@@ -42,15 +42,12 @@ contract ArrakisMetaLPToken is ERC20 {
     function mint(uint256 shares, address receiver) external returns (uint256 amount0, uint256 amount1) {
         if (shares == 0) revert MintZero();
         if (minter != address(0) && msg.sender != minter) revert OnlyMinter();
-        (uint256 total0, uint256 total1) = vault.totalUnderlying();
+    
         uint256 supply = totalSupply();
-        if (total0 == 0 && total1 == 0) {
-            amount0 = FullMath.mulDiv(total0, shares, supply);
-            amount1 = FullMath.mulDiv(total1, shares, supply);
-        } else {
-            amount0 = FullMath.mulDiv(vault.init0(), shares, supply);
-            amount1 = FullMath.mulDiv(vault.init1(), shares, supply);
-        }
+        (uint256 current0, uint256 current1) = supply > 0 ? vault.totalUnderlying() : vault.getInits();
+
+        amount0 = FullMath.mulDiv(current0, shares, supply);
+        amount1 = FullMath.mulDiv(current1, shares, supply);
 
         if (amount0 > 0) IERC20(token0).transferFrom(msg.sender, address(vault), amount0);
         if (amount1 > 0) IERC20(token1).transferFrom(msg.sender, address(vault), amount1);
@@ -64,6 +61,7 @@ contract ArrakisMetaLPToken is ERC20 {
         if (shares == 0) revert BurnZero();
         uint256 supply = totalSupply();
         if (shares > supply) revert BurnOverflow();
+        
         uint24 proportion = FullMath.mulDiv(shares, _PIPS, supply).toUint24();
 
         (amount0, amount1) = vault.withdraw(proportion, receiver);

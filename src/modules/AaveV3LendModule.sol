@@ -16,13 +16,17 @@ contract AaveV3LendModule is IArrakisLPModule, Ownable {
     IPool internal immutable pool1;
     IATokenExt internal immutable aToken0;
     IATokenExt internal immutable aToken1;
+    uint256 internal immutable _init0;
+    uint256 internal immutable _init1;
     address public immutable token0;
     address public immutable token1;
 
     constructor(
         IATokenExt _aToken0,
         IATokenExt _aToken1,
-        address _owner
+        address _owner,
+        uint256 _init0_,
+        uint256 _init1_
     ) Ownable() {
         aToken0 = _aToken0;
         aToken1 = _aToken1;
@@ -31,14 +35,25 @@ contract AaveV3LendModule is IArrakisLPModule, Ownable {
         token0 = _aToken0.UNDERLYING_ASSET_ADDRESS();
         token1 = _aToken1.UNDERLYING_ASSET_ADDRESS();
         _initializeOwner(_owner);
+        _init0 = _init0_;
+        _init1 = _init1_;
     }
 
     function deposit(uint64 proportion_)
         external
         onlyOwner
     {
-        uint256 amount0 = FullMath.mulDiv(aToken0.balanceOf(address(this)), proportion_, _PIPS);
-        uint256 amount1 = FullMath.mulDiv(aToken1.balanceOf(address(this)), proportion_, _PIPS);
+        uint256 bal0 = aToken0.balanceOf(address(this));
+        uint256 bal1 = aToken1.balanceOf(address(this));
+        uint256 amount0;
+        uint256 amount1;
+        if (bal0 > 0 || bal1 > 0) {
+            amount0 = FullMath.mulDiv(bal0, proportion_, _PIPS);
+            amount1 = FullMath.mulDiv(bal1, proportion_, _PIPS);
+        } else {
+            amount0 = FullMath.mulDiv(_init0, proportion_, _PIPS);
+            amount1 = FullMath.mulDiv(_init1, proportion_, _PIPS);
+        }
         
         if (amount0 > 0) {
             IERC20(token0).transferFrom(msg.sender, address(this), amount0);
@@ -52,7 +67,7 @@ contract AaveV3LendModule is IArrakisLPModule, Ownable {
         }
     }
 
-    function withdraw(uint24 proportion_, address receiver_)
+    function withdraw(uint24 proportion_)
         external
         onlyOwner
         returns (uint256 amount0, uint256 amount1)
@@ -60,8 +75,8 @@ contract AaveV3LendModule is IArrakisLPModule, Ownable {
         amount0 = FullMath.mulDiv(aToken0.balanceOf(address(this)), proportion_, _PIPS);
         amount1 = FullMath.mulDiv(aToken1.balanceOf(address(this)), proportion_, _PIPS);
 
-        if (amount0 > 0) pool0.withdraw(token0, amount0, receiver_);
-        if (amount1 > 0) pool1.withdraw(token1, amount1, receiver_);
+        if (amount0 > 0) pool0.withdraw(token0, amount0, msg.sender);
+        if (amount1 > 0) pool1.withdraw(token1, amount1, msg.sender);
     }
 
     function supply(uint256 amount0_, uint256 amount1_) external onlyOwner {
@@ -82,8 +97,8 @@ contract AaveV3LendModule is IArrakisLPModule, Ownable {
         if (amount1_ > 0) pool1.withdraw(token1, amount1_, msg.sender);
     }
 
-    function hasLiquidity() external view returns (bool) {
-        return aToken0.balanceOf(address(this)) > 0 || aToken1.balanceOf(address(this)) > 0;
+    function getInits() external view returns (uint256, uint256) {
+        return (_init0, _init1);
     }
 
     function totalUnderlying()

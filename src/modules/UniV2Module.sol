@@ -16,21 +16,76 @@ contract UniV2Module is IArrakisLPModule, Ownable {
     IUniswapV2Pair internal immutable pool;
     address public immutable token0;
     address public immutable token1;
+    uint256 public immutable initLiquidity;
 
     constructor(
         IUniswapV2Factory _uniV2Factory,
         address _token0,
         address _token1,
-        address _owner
+        address _owner,
+        uint256 _initLiquidity
     ) {
         pool = IUniswapV2Pair(_uniV2Factory.getPair(_token0, _token1));
         uniV2Factory = _uniV2Factory;
         token0 = _token0;
         token1 = _token1;
         _initializeOwner(_owner);
+        initLiquidity = _initLiquidity;
     }
 
-    function firstDeposit(uint256 liquidity_) external onlyOwner {
+    function deposit(uint64 proportion_)
+        external
+        onlyOwner
+    {
+        uint256 totalLiquidity = pool.totalSupply();
+        if (totalLiquidity > 0) {
+            uint256 myLiquidity = pool.balanceOf(address(this));
+            (uint112 total0, uint112 total1,) = pool.getReserves();
+            uint256 amount0;
+            uint256 amount1;
+            if (myLiquidity > 0) {
+                amount0 = FullMath.mulDiv(
+                    FullMath.mulDiv(total0, myLiquidity, totalLiquidity),
+                    proportion_,
+                    _PIPS
+                );
+                amount1 = FullMath.mulDiv(
+                    FullMath.mulDiv(total1, myLiquidity, totalLiquidity),
+                    proportion_,
+                    _PIPS
+                );
+            } else {
+                myLiquidity = FullMath.mulDiv(proportion_, _PIPS, initLiquidity);
+                amount0 = FullMath.mulDiv(
+                    total0,
+                    myLiquidity,
+                    totalLiquidity
+                );
+                amount1 = FullMath.mulDiv(
+                    total1,
+                    myLiquidity,
+                    totalLiquidity
+                );
+            }
+                
+            IERC20(token0).transferFrom(msg.sender, address(pool), amount0);
+            IERC20(token1).transferFrom(msg.sender, address(pool), amount1);
+            pool.mint(address(this));
+        }
+    }
+
+    function withdraw(uint24 proportion_)
+        external
+        onlyOwner
+        returns (uint256 amount0, uint256 amount1)
+    {
+        uint256 myLiquidity = pool.balanceOf(address(this));
+        uint256 liquidity = FullMath.mulDiv(myLiquidity, proportion_, _PIPS);
+        pool.transfer(address(pool), liquidity);
+        (amount0, amount1) = pool.burn(msg.sender);
+    }
+
+    function depositLiquidity(uint256 liquidity_) external onlyOwner {
         (uint112 total0, uint112 total1,) = pool.getReserves();
         uint256 totalLiquidity = pool.totalSupply();
         uint256 amount0 = FullMath.mulDiv(
@@ -49,44 +104,21 @@ contract UniV2Module is IArrakisLPModule, Ownable {
         pool.mint(address(this));
     }
 
-    function deposit(uint64 proportion_)
-        external
-        onlyOwner
-    {
-        uint256 myLiquidity = pool.balanceOf(address(this));
-        if (myLiquidity > 0) {
-            (uint112 total0, uint112 total1,) = pool.getReserves();
-            uint256 totalLiquidity = pool.totalSupply();
-            uint256 amount0 = FullMath.mulDiv(
-                FullMath.mulDiv(total0, myLiquidity, totalLiquidity),
-                proportion_,
-                _PIPS
+    function getInits() external view returns (uint256 init0, uint256 init1) {
+        (uint112 total0, uint112 total1,) = pool.getReserves();
+        uint256 totalLiquidity = pool.totalSupply();
+        if (totalLiquidity > 0) {
+            init0 = FullMath.mulDiv(
+                total0,
+                initLiquidity,
+                totalLiquidity
             );
-            uint256 amount1 = FullMath.mulDiv(
-                FullMath.mulDiv(total1, myLiquidity, totalLiquidity),
-                proportion_,
-                _PIPS
+            init1 = FullMath.mulDiv(
+                total1,
+                initLiquidity,
+                totalLiquidity
             );
-            
-            IERC20(token0).transferFrom(msg.sender, address(pool), amount0);
-            IERC20(token1).transferFrom(msg.sender, address(pool), amount1);
-            pool.mint(address(this));
         }
-    }
-
-    function withdraw(uint24 proportion_, address receiver_)
-        external
-        onlyOwner
-        returns (uint256 amount0, uint256 amount1)
-    {
-        uint256 myLiquidity = pool.balanceOf(address(this));
-        uint256 liquidity = FullMath.mulDiv(myLiquidity, proportion_, _PIPS);
-        pool.transfer(address(pool), liquidity);
-        (amount0, amount1) = pool.burn(receiver_);
-    }
-
-    function hasLiquidity() external view returns (bool) {
-        return pool.balanceOf(address(this)) > 0;
     }
 
     function totalUnderlying()

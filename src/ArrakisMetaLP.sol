@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {
-    IArrakisLPModule,
-    IArrakisMetaLP
-} from "./interfaces/IArrakisMetaLP.sol";
+import {IArrakisMetaLP} from "./interfaces/IArrakisMetaLP.sol";
+import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {EnumerableSet} from "./libraries/EnumerableSet.sol";
 import {Ownable} from "solady/src/auth/Ownable.sol";
@@ -27,11 +25,11 @@ contract ArrakisMetaLP is IArrakisMetaLP, Ownable {
 
     uint24 internal constant _PIPS = 1000000;
 
+    uint256 internal immutable _init0;
+    uint256 internal immutable _init1;
+
     address public immutable token0;
     address public immutable token1;
-
-    uint256 public immutable init0;
-    uint256 public immutable init1;
 
     address public manager;
     uint256 public managerFees0;
@@ -40,12 +38,12 @@ contract ArrakisMetaLP is IArrakisMetaLP, Ownable {
     EnumerableSet.AddressSet internal _modules;
     EnumerableSet.AddressSet internal _swapRouters;
 
-    constructor(address _token0, address _token1, address _owner, uint256 _init0, uint256 _init1) {
+    constructor(address _token0, address _token1, address _owner, uint256 _init0_, uint256 _init1_) {
         token0 = _token0;
         token1 = _token1;
         _initializeOwner(_owner);
-        init0 = _init0;
-        init1 = _init1;
+        _init0 = _init0_;
+        _init1 = _init1_;
     }
 
     function deposit(uint64 proportion_) external onlyOwner {
@@ -63,7 +61,7 @@ contract ArrakisMetaLP is IArrakisMetaLP, Ownable {
         uint256 leftover1 = IERC20(token1).balanceOf(address(this));
         for (uint256 i = 0; i < len; i++) {
             (uint256 a0, uint256 a1) =
-                IArrakisLPModule(_modules.at(i)).withdraw(proportion_, address(this));
+                IArrakisLPModule(_modules.at(i)).withdraw(proportion_);
             amount0 += a0;
             amount1 += a1;
         }
@@ -85,7 +83,7 @@ contract ArrakisMetaLP is IArrakisMetaLP, Ownable {
         for (uint256 i = 0; i < len; i++) {
             address target = targets[i];
             if (!_modules.contains(target) && !_swapRouters.contains(target)) revert InvalidTarget();
-            (bool success,) = payable(target).call(payloads[i]);
+            (bool success,) = target.call(payloads[i]);
 
             if (!success) revert CallFailed();
         }
@@ -161,15 +159,17 @@ contract ArrakisMetaLP is IArrakisMetaLP, Ownable {
         return output;
     }
 
-    function hasLiquidity() external view returns (bool) {
+    function getInits() external view returns (uint256, uint256) {
+        uint256 out0 = _init0;
+        uint256 out1 = _init1;
         uint256 len = _modules.length();
         for (uint256 i = 0; i < len; i++) {
-            if (IArrakisLPModule(_modules.at(i)).hasLiquidity()) {
-                return true;
-            }
+            (uint256 a0, uint256 a1) = IArrakisLPModule(_modules.at(i)).getInits();
+            out0 += a0;
+            out1 += a1;
         }
 
-        return false;
+        return (out0, out1);
     }
 
     function totalUnderlying() external view returns (uint256 amount0, uint256 amount1) {
@@ -179,6 +179,9 @@ contract ArrakisMetaLP is IArrakisMetaLP, Ownable {
             amount0 += a0;
             amount1 += a1;
         }
+
+        amount0 += IERC20(token0).balanceOf(address(this));
+        amount1 += IERC20(token1).balanceOf(address(this));
     }
 
     function totalUnderlyingAtPrice(uint256 priceX96) external view returns (uint256 amount0, uint256 amount1) {
