@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 interface IArrakisLPModule {
-    function deposit(uint64 proportion) external;
+    function deposit(uint256 proportion) external;
     function withdraw(uint24 proportion) external returns (uint256 amount0, uint256 amount1);
 
     function token0() external view returns (address);

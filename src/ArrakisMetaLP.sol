@@ -46,7 +46,7 @@ contract ArrakisMetaLP is IArrakisMetaLP, Ownable {
         _init1 = _init1_;
     }
 
-    function deposit(uint64 proportion_) external onlyOwner {
+    function deposit(uint256 proportion_) external onlyOwner {
         uint256 len = _modules.length();
         for (uint256 i = 0; i < len; i++) {
             IArrakisLPModule(_modules.at(i)).deposit(proportion_);

@@ -33,8 +33,8 @@ contract ArrakisModularTest is Test {
             IATokenExt(0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c),
             IATokenExt(0x4d5F47FA6A74757f35C14fD3a6Ef8E3C9BC514E8),
             address(vault),
-            0,
-            0
+            10**9,
+            1 ether
         );
 
         uniV2Module = new UniV2Module(
@@ -42,7 +42,7 @@ contract ArrakisModularTest is Test {
             address(token0),
             address(token1),
             address(vault),
-            0
+            10**14
         );
 
         vault.addModule(address(uniV2Module));
@@ -62,18 +62,50 @@ contract ArrakisModularTest is Test {
         token0.transfer(address(this), 10**13);
         vm.prank(0x57757E3D981446D585Af0D9Ae4d7DF6D64647806);
         token1.transfer(address(this), 1000 ether);
+
+        token0.approve(address(token), type(uint).max);
+        token1.approve(address(token), type(uint).max);
     }
 
-    function test_vault() public {
+    function test_mint() public {
         uint256 bal0 = token0.balanceOf(address(this));
         uint256 bal1 = token1.balanceOf(address(this));
 
         assertEq(bal0, 10**13);
         assertEq(bal1, 1000 ether);
 
-        token0.approve(address(token), type(uint).max);
-        token1.approve(address(token), type(uint).max);
+        (uint256 init0, uint256 init1) = vault.getInits();
+        assertGt(init0, 2*10**9);
+        assertGt(init1, 2 ether);
+        uint256 balanceLPBefore = token.balanceOf(address(this));
+        token.mint(1 ether, address(this));
 
-        //token.mint(1 ether, address(this));
+        uint256 bal0After = token0.balanceOf(address(this));
+        uint256 bal1After = token1.balanceOf(address(this));
+
+        uint256 balanceLPAfter = token.balanceOf(address(this));
+
+        assertEq(bal0-bal0After, init0);
+        assertEq(bal1-bal1After, init1);
+
+        assertEq(balanceLPBefore, 0);
+        assertEq(balanceLPAfter, 1 ether);
+
+        (uint256 a0, uint256 a1) = vault.totalUnderlying();
+
+        assertGt(init0, a0);
+        assertGt(init1, a1);
+        assertEq(init0-1, a0);
+        assertGt(init1/10**10, init1-a1);
+
+        uint256 bal0Vault = token0.balanceOf(address(vault));
+        uint256 bal1Vault = token1.balanceOf(address(vault));
+
+        assertEq(bal0Vault, 10**9);
+        assertEq(bal1Vault, 1 ether);
+    }
+
+    function test_mint_gas() public {
+        token.mint(1 ether, address(this));
     }
 }

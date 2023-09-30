@@ -33,7 +33,7 @@ contract UniV2Module is IArrakisLPModule, Ownable {
         initLiquidity = _initLiquidity;
     }
 
-    function deposit(uint64 proportion_)
+    function deposit(uint256 proportion_)
         external
         onlyOwner
     {
@@ -55,22 +55,32 @@ contract UniV2Module is IArrakisLPModule, Ownable {
                     _PIPS
                 );
             } else {
-                myLiquidity = FullMath.mulDiv(proportion_, _PIPS, initLiquidity);
-                amount0 = FullMath.mulDiv(
-                    total0,
-                    myLiquidity,
-                    totalLiquidity
-                );
-                amount1 = FullMath.mulDiv(
-                    total1,
-                    myLiquidity,
-                    totalLiquidity
-                );
+                if (initLiquidity > 0) {
+                    amount0 = FullMath.mulDiv(
+                        FullMath.mulDiv(
+                            total0,
+                            initLiquidity,
+                            totalLiquidity
+                        ),
+                        proportion_,
+                        _PIPS
+                    );
+                    amount1 = FullMath.mulDiv(
+                        FullMath.mulDiv(
+                            total1,
+                            initLiquidity,
+                            totalLiquidity
+                        ),
+                        proportion_,
+                        _PIPS
+                    );
+                }
             }
-                
-            IERC20(token0).transferFrom(msg.sender, address(pool), amount0);
-            IERC20(token1).transferFrom(msg.sender, address(pool), amount1);
-            pool.mint(address(this));
+            if (amount0 > 0 || amount1 > 0) {
+                IERC20(token0).transferFrom(msg.sender, address(pool), amount0);
+                IERC20(token1).transferFrom(msg.sender, address(pool), amount1);
+                pool.mint(address(this));
+            }
         }
     }
 
