@@ -56,7 +56,11 @@ contract ArrakisMetaLP is IArrakisMetaLP, Ownable {
     function withdraw(uint24 proportion_, address receiver_) external onlyOwner returns (uint256 amount0, uint256 amount1) {
         uint256 len = _modules.length();
         address _manager = manager;
-        (uint256 fee0, uint256 fee1) = _manager != address(0) ? IManager(_manager).getFee(proportion_) : (0, 0);
+        uint256 fee0; uint256 fee1;
+        try IManager(_manager).getFee(proportion_) returns (uint256 f0, uint256 f1) {
+            fee0 = f0;
+            fee1 = f1;
+        } catch {}
         uint256 leftover0 = IERC20(token0).balanceOf(address(this));
         uint256 leftover1 = IERC20(token1).balanceOf(address(this));
         for (uint256 i = 0; i < len; i++) {
