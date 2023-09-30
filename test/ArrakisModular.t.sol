@@ -6,7 +6,7 @@ import {ArrakisMetaLPToken} from "../src/ArrakisMetaLPToken.sol";
 import {ArrakisMetaLP} from "../src/ArrakisMetaLP.sol";
 import {AaveV3LendModule} from "../src/modules/AaveV3LendModule.sol";
 import {UniV2Module} from "../src/modules/UniV2Module.sol";
-import {IERC20} from "../src/interfaces/IERC20.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IATokenExt} from "../src/interfaces/IATokenExt.sol";
 import {IUniswapV2Factory} from "v2-core/interfaces/IUniswapV2Factory.sol";
 import {IUniswapV2Pair} from "v2-core/interfaces/IUniswapV2Pair.sol";
