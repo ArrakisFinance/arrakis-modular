@@ -49,31 +49,15 @@ contract UniV2Module is IArrakisLPModule, Ownable {
                     proportion_,
                     _PIPS
                 );
-                amount1 = FullMath.mulDiv(
-                    FullMath.mulDiv(total1, myLiquidity, totalLiquidity),
-                    proportion_,
-                    _PIPS
-                );
+                amount1 = FullMath.mulDiv(amount0, total1, total0);
             } else {
                 if (initLiquidity > 0) {
                     amount0 = FullMath.mulDiv(
-                        FullMath.mulDiv(
-                            total0,
-                            initLiquidity,
-                            totalLiquidity
-                        ),
+                        FullMath.mulDiv(total0, initLiquidity, totalLiquidity),
                         proportion_,
                         _PIPS
                     );
-                    amount1 = FullMath.mulDiv(
-                        FullMath.mulDiv(
-                            total1,
-                            initLiquidity,
-                            totalLiquidity
-                        ),
-                        proportion_,
-                        _PIPS
-                    );
+                    amount1 = FullMath.mulDiv(amount0, total1, total0);
                 }
             }
             if (amount0 > 0 || amount1 > 0) {
@@ -124,9 +108,9 @@ contract UniV2Module is IArrakisLPModule, Ownable {
                 totalLiquidity
             );
             init1 = FullMath.mulDiv(
+                init0,
                 total1,
-                initLiquidity,
-                totalLiquidity
+                total0
             );
         }
     }
