@@ -8,8 +8,6 @@ interface IArrakisMetaLP {
     function setManager(address newManager) external;
     function addModule(address newModule) external;
     function removeModule(address oldModule) external;
-    function addSwapRouter(address newSwapRouter) external;
-    function removeSwapRouter(address oldSwapRouter) external;
 
     function totalUnderlying() external view returns (uint256 amount0, uint256 amount1);
     function totalUnderlyingAtPrice(uint256 priceX96) external view returns (uint256 amount0, uint256 amount1);
@@ -18,5 +16,4 @@ interface IArrakisMetaLP {
     function token1() external view returns (address);
     function manager() external view returns (address);
     function modules() external view returns (address[] memory);
-    function swapRouters() external view returns (address[] memory);
 }

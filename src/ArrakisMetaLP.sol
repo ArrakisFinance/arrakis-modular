@@ -3,7 +3,7 @@ pragma solidity 0.8.20;
 
 import {IArrakisMetaLP} from "./interfaces/IArrakisMetaLP.sol";
 import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
-import {IERC20} from "./interfaces/IERC20.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {EnumerableSet} from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {Ownable} from "solady/src/auth/Ownable.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
@@ -36,7 +36,6 @@ contract ArrakisMetaLP is IArrakisMetaLP, Ownable {
     uint256 public managerFees1;
 
     EnumerableSet.AddressSet internal _modules;
-    EnumerableSet.AddressSet internal _swapRouters;
 
     constructor(address _token0, address _token1, address _owner, uint256 _init0_, uint256 _init1_) {
         token0 = _token0;
@@ -86,7 +85,7 @@ contract ArrakisMetaLP is IArrakisMetaLP, Ownable {
         if (len != payloads.length) revert LengthMismatch();
         for (uint256 i = 0; i < len; i++) {
             address target = targets[i];
-            if (!_modules.contains(target) && !_swapRouters.contains(target)) revert InvalidTarget();
+            if (!_modules.contains(target)) revert InvalidTarget();
             (bool success,) = target.call(payloads[i]);
 
             if (!success) revert CallFailed();
@@ -95,25 +94,6 @@ contract ArrakisMetaLP is IArrakisMetaLP, Ownable {
 
     function setManager(address newManager) external onlyOwner {
         manager = newManager;
-    }
-
-    function addSwapRouter(address newSwapRouter) external onlyOwner {
-        if (newSwapRouter == address(0)) revert AddressZero();
-        bool success = _swapRouters.add(newSwapRouter);
-
-        if (!success) revert AlreadyInSet();
-
-        IERC20(token0).approve(newSwapRouter, type(uint256).max);
-        IERC20(token1).approve(newSwapRouter, type(uint256).max);
-    }
-
-    function removeSwapRouter(address oldSwapRouter) external onlyOwner {
-        bool success = _swapRouters.remove(oldSwapRouter);
-
-        if (!success) revert NotInSet();
-
-        IERC20(token0).approve(oldSwapRouter, 0);
-        IERC20(token1).approve(oldSwapRouter, 0);
     }
 
     function addModule(address newModule) external onlyOwner {
@@ -141,16 +121,6 @@ contract ArrakisMetaLP is IArrakisMetaLP, Ownable {
         if (!success) revert NotInSet();
         IERC20(token0).approve(oldModule, 0);
         IERC20(token1).approve(oldModule, 0);
-    }
-
-    function swapRouters() external view returns (address[] memory) {
-        uint256 len = _swapRouters.length();
-        address[] memory output = new address[](len);
-        for (uint256 i; i < len; i++) {
-            output[i] = _swapRouters.at(i);
-        }
-
-        return output;
     }
 
     function modules() external view returns (address[] memory) {

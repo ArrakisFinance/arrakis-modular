@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IUniswapV2Factory} from "v2-core/interfaces/IUniswapV2Factory.sol";
 import {IUniswapV2Pair} from "v2-core/interfaces/IUniswapV2Pair.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {FullMath} from "v3-lib-0.8/FullMath.sol";
 import {Ownable} from "solady/src/auth/Ownable.sol";
 
