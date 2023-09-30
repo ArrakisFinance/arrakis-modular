@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {FullMath} from "v3-lib-0.8/FullMath.sol";

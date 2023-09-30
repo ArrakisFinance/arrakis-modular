@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
 import {IArrakisMetaLP} from "./interfaces/IArrakisMetaLP.sol";
 import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
-import {EnumerableSet} from "./libraries/EnumerableSet.sol";
+import {EnumerableSet} from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {Ownable} from "solady/src/auth/Ownable.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IManager} from "./interfaces/IManager.sol";
