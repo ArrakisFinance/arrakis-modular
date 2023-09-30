@@ -39,7 +39,7 @@ contract AaveV3LendModule is IArrakisLPModule, Ownable {
         _init1 = _init1_;
     }
 
-    function deposit(uint64 proportion_)
+    function deposit(uint256 proportion_)
         external
         onlyOwner
     {
