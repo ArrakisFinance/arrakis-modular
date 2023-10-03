@@ -22,6 +22,9 @@ interface IArrakisMetaVault {
     event LogWithdrawManagerBalance(uint256 amount0, uint256 amount1);
     event LogSetManager(address oldManager, address newManager);
     event LogSetModule(address module, bytes[] payloads_);
+    event LogWhiteListedModules(address[] modules_);
+    event LogBlackListedModules(address[] modules_);
+
     /// @dev storing manager fee on the contract will make it possible to
     /// change fee pips without retroactively applying new feePIPS to old
     /// fee earned.
@@ -51,6 +54,18 @@ interface IArrakisMetaVault {
     /// @param module_ address of the new module
     /// @param payloads_ datas to initialize/rebalance on the new module
     function setModule(address module_, bytes[] calldata payloads_) external;
+
+    /// @notice function used to whitelist modules that can used by manager.
+    /// @param modules_ array of module addresses to be whitelisted.
+    function whitelistModules(address[] calldata modules_) external;
+
+    /// @notice function used to blacklist modules that can used by manager.
+    /// @param modules_ array of module addresses to be blacklisted.
+    function blacklistModules(address[] calldata modules_) external;
+
+    /// @notice function used to get the list of modules whitelisted.
+    /// @return modules whitelisted modules addresses.
+    function whitelistedModules() external view returns(address[] memory modules);
 
     /// @notice function used by manager to set the cut he will
     /// take from APY generated from the position managed.
