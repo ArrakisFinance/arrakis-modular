@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.20;
 
-import {IArrakisLPModuleVault} from "./IArrakisLPModuleVault.sol";
+import {IArrakisLPModule} from "./IArrakisLPModule.sol";
 
 /// @title IArrakisMetaVault
 /// @notice IArrakisMetaVault is a vault that is able to invest dynamically deposited
@@ -16,16 +16,12 @@ interface IArrakisMetaVault {
     // #region events.
 
     event LogDeposit(uint256 proportion, uint256 amount0, uint256 amount1);
-    event LogWithdraw(
-        uint256 proportion,
-        address receiver,
-        uint256 amount0,
-        uint256 amount1
-    );
+    event LogWithdraw(uint256 proportion, uint256 amount0, uint256 amount1);
     event LogRebalance(bytes[] payloads);
     event LogModuleCallback(address module, uint256 amount0, uint256 amount1);
     event LogWithdrawManagerBalance(uint256 amount0, uint256 amount1);
     event LogSetManager(address oldManager, address newManager);
+    event LogSetModule(address module, bytes[] payloads_);
     /// @dev storing manager fee on the contract will make it possible to
     /// change fee pips without retroactively applying new feePIPS to old
     /// fee earned.
@@ -35,24 +31,6 @@ interface IArrakisMetaVault {
     );
 
     // #endregion events.
-
-    /// @notice function used to deposit tokens or expand position inside the
-    /// inherent strategy.
-    /// @param proportion_ the proportion of position expansion.
-    /// @return amount0 amount of token0 need to increase the position by proportion_;
-    /// @return amount1 amount of token1 need to increase the position by proportion_;
-    function deposit(uint256 proportion_) external returns(uint256 amount0, uint256 amount1);
-
-    /// @notice function used to withdraw tokens or position contraction of the
-    /// underpin strategy.
-    /// @param proportion_ the proportion of position contraction.
-    /// @param receiver_ the address that will receive withdrawn tokens.
-    /// @return amount0 amount of token0 returned.
-    /// @return amount1 amount of token1 returned.
-    function withdraw(
-        uint256 proportion_,
-        address receiver_
-    ) external returns (uint256 amount0, uint256 amount1);
 
     /// @notice function used by manager to change the strategy
     /// @param payloads_ datas to use when calling module to rebalance the position.
@@ -68,6 +46,11 @@ interface IArrakisMetaVault {
     /// responsible to rebalance the position.
     /// @param newManager_ address of the new manager.
     function setManager(address newManager_) external;
+
+    /// @notice function used to set module
+    /// @param module_ address of the new module
+    /// @param payloads_ datas to initialize/rebalance on the new module
+    function setModule(address module_, bytes[] calldata payloads_) external;
 
     /// @notice function used by manager to set the cut he will
     /// take from APY generated from the position managed.
@@ -108,23 +91,17 @@ interface IArrakisMetaVault {
     function manager() external view returns (address);
 
     /// @notice function used to get manager Fees in PIPS.
-    function managerFeePIPS() external returns (uint24);
+    function managerFeePIPS() external view returns (uint24);
 
     /// @notice function used to get manager balance in token0
     /// that can be withdrawn by manager.
-    function managerBalance0() external returns (uint256);
+    function managerBalance0() external view returns (uint256);
 
     /// @notice function used to get manager balance in token1
     /// that can be withdrawn by manager.
-    function managerBalance1() external returns (uint256);
+    function managerBalance1() external view returns (uint256);
 
     /// @notice function used to get module used to 
     /// open/close/manager a position.
-    function module() external view returns (IArrakisLPModuleVault);
-
-    /// @notice function used to get the duration btw 2 manager fee update.
-    function feeDuration() external view returns(uint256);
-
-    /// @notice function to get the timestamp of the last manager fee update.
-    function lastFeeUpdate() external view returns(uint256);
+    function module() external view returns (IArrakisLPModule);
 }

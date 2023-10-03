@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
-import {IArrakisLPModuleVault} from "./interfaces/IArrakisLPModuleVault.sol";
+import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
 import {IERC20, SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "solady/src/auth/Ownable.sol";
@@ -12,8 +12,9 @@ error OnlyManager(address caller, address manager);
 error OnlyModule(address caller, address module);
 error ProportionGtPIPS(uint256 proportion);
 error ManagerFeePIPSTooHigh(uint24 managerFeePIPS);
-error FeeUpdateTooEarly(uint256 timeToUpdate);
 error CallFailed();
+error SameModule();
+error ModuleNotEmpty(uint256 amount0, uint256 amount1);
 
 contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -37,18 +38,15 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
     // #region public manager properties.
 
     address public manager;
-    uint24 public managerFeePIPS;
-    uint256 public feeDuration;
-    uint256 public lastFeeUpdate;
-
     uint256 public managerBalance0;
     uint256 public managerBalance1;
+    uint24 public managerFeePIPS;
 
     // #endregion public manager properties.
 
     // #region public properties.
 
-    IArrakisLPModuleVault public module;
+    IArrakisLPModule public module;
 
     // #endregion public properties.
 
@@ -80,21 +78,7 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         _initializeOwner(owner_);
         _init0 = init0_;
         _init1 = init1_;
-        module =IArrakisLPModuleVault(module_);
-    }
-
-    function deposit(
-        uint256 proportion_
-    ) external virtual onlyOwner returns (uint256 amount0, uint256 amount1) {
-        _tokenSender = owner();
-        (amount0, amount1) = _deposit(proportion_);
-    }
-
-    function withdraw(
-        uint256 proportion_,
-        address receiver_
-    ) external virtual onlyOwner returns (uint256 amount0, uint256 amount1) {
-        (amount0, amount1) = _withdrawAndSend(proportion_, receiver_);
+        module =IArrakisLPModule(module_);
     }
 
     function rebalance(bytes[] calldata payloads_) external onlyManager {
@@ -130,23 +114,31 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
     }
 
     function setManager(address newManager) external onlyOwner {
-        _collectFees();
         withdrawManagerBalance();
 
         emit LogSetManager(manager, manager = newManager);
     }
 
-    function setManagerFeePIPS(uint24 managerFeePIPS_) external onlyManager {
-        if (managerFeePIPS_ > (_PIPS / 10))
-            revert ManagerFeePIPSTooHigh(managerFeePIPS_);
-        if (block.timestamp < feeDuration + lastFeeUpdate)
-            revert FeeUpdateTooEarly(feeDuration + lastFeeUpdate);
-        _collectFees();
+    function setManagerFeePIPS(uint24 newManagerFeePIPS) external onlyManager {
+        emit LogSetManagerFeePIPS(managerFeePIPS, managerFeePIPS = newManagerFeePIPS);
+    }
 
-        emit LogSetManagerFeePIPS(
-            managerFeePIPS,
-            managerFeePIPS = managerFeePIPS_
-        );
+    function setModule(address module_, bytes[] calldata payloads_) external onlyManager {
+        if(address(module) == module_) revert SameModule();
+
+        (uint256 amount0, uint256 amount1) = module.totalUnderlying();
+        if (amount0 != 0 || amount1 != 0) revert ModuleNotEmpty(amount0, amount1);
+
+        module = IArrakisLPModule(module_);
+
+        uint256 len = payloads_.length;
+        for (uint256 i = 0; i < len; i++) {
+            (bool success, ) = address(module).call(payloads_[i]);
+
+            if (!success) revert CallFailed();
+        }
+
+        emit LogSetModule(module_, payloads_);
     }
 
     function withdrawManagerBalance()
@@ -168,11 +160,13 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
     // #region view functions.
 
     function getInits() external view returns (uint256 init0, uint256 init1) {
-        return module.getInits();
+        (init0, init1) = module.getInits();
+        init0 += _init0;
+        init1 += _init1;
     }
 
     function totalUnderlying()
-        external
+        public
         view
         returns (uint256 amount0, uint256 amount1)
     {
@@ -195,43 +189,23 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
 
     // #region internal functions.
 
-    function _collectFees() internal {
-        // TODO: check how to deal with complete burn and mint.
-        _withdraw(_PIPS);
-
-        // #region deposit
-        _tokenSender = address(this);
-
-        uint256 token0Balance = IERC20(token0).balanceOf(address(this)) -
-            managerBalance0;
-        uint256 token1Balance = IERC20(token1).balanceOf(address(this)) -
-            managerBalance1;
-        IERC20(token0).safeIncreaseAllowance(address(module), token0Balance);
-        IERC20(token1).safeIncreaseAllowance(address(module), token1Balance);
-
-        _deposit(_PIPS);
-
-        // #endregion deposit
-    }
-
     function _deposit(
         uint256 proportion_
     ) internal nonReentrant returns (uint256 amount0, uint256 amount1) {
-        (amount0, amount1) = module.deposit(proportion_);
+        (uint256 total0, uint256 total1) = totalUnderlying();
+        amount0 = FullMath.mulDiv(total0, proportion_,_PIPS);
+        amount1 = FullMath.mulDiv(total1, proportion_, _PIPS);
+        uint256 feeProportion = FullMath.mulDiv(proportion_, managerFeePIPS, _PIPS);
+        _tokenSender = msg.sender;
+        (uint256 d0, uint256 d1) = module.deposit(proportion_-feeProportion);
+
+        IERC20(token0).safeTransferFrom(msg.sender, address(this), amount0-d0);
+        IERC20(token0).safeTransferFrom(msg.sender, address(this), amount1-d1);
+
+        managerBalance0 += FullMath.mulDiv(total0, feeProportion, _PIPS);
+        managerBalance1 += FullMath.mulDiv(total1, feeProportion, _PIPS);
 
         emit LogDeposit(proportion_, amount0, amount1);
-    }
-
-    function _withdrawAndSend(
-        uint256 proportion_,
-        address receiver_
-    ) internal nonReentrant returns (uint256 amount0, uint256 amount1) {
-        (amount0, amount1) = _withdraw(proportion_);
-
-        if (amount0 > 0) IERC20(token0).transfer(receiver_, amount0);
-        if (amount1 > 0) IERC20(token1).transfer(receiver_, amount1);
-
-        emit LogWithdraw(proportion_, receiver_, amount0, amount1);
     }
 
     function _withdraw(
@@ -245,17 +219,10 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
 
         (amount0, amount1) = module.withdraw(proportion_);
 
-        uint256 managerFees0 = FullMath.mulDiv(amount0, managerFeePIPS, _PIPS);
-        uint256 managerFees1 = FullMath.mulDiv(amount1, managerFeePIPS, _PIPS);
-
-        amount0 -= managerFees0;
-        amount1 -= managerFees1;
-
-        managerBalance0 += managerFees0;
-        managerBalance1 += managerFees1;
-
         amount0 += FullMath.mulDiv(leftover0, proportion_, _PIPS);
         amount1 += FullMath.mulDiv(leftover1, proportion_, _PIPS);
+
+        emit LogWithdraw(proportion_, amount0, amount1);
     }
 
     // #endregion internal functions.

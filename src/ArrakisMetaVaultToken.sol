@@ -5,6 +5,7 @@ import {IArrakisMetaToken} from "./interfaces/IArrakisMetaToken.sol";
 import {ERC20} from "solady/src/tokens/ERC20.sol";
 import {ArrakisMetaVault} from "./ArrakisMetaVault.sol";
 import {FullMath} from "v3-lib-0.8/FullMath.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 error NotImplemented();
 error MintZero();
@@ -29,19 +30,6 @@ contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
         _symbol = symbol_;
     }
 
-    function deposit(
-        uint256
-    ) external override returns (uint256, uint256) {
-        revert NotImplemented();
-    }
-
-    function withdraw(
-        uint256,
-        address
-    ) external override returns (uint256, uint256) {
-        revert NotImplemented();
-    }
-
     function burn(
         uint256 shares_,
         address receiver_
@@ -54,7 +42,10 @@ contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
 
         _burn(msg.sender, shares_);
 
-        (amount0, amount1) = _withdrawAndSend(proportion, receiver_);
+        (amount0, amount1) = _withdraw(proportion);
+
+        if (amount0 > 0) IERC20(token0).transfer(receiver_, amount0);
+        if (amount1 > 0) IERC20(token1).transfer(receiver_, amount1);
 
         emit LogBurn(shares_, receiver_, amount0, amount1);
     }
@@ -71,7 +62,6 @@ contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
             _PIPS,
             supply > 0 ? supply : 1 ether
         );
-        _tokenSender = msg.sender;
 
         _mint(receiver_, shares_);
 
