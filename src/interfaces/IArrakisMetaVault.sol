@@ -88,7 +88,7 @@ interface IArrakisMetaVault {
     /// @return amount0 the amount of token0 sitting on the position for priceX96.
     /// @return amount1 the amount of token1 sitting on the position for priceX96.
     function totalUnderlyingAtPrice(
-        uint256 priceX96
+        uint160 priceX96
     ) external view returns (uint256 amount0, uint256 amount1);
 
     /// @notice function used to get the initial amounts needed to open a position.

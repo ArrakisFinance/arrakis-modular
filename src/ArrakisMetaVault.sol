@@ -8,6 +8,7 @@ import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/Reentrancy
 import {EnumerableSet} from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {Ownable} from "solady/src/auth/Ownable.sol";
 import {FullMath} from "v3-lib-0.8/FullMath.sol";
+import {PIPS} from "./constants/CArrakis.sol";
 
 error OnlyManager(address caller, address manager);
 error OnlyModule(address caller, address module);
@@ -23,8 +24,6 @@ error ActiveModule();
 contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
-
-    uint24 internal constant _PIPS = 1_000_000;
 
     // #region internal immutable.
 
@@ -216,7 +215,7 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
     }
 
     function totalUnderlyingAtPrice(
-        uint256 priceX96_
+        uint160 priceX96_
     ) external view returns (uint256 amount0, uint256 amount1) {
         (amount0, amount1) = module.totalUnderlyingAtPrice(priceX96_);
 
@@ -232,17 +231,17 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         uint256 proportion_
     ) internal nonReentrant returns (uint256 amount0, uint256 amount1) {
         (uint256 total0, uint256 total1) = totalUnderlying();
-        amount0 = FullMath.mulDiv(total0, proportion_,_PIPS);
-        amount1 = FullMath.mulDiv(total1, proportion_, _PIPS);
-        uint256 feeProportion = FullMath.mulDiv(proportion_, managerFeePIPS, _PIPS);
+        amount0 = FullMath.mulDiv(total0, proportion_,PIPS);
+        amount1 = FullMath.mulDiv(total1, proportion_, PIPS);
+        uint256 feeProportion = FullMath.mulDiv(proportion_, managerFeePIPS, PIPS);
         _tokenSender = msg.sender;
         (uint256 d0, uint256 d1) = module.deposit(proportion_-feeProportion);
 
         IERC20(token0).safeTransferFrom(msg.sender, address(this), amount0-d0);
         IERC20(token0).safeTransferFrom(msg.sender, address(this), amount1-d1);
 
-        managerBalance0 += FullMath.mulDiv(total0, feeProportion, _PIPS);
-        managerBalance1 += FullMath.mulDiv(total1, feeProportion, _PIPS);
+        managerBalance0 += FullMath.mulDiv(total0, feeProportion, PIPS);
+        managerBalance1 += FullMath.mulDiv(total1, feeProportion, PIPS);
 
         emit LogDeposit(proportion_, amount0, amount1);
     }
@@ -250,7 +249,7 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
     function _withdraw(
         uint256 proportion_
     ) internal returns (uint256 amount0, uint256 amount1) {
-        if (proportion_ > _PIPS) revert ProportionGtPIPS(proportion_);
+        if (proportion_ > PIPS) revert ProportionGtPIPS(proportion_);
         uint256 leftover0 = IERC20(token0).balanceOf(address(this)) -
             managerBalance0;
         uint256 leftover1 = IERC20(token1).balanceOf(address(this)) -
@@ -258,8 +257,8 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
 
         (amount0, amount1) = module.withdraw(proportion_);
 
-        amount0 += FullMath.mulDiv(leftover0, proportion_, _PIPS);
-        amount1 += FullMath.mulDiv(leftover1, proportion_, _PIPS);
+        amount0 += FullMath.mulDiv(leftover0, proportion_, PIPS);
+        amount1 += FullMath.mulDiv(leftover1, proportion_, PIPS);
 
         emit LogWithdraw(proportion_, amount0, amount1);
     }
