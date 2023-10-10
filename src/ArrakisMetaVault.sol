@@ -10,17 +10,6 @@ import {Ownable} from "solady/src/auth/Ownable.sol";
 import {FullMath} from "v3-lib-0.8/FullMath.sol";
 import {PIPS} from "./constants/CArrakis.sol";
 
-error OnlyManager(address caller, address manager);
-error OnlyModule(address caller, address module);
-error ProportionGtPIPS(uint256 proportion);
-error ManagerFeePIPSTooHigh(uint24 managerFeePIPS);
-error CallFailed();
-error SameModule();
-error ModuleNotEmpty(uint256 amount0, uint256 amount1);
-error AlreadyWhitelisted(address module);
-error NotWhitelistedModule(address module);
-error ActiveModule();
-
 contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -84,7 +73,7 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         _initializeOwner(owner_);
         _init0 = init0_;
         _init1 = init1_;
-        module =IArrakisLPModule(module_);
+        module = IArrakisLPModule(module_);
     }
 
     function rebalance(bytes[] calldata payloads_) external onlyManager {
@@ -126,7 +115,10 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
     }
 
     function setManagerFeePIPS(uint24 newManagerFeePIPS) external onlyManager {
-        emit LogSetManagerFeePIPS(managerFeePIPS, managerFeePIPS = newManagerFeePIPS);
+        emit LogSetManagerFeePIPS(
+            managerFeePIPS,
+            managerFeePIPS = newManagerFeePIPS
+        );
     }
 
     function setModule(
@@ -153,8 +145,8 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
 
     function whitelistModules(address[] calldata modules_) external onlyOwner {
         uint256 len = modules_.length;
-        for(uint256 i; i<len; i++) {
-            if(_whitelistedModules.contains(modules_[i]))
+        for (uint256 i; i < len; i++) {
+            if (_whitelistedModules.contains(modules_[i]))
                 revert NotWhitelistedModule(modules_[i]);
             _whitelistedModules.add(modules_[i]);
         }
@@ -164,18 +156,21 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
 
     function blacklistModules(address[] calldata modules_) external onlyOwner {
         uint256 len = modules_.length;
-        for(uint256 i; i<len; i++) {
-            if(!_whitelistedModules.contains(modules_[i]))
+        for (uint256 i; i < len; i++) {
+            if (!_whitelistedModules.contains(modules_[i]))
                 revert AlreadyWhitelisted(modules_[i]);
-            if(address(module) == modules_[i])
-                revert ActiveModule();
+            if (address(module) == modules_[i]) revert ActiveModule();
             _whitelistedModules.remove(modules_[i]);
         }
 
         emit LogBlackListedModules(modules_);
     }
 
-    function whitelistedModules() external view returns(address[] memory modules) {
+    function whitelistedModules()
+        external
+        view
+        returns (address[] memory modules)
+    {
         return _whitelistedModules.values();
     }
 
@@ -231,14 +226,32 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         uint256 proportion_
     ) internal nonReentrant returns (uint256 amount0, uint256 amount1) {
         (uint256 total0, uint256 total1) = totalUnderlying();
-        amount0 = FullMath.mulDiv(total0, proportion_,PIPS);
+        if (total0 == 0 && total1 == 0) {
+            total0 = _init0;
+            total1 = _init1;
+        }
+        amount0 = FullMath.mulDiv(total0, proportion_, PIPS);
         amount1 = FullMath.mulDiv(total1, proportion_, PIPS);
-        uint256 feeProportion = FullMath.mulDiv(proportion_, managerFeePIPS, PIPS);
+        uint256 feeProportion = FullMath.mulDiv(
+            proportion_,
+            managerFeePIPS,
+            PIPS
+        );
         _tokenSender = msg.sender;
-        (uint256 d0, uint256 d1) = module.deposit(proportion_-feeProportion);
+        (uint256 d0, uint256 d1) = module.deposit(proportion_ - feeProportion);
 
-        IERC20(token0).safeTransferFrom(msg.sender, address(this), amount0-d0);
-        IERC20(token0).safeTransferFrom(msg.sender, address(this), amount1-d1);
+        if(amount0 - d0 > 0)
+        IERC20(token0).safeTransferFrom(
+            msg.sender,
+            address(this),
+            amount0 - d0
+        );
+        if(amount1 - d1 > 0)
+        IERC20(token1).safeTransferFrom(
+            msg.sender,
+            address(this),
+            amount1 - d1
+        );
 
         managerBalance0 += FullMath.mulDiv(total0, feeProportion, PIPS);
         managerBalance1 += FullMath.mulDiv(total1, feeProportion, PIPS);

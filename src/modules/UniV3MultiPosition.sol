@@ -7,6 +7,7 @@ import {IERC20, SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/ut
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {IUniswapV3MintCallback} from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3MintCallback.sol";
 import {ReentrancyGuardUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import {Underlying, Position, FullMath} from "../libraries/Underlying.sol";
 import {Pool} from "../libraries/Pool.sol";
@@ -14,19 +15,10 @@ import {UnderlyingPayload, Range, Withdraw, RangeMintBurn} from "../structs/SUni
 import {SafeCast} from "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 import {PIPS} from "../constants/CArrakis.sol";
 
-error ProportionZero();
-error WrongProportion();
-error PoolZeroAddress(uint24 feeTier);
-error NotValidRange();
-error RangeDontExist();
-error LessThanMinDeposit(uint256 deposit0, uint256 deposit1);
-error LessThanMinWithdraw(uint256 withdraw0, uint256 withdraw1);
-error OnlyMetaVault(address caller, address metaVault);
-error ZeroLiquidity();
-
 abstract contract UniV3MultiPosition is
     IArrakisLPModule,
     IUniV3MultiPosition,
+    IUniswapV3MintCallback,
     ReentrancyGuardUpgradeable
 {
     using SafeERC20 for IERC20;
@@ -68,6 +60,23 @@ abstract contract UniV3MultiPosition is
         factory = factory_;
     }
 
+    function uniswapV3MintCallback(
+        uint256 amount0Owed_,
+        uint256 amount1Owed_,
+        bytes calldata /*_data*/
+    ) external override {
+        if (
+            factory.getPool(
+                address(token0),
+                address(token1),
+                IUniswapV3Pool(msg.sender).fee()
+            ) != msg.sender
+        ) revert NotUniswapPool(msg.sender);
+
+        if (amount0Owed_ > 0) token0.safeTransfer(msg.sender, amount0Owed_);
+        if (amount1Owed_ > 0) token1.safeTransfer(msg.sender, amount1Owed_);
+    }
+
     function deposit(
         uint256 proportion_
     )
@@ -104,16 +113,6 @@ abstract contract UniV3MultiPosition is
             if (FullMath.mulDiv(proportion_, init1M, PIPS) == 0) {
                 amount1 = 0;
             }
-
-            uint256 amount0P = init0M != 0
-                ? FullMath.mulDiv(amount0, PIPS, init0M)
-                : type(uint256).max;
-            uint256 amount1P = init1M != 0
-                ? FullMath.mulDiv(amount1, PIPS, init1M)
-                : type(uint256).max;
-
-            if ((amount0P < amount1P ? amount0P : amount1P) == proportion_)
-                revert WrongProportion();
         }
 
         metaVault.moduleCallback(amount0, amount1);
@@ -265,7 +264,7 @@ abstract contract UniV3MultiPosition is
             amount1 += amt1;
         }
 
-        if (amount0 >= minDeposit0_ || amount1 >= minDeposit1_)
+        if (amount0 < minDeposit0_ || amount1 < minDeposit1_)
             revert LessThanMinDeposit(amount0, amount1);
 
         emit LogMint(ranges_, amount0, amount1);

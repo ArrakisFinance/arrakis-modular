@@ -10,6 +10,16 @@ interface IArrakisMetaVault {
     // #region errors.
 
     error AddressZero();
+    error OnlyManager(address caller, address manager);
+    error OnlyModule(address caller, address module);
+    error ProportionGtPIPS(uint256 proportion);
+    error ManagerFeePIPSTooHigh(uint24 managerFeePIPS);
+    error CallFailed();
+    error SameModule();
+    error ModuleNotEmpty(uint256 amount0, uint256 amount1);
+    error AlreadyWhitelisted(address module);
+    error NotWhitelistedModule(address module);
+    error ActiveModule();
 
     // #endregion errors.
 
@@ -39,11 +49,13 @@ interface IArrakisMetaVault {
     /// @param payloads_ datas to use when calling module to rebalance the position.
     function rebalance(bytes[] calldata payloads_) external;
 
-    /// @notice function used by module to get tokens 
+    /// @notice function used by module to get tokens
     function moduleCallback(uint256 amount0, uint256 amount1) external;
 
     /// @notice function used by manager to withdraw fees
-    function withdrawManagerBalance() external returns (uint256 amount0, uint256 amount1);
+    function withdrawManagerBalance()
+        external
+        returns (uint256 amount0, uint256 amount1);
 
     /// @notice function used by owner to set the Manager
     /// responsible to rebalance the position.
@@ -65,7 +77,10 @@ interface IArrakisMetaVault {
 
     /// @notice function used to get the list of modules whitelisted.
     /// @return modules whitelisted modules addresses.
-    function whitelistedModules() external view returns(address[] memory modules);
+    function whitelistedModules()
+        external
+        view
+        returns (address[] memory modules);
 
     /// @notice function used by manager to set the cut he will
     /// take from APY generated from the position managed.
@@ -116,7 +131,7 @@ interface IArrakisMetaVault {
     /// that can be withdrawn by manager.
     function managerBalance1() external view returns (uint256);
 
-    /// @notice function used to get module used to 
+    /// @notice function used to get module used to
     /// open/close/manager a position.
     function module() external view returns (IArrakisLPModule);
 }

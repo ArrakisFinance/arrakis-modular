@@ -4,6 +4,18 @@ pragma solidity 0.8.20;
 import {IOracleWrapper} from "./IOracleWrapper.sol";
 
 interface ISwap {
+    // #region errors.
+
+    error SwapCallFailed(address target, bytes data);
+    error PortFolioValueDecreased(
+        uint256 before0,
+        uint256 before1,
+        uint256 after0,
+        uint256 after1
+    );
+
+    // #endregion errors.
+
     // #region events.
 
     event LogSwap(address target_, bytes data_, int256 amount0, int256 amount1);

@@ -5,7 +5,6 @@ import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IArrakisMetaVault} from "./IArrakisMetaVault.sol";
 
 interface IArrakisLPModule {
-
     // #region events.
 
     event LogDeposit(uint256 proportion, uint256 amount0, uint256 amount1);
@@ -54,7 +53,7 @@ interface IArrakisLPModule {
 
     /// @notice function used to get the amounts of token0 and token1 sitting
     /// on the position for a specific price.
-    /// @param priceX96 price at which we want to simulate our tokens composition
+    /// @param priceX96_ price at which we want to simulate our tokens composition
     /// @return amount0 the amount of token0 sitting on the position for priceX96.
     /// @return amount1 the amount of token1 sitting on the position for priceX96.
     function totalUnderlyingAtPrice(

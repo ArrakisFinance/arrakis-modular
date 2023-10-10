@@ -5,14 +5,6 @@ import {UniV3MultiPosition, IUniswapV3Factory, IArrakisMetaVault, IERC20, FullMa
 import {ISwap, IOracleWrapper} from "../interfaces/ISwap.sol";
 import {IERC20Decimals} from "../interfaces/IERC20Decimals.sol";
 
-error SwapCallFailed(address target, bytes data);
-error PortFolioValueDecreased(
-    uint256 before0,
-    uint256 before1,
-    uint256 after0,
-    uint256 after1
-);
-
 contract UniV3MultiPositionWithSwap is ISwap, UniV3MultiPosition {
     IOracleWrapper public oracle;
 

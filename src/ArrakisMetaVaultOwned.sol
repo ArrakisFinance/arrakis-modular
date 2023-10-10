@@ -6,11 +6,6 @@ import {ArrakisMetaVault} from "./ArrakisMetaVault.sol";
 import {FullMath} from "v3-lib-0.8/FullMath.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
-error NotImplemented();
-error MintZero();
-error BurnZero();
-error BurnOverflow();
-
 contract ArrakisMetaVaultOwned is ArrakisMetaVault, IArrakisMetaOwned {
     constructor(
         address token0_,

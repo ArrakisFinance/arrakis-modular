@@ -2,6 +2,15 @@
 pragma solidity 0.8.20;
 
 interface IArrakisMetaToken {
+    // #region errors.
+
+    error NotImplemented();
+    error MintZero();
+    error BurnZero();
+    error BurnOverflow();
+
+    // #endregion errors.
+
     // #region events.
 
     event LogMint(
