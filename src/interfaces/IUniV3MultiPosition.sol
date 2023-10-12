@@ -17,6 +17,7 @@ interface IUniV3MultiPosition {
     error OnlyMetaVault(address caller, address metaVault);
     error ZeroLiquidity();
     error NotUniswapPool(address caller);
+    error NotPayable();
 
     // #endregion errors.
 

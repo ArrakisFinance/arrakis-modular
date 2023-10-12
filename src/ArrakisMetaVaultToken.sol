@@ -2,10 +2,10 @@
 pragma solidity 0.8.20;
 
 import {IArrakisMetaToken} from "./interfaces/IArrakisMetaToken.sol";
-import {ERC20} from "solady/src/tokens/ERC20.sol";
+import {ERC20} from "@solady/contracts/tokens/ERC20.sol";
 import {ArrakisMetaVault, PIPS} from "./ArrakisMetaVault.sol";
-import {FullMath} from "v3-lib-0.8/FullMath.sol";
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
     string internal _name;

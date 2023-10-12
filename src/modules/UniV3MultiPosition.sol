@@ -3,16 +3,16 @@ pragma solidity 0.8.20;
 
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IUniV3MultiPosition} from "../interfaces/IUniV3MultiPosition.sol";
-import {IERC20, SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IUniswapV3MintCallback} from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3MintCallback.sol";
-import {ReentrancyGuardUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {Underlying, Position, FullMath} from "../libraries/Underlying.sol";
 import {Pool} from "../libraries/Pool.sol";
 import {UnderlyingPayload, Range, Withdraw, RangeMintBurn} from "../structs/SUniswap.sol";
-import {SafeCast} from "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {PIPS} from "../constants/CArrakis.sol";
 
 abstract contract UniV3MultiPosition is
@@ -81,10 +81,12 @@ abstract contract UniV3MultiPosition is
         uint256 proportion_
     )
         external
+        payable
         nonReentrant
         onlyVault
         returns (uint256 amount0, uint256 amount1)
     {
+        if(msg.value > 0) revert NotPayable();
         if (proportion_ == 0) revert ProportionZero();
 
         (amount0, amount1) = Underlying.totalUnderlyingForMint(
