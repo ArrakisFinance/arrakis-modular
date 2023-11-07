@@ -3,13 +3,13 @@ pragma solidity 0.8.20;
 
 import {UnderlyingPayload, ComputeFeesPayload, PositionUnderlying, GetFeesPayload, RangeData} from "../structs/SUniswap.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {FullMath, LiquidityAmounts} from "v3-lib-0.8/LiquidityAmounts.sol";
-import {TickMath} from "v3-lib-0.8/TickMath.sol";
-import {SqrtPriceMath} from "v3-lib-0.8/SqrtPriceMath.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {FullMath, LiquidityAmounts} from "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
+import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
+import {SqrtPriceMath} from "@v3-lib-0.8/contracts/SqrtPriceMath.sol";
 import {PIPS} from "../constants/CArrakis.sol";
 import {Position} from "./Position.sol";
-import {SafeCast} from "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 library Underlying {
     // solhint-disable-next-line function-max-lines

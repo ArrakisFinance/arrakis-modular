@@ -3,11 +3,11 @@ pragma solidity 0.8.20;
 
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
-import {IERC20, SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
-import {EnumerableSet} from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
-import {Ownable} from "solady/src/auth/Ownable.sol";
-import {FullMath} from "v3-lib-0.8/FullMath.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {Ownable} from "@solady/contracts/auth/Ownable.sol";
+import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 import {PIPS} from "./constants/CArrakis.sol";
 
 contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {

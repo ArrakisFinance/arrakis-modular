@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IArrakisMetaVault} from "./IArrakisMetaVault.sol";
 
 interface IArrakisLPModule {
@@ -18,7 +18,7 @@ interface IArrakisLPModule {
     /// @return amount1 amount of token1 deposited.
     function deposit(
         uint256 proportion_
-    ) external returns (uint256 amount0, uint256 amount1);
+    ) external payable returns (uint256 amount0, uint256 amount1);
 
     /// @notice function used by metaVault to withdraw tokens from the strategy.
     /// @param proportion_ number of share needed to be withdrawn.
