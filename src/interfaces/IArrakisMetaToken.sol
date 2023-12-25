@@ -4,7 +4,6 @@ pragma solidity 0.8.20;
 interface IArrakisMetaToken {
     // #region errors.
 
-    error NotImplemented();
     error MintZero();
     error BurnZero();
     error BurnOverflow();
@@ -36,7 +35,7 @@ interface IArrakisMetaToken {
     function mint(
         uint256 shares_,
         address receiver_
-    ) external returns (uint256 amount0, uint256 amount1);
+    ) external payable returns (uint256 amount0, uint256 amount1);
 
     /// @notice function used to burn share of the vault position.
     /// @param shares_ amount of share that will be burn.

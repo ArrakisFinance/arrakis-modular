@@ -11,14 +11,12 @@ contract ArrakisMetaVaultOwned is ArrakisMetaVault, IArrakisMetaOwned {
         address token0_,
         address token1_,
         address owner_,
-        uint256 init0_,
-        uint256 init1_,
         address module_
-    ) ArrakisMetaVault(token0_, token1_, owner_, init0_, init1_, module_) {}
+    ) ArrakisMetaVault(token0_, token1_, owner_, module_) {}
 
     function deposit(
         uint256 proportion_
-    ) external onlyOwner returns (uint256 amount0, uint256 amount1) {
+    ) external payable onlyOwner returns (uint256 amount0, uint256 amount1) {
         (amount0, amount1) = _deposit(proportion_);
     }
 
@@ -26,9 +24,6 @@ contract ArrakisMetaVaultOwned is ArrakisMetaVault, IArrakisMetaOwned {
         uint256 proportion_,
         address receiver_
     ) external onlyOwner returns (uint256 amount0, uint256 amount1) {
-        (amount0, amount1) = _withdraw(proportion_);
-
-        if (amount0 > 0) IERC20(token0).transfer(receiver_, amount0);
-        if (amount1 > 0) IERC20(token1).transfer(receiver_, amount1);
+        (amount0, amount1) = _withdraw(receiver_, proportion_);
     }
 }

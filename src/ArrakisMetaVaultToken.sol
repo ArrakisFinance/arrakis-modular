@@ -15,14 +15,33 @@ contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
         address token0_,
         address token1_,
         address owner_,
-        uint256 init0_,
-        uint256 init1_,
         address module_,
         string memory name_,
         string memory symbol_
-    ) ArrakisMetaVault(token0_, token1_, owner_, init0_, init1_, module_) {
+    ) ArrakisMetaVault(token0_, token1_, owner_, module_) {
         _name = name_;
         _symbol = symbol_;
+    }
+
+    function mint(
+        uint256 shares_,
+        address receiver_
+    ) external payable returns (uint256 amount0, uint256 amount1) {
+        if (shares_ == 0) revert MintZero();
+        uint256 supply = totalSupply();
+
+        // should we do a mulDivRoundup
+        uint256 proportion = FullMath.mulDiv(
+            shares_,
+            PIPS,
+            supply > 0 ? supply : 1 ether
+        );
+
+        _mint(receiver_, shares_);
+
+        (amount0, amount1) = _deposit(proportion);
+
+        emit LogMint(shares_, receiver_, amount0, amount1);
     }
 
     function burn(
@@ -37,32 +56,9 @@ contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
 
         _burn(msg.sender, shares_);
 
-        (amount0, amount1) = _withdraw(proportion);
-
-        if (amount0 > 0) IERC20(token0).transfer(receiver_, amount0);
-        if (amount1 > 0) IERC20(token1).transfer(receiver_, amount1);
+        (amount0, amount1) = _withdraw(receiver_, proportion);
 
         emit LogBurn(shares_, receiver_, amount0, amount1);
-    }
-
-    function mint(
-        uint256 shares_,
-        address receiver_
-    ) external returns (uint256 amount0, uint256 amount1) {
-        if (shares_ == 0) revert MintZero();
-        uint256 supply = totalSupply();
-
-        uint256 proportion = FullMath.mulDiv(
-            shares_,
-            PIPS,
-            supply > 0 ? supply : 1 ether
-        );
-
-        _mint(receiver_, shares_);
-
-        (amount0, amount1) = _deposit(proportion);
-
-        emit LogMint(shares_, receiver_, amount0, amount1);
     }
 
     function name() public view override returns (string memory) {
