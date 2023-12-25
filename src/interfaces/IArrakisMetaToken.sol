@@ -4,6 +4,7 @@ pragma solidity 0.8.20;
 interface IArrakisMetaToken {
     // #region errors.
 
+
     error MintZero();
     error BurnZero();
     error BurnOverflow();

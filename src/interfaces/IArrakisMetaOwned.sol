@@ -2,6 +2,15 @@
 pragma solidity 0.8.20;
 
 interface IArrakisMetaOwned {
+    // #region errors.
+
+    error NotImplemented();
+    error MintZero();
+    error BurnZero();
+    error BurnOverflow();
+
+    // #endregion errors.
+
     /// @notice function used to deposit tokens or expand position inside the
     /// inherent strategy.
     /// @param proportion_ the proportion of position expansion.
