@@ -14,22 +14,31 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
     EnumerableSet.AddressSet internal _tokenVaults;
     EnumerableSet.AddressSet internal _ownedVaults;
 
+    /// @notice function used to deploy ERC20 token wrapped Arrakis
+    /// Meta Vault.
+    /// @param token0_ address of the first token of the token pair.
+    /// @param token1_ address of the second token of the token pair.
+    /// @param owner_ address of the owner of the vault.
+    /// @param module_ address of the initial module that will be used
+    /// by Meta Vault.
+    /// @return vault address of the newly created Token Meta Vault.
     function deployTokenMetaVault(
         address token0_,
         address token1_,
         address owner_,
-        address module_,
-        string memory name_,
-        string memory symbol_
+        address module_
     ) external returns (address vault) {
+        string memory name = getTokenName(token0_, token1_);
+        string memory symbol = getTokenSymbol(token0_, token1_);
+
         vault = address(
             new ArrakisMetaVaultToken(
                 token0_,
                 token1_,
                 owner_,
                 module_,
-                name_,
-                symbol_
+                name,
+                symbol
             )
         );
         _tokenVaults.add(vault);
@@ -37,6 +46,14 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
         emit LogTokenVaultCreation(msg.sender, vault);
     }
 
+    /// @notice function used to deploy ERC20 owned Arrakis
+    /// Meta Vault.
+    /// @param token0_ address of the first token of the token pair.
+    /// @param token1_ address of the second token of the token pair.
+    /// @param owner_ address of the owner of the vault.
+    /// @param module_ address of the initial module that will be used
+    /// by Meta Vault.
+    /// @return vault address of the newly created Owned Meta Vault.
     function deployOwnedMetaVault(
         address token0_,
         address token1_,
@@ -60,10 +77,23 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
     function getTokenName(
         address token0_,
         address token1_
-    ) external view returns (string memory) {
+    ) public view returns (string memory) {
         string memory symbol0 = IERC20Metadata(token0_).symbol();
         string memory symbol1 = IERC20Metadata(token1_).symbol();
         return _append("Arrakis Modular ", symbol0, "/", symbol1);
+    }
+
+    /// @notice get Arrakis Modular standard token symbol for two corresponding tokens.
+    /// @param token0_ address of the first token.
+    /// @param token1_ address of the second token.
+    /// @return symbol symbol of the arrakis modular token vault.
+    function getTokenSymbol(
+        address token0_,
+        address token1_
+    ) public view returns (string memory) {
+        string memory symbol0 = IERC20Metadata(token0_).symbol();
+        string memory symbol1 = IERC20Metadata(token1_).symbol();
+        return string(abi.encodePacked("AM", "/", symbol0, "/", symbol1));
     }
 
     /// @notice get a list of token vaults created by this factory
@@ -133,7 +163,7 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
         string memory b_,
         string memory c_,
         string memory d_
-    ) pure returns (string memory) {
+    ) internal pure returns (string memory) {
         return string(abi.encodePacked(a_, b_, c_, d_));
     }
 
