@@ -22,12 +22,13 @@ contract Manager is IManager, Ownable {
     // #region internal properties.
 
     EnumerableSet.AddressSet internal _whitelistedVaults;
+    EnumerableSet.AddressSet internal _whitelistedRebalancers;
 
     // #endregion internal properties.
 
     constructor(address owner_, address defaultReceiver_) {
         if (owner_ == address(0) || defaultReceiver_ == address(0))
-            revert AddressZero();        
+            revert AddressZero();
         _initializeOwner(owner_);
         defaultReceiver = defaultReceiver_;
 
@@ -102,13 +103,12 @@ contract Manager is IManager, Ownable {
 
     function whitelistVaults(address[] calldata vaults_) external onlyOwner {
         uint256 _length = vaults_.length;
-        if (_length == 0) revert EmptyVaultArray();
+        if (_length == 0) revert EmptyVaultsArray();
 
         for (uint256 i; i < _length; i++) {
             address _vault = vaults_[i];
 
-            if(_vault == address(0))
-                revert AddressZero();
+            if (_vault == address(0)) revert AddressZero();
 
             if (_whitelistedVaults.contains(_vault))
                 revert AlreadyWhitelistedVault(_vault);
@@ -116,18 +116,37 @@ contract Manager is IManager, Ownable {
             _whitelistedVaults.add(_vault);
         }
 
-        emit LogWhitelistVault(vaults_);
+        emit LogWhitelistVaults(vaults_);
+    }
+
+    function whitelistRebalancers(
+        address[] calldata rebalancers_
+    ) external onlyOwner {
+        uint256 _length = rebalancers_.length;
+        if (_length == 0) revert EmptyRebalancersArray();
+
+        for (uint256 i; i < _length; i++) {
+            address _rebalancer = rebalancers_[i];
+
+            if (_rebalancer == address(0)) revert AddressZero();
+
+            if (_whitelistedRebalancers.contains(_rebalancer))
+                revert AlreadyWhitelistedRebalancer(_rebalancer);
+
+            _whitelistedRebalancers.add(_rebalancer);
+        }
+
+        emit LogWhitelistRebalancers(rebalancers_);
     }
 
     function blacklistVaults(address[] calldata vaults_) external onlyOwner {
         uint256 _length = vaults_.length;
-        if (_length == 0) revert EmptyVaultArray();
+        if (_length == 0) revert EmptyVaultsArray();
 
         for (uint256 i; i < _length; i++) {
             address _vault = vaults_[i];
 
-            if(_vault == address(0))
-                revert AddressZero();
+            if (_vault == address(0)) revert AddressZero();
 
             if (!_whitelistedVaults.contains(_vault))
                 revert NotWhitelistedVault(_vault);
@@ -135,13 +154,33 @@ contract Manager is IManager, Ownable {
             _whitelistedVaults.remove(_vault);
         }
 
-        emit LogBlacklistVault(vaults_);
+        emit LogBlacklistVaults(vaults_);
     }
 
-    function rebalance(
-        address vault_,
-        bytes[] calldata payloads_
+    function blacklistRebalancers(
+        address[] calldata rebalancers_
     ) external onlyOwner {
+        uint256 _length = rebalancers_.length;
+        if (_length == 0) revert EmptyRebalancersArray();
+
+        for (uint256 i; i < _length; i++) {
+            address _rebalancer = rebalancers_[i];
+
+            if (_rebalancer == address(0)) revert AddressZero();
+
+            if (!_whitelistedRebalancers.contains(_rebalancer))
+                revert NotWhitelistedRebalancer(_rebalancer);
+
+            _whitelistedRebalancers.remove(_rebalancer);
+        }
+
+        emit LogBlacklistRebalancers(rebalancers_);
+    }
+
+    function rebalance(address vault_, bytes[] calldata payloads_) external {
+        if (!_whitelistedRebalancers.contains(msg.sender))
+            revert OnlyRebalancers(msg.sender);
+
         if (!_whitelistedVaults.contains(vault_))
             revert NotWhitelistedVault(vault_);
 
@@ -155,7 +194,7 @@ contract Manager is IManager, Ownable {
             if (!success) revert CallFailed(payloads_[i]);
         }
 
-        emit LogRebalance(payloads_);
+        emit LogRebalance(vault_, payloads_);
     }
 
     function setModule(
@@ -193,8 +232,20 @@ contract Manager is IManager, Ownable {
 
     // #region view functions.
 
-    function whitelistedVaults() external view returns(address[] memory vaults) {
+    function whitelistedVaults()
+        external
+        view
+        returns (address[] memory vaults)
+    {
         return _whitelistedVaults.values();
+    }
+
+    function whitelistedRebalancers()
+        external
+        view
+        returns (address[] memory rebalancers)
+    {
+        return _whitelistedRebalancers.values();
     }
 
     // #endregion view functions.
