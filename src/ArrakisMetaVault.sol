@@ -50,6 +50,7 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         if (token0_ == address(0)) revert AddressZero("Token 0");
         if (token1_ == address(0)) revert AddressZero("Token 1");
         if (token0_ > token1_) revert Token0GtToken1();
+        if (token0_ == token1_) revert Token0EqToken1();
         if (owner_ == address(0)) revert AddressZero("Owner");
         if (module_ == address(0)) revert AddressZero("Module");
 

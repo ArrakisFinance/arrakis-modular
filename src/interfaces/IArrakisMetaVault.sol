@@ -20,6 +20,7 @@ interface IArrakisMetaVault {
     error NotWhitelistedModule(address module);
     error ActiveModule();
     error Token0GtToken1();
+    error Token0EqToken1();
 
     // #endregion errors.
 
