@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IValantisModule} from "../interfaces/IValantisSOTModule.sol";
@@ -8,14 +8,10 @@ import {ISovereignPool} from "../interfaces/ISovereignPool.sol";
 import {ISovereignALM} from "../interfaces/ISovereignALM.sol";
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {PIPS} from "../constants/CArrakis.sol";
 
-contract ValantisModule is
-    IArrakisLPModule,
-    IValantisModule,
-    ReentrancyGuard
-{
+contract ValantisModule is IArrakisLPModule, IValantisModule, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // #region public immutable properties.
@@ -43,23 +39,7 @@ contract ValantisModule is
         _;
     }
 
-    modifier onlyPool() {
-        if (msg.sender != address(pool))
-            revert OnlyPool(msg.sender, address(pool));
-        _;
-    }
-
     // #endregion modifiers.
-
-    // #region enums.
-
-    enum AccessType {
-        SWAP,
-        DEPOSIT,
-        WITHDRAW
-    }
-
-    // #endregion enums.
 
     constructor(
         address metaVault_,
@@ -149,7 +129,7 @@ contract ValantisModule is
 
         // #endregion interactions.
 
-        emit LogDeposit(proportion_, amount0, amount1);
+        emit LogDeposit(depositor_, proportion_, amount0, amount1);
     }
 
     function withdraw(
@@ -210,7 +190,7 @@ contract ValantisModule is
 
         // #endregion assertions.
 
-        emit LogWithdraw(proportion_, amount0, amount1);
+        emit LogWithdraw(receiver_, proportion_, amount0, amount1);
     }
 
     function withdrawManagerBalance()
