@@ -51,16 +51,6 @@ contract ValantisModule is
 
     // #endregion modifiers.
 
-    // #region enums.
-
-    enum AccessType {
-        SWAP,
-        DEPOSIT,
-        WITHDRAW
-    }
-
-    // #endregion enums.
-
     constructor(
         address metaVault_,
         address pool_,
