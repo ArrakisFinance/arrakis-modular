@@ -43,12 +43,6 @@ contract ValantisModule is
         _;
     }
 
-    modifier onlyPool() {
-        if (msg.sender != address(pool))
-            revert OnlyPool(msg.sender, address(pool));
-        _;
-    }
-
     // #endregion modifiers.
 
     constructor(
