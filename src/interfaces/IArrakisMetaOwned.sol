@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 interface IArrakisMetaOwned {
     // #region errors.
@@ -18,7 +18,7 @@ interface IArrakisMetaOwned {
     /// @return amount1 amount of token1 need to increase the position by proportion_;
     function deposit(
         uint256 proportion_
-    ) external returns (uint256 amount0, uint256 amount1);
+    ) external payable returns (uint256 amount0, uint256 amount1);
 
     /// @notice function used to withdraw tokens or position contraction of the
     /// underpin strategy.
