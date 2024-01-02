@@ -66,10 +66,12 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         emit LogWhitelistedModule(module_);
     }
 
-    function setManager(address newManager) external onlyOwner nonReentrant {
+    function setManager(address newManager_) external onlyOwner nonReentrant {
+        if (newManager_ == address(0))
+                revert AddressZero("New Manager");
         if (manager != address(0)) _withdrawManagerBalance(module);
 
-        emit LogSetManager(manager, manager = newManager);
+        emit LogSetManager(manager, manager = newManager_);
     }
 
     function setModule(
@@ -118,6 +120,8 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         uint256 len = modules_.length;
         for (uint256 i; i < len; i++) {
             address _module = modules_[i];
+            if (_module == address(0))
+                revert AddressZero("Module");
             if (_whitelistedModules.contains(_module))
                 revert AlreadyWhitelisted(_module);
             _whitelistedModules.add(_module);
