@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import {IArrakisMetaToken} from "./interfaces/IArrakisMetaToken.sol";
 import {ERC20} from "@solady/contracts/tokens/ERC20.sol";
 import {ArrakisMetaVault, PIPS} from "./ArrakisMetaVault.sol";
-import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {

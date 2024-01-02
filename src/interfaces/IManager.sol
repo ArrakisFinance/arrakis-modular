@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 interface IManager {
     // #region errors.
 
     error AddressZero();
     error NotWhitelistedVault(address vault);
+    error NotWhitelistedRebalancer(address rebalancer);
     error AlreadyWhitelistedVault(address vault);
-    error EmptyVaultArray();
+    error AlreadyWhitelistedRebalancer(address rebalancer);
+    error EmptyVaultsArray();
+    error EmptyRebalancersArray();
     error CallFailed(bytes payload);
     error NotSameLengthArray(
         uint256 vaultsArrayLength,
         uint256 feePIPSArrayLength
     );
+    error OnlyRebalancers(address caller);
 
     // #endregion errors.
 
@@ -26,9 +30,11 @@ interface IManager {
         uint256 amount0,
         uint256 amount1
     );
-    event LogWhitelistVault(address[] vaults);
-    event LogBlacklistVault(address[] vaults);
-    event LogRebalance(bytes[] payloads);
+    event LogWhitelistVaults(address[] vaults);
+    event LogWhitelistRebalancers(address[] rebalancers);
+    event LogBlacklistVaults(address[] vaults);
+    event LogBlacklistRebalancers(address[] rebalancers);
+    event LogRebalance(address indexed vault, bytes[] payloads);
     event LogSetModule(address indexed vault, address module, bytes[] payloads);
     event LogSetManagerFeePIPS(address[] vaults, uint256[] feePIPS);
 
@@ -47,9 +53,17 @@ interface IManager {
     /// @param vaults_ list of vault address to add.
     function whitelistVaults(address[] calldata vaults_) external;
 
+    /// @notice function used to add rebalancers that will be able to rebalance.
+    /// @param rebalancers_ list of rebalancer address to add.
+    function whitelistRebalancers(address[] calldata rebalancers_) external;
+
     /// @notice function used to remove vault under management.
     /// @param vaults_ list of vault address to remove.
     function blacklistVaults(address[] calldata vaults_) external;
+
+    /// @notice function used to remove rebalancers.
+    /// @param rebalancers_ list of rebalancers address to remove.
+    function blacklistRebalancers(address[] calldata rebalancers_) external;
 
     /// @notice function used to manage vault's strategy.
     /// @param vault_ address of the vault that need a rebalance.
@@ -97,4 +111,11 @@ interface IManager {
         external
         view
         returns (address[] memory vaults);
+
+    /// @notice function used to get the list of rebalancers.
+    /// @return rebalancers set of rebalancers.
+    function whitelistedRebalancers()
+        external
+        view
+        returns (address[] memory rebalancers);
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -28,8 +28,16 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
         address owner_,
         address module_
     ) external returns (address vault) {
-        string memory name = getTokenName(token0_, token1_);
-        string memory symbol = getTokenSymbol(token0_, token1_);
+        string memory name = "Arrakis Modular Vault";
+        string memory symbol = "AMV";
+
+        try this.getTokenName(token0_, token1_) returns (string memory result) {
+            name = result;
+        } catch {} // solhint-disable-line no-empty-blocks
+
+        try this.getTokenSymbol(token0_, token1_) returns (string memory result) {
+            symbol = result;
+        } catch {} // solhint-disable-line no-empty-blocks
 
         vault = address(
             new ArrakisMetaVaultToken(

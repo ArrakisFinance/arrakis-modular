@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import {UnderlyingPayload, ComputeFeesPayload, PositionUnderlying, GetFeesPayload, RangeData} from "../structs/SUniswapV4.sol";
 import {PIPS} from "../constants/CArrakis.sol";
 
-import {IPoolManager} from "@uniswap/v4-core/contracts/interfaces/IPoolManager.sol";
-import {FullMath} from "@uniswap/v4-core/contracts/libraries/FullMath.sol";
-import {TickMath} from "@uniswap/v4-core/contracts/libraries/TickMath.sol";
-import {Position} from "@uniswap/v4-core/contracts/libraries/Position.sol";
-import {FixedPoint128} from "@uniswap/v4-core/contracts/libraries/FixedPoint128.sol";
-import {SqrtPriceMath} from "@uniswap/v4-core/contracts/libraries/SqrtPriceMath.sol";
-import {PoolIdLibrary, PoolId} from "@uniswap/v4-core/contracts/types/PoolId.sol";
-import {PoolKey} from "@uniswap/v4-core/contracts/types/PoolKey.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
+import {FixedPoint128} from "@uniswap/v4-core/src/libraries/FixedPoint128.sol";
+import {SqrtPriceMath} from "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
+import {PoolIdLibrary, PoolId} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {LiquidityAmounts} from "@uniswap/v4-periphery/contracts/libraries/LiquidityAmounts.sol";
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -117,7 +117,7 @@ library UnderlyingV4 {
         view
         returns (uint256 amount0, uint256 amount1, uint256 fee0, uint256 fee1)
     {
-        (uint160 sqrtPriceX96, , , ) = underlying_.poolManager.getSlot0(
+        (uint160 sqrtPriceX96, , ) = underlying_.poolManager.getSlot0(
             PoolIdLibrary.toId(underlying_.range.poolKey)
         );
         PositionUnderlying memory positionUnderlying = PositionUnderlying({
@@ -141,7 +141,7 @@ library UnderlyingV4 {
         view
         returns (uint256 amount0, uint256 amount1, uint256 fee0, uint256 fee1)
     {
-        (uint160 sqrtPriceX96, , , ) = underlying_.poolManager.getSlot0(
+        (uint160 sqrtPriceX96, , ) = underlying_.poolManager.getSlot0(
             PoolIdLibrary.toId(underlying_.range.poolKey)
         );
         PositionUnderlying memory positionUnderlying = PositionUnderlying({
@@ -423,7 +423,7 @@ library UnderlyingV4 {
             // #endregion tickInfo Upper tick.
             // #region get slot0.
 
-            (, feeGrowthInside.tickCurrent, , ) = poolManager_.getSlot0(
+            (, feeGrowthInside.tickCurrent, ) = poolManager_.getSlot0(
                 poolId_
             );
 
