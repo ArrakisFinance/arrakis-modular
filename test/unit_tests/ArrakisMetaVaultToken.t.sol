@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import {console} from "forge-std/console.sol";
 
@@ -16,7 +16,7 @@ import {ManagerMock} from "../mocks/ManagerMock.sol";
 import {LpModuleMock} from "../mocks/LpModuleMock.sol";
 import {BuggyLpModuleMock} from "../mocks/BuggyLpModule.sol";
 
-import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 
 // #endregion mock contracts.
 

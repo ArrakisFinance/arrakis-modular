@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 interface ISovereignALM {
-
     // #region valantis structs.
 
     struct ALMLiquidityQuoteInput {
@@ -46,6 +45,11 @@ interface ISovereignALM {
         address recipient_,
         bytes calldata withdrawalVerificationContext_
     ) external returns (uint256 amount0, uint256 amount1);
+
+    function getSqrtOraclePriceX96()
+        external
+        view
+        returns (uint160 sqrtOraclePriceX96);
 
     function getReserves()
         external

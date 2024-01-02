@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import {ISovereignALM} from "../../src/interfaces/ISovereignALM.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -90,6 +90,14 @@ contract SovereignALMMock is ISovereignALM {
 
     function totalSupply() external view returns (uint256) {
         return shares;
+    }
+
+    function getSqrtOraclePriceX96()
+        external
+        view
+        returns (uint160 sqrtOraclePriceX96)
+    {
+        return 0;
     }
 
     // #region mock functions.

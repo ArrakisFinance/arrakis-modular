@@ -20,8 +20,8 @@ interface IArrakisLPModule {
 
     // #region events.
 
-    event LogDeposit(uint256 proportion, uint256 amount0, uint256 amount1);
-    event LogWithdraw(uint256 proportion, uint256 amount0, uint256 amount1);
+    event LogDeposit(address indexed depositor, uint256 proportion, uint256 amount0, uint256 amount1);
+    event LogWithdraw(address indexed receiver, uint256 proportion, uint256 amount0, uint256 amount1);
     event LogWithdrawManagerBalance(address manager, uint256 amount0, uint256 amount1);
     event LogSetManagerFeePIPS(uint256 oldFee, uint256 newFee);
 
