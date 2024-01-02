@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
@@ -7,7 +7,7 @@ import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
-import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {PIPS} from "./constants/CArrakis.sol";
 
 contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
@@ -50,6 +50,7 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         if (token0_ == address(0)) revert AddressZero("Token 0");
         if (token1_ == address(0)) revert AddressZero("Token 1");
         if (token0_ > token1_) revert Token0GtToken1();
+        if (token0_ == token1_) revert Token0EqToken1();
         if (owner_ == address(0)) revert AddressZero("Owner");
         if (module_ == address(0)) revert AddressZero("Module");
 
@@ -65,10 +66,12 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         emit LogWhitelistedModule(module_);
     }
 
-    function setManager(address newManager) external onlyOwner nonReentrant {
+    function setManager(address newManager_) external onlyOwner nonReentrant {
+        if (newManager_ == address(0))
+                revert AddressZero("New Manager");
         if (manager != address(0)) _withdrawManagerBalance(module);
 
-        emit LogSetManager(manager, manager = newManager);
+        emit LogSetManager(manager, manager = newManager_);
     }
 
     function setModule(
@@ -117,6 +120,8 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         uint256 len = modules_.length;
         for (uint256 i; i < len; i++) {
             address _module = modules_[i];
+            if (_module == address(0))
+                revert AddressZero("Module");
             if (_whitelistedModules.contains(_module))
                 revert AlreadyWhitelisted(_module);
             _whitelistedModules.add(_module);

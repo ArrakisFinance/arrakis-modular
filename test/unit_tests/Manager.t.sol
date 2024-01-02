@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import {console} from "forge-std/console.sol";
 
@@ -91,7 +91,7 @@ contract ManagerTest is TestWrapper {
 
         vm.prank(owner);
 
-        vm.expectRevert(IManager.EmptyVaultArray.selector);
+        vm.expectRevert(IManager.EmptyVaultsArray.selector);
 
         manager.whitelistVaults(vaults);
     }
@@ -161,6 +161,84 @@ contract ManagerTest is TestWrapper {
 
     // #endregion test whitelist a vault.
 
+
+    // #region test whitelist a rebalancer.
+
+    function testWhitelistRebalancerEmptyArray() public {
+        address[] memory rebalancers = new address[](0);
+
+        vm.prank(owner);
+
+        vm.expectRevert(IManager.EmptyRebalancersArray.selector);
+
+        manager.whitelistRebalancers(rebalancers);
+    }
+
+    function testWhitelistRebalancerNotOwner() public {
+        address[] memory rebalancers = new address[](1);
+        rebalancers[0] = vm.addr(10);
+
+        vm.expectRevert(0x82b42900);
+
+        manager.whitelistRebalancers(rebalancers);
+    }
+
+    function testWhitelistRebalancerAddressZero() public {
+        address[] memory rebalancers = new address[](1);
+        rebalancers[0] = address(0);
+
+        vm.prank(owner);
+
+        vm.expectRevert(IManager.AddressZero.selector);
+
+        manager.whitelistRebalancers(rebalancers);
+    }
+
+    function testwhitelistRebalancer() public {
+        address[] memory rebalancers = new address[](2);
+        rebalancers[0] = vm.addr(10);
+        rebalancers[1] = vm.addr(11);
+
+        vm.prank(owner);
+
+        manager.whitelistRebalancers(rebalancers);
+
+        address[] memory currentRebalancers = manager.whitelistedRebalancers();
+
+        assertEq(rebalancers[0], currentRebalancers[0]);
+        assertEq(rebalancers[1], currentRebalancers[1]);
+    }
+
+    function testWhitelistAlreadyWhitelistedRebalancer() public {
+        address[] memory rebalancers = new address[](2);
+        rebalancers[0] = vm.addr(10);
+        rebalancers[1] = vm.addr(11);
+
+        vm.prank(owner);
+
+        manager.whitelistRebalancers(rebalancers);
+
+        address[] memory currentRebalancers = manager.whitelistedRebalancers();
+
+        assertEq(rebalancers[0], currentRebalancers[0]);
+        assertEq(rebalancers[1], currentRebalancers[1]);
+
+        rebalancers[0] = vm.addr(12);
+
+        vm.prank(owner);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IManager.AlreadyWhitelistedRebalancer.selector,
+                rebalancers[1]
+            )
+        );
+
+        manager.whitelistRebalancers(rebalancers);
+    }
+
+    // #endregion test whitelist a rebalancer.
+
     // #region test blacklist vault.
 
     function testBlacklistEmptyArray() public {
@@ -168,7 +246,7 @@ contract ManagerTest is TestWrapper {
 
         vm.prank(owner);
 
-        vm.expectRevert(IManager.EmptyVaultArray.selector);
+        vm.expectRevert(IManager.EmptyVaultsArray.selector);
 
         manager.blacklistVaults(vaults);
     }
@@ -230,6 +308,76 @@ contract ManagerTest is TestWrapper {
     }
 
     // #endregion test blacklist vault.
+
+    // #region test blacklist rebalancers.
+
+    function testBlacklistRebalancersEmptyArray() public {
+        address[] memory rebalancers = new address[](0);
+
+        vm.prank(owner);
+
+        vm.expectRevert(IManager.EmptyRebalancersArray.selector);
+
+        manager.blacklistRebalancers(rebalancers);
+    }
+
+    function testBacklistRebalancersNotOwner() public {
+        address[] memory rebalancers = new address[](1);
+        rebalancers[0] = vm.addr(10);
+
+        vm.expectRevert(0x82b42900);
+
+        manager.blacklistRebalancers(rebalancers);
+    }
+
+    function testBlacklistRebalancers() public {
+        address[] memory rebalancers = new address[](2);
+        rebalancers[0] = vm.addr(10);
+        rebalancers[1] = vm.addr(11);
+
+        vm.prank(owner);
+
+        manager.whitelistRebalancers(rebalancers);
+
+        address[] memory currentRebalancers = manager.whitelistedRebalancers();
+
+        assertEq(rebalancers[0], currentRebalancers[0]);
+        assertEq(rebalancers[1], currentRebalancers[1]);
+
+        vm.prank(owner);
+
+        manager.blacklistRebalancers(rebalancers);
+    }
+
+    function testBlacklistRebalancersAddressZero() public {
+        address[] memory rebalancers = new address[](1);
+        rebalancers[0] = address(0);
+
+        vm.prank(owner);
+
+        vm.expectRevert(IManager.AddressZero.selector);
+
+        manager.blacklistRebalancers(rebalancers);
+    }
+
+    function testBlacklistNotAlreadyWhitelistedRebalancers() public {
+        address[] memory rebalancers = new address[](2);
+        rebalancers[0] = vm.addr(10);
+        rebalancers[1] = vm.addr(11);
+
+        vm.prank(owner);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IManager.NotWhitelistedRebalancer.selector,
+                rebalancers[0]
+            )
+        );
+
+        manager.blacklistRebalancers(rebalancers);
+    }
+
+    // #endregion test blacklist rebalancers.
 
     // #region test set receiver by token.
 

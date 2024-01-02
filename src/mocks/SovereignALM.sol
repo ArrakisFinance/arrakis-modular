@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import {ISovereignALM} from "../interfaces/ISovereignALM.sol";
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -138,4 +138,11 @@ contract SovereignALM is ISovereignALM {
             SafeCast.toUint128(token1.balanceOf(address(this)))
         );
     }
+
+    function getSqrtOraclePriceX96()
+        external
+        view
+        returns (uint160 sqrtOraclePriceX96) {
+            return 0;
+        }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import {IArrakisLPModule} from "./IArrakisLPModule.sol";
 
@@ -20,6 +20,7 @@ interface IArrakisMetaVault {
     error NotWhitelistedModule(address module);
     error ActiveModule();
     error Token0GtToken1();
+    error Token0EqToken1();
 
     // #endregion errors.
 

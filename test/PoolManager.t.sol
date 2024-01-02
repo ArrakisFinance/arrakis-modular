@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import {console} from "forge-std/console.sol";
 import "forge-std/Test.sol";
-import {PoolManager} from "@uniswap/v4-core/contracts/PoolManager.sol";
-import {IPoolManager} from "@uniswap/v4-core/contracts/interfaces/IPoolManager.sol";
-import {PoolKey} from "@uniswap/v4-core/contracts/types/PoolKey.sol";
-import {PoolIdLibrary, PoolId} from "@uniswap/v4-core/contracts/types/PoolId.sol";
-import {Currency} from "@uniswap/v4-core/contracts/types/Currency.sol";
-import {FeeLibrary} from "@uniswap/v4-core/contracts/libraries/FeeLibrary.sol";
-import {FixedPoint128} from "@uniswap/v4-core/contracts/libraries/FixedPoint128.sol";
-import {Position} from "@uniswap/v4-core/contracts/libraries/Position.sol";
-import {IHooks} from "@uniswap/v4-core/contracts/interfaces/IHooks.sol";
-import {TickMath} from "@uniswap/v4-core/contracts/libraries/TickMath.sol";
-import {FullMath} from "@uniswap/v4-core/contracts/libraries/FullMath.sol";
+import {PoolManager} from "@uniswap/v4-core/src/PoolManager.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {PoolIdLibrary, PoolId} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {FeeLibrary} from "@uniswap/v4-core/src/libraries/FeeLibrary.sol";
+import {FixedPoint128} from "@uniswap/v4-core/src/libraries/FixedPoint128.sol";
+import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+import {Pool} from "@uniswap/v4-core/src/libraries/Pool.sol";
 import {IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -31,6 +32,7 @@ contract PoolManagerTest is Test {
     IERC20 public tokenA;
     IERC20 public tokenB;
     PoolKey public poolKey;
+    uint160 public sqrtPriceX96;
 
     // #endregion properties.
 
@@ -56,25 +58,24 @@ contract PoolManagerTest is Test {
             hooks: IHooks(address(0))
         });
 
-        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(0);
+        sqrtPriceX96 = TickMath.getSqrtRatioAtTick(0);
 
-        poolManager.initialize(poolKey, sqrtPriceX96, "");
-
-        poolManager.lock(abi.encode(0));
+        poolManager.lock(address(this),abi.encode(2));
 
         // #endregion initialize pool.
     }
 
-    function lockAcquired(bytes calldata data) public returns (bytes memory) {
+    function lockAcquired(address caller, bytes calldata data) public returns (bytes memory) {
         uint256 typeOfLockAcquired = abi.decode(data, (uint256));
 
         if (typeOfLockAcquired == 0) _lockAcquiredAddPosition();
         if (typeOfLockAcquired == 1) _lockAcquiredSwap();
+        if (typeOfLockAcquired == 2) poolManager.initialize(poolKey, sqrtPriceX96, "");
     }
 
     function testExtSload() public {
         // #region swap.
-        poolManager.lock(abi.encode(1));
+        poolManager.lock(address(this), abi.encode(1));
         // #endregion swap.
 
         uint256 POOL_SLOT = 10;
@@ -244,7 +245,7 @@ contract PoolManagerTest is Test {
         // #endregion tickInfo Upper tick.
         // #region get slot0.
 
-        (, int24 tickCurrent, , ) = poolManager.getSlot0(PoolId.wrap(poolId));
+        (, int24 tickCurrent, ) = poolManager.getSlot0(PoolId.wrap(poolId));
 
         // #endregion get slot0.
         // #region pool global fees.

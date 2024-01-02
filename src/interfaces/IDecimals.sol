@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+// solhint-disable-next-line compiler-version
+pragma solidity ^0.8.20;
 
-interface IERC20Decimals {
+interface IDecimals {
     function decimals() external view returns (uint8);
 }
