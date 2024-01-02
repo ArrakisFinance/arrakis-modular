@@ -43,23 +43,7 @@ contract ValantisModule is
         _;
     }
 
-    modifier onlyPool() {
-        if (msg.sender != address(pool))
-            revert OnlyPool(msg.sender, address(pool));
-        _;
-    }
-
     // #endregion modifiers.
-
-    // #region enums.
-
-    enum AccessType {
-        SWAP,
-        DEPOSIT,
-        WITHDRAW
-    }
-
-    // #endregion enums.
 
     constructor(
         address metaVault_,
