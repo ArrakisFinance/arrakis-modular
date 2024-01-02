@@ -16,9 +16,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // #endregion openzeppelin.
 
 // #region constants.
-
 import {PIPS} from "../../src/constants/CArrakis.sol";
-
 // #endregion constants.
 
 // #region mocks.
@@ -26,7 +24,6 @@ import {ManagerMock} from "../mocks/ManagerMock.sol";
 import {ArrakisMetaVaultMock} from "../mocks/ArrakisMetaVaultMock.sol";
 import {SovereignPoolMock} from "../mocks/SovereignPoolMock.sol";
 import {SovereignALMMock} from "../mocks/SovereignALMMock.sol";
-
 // #endregion mocks.
 
 contract ValantisSOTModuleTest is TestWrapper {
@@ -57,7 +54,8 @@ contract ValantisSOTModuleTest is TestWrapper {
             address(sovereignPool),
             address(sovereignALM),
             2000e6,
-            1e18
+            1e18,
+            PIPS/10
         );
 
         metaVault.setManager(address(manager));
@@ -74,7 +72,8 @@ contract ValantisSOTModuleTest is TestWrapper {
             address(sovereignPool),
             address(sovereignALM),
             2000e6,
-            1e18
+            1e18,
+            PIPS/10
         );
     }
 
@@ -86,7 +85,8 @@ contract ValantisSOTModuleTest is TestWrapper {
             address(0),
             address(sovereignALM),
             2000e6,
-            1e18
+            1e18,
+            PIPS/10
         );
     }
 
@@ -98,7 +98,8 @@ contract ValantisSOTModuleTest is TestWrapper {
             address(sovereignPool),
             address(0),
             2000e6,
-            1e18
+            1e18,
+            PIPS/10
         );
     }
 
@@ -110,7 +111,8 @@ contract ValantisSOTModuleTest is TestWrapper {
             address(sovereignPool),
             address(sovereignALM),
             0,
-            0
+            0,
+            PIPS/10
         );
     }
 
@@ -120,7 +122,8 @@ contract ValantisSOTModuleTest is TestWrapper {
             address(sovereignPool),
             address(sovereignALM),
             2000e6,
-            0
+            0,
+            PIPS/10
         );
 
         assertEq(address(metaVault), address(module.metaVault()));

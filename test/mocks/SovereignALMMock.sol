@@ -92,6 +92,14 @@ contract SovereignALMMock is ISovereignALM {
         return shares;
     }
 
+    function getSqrtOraclePriceX96()
+        external
+        view
+        returns (uint160 sqrtOraclePriceX96)
+    {
+        return 0;
+    }
+
     // #region mock functions.
 
     function setModule(address module_) public {

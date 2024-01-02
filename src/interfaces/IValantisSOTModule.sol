@@ -13,8 +13,28 @@ interface IValantisModule {
     error Actual0DifferentExpected(uint256 actual0, uint256 expected0);
     error Actual1DifferentExpected(uint256 actual1, uint256 expected1);
     error NotImplemented();
+    error ExpectedMinReturnTooLow();
+    error MaxSlippageGtTenPercent();
+    error NotEnoughToken0();
+    error NotEnoughToken1();
+    error SwapCallFailed();
+    error SlippageTooHigh();
+    error RouterTakeTooMuchTokenIn();
+    error NotDepositedAllToken0();
+    error NotDepositedAllToken1();
 
     // #endregion errors.
+
+    // #region events.
+
+    event LogSwap(
+        uint256 oldBalance0,
+        uint256 oldBalance1,
+        uint256 newBalance0,
+        uint256 newBalance1
+    );
+
+    // #endregion events.
 
     // #region state modifying functions.
 

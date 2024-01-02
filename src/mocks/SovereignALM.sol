@@ -138,4 +138,11 @@ contract SovereignALM is ISovereignALM {
             SafeCast.toUint128(token1.balanceOf(address(this)))
         );
     }
+
+    function getSqrtOraclePriceX96()
+        external
+        view
+        returns (uint160 sqrtOraclePriceX96) {
+            return 0;
+        }
 }
