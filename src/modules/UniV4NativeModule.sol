@@ -512,14 +512,7 @@ contract UniV4NativeModule is
                 PIPS
             );
 
-            if (liquidity > 0) {
-                IPoolManager.SwapParams memory swapParams = IPoolManager
-                    .SwapParams({
-                        zeroForOne: false,
-                        amountSpecified: 1e18,
-                        sqrtPriceLimitX96: 1e18
-                    });
-
+            if (liquidity > 0)
                 poolManager.modifyPosition(
                     poolKey,
                     IPoolManager.ModifyPositionParams(
@@ -529,7 +522,6 @@ contract UniV4NativeModule is
                     ),
                     new bytes(0)
                 );
-            }
         }
 
         // #endregion get liquidity for each positions and mint.
