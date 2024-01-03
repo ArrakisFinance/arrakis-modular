@@ -246,7 +246,7 @@ contract ValantisModule is IArrakisLPModule, IValantisModule, ReentrancyGuard {
         address router_,
         bytes calldata payload_
     ) external {
-        // #region checks.
+        // #region checks/effects.
 
         // check only manager can call this function.
         {
@@ -266,9 +266,9 @@ contract ValantisModule is IArrakisLPModule, IValantisModule, ReentrancyGuard {
         uint256 _liq = alm.totalSupply();
         if (_liq == 0) revert TotalSupplyZero();
 
-        // #endregion checks.
+        // #endregion checks/effects.
 
-        // #region effects.
+        // #region interactions.
 
         uint256 _amt0;
         uint256 _amt1;
@@ -281,10 +281,6 @@ contract ValantisModule is IArrakisLPModule, IValantisModule, ReentrancyGuard {
             if (zeroForOne_) {
                 if (_amt0 < amountIn_) revert NotEnoughToken0();
             } else if (_amt1 < amountIn_) revert NotEnoughToken1();
-
-            // #endregion effects.
-
-            // #region interactions.
 
             (actual0, actual1) = alm.withdrawLiquidity(
                 _liq,
@@ -402,40 +398,40 @@ contract ValantisModule is IArrakisLPModule, IValantisModule, ReentrancyGuard {
     // #region view functions.
 
     function _getPrice0(
-        uint8 token0Decimals_
+        uint8 decimals0_
     ) internal view returns (uint256 price0) {
         uint256 priceX96 = alm.getSqrtOraclePriceX96();
 
         if (priceX96 <= type(uint128).max) {
             price0 = FullMath.mulDiv(
                 priceX96 * priceX96,
-                10 ** token0Decimals_,
+                10 ** decimals0_,
                 2 ** 192
             );
         } else {
             price0 = FullMath.mulDiv(
                 FullMath.mulDiv(priceX96, priceX96, 1 << 64),
-                10 ** token0Decimals_,
+                10 ** decimals0_,
                 1 << 128
             );
         }
     }
 
     function _getPrice1(
-        uint8 token1Decimals_
+        uint8 decimals1_
     ) internal view returns (uint256 price1) {
         uint256 priceX96 = alm.getSqrtOraclePriceX96();
 
         if (priceX96 <= type(uint128).max) {
             price1 = FullMath.mulDiv(
                 2 ** 192,
-                10 ** token1Decimals_,
+                10 ** decimals1_,
                 priceX96 * priceX96
             );
         } else {
             price1 = FullMath.mulDiv(
                 1 << 128,
-                10 ** token1Decimals_,
+                10 ** decimals1_,
                 FullMath.mulDiv(priceX96, priceX96, 1 << 64)
             );
         }

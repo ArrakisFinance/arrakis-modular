@@ -57,14 +57,6 @@ contract SovereignALM is ISovereignALM {
         module = module_;
     }
 
-    function getLiquidityQuote(
-        ALMLiquidityQuoteInput memory almLiquidityQuoteInput_,
-        bytes calldata externalContext_,
-        bytes calldata
-    ) external returns (ALMLiquidityQuote memory almLiquidityQuote) {
-        revert NotImplemented();
-    }
-
     function depositLiquidity(
         uint256 amount0_,
         uint256 amount1_,

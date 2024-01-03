@@ -15,6 +15,7 @@ interface IArrakisMetaVault {
     error ProportionGtPIPS(uint256 proportion);
     error CallFailed();
     error SameModule();
+    error SameManager();
     error ModuleNotEmpty(uint256 amount0, uint256 amount1);
     error AlreadyWhitelisted(address module);
     error NotWhitelistedModule(address module);

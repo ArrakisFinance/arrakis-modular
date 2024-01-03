@@ -67,17 +67,21 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
     }
 
     function setManager(address newManager_) external onlyOwner nonReentrant {
+        address _manager = manager;
         if (newManager_ == address(0))
-                revert AddressZero("New Manager");
-        if (manager != address(0)) _withdrawManagerBalance(module);
+            revert AddressZero("New Manager");
+        if (newManager_ == _manager)
+            revert SameManager();
+        if (_manager != address(0)) _withdrawManagerBalance(module);
+        manager = newManager_;
 
-        emit LogSetManager(manager, manager = newManager_);
+        emit LogSetManager(_manager, newManager_);
     }
 
     function setModule(
         address module_,
         bytes[] calldata payloads_
-    ) external onlyManager {
+    ) external onlyManager nonReentrant {
         // store in memory to save gas.
         IArrakisLPModule _module = module;
 
@@ -101,7 +105,10 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         // #endregion move tokens to the new module.
 
         // #region check if the module is empty.
-
+        /// @dev module implementation should take into account
+        /// that wrongly implemented module can freeze the modularity
+        /// of ArrakisMetaVault if withdrawManagerBalance + withdraw 100%
+        /// don't transfer every tokens (0/1) from module.
         (uint256 amount0, uint256 amount1) = _module.totalUnderlying();
         if (amount0 != 0 || amount1 != 0)
             revert ModuleNotEmpty(amount0, amount1);
