@@ -4,23 +4,21 @@ pragma solidity ^0.8.20;
 import {console} from "forge-std/console.sol";
 
 import {TestWrapper} from "../utils/TestWrapper.sol";
-import {ArrakisMetaVaultToken} from "../../src/ArrakisMetaVaultToken.sol";
+import {ArrakisMetaVaultPrivate} from "../../src/ArrakisMetaVaultPrivate.sol";
 import {IArrakisMetaVault} from "../../src/interfaces/IArrakisMetaVault.sol";
+import {PIPS} from "../../src/constants/CArrakis.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
-// #region mock contracts.
 
 import {ManagerMock} from "../mocks/ManagerMock.sol";
 import {LpModuleMock} from "../mocks/LpModuleMock.sol";
 import {BuggyLpModuleMock} from "../mocks/BuggyLpModule.sol";
 
-import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
+import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
-// #endregion mock contracts.
-
-contract ArrakisMetaVaultTokenTest is TestWrapper {
+contract ArrakisMetaVaultPrivateTest is TestWrapper {
     // #region constant properties.
 
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -28,28 +26,17 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
     // #endregion constant properties.
 
-    // #region public properties.
-
-    ArrakisMetaVaultToken public vaultToken;
+    ArrakisMetaVaultPrivate public vault;
     ManagerMock public manager;
     LpModuleMock public module;
     address public owner;
-
-    // #endregion public properties.
 
     function setUp() public {
         manager = new ManagerMock();
         module = new LpModuleMock(USDC, WETH, address(manager));
         owner = vm.addr(1);
 
-        vaultToken = new ArrakisMetaVaultToken(
-            USDC,
-            WETH,
-            owner,
-            address(module),
-            "Arrakis Vault Token",
-            "AVK"
-        );
+        vault = new ArrakisMetaVaultPrivate(USDC, WETH, owner, address(module));
     }
 
     // #region test constructor.
@@ -62,13 +49,11 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
             )
         );
 
-        vaultToken = new ArrakisMetaVaultToken(
+        vault = new ArrakisMetaVaultPrivate(
             address(0),
             WETH,
             owner,
-            address(module),
-            "Arrakis Vault Token",
-            "AVK"
+            address(module)
         );
     }
 
@@ -80,27 +65,18 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
             )
         );
 
-        vaultToken = new ArrakisMetaVaultToken(
+        vault = new ArrakisMetaVaultPrivate(
             USDC,
             address(0),
             owner,
-            address(module),
-            "Arrakis Vault Token",
-            "AVK"
+            address(module)
         );
     }
 
     function testConstructorToken0GtToken1() public {
         vm.expectRevert(IArrakisMetaVault.Token0GtToken1.selector);
 
-        vaultToken = new ArrakisMetaVaultToken(
-            WETH,
-            USDC,
-            owner,
-            address(module),
-            "Arrakis Vault Token",
-            "AVK"
-        );
+        vault = new ArrakisMetaVaultPrivate(WETH, USDC, owner, address(module));
     }
 
     function testConstructorOwnerIsAddressZero() public {
@@ -111,13 +87,11 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
             )
         );
 
-        vaultToken = new ArrakisMetaVaultToken(
+        vault = new ArrakisMetaVaultPrivate(
             USDC,
             WETH,
             address(0),
-            address(module),
-            "Arrakis Vault Token",
-            "AVK"
+            address(module)
         );
     }
 
@@ -129,14 +103,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
             )
         );
 
-        vaultToken = new ArrakisMetaVaultToken(
-            USDC,
-            WETH,
-            owner,
-            address(0),
-            "Arrakis Vault Token",
-            "AVK"
-        );
+        vault = new ArrakisMetaVaultPrivate(USDC, WETH, owner, address(0));
     }
 
     // #endregion test constructor.
@@ -150,13 +117,13 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         vm.expectRevert(0x82b42900);
 
-        vaultToken.setManager(address(manager));
+        vault.setManager(address(manager));
     }
 
     function testSetManager() public {
         vm.prank(owner);
 
-        vaultToken.setManager(address(manager));
+        vault.setManager(address(manager));
     }
 
     // #endregion test setManager functions.
@@ -168,7 +135,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         vm.prank(owner);
 
-        vaultToken.setManager(address(manager));
+        vault.setManager(address(manager));
 
         // #endregion set manager.
 
@@ -186,7 +153,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
             )
         );
 
-        vaultToken.setModule(address(module), payloads);
+        vault.setModule(address(module), payloads);
     }
 
     function testSetModuleSameModule() public {
@@ -194,7 +161,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         vm.prank(owner);
 
-        vaultToken.setManager(address(manager));
+        vault.setManager(address(manager));
 
         // #endregion set manager.
 
@@ -204,7 +171,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         bytes[] memory payloads = new bytes[](0);
 
-        vaultToken.setModule(address(module), payloads);
+        vault.setModule(address(module), payloads);
     }
 
     function testSetModuleNotWhitelistedModule() public {
@@ -212,7 +179,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         vm.prank(owner);
 
-        vaultToken.setManager(address(manager));
+        vault.setManager(address(manager));
 
         // #endregion set manager.
 
@@ -229,7 +196,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         bytes[] memory payloads = new bytes[](0);
 
-        vaultToken.setModule(newModule, payloads);
+        vault.setModule(newModule, payloads);
     }
 
     function testSetModuleBuggyModule() public {
@@ -239,20 +206,18 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
             address(manager)
         );
 
-        vaultToken = new ArrakisMetaVaultToken(
+        vault = new ArrakisMetaVaultPrivate(
             USDC,
             WETH,
             owner,
-            address(buggymodule),
-            "Arrakis Vault Token",
-            "AVK"
+            address(buggymodule)
         );
 
         // #region set manager.
 
         vm.prank(owner);
 
-        vaultToken.setManager(address(manager));
+        vault.setManager(address(manager));
 
         // #endregion set manager.
 
@@ -280,7 +245,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         modules[0] = newModule;
 
-        vaultToken.whitelistModules(modules);
+        vault.whitelistModules(modules);
 
         // #endregion whitelist module.
 
@@ -298,7 +263,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         bytes[] memory payloads = new bytes[](0);
 
-        vaultToken.setModule(newModule, payloads);
+        vault.setModule(newModule, payloads);
     }
 
     function testSetModule() public {
@@ -306,7 +271,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         vm.prank(owner);
 
-        vaultToken.setManager(address(manager));
+        vault.setManager(address(manager));
 
         // #endregion set manager.
 
@@ -334,7 +299,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         modules[0] = newModule;
 
-        vaultToken.whitelistModules(modules);
+        vault.whitelistModules(modules);
 
         // #endregion whitelist module.
 
@@ -361,7 +326,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         bytes[] memory payloads = new bytes[](0);
 
-        vaultToken.setModule(newModule, payloads);
+        vault.setModule(newModule, payloads);
 
         // #region get manager, old and new module balances.
 
@@ -392,7 +357,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         vm.expectRevert(0x82b42900);
 
-        vaultToken.whitelistModules(modules);
+        vault.whitelistModules(modules);
     }
 
     function testWhitelistModulesAlreadyWhitelisted() public {
@@ -408,7 +373,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
         );
         vm.prank(owner);
 
-        vaultToken.whitelistModules(modules);
+        vault.whitelistModules(modules);
     }
 
     function testWhitelistModules() public {
@@ -427,9 +392,9 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         vm.prank(owner);
 
-        vaultToken.whitelistModules(modules);
+        vault.whitelistModules(modules);
 
-        address[] memory listOfVault = vaultToken.whitelistedModules();
+        address[] memory listOfVault = vault.whitelistedModules();
 
         assertEq(listOfVault[0], address(module));
         assertEq(listOfVault[1], newModule);
@@ -451,16 +416,16 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         vm.prank(owner);
 
-        vaultToken.whitelistModules(modules);
+        vault.whitelistModules(modules);
 
-        address[] memory listOfVault = vaultToken.whitelistedModules();
+        address[] memory listOfVault = vault.whitelistedModules();
 
         assertEq(listOfVault[0], address(module));
         assertEq(listOfVault[1], newModule);
 
         vm.expectRevert(0x82b42900);
 
-        vaultToken.blacklistModules(modules);
+        vault.blacklistModules(modules);
     }
 
     function testBlacklistModulesNotWhitelisted() public {
@@ -481,7 +446,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         vm.prank(owner);
 
-        vaultToken.blacklistModules(modules);
+        vault.blacklistModules(modules);
     }
 
     function testBlacklistModulesActiveModule() public {
@@ -493,7 +458,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         vm.prank(owner);
 
-        vaultToken.blacklistModules(modules);
+        vault.blacklistModules(modules);
     }
 
     function testBlacklistModules() public {
@@ -507,9 +472,9 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         vm.prank(owner);
 
-        vaultToken.whitelistModules(modules);
+        vault.whitelistModules(modules);
 
-        address[] memory listOfVault = vaultToken.whitelistedModules();
+        address[] memory listOfVault = vault.whitelistedModules();
 
         assertEq(listOfVault[0], address(module));
         assertEq(listOfVault[1], newModule);
@@ -517,9 +482,9 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         vm.prank(owner);
 
-        vaultToken.blacklistModules(modules);
+        vault.blacklistModules(modules);
 
-        listOfVault = vaultToken.whitelistedModules();
+        listOfVault = vault.whitelistedModules();
 
         assertEq(listOfVault[0], address(module));
         assertEq(listOfVault.length, 1);
@@ -545,9 +510,9 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         vm.prank(owner);
 
-        vaultToken.whitelistModules(modules);
+        vault.whitelistModules(modules);
 
-        address[] memory listOfVault = vaultToken.whitelistedModules();
+        address[] memory listOfVault = vault.whitelistedModules();
 
         assertEq(listOfVault[0], address(module));
         assertEq(listOfVault[1], newModule);
@@ -569,7 +534,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
         // #endregion mock inits.
 
-        (uint256 init0, uint256 init1) = vaultToken.getInits();
+        (uint256 init0, uint256 init1) = vault.getInits();
 
         assertEq(init0, i0);
         assertEq(init1, i1);
@@ -588,7 +553,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
         deal(USDC, address(module), managerBalance0 * 101);
         deal(WETH, address(module), managerBalance1 * 101);
 
-        (uint256 amount0, uint256 amount1) = vaultToken.totalUnderlying();
+        (uint256 amount0, uint256 amount1) = vault.totalUnderlying();
 
         assertEq(managerBalance0 * 100, amount0);
         assertEq(managerBalance1 * 100, amount1);
@@ -616,7 +581,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
         amt0 = FullMath.mulDiv(amt0, priceX96, currentPriceX96);
         amt1 = FullMath.mulDiv(amt1, currentPriceX96, priceX96);
 
-        (uint256 amount0, uint256 amount1) = vaultToken.totalUnderlyingAtPrice(
+        (uint256 amount0, uint256 amount1) = vault.totalUnderlyingAtPrice(
             SafeCast.toUint160(priceX96)
         );
 
@@ -625,4 +590,173 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
     }
 
     // #endregion test totalUnderlyingAtPrice.
+
+    // #region test deposit.
+
+    function testDepositNotOwner() public {
+        // #region mock.
+
+        uint256 i0 = 2000e6;
+        uint256 i1 = 1e18;
+
+        module.setInits(i0, i1);
+
+        // #endregion mock.
+
+        uint256 proportion = PIPS / 2;
+
+        // #region get total underlying.
+
+        (uint256 total0, uint256 total1) = vault.totalUnderlying();
+
+        (total0, total1) = vault.getInits();
+
+        // #endregion get total underlying.
+
+        uint256 expectedAmount0 = FullMath.mulDiv(total0, proportion, PIPS);
+        uint256 expectedAmount1 = FullMath.mulDiv(total1, proportion, PIPS);
+
+        // #region approve module.
+
+        IERC20(USDC).approve(address(module), expectedAmount0);
+        IERC20(WETH).approve(address(module), expectedAmount1);
+
+        // #endregion approve module.
+
+        vm.expectRevert(Ownable.Unauthorized.selector);
+
+        vault.deposit(proportion);
+    }
+
+    function testDeposit() public {
+        // #region mock.
+
+        uint256 i0 = 2000e6;
+        uint256 i1 = 1e18;
+
+        module.setInits(i0, i1);
+
+        // #endregion mock.
+
+        uint256 proportion = PIPS / 2;
+
+        // #region get total underlying.
+
+        (uint256 total0, uint256 total1) = vault.totalUnderlying();
+
+        (total0, total1) = vault.getInits();
+
+        // #endregion get total underlying.
+
+        uint256 expectedAmount0 = FullMath.mulDiv(total0, proportion, PIPS);
+        uint256 expectedAmount1 = FullMath.mulDiv(total1, proportion, PIPS);
+
+        // #region approve module.
+
+        deal(USDC, owner, expectedAmount0);
+        deal(WETH, owner, expectedAmount1);
+
+        vm.startPrank(owner);
+
+        IERC20(USDC).approve(address(module), expectedAmount0);
+        IERC20(WETH).approve(address(module), expectedAmount1);
+
+        // #endregion approve module.
+
+        vault.deposit(proportion);
+
+        vm.stopPrank();
+    }
+
+    // #endregion test deposit.
+
+    // #region test withdraw.
+
+    function testWithdrawNotOwner() public {
+        // #region deposit first.
+
+        uint256 i0 = 2000e6;
+        uint256 i1 = 1e18;
+
+        module.setInits(i0, i1);
+
+        uint256 proportion = PIPS / 2;
+
+        // #region get total underlying.
+
+        (uint256 total0, uint256 total1) = vault.totalUnderlying();
+
+        (total0, total1) = vault.getInits();
+
+        // #endregion get total underlying.
+
+        uint256 expectedAmount0 = FullMath.mulDiv(total0, proportion, PIPS);
+        uint256 expectedAmount1 = FullMath.mulDiv(total1, proportion, PIPS);
+
+        // #region approve module.
+
+        deal(USDC, owner, expectedAmount0);
+        deal(WETH, owner, expectedAmount1);
+
+        vm.startPrank(owner);
+
+        IERC20(USDC).approve(address(module), expectedAmount0);
+        IERC20(WETH).approve(address(module), expectedAmount1);
+
+        // #endregion approve module.
+
+        vault.deposit(proportion);
+
+        vm.stopPrank();
+
+        // #endregion deposit first.
+
+        vm.expectRevert(Ownable.Unauthorized.selector);
+
+        vault.withdraw(PIPS, owner);
+    }
+
+    function testWithdraw() public {
+        // #region deposit first.
+
+        uint256 i0 = 2000e6;
+        uint256 i1 = 1e18;
+
+        module.setInits(i0, i1);
+
+        uint256 proportion = PIPS / 2;
+
+        // #region get total underlying.
+
+        (uint256 total0, uint256 total1) = vault.totalUnderlying();
+
+        (total0, total1) = vault.getInits();
+
+        // #endregion get total underlying.
+
+        uint256 expectedAmount0 = FullMath.mulDiv(total0, proportion, PIPS);
+        uint256 expectedAmount1 = FullMath.mulDiv(total1, proportion, PIPS);
+
+        // #region approve module.
+
+        deal(USDC, owner, expectedAmount0);
+        deal(WETH, owner, expectedAmount1);
+
+        vm.startPrank(owner);
+
+        IERC20(USDC).approve(address(module), expectedAmount0);
+        IERC20(WETH).approve(address(module), expectedAmount1);
+
+        // #endregion approve module.
+
+        vault.deposit(proportion);
+
+        // #endregion deposit first.
+
+        vault.withdraw(PIPS, owner);
+
+        vm.stopPrank();
+    }
+
+    // #endregion test withdraw.
 }

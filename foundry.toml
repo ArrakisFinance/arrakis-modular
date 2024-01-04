@@ -5,5 +5,4 @@ libs = ["lib"]
 ffi = true
 fs_permissions = [{ access = "read-write", path = ".forge-snapshots/"}]
 cancun = true
-
-solc = "lib/periphery-next/lib/v4-core/bin/solc-mac"
+solc_version = "0.8.22"

@@ -7,6 +7,9 @@
 [submodule "lib/solady"]
 	path = lib/solady
 	url = https://github.com/vectorized/solady
-[submodule "lib/periphery-next"]
-	path = lib/periphery-next
-	url = https://github.com/Uniswap/periphery-next
+[submodule "lib/create3"]
+	path = lib/create3
+	url = https://github.com/0xsequence/create3
+[submodule "lib/v3-lib-0.8"]
+	path = lib/v3-lib-0.8
+	url = https://github.com/ArrakisFinance/v3-lib-0.8
