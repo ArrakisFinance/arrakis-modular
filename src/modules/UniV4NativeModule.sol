@@ -11,9 +11,9 @@ import {UnderlyingPayload, Range as PoolRange} from "../structs/SUniswapV4.sol";
 import {UnderlyingV4} from "../libraries/UnderlyingV4.sol";
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {IClaims} from "@uniswap/v4-core/src/interfaces/IClaims.sol";
@@ -36,7 +36,6 @@ contract UniV4NativeModule is
     using SafeERC20 for IERC20;
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
-    using Address for address;
 
     // #region immutable properties.
 
@@ -133,11 +132,11 @@ contract UniV4NativeModule is
 
         /// @dev check if the pool is initialized.
         PoolId poolId = poolKey_.toId();
-        (uint160 sqrtPriceX96, int24 tick, ) = IPoolManager(poolManager_)
-            .getSlot0(poolId);
+        (uint160 sqrtPriceX96, , ) = IPoolManager(poolManager_).getSlot0(
+            poolId
+        );
 
         if (sqrtPriceX96 == 0) revert SqrtPriceZero();
-        if (tick == 0) revert TickZero();
 
         // #endregion checks.
 
@@ -170,12 +169,17 @@ contract UniV4NativeModule is
                 _token1
             );
 
+        if (
+            poolKey_.fee == poolKey.fee &&
+            poolKey_.tickSpacing == poolKey.tickSpacing &&
+            address(poolKey_.hooks) == address(poolKey.hooks)
+        ) revert SamePool();
+
         /// @dev check if the pool is initialized.
         PoolId poolId = poolKey_.toId();
-        (uint160 sqrtPriceX96, int24 tick, ) = poolManager.getSlot0(poolId);
+        (uint160 sqrtPriceX96, , ) = poolManager.getSlot0(poolId);
 
         if (sqrtPriceX96 == 0) revert SqrtPriceZero();
-        if (tick == 0) revert TickZero();
 
         // #region remove any remaining liquidity on the previous pool.
 
@@ -184,8 +188,6 @@ contract UniV4NativeModule is
         uint256 length = _ranges.length;
 
         PoolId currentPoolId = poolKey.toId();
-        uint256 amount0;
-        uint256 amount1;
         for (uint256 i; i < length; i++) {
             Range memory range = _ranges[i];
             uint128 liquidityToRemove = poolManager.getLiquidity(
@@ -289,8 +291,8 @@ contract UniV4NativeModule is
         int24 tickUpper_
     )
         external
-        nonReentrant
         onlyManager
+        nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
         bytes memory data = abi.encode(
@@ -317,8 +319,8 @@ contract UniV4NativeModule is
         int24 tickUpper_
     )
         public
-        nonReentrant
         onlyManager
+        nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
         // TODO check that when calling through setPool, msg.sender == manager.
@@ -343,10 +345,7 @@ contract UniV4NativeModule is
     /// @notice function used by metaVault or manager to get manager fees.
     /// @return amount0 amount of token0 sent to manager.
     /// @return amount1 amount of token1 sent to manager.
-    function withdrawManagerBalance()
-        external
-        returns (uint256 amount0, uint256 amount1)
-    {
+    function withdrawManagerBalance() external returns (uint256, uint256) {
         revert NotImplemented();
     }
 
@@ -530,6 +529,11 @@ contract UniV4NativeModule is
 
         (, uint256 leftOver0, , uint256 leftOver1) = _get1155Balances();
 
+        if (length == 0 && leftOver0 == 0 && leftOver1 == 0) {
+            leftOver0 = _init0;
+            leftOver1 = _init1;
+        }
+
         // rounding up during mint only.
         uint256 leftOver0ToMint = FullMath.mulDivRoundingUp(
             leftOver0,
@@ -554,7 +558,13 @@ contract UniV4NativeModule is
 
         // #region get how much we should settle with poolManager.
 
-        (uint256 amount0, uint256 amount1) = _checkCurrencyBalances();
+        uint256 amount0 = SafeCast.toUint256(
+            poolManager.currencyDelta(address(this), poolKey.currency0)
+        );
+
+        uint256 amount1 = SafeCast.toUint256(
+            poolManager.currencyDelta(address(this), poolKey.currency1)
+        );
 
         // #endregion get how much we should settle with poolManager.
 
@@ -645,13 +655,7 @@ contract UniV4NativeModule is
 
         // #endregion get how much left over we have on poolManager and mint.
 
-        uint256 amount0 = SafeCast.toUint256(
-            poolManager.currencyDelta(address(this), poolKey.currency0)
-        );
-
-        uint256 amount1 = SafeCast.toUint256(
-            poolManager.currencyDelta(address(this), poolKey.currency1)
-        );
+        (uint256 amount0, uint256 amount1) = _checkCurrencyBalances();
 
         // #region take and send token to receiver.
 
@@ -703,7 +707,13 @@ contract UniV4NativeModule is
             ""
         );
 
-        (uint256 amount0, uint256 amount1) = _checkCurrencyBalances();
+        uint256 amount0 = SafeCast.toUint256(
+            poolManager.currencyDelta(address(this), poolKey.currency0)
+        );
+
+        uint256 amount1 = SafeCast.toUint256(
+            poolManager.currencyDelta(address(this), poolKey.currency1)
+        );
 
         if (amount0 > 0) {
             poolManager.burn(poolKey.currency0, amount0);
@@ -777,13 +787,7 @@ contract UniV4NativeModule is
             ""
         );
 
-        uint256 amount0 = SafeCast.toUint256(
-            poolManager.currencyDelta(address(this), poolKey.currency0)
-        );
-
-        uint256 amount1 = SafeCast.toUint256(
-            poolManager.currencyDelta(address(this), poolKey.currency1)
-        );
+        (uint256 amount0, uint256 amount1) = _checkCurrencyBalances();
 
         poolManager.mint(poolKey.currency0, address(this), amount0);
         poolManager.mint(poolKey.currency1, address(this), amount1);

@@ -172,10 +172,6 @@ contract PoolManagerTest is Test {
             feeGrowthInside0X128,
             feeGrowthInside1X128
         );
-
-        console.logString("Fees : ");
-        console.log(feesOwed0);
-        console.log(feesOwed1);
     }
 
     // #region internal functions.
@@ -326,9 +322,6 @@ contract PoolManagerTest is Test {
             address(this),
             poolKey.currency1
         );
-
-        console.logInt(due0);
-        console.logInt(due1);
 
         address token0 = address(Currency.unwrap(poolKey.currency0));
 
