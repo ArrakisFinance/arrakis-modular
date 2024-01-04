@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IArrakisLPModule} from "../../src/interfaces/IArrakisLPModule.sol";
 import {PIPS} from "../../src/constants/CArrakis.sol";
-import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 contract LpModuleMock {
     IERC20 public token0;
@@ -38,6 +41,30 @@ contract LpModuleMock {
         token1.transfer(manager, _managerBalance1);
 
         return (_managerBalance1, _managerBalance1);
+    }
+
+    function deposit(
+        address depositor_,
+        uint256 proportion_
+    ) external payable returns (uint256 amount0, uint256 amount1) {
+
+        uint256 balance0 = token0.balanceOf(address(this));
+        uint256 balance1 = token1.balanceOf(address(this));
+
+        if(balance0 == 0 && balance1 == 0) {
+            balance0 = init0;
+            balance1 = init1;
+        }
+
+        amount0 = FullMath.mulDiv(balance0, proportion_, PIPS);
+        amount1 = FullMath.mulDiv(balance1, proportion_, PIPS);
+
+        // #region get the token from the depositor.
+
+        token0.transferFrom(depositor_, address(this), amount0);
+        token1.transferFrom(depositor_, address(this), amount1);
+
+        // #endregion get the token from the depositor.
     }
 
     function withdraw(

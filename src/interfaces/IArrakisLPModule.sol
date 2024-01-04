@@ -3,26 +3,89 @@ pragma solidity ^0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IArrakisMetaVault} from "./IArrakisMetaVault.sol";
+import {IOracleWrapper} from "./IOracleWrapper.sol";
 
+/// @title Liquidity providing module interface.
+/// @author Arrakis Finance
+/// @notice Module interfaces, modules are implementing differents strategies that an
+/// arrakis module can use.
 interface IArrakisLPModule {
-
     // #region errors.
 
+    /// @dev triggered when an address that should not
+    /// be zero is equal to address zero.
     error AddressZero();
+
+    /// @dev triggered when the caller is different than
+    /// the metaVault that own this module.
     error OnlyMetaVault(address caller, address metaVault);
+
+    /// @dev triggered when the caller is different than
+    /// the manager defined by the metaVault.
     error OnlyManager(address caller, address manager);
+
+    /// @dev triggered if proportion of minting or burning is
+    /// zero.
     error ProportionZero();
-    error CannotBurnMtTotalSupply();
+
+    /// @dev triggered if during withdraw more than 100% of the
+    /// position.
+    error ProportionGtPIPS();
+
+    /// @dev triggered when manager want to set his more
+    /// earned by the position than 100% of fees earned.
     error NewFeesGtPIPS(uint256 newFees);
+
+    /// @dev triggered when manager is setting the same fees
+    /// that already active.
+    error SameManagerFee();
+
+    /// @dev triggered when inits values are zeros.
     error InitsAreZeros();
 
     // #endregion errors.
 
     // #region events.
 
-    event LogDeposit(address indexed depositor, uint256 proportion, uint256 amount0, uint256 amount1);
-    event LogWithdraw(address indexed receiver, uint256 proportion, uint256 amount0, uint256 amount1);
-    event LogWithdrawManagerBalance(address manager, uint256 amount0, uint256 amount1);
+    /// @notice Event describing a deposit done by an user inside this module.
+    /// @dev deposit action can be indexed by depositor.
+    /// @param depositor address of the tokens provider.
+    /// @param proportion percentage of the current position that depositor want to increase.
+    /// @param amount0 amount of token0 needed to increase the portfolio of "proportion" percent.
+    /// @param amount1 amount of token1 needed to increase the portfolio of "proportion" percent.
+    event LogDeposit(
+        address indexed depositor,
+        uint256 proportion,
+        uint256 amount0,
+        uint256 amount1
+    );
+
+    /// @notice Event describing a withdrawal of participation by an user inside this module.
+    /// @dev withdraw action can be indexed by receiver.
+    /// @param receiver address that will receive the tokens withdrawn.
+    /// @param proportion percentage of the current position that user want to withdraw.
+    /// @param amount0 amount of token0 send to "receiver" due to withdraw action.
+    /// @param amount1 amount of token1 send to "receiver" due to withdraw action.
+    event LogWithdraw(
+        address indexed receiver,
+        uint256 proportion,
+        uint256 amount0,
+        uint256 amount1
+    );
+
+    /// @notice Event describing a manager fee withdrawal.
+    /// @param manager address of the manager that will fees earned due to his fund management.
+    /// @param amount0 amount of token0 that manager has earned and will be transfered.
+    /// @param amount1 amount of token1 that manager has earned and will be transfered.
+    event LogWithdrawManagerBalance(
+        address manager,
+        uint256 amount0,
+        uint256 amount1
+    );
+
+    /// @notice Event describing manager set his fees.
+    /// @param oldFee fees share that have been taken by manager.
+    /// @param newFee fees share that have been taken by manager.
     event LogSetManagerFeePIPS(uint256 oldFee, uint256 newFee);
 
     // #endregion events.
@@ -61,21 +124,29 @@ interface IArrakisLPModule {
     // #region view functions.
 
     /// @notice function used to get metaVault as IArrakisMetaVault.
+    /// @return metaVault that implement IArrakisMetaVault.
     function metaVault() external view returns (IArrakisMetaVault);
 
     /// @notice function used to get manager token0 balance.
+    /// @dev amount of fees in token0 that manager have not taken yet.
+    /// @return managerBalance0 amount of token0 that manager earned.
     function managerBalance0() external view returns (uint256);
 
     /// @notice function used to get manager token1 balance.
+    /// @dev amount of fees in token1 that manager have not taken yet.
+    /// @return managerBalance1 amount of token1 that manager earned.
     function managerBalance1() external view returns (uint256);
 
     /// @notice function used to get manager fees.
+    /// @return managerFeePIPS amount of token1 that manager earned.
     function managerFeePIPS() external view returns (uint256);
 
     /// @notice function used to get token0 as IERC20.
+    /// @return token0 as IERC20.
     function token0() external view returns (IERC20);
 
     /// @notice function used to get token0 as IERC20.
+    /// @return token1 as IERC20.
     function token1() external view returns (IERC20);
 
     /// @notice function used to get the initial amounts needed to open a position.
@@ -100,6 +171,15 @@ interface IArrakisLPModule {
     function totalUnderlyingAtPrice(
         uint160 priceX96_
     ) external view returns (uint256 amount0, uint256 amount1);
+
+    /// @notice function used to validate if module state is not manipulated
+    /// before rebalance.
+    /// @param oracle_ oracle that will used to check internal state.
+    /// @param maxDeviation_ maximum deviation allowed.
+    function validateRebalance(
+        IOracleWrapper oracle_,
+        uint24 maxDeviation_
+    ) external view;
 
     // #endregion view function.
 }
