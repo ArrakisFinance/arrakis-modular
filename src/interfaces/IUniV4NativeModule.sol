@@ -10,7 +10,6 @@ interface IUniV4NativeModule {
     error Currency0DtToken0(address currency0, address token0);
     error Currency1DtToken1(address currency1, address token1);
     error SqrtPriceZero();
-    error TickZero();
     error OnlyPoolManager();
     error OnlyModuleCaller();
     error InvalidCurrencyDelta();
@@ -24,6 +23,7 @@ interface IUniV4NativeModule {
     error TickUpperOutOfBounds(int24 tickUpper);
     error OnlyMetaVaultOrManager();
     error NotImplemented();
+    error SamePool();
 
     // #endregion errors.
 
