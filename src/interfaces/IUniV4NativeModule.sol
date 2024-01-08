@@ -22,7 +22,6 @@ interface IUniV4NativeModule {
     error TickLowerOutOfBounds(int24 tickLower);
     error TickUpperOutOfBounds(int24 tickUpper);
     error OnlyMetaVaultOrManager();
-    error NotImplemented();
     error SamePool();
     error NoModifyLiquidityHooks();
 
