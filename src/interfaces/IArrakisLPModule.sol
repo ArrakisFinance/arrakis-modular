@@ -14,6 +14,7 @@ interface IArrakisLPModule {
     error ProportionZero();
     error CannotBurnMtTotalSupply();
     error NewFeesGtPIPS(uint256 newFees);
+    error SameManagerFee();
     error InitsAreZeros();
 
     // #endregion errors.

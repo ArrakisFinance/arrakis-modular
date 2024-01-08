@@ -359,7 +359,7 @@ library UnderlyingV4 {
         FeeGrowthInside memory feeGrowthInside;
 
         {
-            uint256 POOL_SLOT = 10;
+            uint256 POOL_SLOT = 6;
             bytes32 poolId = PoolId.unwrap(poolId_);
 
             // #region tickInfo Lower tick.

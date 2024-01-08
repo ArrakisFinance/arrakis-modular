@@ -60,25 +60,31 @@ contract PoolManagerTest is Test {
 
         sqrtPriceX96 = TickMath.getSqrtRatioAtTick(0);
 
-        poolManager.lock(address(this),abi.encode(2));
+        poolManager.lock(address(this), abi.encode(2));
 
         // #endregion initialize pool.
     }
 
-    function lockAcquired(address caller, bytes calldata data) public returns (bytes memory) {
+    function lockAcquired(
+        address caller,
+        bytes calldata data
+    ) public returns (bytes memory) {
         uint256 typeOfLockAcquired = abi.decode(data, (uint256));
 
         if (typeOfLockAcquired == 0) _lockAcquiredAddPosition();
         if (typeOfLockAcquired == 1) _lockAcquiredSwap();
-        if (typeOfLockAcquired == 2) poolManager.initialize(poolKey, sqrtPriceX96, "");
+        if (typeOfLockAcquired == 2)
+            poolManager.initialize(poolKey, sqrtPriceX96, "");
     }
 
     function testExtSload() public {
+        poolManager.lock(address(this), abi.encode(0));
+
         // #region swap.
         poolManager.lock(address(this), abi.encode(1));
         // #endregion swap.
 
-        uint256 POOL_SLOT = 10;
+        uint256 POOL_SLOT = 6;
 
         bytes32 poolId = PoolId.unwrap(PoolIdLibrary.toId(poolKey));
 
@@ -185,7 +191,7 @@ contract PoolManagerTest is Test {
         view
         returns (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128)
     {
-        uint256 POOL_SLOT = 10;
+        uint256 POOL_SLOT = 6;
         bytes32 poolId = PoolId.unwrap(PoolIdLibrary.toId(poolKey_));
 
         // #region tickInfo Lower tick.
@@ -241,18 +247,55 @@ contract PoolManagerTest is Test {
         // #endregion tickInfo Upper tick.
         // #region get slot0.
 
-        (, int24 tickCurrent, ) = poolManager.getSlot0(PoolId.wrap(poolId));
-
-        // #endregion get slot0.
-        // #region pool global fees.
-
-        bytes memory globalFee = poolManager.extsload(
-            bytes32(uint256(keccak256(abi.encode(poolId, POOL_SLOT))) + 1),
-            2
+        (uint256 price, int24 tickCurrent, ) = poolManager.getSlot0(
+            PoolId.wrap(poolId)
         );
 
+        // #endregion get slot0.
+        // #region get slot0 through extsload.
+
+        {
+            bytes memory slot0Data = poolManager.extsload(
+                bytes32(uint256(keccak256(abi.encode(poolId, 6)))),
+                4
+            );
+
+            // console.logBytes(slot0Data);
+
+            {
+                {
+                    (
+                        bytes32 slot0,
+                        uint256 feeGrowthGlobal0X128,
+                        uint256 feeGrowthGlobal1X128,
+                        uint128 liquidity
+                    ) = abi.decode(
+                            slot0Data,
+                            (bytes32, uint256, uint256, uint128)
+                        );
+                }
+
+                uint128 liquidity = poolManager.getLiquidity(
+                    PoolId.wrap(poolId),
+                    address(this),
+                    -10,
+                    10
+                );
+            }
+        }
+        // #endregion get slot0 extsload.
+        // #region pool global fees.
+
         (uint256 feeGrowthGlobal0X128, uint256 feeGrowthGlobal1X128) = abi
-            .decode(globalFee, (uint256, uint256));
+            .decode(
+                poolManager.extsload(
+                    bytes32(
+                        uint256(keccak256(abi.encode(poolId, POOL_SLOT))) + 1
+                    ),
+                    2
+                ),
+                (uint256, uint256)
+            );
 
         // #endregion pool global fees.
 
