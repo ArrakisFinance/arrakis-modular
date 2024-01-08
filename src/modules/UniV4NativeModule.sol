@@ -341,10 +341,24 @@ contract UniV4NativeModule is
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
-        LiquidityRange[] memory liquidityRanges_ = new LiquidityRange[](0);
+        uint256 length = _ranges.length;
+
+        LiquidityRange[] memory liquidityRanges = new LiquidityRange[](length);
+
+        for (uint256 i; i < length; i++) {
+            Range memory range = _ranges[i];
+
+            liquidityRanges[i] = LiquidityRange({
+                liquidity: 0,
+                range: Range({
+                    tickLower: range.tickLower,
+                    tickUpper: range.tickUpper
+                })
+            });
+        }
         bytes memory data = abi.encode(
             Action.REBALANCE,
-            abi.encode(liquidityRanges_)
+            abi.encode(liquidityRanges)
         );
 
         bytes memory result = poolManager.lock(address(this), data);
@@ -855,6 +869,7 @@ contract UniV4NativeModule is
         LiquidityRange[] memory liquidityRanges_
     ) internal returns (bytes memory result) {
         PoolKey memory _poolKey = poolKey;
+        PoolId poolId = _poolKey.toId();
         uint256 length = liquidityRanges_.length;
         address manager = metaVault.manager();
         // #region fees computations.
@@ -889,6 +904,7 @@ contract UniV4NativeModule is
             if (lrange.liquidity > 0) {
                 (uint256 amt0, uint256 amt1) = _addLiquidity(
                     _poolKey,
+                    poolId,
                     SafeCast.toUint128(SafeCast.toUint256(lrange.liquidity)),
                     lrange.range.tickLower,
                     lrange.range.tickUpper
@@ -899,6 +915,7 @@ contract UniV4NativeModule is
             } else if (lrange.liquidity < 0) {
                 (uint256 amt0, uint256 amt1) = _removeLiquidity(
                     _poolKey,
+                    poolId,
                     SafeCast.toUint128(SafeCast.toUint256(-lrange.liquidity)),
                     lrange.range.tickLower,
                     lrange.range.tickUpper
@@ -906,7 +923,13 @@ contract UniV4NativeModule is
 
                 amount0Burned += amt0;
                 amount1Burned += amt1;
-            }
+            } else
+                _collectFee(
+                    _poolKey,
+                    poolId,
+                    lrange.range.tickLower,
+                    lrange.range.tickUpper
+                );
         }
 
         // #endregion add liquidities.
@@ -957,14 +980,39 @@ contract UniV4NativeModule is
             );
     }
 
+    function _collectFee(
+        PoolKey memory poolKey_,
+        PoolId poolId_,
+        int24 tickLower_,
+        int24 tickUpper_
+    ) internal {
+        _checkTicks(tickLower_, tickUpper_);
+
+        bytes32 positionId = keccak256(
+            abi.encode(poolId_, tickLower_, tickUpper_)
+        );
+
+        if (!_activeRanges[positionId])
+            revert RangeShouldBeActive(tickLower_, tickUpper_);
+
+        poolManager.modifyPosition(
+            poolKey_,
+            IPoolManager.ModifyPositionParams({
+                liquidityDelta: 0,
+                tickLower: tickLower_,
+                tickUpper: tickUpper_
+            }),
+            ""
+        );
+    }
+
     function _addLiquidity(
         PoolKey memory poolKey_,
+        PoolId poolId_,
         uint128 liquidityToAdd_,
         int24 tickLower_,
         int24 tickUpper_
     ) internal returns (uint256 amount0, uint256 amount1) {
-        PoolId poolId = poolKey_.toId();
-
         // #region checks.
 
         if (liquidityToAdd_ == 0) revert LiquidityToAddEqZero();
@@ -976,7 +1024,7 @@ contract UniV4NativeModule is
         // #region effects.
 
         bytes32 positionId = keccak256(
-            abi.encode(poolId, tickLower_, tickUpper_)
+            abi.encode(poolId_, tickLower_, tickUpper_)
         );
         if (!_activeRanges[positionId]) {
             _ranges.push(Range({tickLower: tickLower_, tickUpper: tickUpper_}));
@@ -1016,12 +1064,11 @@ contract UniV4NativeModule is
 
     function _removeLiquidity(
         PoolKey memory poolKey_,
+        PoolId poolId_,
         uint128 liquidityToRemove_,
         int24 tickLower_,
         int24 tickUpper_
     ) internal returns (uint256 amount0, uint256 amount1) {
-        PoolId poolId = poolKey_.toId();
-
         // #region checks.
 
         if (liquidityToRemove_ == 0) revert LiquidityToRemoveEqZero();
@@ -1031,7 +1078,7 @@ contract UniV4NativeModule is
         // #region get liqudity.
 
         Position.Info memory info = poolManager.getPosition(
-            poolId,
+            poolId_,
             address(this),
             tickLower_,
             tickUpper_
@@ -1042,7 +1089,7 @@ contract UniV4NativeModule is
         // #region effects.
 
         bytes32 positionId = keccak256(
-            abi.encode(poolId, tickLower_, tickUpper_)
+            abi.encode(poolId_, tickLower_, tickUpper_)
         );
 
         if (!_activeRanges[positionId])
