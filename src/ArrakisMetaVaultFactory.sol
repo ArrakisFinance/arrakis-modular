@@ -8,14 +8,22 @@ import {IArrakisMetaVaultFactory} from "./interfaces/IArrakisMetaVaultFactory.so
 import {ArrakisMetaVaultToken} from "./ArrakisMetaVaultToken.sol";
 import {ArrakisMetaVaultOwned} from "./ArrakisMetaVaultOwned.sol";
 
+import {Create3} from "@create3/contracts/Create3.sol";
+
+/// @dev this contract will use create3 to deploy vaults.
 contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
     using EnumerableSet for EnumerableSet.AddressSet;
+
+    // #region internal properties.
 
     EnumerableSet.AddressSet internal _tokenVaults;
     EnumerableSet.AddressSet internal _ownedVaults;
 
+    // #endregion internal properties.
+
     /// @notice function used to deploy ERC20 token wrapped Arrakis
     /// Meta Vault.
+    /// @param salt_ bytes32 needed to compute vault address deterministic way.
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
     /// @param owner_ address of the owner of the vault.
@@ -23,6 +31,7 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
     /// by Meta Vault.
     /// @return vault address of the newly created Token Meta Vault.
     function deployTokenMetaVault(
+        bytes32 salt_,
         address token0_,
         address token1_,
         address owner_,
@@ -35,27 +44,50 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
             name = result;
         } catch {} // solhint-disable-line no-empty-blocks
 
-        try this.getTokenSymbol(token0_, token1_) returns (string memory result) {
+        try this.getTokenSymbol(token0_, token1_) returns (
+            string memory result
+        ) {
             symbol = result;
         } catch {} // solhint-disable-line no-empty-blocks
 
-        vault = address(
-            new ArrakisMetaVaultToken(
-                token0_,
-                token1_,
-                owner_,
-                module_,
-                name,
-                symbol
-            )
+        // #region compute salt = salt + msg.sender.
+
+        // TODO maybe we need to modify that if we deploy through an helper contract.
+        bytes32 salt = keccak256(abi.encode(msg.sender, salt_));
+
+        // #endregion compute salt = salt + msg.sender.
+
+        // #region get the creation code for TokenMetaVault.
+
+        bytes memory creationCode = abi.encode(
+            type(ArrakisMetaVaultToken).creationCode,
+            token0_,
+            token1_,
+            owner_,
+            module_,
+            name,
+            symbol
         );
+
+        // #endregion get the creation code for TokenMetaVault.
+
+        vault = Create3.create3(salt, creationCode);
         _tokenVaults.add(vault);
 
-        emit LogTokenVaultCreation(msg.sender, vault);
+        emit LogTokenVaultCreation(
+            msg.sender,
+            salt_,
+            token0_,
+            token1_,
+            owner_,
+            module_,
+            vault
+        );
     }
 
     /// @notice function used to deploy ERC20 owned Arrakis
     /// Meta Vault.
+    /// @param salt_ bytes32 needed to compute vault address deterministic way.
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
     /// @param owner_ address of the owner of the vault.
@@ -63,17 +95,42 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
     /// by Meta Vault.
     /// @return vault address of the newly created Owned Meta Vault.
     function deployOwnedMetaVault(
+        bytes32 salt_,
         address token0_,
         address token1_,
         address owner_,
         address module_
     ) external returns (address vault) {
-        vault = address(
-            new ArrakisMetaVaultOwned(token0_, token1_, owner_, module_)
+        // #region compute salt = salt + msg.sender.
+
+        bytes32 salt = keccak256(abi.encode(msg.sender, salt_));
+
+        // #endregion compute salt = salt + msg.sender.
+
+        // #region get the creation code for TokenMetaVault.
+
+        bytes memory creationCode = abi.encode(
+            type(ArrakisMetaVaultOwned).creationCode,
+            token0_,
+            token1_,
+            owner_,
+            module_
         );
+
+        // #endregion get the creation code for TokenMetaVault.
+
+        vault = Create3.create3(salt, creationCode);
         _ownedVaults.add(vault);
 
-        emit LogOwnedVaultCreation(msg.sender, vault);
+        emit LogOwnedVaultCreation(
+            msg.sender,
+            salt_,
+            token0_,
+            token1_,
+            owner_,
+            module_,
+            vault
+        );
     }
 
     // #region view/pure function.

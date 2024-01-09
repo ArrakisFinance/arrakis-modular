@@ -10,7 +10,7 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {PIPS} from "./constants/CArrakis.sol";
 
-contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
+abstract contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -105,6 +105,7 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         // #endregion move tokens to the new module.
 
         // #region check if the module is empty.
+
         /// @dev module implementation should take into account
         /// that wrongly implemented module can freeze the modularity
         /// of ArrakisMetaVault if withdrawManagerBalance + withdraw 100%

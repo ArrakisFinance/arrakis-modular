@@ -2,9 +2,13 @@
 pragma solidity ^0.8.20;
 
 import {IArrakisMetaToken} from "./interfaces/IArrakisMetaToken.sol";
-import {ERC20} from "@solady/contracts/tokens/ERC20.sol";
 import {ArrakisMetaVault, PIPS} from "./ArrakisMetaVault.sol";
+import {ERC20TYPE} from "./constants/CArrakis.sol";
+
+import {ERC20} from "@solady/contracts/tokens/ERC20.sol";
+
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
@@ -59,6 +63,10 @@ contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
         (amount0, amount1) = _withdraw(receiver_, proportion);
 
         emit LogBurn(shares_, receiver_, amount0, amount1);
+    }
+
+    function vaultType() external pure override returns (bytes32) {
+        return ERC20TYPE;
     }
 
     function name() public view override returns (string memory) {

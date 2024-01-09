@@ -2,13 +2,14 @@
 pragma solidity ^0.8.20;
 
 import {IManager} from "./interfaces/IManager.sol";
+import {INativeManager} from "./interfaces/INativeManager.sol";
 import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-contract Manager is IManager, Ownable {
+contract NativeManager is IManager, INativeManager, Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 

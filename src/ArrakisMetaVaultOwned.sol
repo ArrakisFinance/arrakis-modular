@@ -3,7 +3,10 @@ pragma solidity ^0.8.20;
 
 import {IArrakisMetaOwned} from "./interfaces/IArrakisMetaOwned.sol";
 import {ArrakisMetaVault} from "./ArrakisMetaVault.sol";
+import {NFTTYPE} from "./constants/CArrakis.sol";
+
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ArrakisMetaVaultOwned is ArrakisMetaVault, IArrakisMetaOwned {
@@ -25,5 +28,9 @@ contract ArrakisMetaVaultOwned is ArrakisMetaVault, IArrakisMetaOwned {
         address receiver_
     ) external onlyOwner returns (uint256 amount0, uint256 amount1) {
         (amount0, amount1) = _withdraw(receiver_, proportion_);
+    }
+
+    function vaultType() external pure override returns (bytes32) {
+        return NFTTYPE;
     }
 }

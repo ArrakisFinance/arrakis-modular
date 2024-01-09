@@ -6,8 +6,8 @@ interface IManager {
 
     error AddressZero();
     error NotWhitelistedVault(address vault);
-    error NotWhitelistedRebalancer(address rebalancer);
     error AlreadyWhitelistedVault(address vault);
+    error NotWhitelistedRebalancer(address rebalancer);
     error AlreadyWhitelistedRebalancer(address rebalancer);
     error EmptyVaultsArray();
     error EmptyRebalancersArray();
@@ -30,9 +30,7 @@ interface IManager {
         uint256 amount0,
         uint256 amount1
     );
-    event LogWhitelistVaults(address[] vaults);
     event LogWhitelistRebalancers(address[] rebalancers);
-    event LogBlacklistVaults(address[] vaults);
     event LogBlacklistRebalancers(address[] rebalancers);
     event LogRebalance(address indexed vault, bytes[] payloads);
     event LogSetModule(address indexed vault, address module, bytes[] payloads);
@@ -49,17 +47,10 @@ interface IManager {
         address vault_
     ) external returns (uint256 amount0, uint256 amount1);
 
-    /// @notice function used to add vault under management.
-    /// @param vaults_ list of vault address to add.
-    function whitelistVaults(address[] calldata vaults_) external;
 
     /// @notice function used to add rebalancers that will be able to rebalance.
     /// @param rebalancers_ list of rebalancer address to add.
     function whitelistRebalancers(address[] calldata rebalancers_) external;
-
-    /// @notice function used to remove vault under management.
-    /// @param vaults_ list of vault address to remove.
-    function blacklistVaults(address[] calldata vaults_) external;
 
     /// @notice function used to remove rebalancers.
     /// @param rebalancers_ list of rebalancers address to remove.

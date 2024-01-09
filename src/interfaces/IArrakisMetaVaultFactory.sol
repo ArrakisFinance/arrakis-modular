@@ -13,8 +13,24 @@ interface IArrakisMetaVaultFactory {
 
     // #region events.
 
-    event LogTokenVaultCreation(address indexed creator, address tokenVault);
-    event LogOwnedVaultCreation(address indexed creator, address ownedVault);
+    event LogTokenVaultCreation(
+        address indexed creator,
+        bytes32 salt,
+        address token0,
+        address token1,
+        address owner,
+        address module,
+        address tokenVault
+    );
+    event LogOwnedVaultCreation(
+        address indexed creator,
+        bytes32 salt,
+        address token0,
+        address token1,
+        address owner,
+        address module,
+        address ownedVault
+    );
 
     // #endregion events.
 
@@ -22,6 +38,7 @@ interface IArrakisMetaVaultFactory {
 
     /// @notice function used to deploy ERC20 token wrapped Arrakis
     /// Meta Vault.
+    /// @param salt_ bytes32 used to get a deterministic all chains address.
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
     /// @param owner_ address of the owner of the vault.
@@ -29,6 +46,7 @@ interface IArrakisMetaVaultFactory {
     /// by Meta Vault.
     /// @return vault address of the newly created Token Meta Vault.
     function deployTokenMetaVault(
+        bytes32 salt_,
         address token0_,
         address token1_,
         address owner_,
@@ -37,6 +55,7 @@ interface IArrakisMetaVaultFactory {
 
     /// @notice function used to deploy ERC20 owned Arrakis
     /// Meta Vault.
+    /// @param salt_ bytes32 needed to compute vault address deterministic way.
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
     /// @param owner_ address of the owner of the vault.
@@ -44,6 +63,7 @@ interface IArrakisMetaVaultFactory {
     /// by Meta Vault.
     /// @return vault address of the newly created Owned Meta Vault.
     function deployOwnedMetaVault(
+        bytes32 salt_,
         address token0_,
         address token1_,
         address owner_,
