@@ -4,10 +4,11 @@ pragma solidity ^0.8.20;
 import {IManager} from "./interfaces/IManager.sol";
 import {IStandardManager} from "./interfaces/IStandardManager.sol";
 import {SetupParams} from "./structs/SManager.sol";
-import {ERC20TYPE, NFTTYPE, TEN_PERCENT} from "./constants/CArrakis.sol";
+import {ERC20TYPE, NFTTYPE, TEN_PERCENT, PIPS} from "./constants/CArrakis.sol";
 import {IOwnerOf} from "./interfaces/IOwnerOf.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
+import {IDecimals} from "./interfaces/IDecimals.sol";
 import {VaultInfo} from "./structs/SManager.sol";
 
 // #region openzeppelin dependencies.
@@ -17,8 +18,11 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 // #endregion openzeppelin dependencies.
 // #region solady dependencies.
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
-
 // #endregion solady dependencies.
+// #region uniswap.
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+
+// #endregion uniswap.
 
 contract StandardManager is IManager, IStandardManager, Ownable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -147,6 +151,25 @@ contract StandardManager is IManager, IStandardManager, Ownable {
             revert VaultTypeNotSupported(vaultType);
         }
 
+        // #region get current value of the vault.
+
+        (uint256 amount0, uint256 amount1) = IArrakisMetaVault(vault_)
+            .totalUnderlying();
+        uint8 token0Decimals = IDecimals(IArrakisMetaVault(vault_).token0())
+            .decimals();
+
+        VaultInfo memory info = infosByVault[vault_];
+
+        uint256 price0 = info.oracle.getPrice0();
+
+        uint256 vaultInToken1BeforeRebalance = FullMath.mulDiv(
+            amount0,
+            price0,
+            10**token0Decimals
+        ) + amount1;
+
+        // #endregion get current value of the vault.
+
         uint256 _length = payloads_.length;
 
         for (uint256 i; i < _length; i++) {
@@ -156,6 +179,33 @@ contract StandardManager is IManager, IStandardManager, Ownable {
 
             if (!success) revert CallFailed(payloads_[i]);
         }
+
+        // #region assertions.
+
+        (amount0, amount1) = IArrakisMetaVault(vault_).totalUnderlying();
+
+        uint256 vaultInToken1AfterRebalance = FullMath.mulDiv(
+            amount0,
+            price0,
+            token0Decimals
+        ) + amount1;
+
+        uint256 currentSlippage = vaultInToken1BeforeRebalance >
+            vaultInToken1AfterRebalance
+            ? FullMath.mulDiv(
+                vaultInToken1BeforeRebalance - vaultInToken1AfterRebalance,
+                PIPS,
+                vaultInToken1BeforeRebalance
+            )
+            : FullMath.mulDiv(
+                vaultInToken1AfterRebalance - vaultInToken1BeforeRebalance,
+                PIPS,
+                vaultInToken1BeforeRebalance
+            );
+
+        if (currentSlippage > info.maxSlippage) revert OverMaxSlippage();
+
+        // #endregion assertions.
 
         emit LogRebalance(vault_, payloads_);
     }

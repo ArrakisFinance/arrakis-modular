@@ -29,6 +29,7 @@ interface IStandardManager {
     error NotWhitelistedStrat();
     error NotNativeCoinSent();
     error NoEnoughBalance();
+    error OverMaxSlippage();
 
     // #endregion errors.
 
