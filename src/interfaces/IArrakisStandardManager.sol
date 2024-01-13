@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {SetupParams} from "../structs/SManager.sol";
 
-interface IStandardManager {
+interface IArrakisStandardManager {
     // #region errors.
 
     error EmptyNftRebalancersArray();

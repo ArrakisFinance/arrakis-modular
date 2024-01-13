@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {IManager} from "./interfaces/IManager.sol";
-import {IStandardManager} from "./interfaces/IStandardManager.sol";
+import {IArrakisStandardManager} from "./interfaces/IArrakisStandardManager.sol";
 import {SetupParams} from "./structs/SManager.sol";
 import {PUBLIC_TYPE, PRIVATE_TYPE, TEN_PERCENT, PIPS} from "./constants/CArrakis.sol";
 import {IOwnerOf} from "./interfaces/IOwnerOf.sol";
@@ -24,7 +24,7 @@ import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 
 // #endregion uniswap.
 
-contract StandardManager is IManager, IStandardManager, Ownable {
+contract ArrakisStandardManager is IManager, IArrakisStandardManager, Ownable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
