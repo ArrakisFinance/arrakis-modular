@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-interface IArrakisVaultNFT {
+interface IPALMVaultNFT {
     // #region errors.
 
     error AddressZero();

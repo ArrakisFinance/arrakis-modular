@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisMetaOwned} from "./interfaces/IArrakisMetaOwned.sol";
-import {ArrakisMetaVault} from "./ArrakisMetaVault.sol";
-import {NFTTYPE} from "./constants/CArrakis.sol";
+import {IArrakisMetaVaultPrivate} from "./interfaces/IArrakisMetaVaultPrivate.sol";
+import {ArrakisMetaVault} from "./abstract/ArrakisMetaVault.sol";
+import {PRIVATE_TYPE} from "./constants/CArrakis.sol";
 
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract ArrakisMetaVaultOwned is ArrakisMetaVault, IArrakisMetaOwned {
+contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
     constructor(
         address token0_,
         address token1_,
@@ -31,6 +31,6 @@ contract ArrakisMetaVaultOwned is ArrakisMetaVault, IArrakisMetaOwned {
     }
 
     function vaultType() external pure override returns (bytes32) {
-        return NFTTYPE;
+        return PRIVATE_TYPE;
     }
 }

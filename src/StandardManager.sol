@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {IManager} from "./interfaces/IManager.sol";
 import {IStandardManager} from "./interfaces/IStandardManager.sol";
 import {SetupParams} from "./structs/SManager.sol";
-import {ERC20TYPE, NFTTYPE, TEN_PERCENT, PIPS} from "./constants/CArrakis.sol";
+import {PUBLIC_TYPE, PRIVATE_TYPE, TEN_PERCENT, PIPS} from "./constants/CArrakis.sol";
 import {IOwnerOf} from "./interfaces/IOwnerOf.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
@@ -141,10 +141,10 @@ contract StandardManager is IManager, IStandardManager, Ownable {
 
         if (!_vaults.contains(vault_)) revert NotWhitelistedVault(vault_);
 
-        if (vaultType == ERC20TYPE) {
+        if (vaultType == PUBLIC_TYPE) {
             if (!_rebalancers.contains(msg.sender))
                 revert OnlyRebalancers(msg.sender);
-        } else if (vaultType == NFTTYPE) {
+        } else if (vaultType == PRIVATE_TYPE) {
             if (!_nftRebalancers.contains(msg.sender))
                 revert OnlyNftRebalancers(msg.sender);
         } else {
@@ -352,10 +352,10 @@ contract StandardManager is IManager, IStandardManager, Ownable {
     function initManagement(SetupParams calldata params_) external payable {
         bytes32 vaultType = IArrakisMetaVault(params_.vault).vaultType();
 
-        if (vaultType == NFTTYPE) {
+        if (vaultType == PRIVATE_TYPE) {
             address o = IOwnerOf(terms).ownerOf(params_.vault);
             if (msg.sender != o) revert OnlyVaultOwner(msg.sender, o);
-        } else if (vaultType == ERC20TYPE) {
+        } else if (vaultType == PUBLIC_TYPE) {
             if (msg.sender != owner()) revert OnlyOwner();
         } else revert VaultTypeNotSupported(vaultType);
 
@@ -376,10 +376,10 @@ contract StandardManager is IManager, IStandardManager, Ownable {
     function setVaultData(address vault_, bytes calldata datas_) external {
         bytes32 vaultType = IArrakisMetaVault(vault_).vaultType();
 
-        if (vaultType == NFTTYPE) {
+        if (vaultType == PRIVATE_TYPE) {
             address o = IOwnerOf(terms).ownerOf(vault_);
             if (msg.sender != o) revert OnlyVaultOwner(msg.sender, o);
-        } else if (vaultType == ERC20TYPE) {
+        } else if (vaultType == PUBLIC_TYPE) {
             if (msg.sender != owner()) revert OnlyOwner();
         } else revert VaultTypeNotSupported(vaultType);
 
@@ -404,10 +404,10 @@ contract StandardManager is IManager, IStandardManager, Ownable {
     ) external {
         bytes32 vaultType = IArrakisMetaVault(vault_).vaultType();
 
-        if (vaultType == NFTTYPE) {
+        if (vaultType == PRIVATE_TYPE) {
             address o = IOwnerOf(terms).ownerOf(vault_);
             if (msg.sender != o) revert OnlyVaultOwner(msg.sender, o);
-        } else if (vaultType == ERC20TYPE) {
+        } else if (vaultType == PUBLIC_TYPE) {
             if (msg.sender != owner()) revert OnlyOwner();
         } else revert VaultTypeNotSupported(vaultType);
 
@@ -445,10 +445,10 @@ contract StandardManager is IManager, IStandardManager, Ownable {
     ) external {
         bytes32 vaultType = IArrakisMetaVault(vault_).vaultType();
 
-        if (vaultType == NFTTYPE) {
+        if (vaultType == PRIVATE_TYPE) {
             address o = IOwnerOf(terms).ownerOf(vault_);
             if (msg.sender != o) revert OnlyVaultOwner(msg.sender, o);
-        } else if (vaultType == ERC20TYPE) {
+        } else if (vaultType == PUBLIC_TYPE) {
             if (msg.sender != owner()) revert OnlyOwner();
         } else revert VaultTypeNotSupported(vaultType);
 

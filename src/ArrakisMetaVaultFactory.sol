@@ -5,8 +5,8 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {IArrakisMetaVaultFactory} from "./interfaces/IArrakisMetaVaultFactory.sol";
-import {ArrakisMetaVaultToken} from "./ArrakisMetaVaultToken.sol";
-import {ArrakisMetaVaultOwned} from "./ArrakisMetaVaultOwned.sol";
+import {ArrakisMetaVaultPublic} from "./ArrakisMetaVaultPublic.sol";
+import {ArrakisMetaVaultPrivate} from "./ArrakisMetaVaultPrivate.sol";
 
 import {Create3} from "@create3/contracts/Create3.sol";
 
@@ -16,8 +16,8 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
 
     // #region internal properties.
 
-    EnumerableSet.AddressSet internal _tokenVaults;
-    EnumerableSet.AddressSet internal _ownedVaults;
+    EnumerableSet.AddressSet internal _publicVaults;
+    EnumerableSet.AddressSet internal _privateVaults;
 
     // #endregion internal properties.
 
@@ -30,7 +30,7 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
     /// @param module_ address of the initial module that will be used
     /// by Meta Vault.
     /// @return vault address of the newly created Token Meta Vault.
-    function deployTokenMetaVault(
+    function deployPublicVault(
         bytes32 salt_,
         address token0_,
         address token1_,
@@ -60,7 +60,7 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
         // #region get the creation code for TokenMetaVault.
 
         bytes memory creationCode = abi.encode(
-            type(ArrakisMetaVaultToken).creationCode,
+            type(ArrakisMetaVaultPublic).creationCode,
             token0_,
             token1_,
             owner_,
@@ -72,9 +72,9 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
         // #endregion get the creation code for TokenMetaVault.
 
         vault = Create3.create3(salt, creationCode);
-        _tokenVaults.add(vault);
+        _publicVaults.add(vault);
 
-        emit LogTokenVaultCreation(
+        emit LogPublicVaultCreation(
             msg.sender,
             salt_,
             token0_,
@@ -94,7 +94,7 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
     /// @param module_ address of the initial module that will be used
     /// by Meta Vault.
     /// @return vault address of the newly created Owned Meta Vault.
-    function deployOwnedMetaVault(
+    function deployPrivateVault(
         bytes32 salt_,
         address token0_,
         address token1_,
@@ -110,7 +110,7 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
         // #region get the creation code for TokenMetaVault.
 
         bytes memory creationCode = abi.encode(
-            type(ArrakisMetaVaultOwned).creationCode,
+            type(ArrakisMetaVaultPrivate).creationCode,
             token0_,
             token1_,
             owner_,
@@ -120,9 +120,9 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
         // #endregion get the creation code for TokenMetaVault.
 
         vault = Create3.create3(salt, creationCode);
-        _ownedVaults.add(vault);
+        _privateVaults.add(vault);
 
-        emit LogOwnedVaultCreation(
+        emit LogPrivateVaultCreation(
             msg.sender,
             salt_,
             token0_,
@@ -165,58 +165,58 @@ contract ArrakisMetaVaultFactory is IArrakisMetaVaultFactory {
     /// @param startIndex_ start index
     /// @param endIndex_ end index
     /// @return vaults list of all created vaults.
-    function tokenVaults(
+    function publicVaults(
         uint256 startIndex_,
         uint256 endIndex_
     ) external view returns (address[] memory) {
         if (startIndex_ >= endIndex_)
             revert StartIndexLtEndIndex(startIndex_, endIndex_);
 
-        uint256 vaultsLength = numOfTokenVaults();
+        uint256 vaultsLength = numPublicVaults();
         if (endIndex_ > vaultsLength)
             revert EndIndexGtNbOfVaults(endIndex_, vaultsLength);
 
         address[] memory vs = new address[](endIndex_ - startIndex_);
         for (uint256 i = startIndex_; i < endIndex_; i++) {
-            vs[i - startIndex_] = _tokenVaults.at(i);
+            vs[i - startIndex_] = _publicVaults.at(i);
         }
 
         return vs;
     }
 
-    /// @notice numOfTokenVaults counts the total number of token vaults in existence
+    /// @notice numPublicVaults counts the total number of token vaults in existence
     /// @return result total number of vaults deployed
-    function numOfTokenVaults() public view returns (uint256 result) {
-        return _tokenVaults.length();
+    function numPublicVaults() public view returns (uint256 result) {
+        return _publicVaults.length();
     }
 
     /// @notice get a list of owned vaults created by this factory
     /// @param startIndex_ start index
     /// @param endIndex_ end index
     /// @return vaults list of all created vaults.
-    function ownedVaults(
+    function privateVaults(
         uint256 startIndex_,
         uint256 endIndex_
     ) external view returns (address[] memory) {
         if (startIndex_ >= endIndex_)
             revert StartIndexLtEndIndex(startIndex_, endIndex_);
 
-        uint256 vaultsLength = numOfTokenVaults();
+        uint256 vaultsLength = numPublicVaults();
         if (endIndex_ > vaultsLength)
             revert EndIndexGtNbOfVaults(endIndex_, vaultsLength);
 
         address[] memory vs = new address[](endIndex_ - startIndex_);
         for (uint256 i = startIndex_; i < endIndex_; i++) {
-            vs[i - startIndex_] = _ownedVaults.at(i);
+            vs[i - startIndex_] = _privateVaults.at(i);
         }
 
         return vs;
     }
 
-    /// @notice numOfOwnedVaults counts the total number of owned vaults in existence
+    /// @notice numPrivateVaults counts the total number of owned vaults in existence
     /// @return result total number of vaults deployed
-    function numOfOwnedVaults() public view returns (uint256 result) {
-        return _ownedVaults.length();
+    function numPrivateVaults() public view returns (uint256 result) {
+        return _privateVaults.length();
     }
 
     // #endregion view/pure functions.

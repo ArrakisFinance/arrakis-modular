@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 uint24 constant PIPS = 1_000_000;
 uint24 constant TEN_PERCENT = 100_000;
-/// @dev keccak256(abi.encode("ERC20TYPE"))
-bytes32 constant ERC20TYPE = 0x622455176864f807122afa6d289a279f65cb874aa288df301854eb10e461c66f;
-/// @dev keccak256(abi.encode("NFTTYPE"))
-bytes32 constant NFTTYPE = 0xc4d0d2f21a055d9d9ecb61b5b7ced1d77b855e43ca9459036f8dea463b825180;
+/// @dev keccak256(abi.encode("PUBLIC"))
+bytes32 constant PUBLIC_TYPE = 0x6c9260317eb3686591d0f7f822e48f62c94ad687bd13b2e0d60b2fd97500094a;
+/// @dev keccak256(abi.encode("PRIVATE"))
+bytes32 constant PRIVATE_TYPE = 0x328c5974909fb30f82b805e5f612684a346fe6c97f65297e727160ed87c33a19;

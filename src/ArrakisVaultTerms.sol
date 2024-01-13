@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {IArrakisVaultTerms} from "./interfaces/IArrakisVaultTerms.sol";
 import {IOwnerOf} from "./interfaces/IOwnerOf.sol";
 import {IArrakisMetaVaultFactory} from "./interfaces/IArrakisMetaVaultFactory.sol";
-import {IArrakisMetaOwned} from "./interfaces/IArrakisMetaOwned.sol";
+import {IArrakisMetaVaultPrivate} from "./interfaces/IArrakisMetaVaultPrivate.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -78,7 +78,7 @@ contract ArrakisVaultTerms is IArrakisVaultTerms, IOwnerOf, Ownable {
         // #region create the owned vault.
 
         address vault = IArrakisMetaVaultFactory(arrakisMetaVaultFactory)
-            .deployOwnedMetaVault(
+            .deployPrivateVault(
                 _salt,
                 token0_,
                 token1_,
@@ -134,7 +134,7 @@ contract ArrakisVaultTerms is IArrakisVaultTerms, IOwnerOf, Ownable {
             _token1.safeIncreaseAllowance(module, maxAmount1_);
         }
 
-        (amount0, amount1) = IArrakisMetaOwned(vault_).deposit{
+        (amount0, amount1) = IArrakisMetaVaultPrivate(vault_).deposit{
             value: msg.value
         }(proportion_);
 
@@ -168,7 +168,7 @@ contract ArrakisVaultTerms is IArrakisVaultTerms, IOwnerOf, Ownable {
     {
         // #region interactions.
 
-        (amount0, amount1) = IArrakisMetaOwned(vault_).withdraw(
+        (amount0, amount1) = IArrakisMetaVaultPrivate(vault_).withdraw(
             proportion_,
             receiver_
         );

@@ -33,11 +33,11 @@
 
 // // #endregion mocks.
 
-// import {UniV4NativeModule} from "../../src/modules/UniV4NativeModule.sol";
-// import {IUniV4NativeModule} from "../../src/interfaces/IUniV4NativeModule.sol";
+// import {UniV4StandardModule} from "../../src/modules/UniV4StandardModule.sol";
+// import {IUniV4StandardModule} from "../../src/interfaces/IUniV4StandardModule.sol";
 // import {IArrakisLPModule} from "../../src/interfaces/IArrakisLPModule.sol";
 
-// contract UniV4NativeModuleTest is TestWrapper {
+// contract UniV4StandardModuleTest is TestWrapper {
 //     using PoolIdLibrary for PoolKey;
 //     using BalanceDeltaLibrary for BalanceDelta;
 //     // #region constant properties.
@@ -66,7 +66,7 @@
 
 //     // #endregion mocks.
 
-//     UniV4NativeModule public module;
+//     UniV4StandardModule public module;
 //     PoolKey public poolKey;
 
 //     function setUp() public {
@@ -90,7 +90,7 @@
 
 //         // #region create uni v3 native module.
 
-//         module = new UniV4NativeModule(
+//         module = new UniV4StandardModule(
 //             address(poolManager),
 //             poolKey,
 //             address(metaVault),
@@ -108,7 +108,7 @@
 //     function test_ConstructorWithPoolManagerZeroAddress() public {
 //         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
-//         module = new UniV4NativeModule(
+//         module = new UniV4StandardModule(
 //             address(0),
 //             poolKey,
 //             address(metaVault),
@@ -122,7 +122,7 @@
 //     function test_ConstructorWithMetaVaultZeroAddress() public {
 //         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
-//         module = new UniV4NativeModule(
+//         module = new UniV4StandardModule(
 //             address(poolManager),
 //             poolKey,
 //             address(0),
@@ -136,7 +136,7 @@
 //     function test_ConstructorWithToken0ZeroAddress() public {
 //         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
-//         module = new UniV4NativeModule(
+//         module = new UniV4StandardModule(
 //             address(poolManager),
 //             poolKey,
 //             address(metaVault),
@@ -150,7 +150,7 @@
 //     function test_ConstructorWithToken1ZeroAddress() public {
 //         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
-//         module = new UniV4NativeModule(
+//         module = new UniV4StandardModule(
 //             address(poolManager),
 //             poolKey,
 //             address(metaVault),
@@ -162,9 +162,9 @@
 //     }
 
 //     function test_ConstructorWithToken0GtToken1() public {
-//         vm.expectRevert(IUniV4NativeModule.Token0GteToken1.selector);
+//         vm.expectRevert(IUniV4StandardModule.Token0GteToken1.selector);
 
-//         module = new UniV4NativeModule(
+//         module = new UniV4StandardModule(
 //             address(poolManager),
 //             poolKey,
 //             address(metaVault),
@@ -178,13 +178,13 @@
 //     function test_ConstructorWithCurrency0DtToken0() public {
 //         vm.expectRevert(
 //             abi.encodeWithSelector(
-//                 IUniV4NativeModule.Currency0DtToken0.selector,
+//                 IUniV4StandardModule.Currency0DtToken0.selector,
 //                 USDC,
 //                 UNI
 //             )
 //         );
 
-//         module = new UniV4NativeModule(
+//         module = new UniV4StandardModule(
 //             address(poolManager),
 //             poolKey,
 //             address(metaVault),
@@ -196,7 +196,7 @@
 //     }
 
 //     function test_ConstructorWithPoolNotInitialized() public {
-//         vm.expectRevert(IUniV4NativeModule.SqrtPriceZero.selector);
+//         vm.expectRevert(IUniV4StandardModule.SqrtPriceZero.selector);
 
 //         poolKey = PoolKey({
 //             currency0: Currency.wrap(UNI),
@@ -206,7 +206,7 @@
 //             hooks: IHooks(address(0))
 //         });
 
-//         module = new UniV4NativeModule(
+//         module = new UniV4StandardModule(
 //             address(poolManager),
 //             poolKey,
 //             address(metaVault),
@@ -276,7 +276,7 @@
 
 //         vm.expectRevert(
 //             abi.encodeWithSelector(
-//                 IUniV4NativeModule.Currency0DtToken0.selector,
+//                 IUniV4StandardModule.Currency0DtToken0.selector,
 //                 UNI,
 //                 USDC
 //             )
@@ -298,7 +298,7 @@
 
 //         vm.expectRevert(
 //             abi.encodeWithSelector(
-//                 IUniV4NativeModule.Currency1DtToken1.selector,
+//                 IUniV4StandardModule.Currency1DtToken1.selector,
 //                 STETH,
 //                 WETH
 //             )
@@ -318,7 +318,7 @@
 
 //         vm.prank(address(manager));
 
-//         vm.expectRevert(IUniV4NativeModule.SqrtPriceZero.selector);
+//         vm.expectRevert(IUniV4StandardModule.SqrtPriceZero.selector);
 
 //         module.setPool(poolKey);
 //     }
@@ -334,7 +334,7 @@
 
 //         vm.prank(address(manager));
 
-//         vm.expectRevert(IUniV4NativeModule.SamePool.selector);
+//         vm.expectRevert(IUniV4StandardModule.SamePool.selector);
 
 //         module.setPool(poolKey);
 //     }
@@ -635,7 +635,7 @@
 
 //         uint128 liquidityToAdd = 0;
 
-//         vm.expectRevert(IUniV4NativeModule.LiquidityToAddEqZero.selector);
+//         vm.expectRevert(IUniV4StandardModule.LiquidityToAddEqZero.selector);
 //         vm.prank(address(manager));
 
 //         module.addLiquidity(liquidityToAdd, tickLower, tickUpper);
@@ -686,7 +686,7 @@
 
 //         vm.expectRevert(
 //             abi.encodeWithSelector(
-//                 IUniV4NativeModule.TicksMisordered.selector,
+//                 IUniV4StandardModule.TicksMisordered.selector,
 //                 tickUpper,
 //                 tickLower
 //             )
@@ -742,7 +742,7 @@
 //         vm.prank(address(manager));
 //         vm.expectRevert(
 //             abi.encodeWithSelector(
-//                 IUniV4NativeModule.TickLowerOutOfBounds.selector,
+//                 IUniV4StandardModule.TickLowerOutOfBounds.selector,
 //                 TickMath.MIN_TICK - 1
 //             )
 //         );
@@ -796,7 +796,7 @@
 //         vm.prank(address(manager));
 //         vm.expectRevert(
 //             abi.encodeWithSelector(
-//                 IUniV4NativeModule.TickUpperOutOfBounds.selector,
+//                 IUniV4StandardModule.TickUpperOutOfBounds.selector,
 //                 TickMath.MAX_TICK + 1
 //             )
 //         );
@@ -976,7 +976,7 @@
 
 //         uint128 liquidityToRemove = 0;
 
-//         vm.expectRevert(IUniV4NativeModule.LiquidityToRemoveEqZero.selector);
+//         vm.expectRevert(IUniV4StandardModule.LiquidityToRemoveEqZero.selector);
 
 //         vm.prank(address(manager));
 
@@ -1034,7 +1034,7 @@
 
 //         vm.expectRevert(
 //             abi.encodeWithSelector(
-//                 IUniV4NativeModule.RangeShouldBeActive.selector,
+//                 IUniV4StandardModule.RangeShouldBeActive.selector,
 //                 tickLower + 1,
 //                 tickUpper + 1
 //             )
@@ -1094,7 +1094,7 @@
 
 //         uint128 liquidityToRemove = liquidityToAdd + 1;
 
-//         vm.expectRevert(IUniV4NativeModule.OverBurning.selector);
+//         vm.expectRevert(IUniV4StandardModule.OverBurning.selector);
 
 //         vm.prank(address(manager));
 

@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {console} from "forge-std/console.sol";
 
 import {TestWrapper} from "../utils/TestWrapper.sol";
-import {ArrakisMetaVaultToken} from "../../src/ArrakisMetaVaultToken.sol";
+import {ArrakisMetaVaultPublic} from "../../src/ArrakisMetaVaultPublic.sol";
 import {IArrakisMetaVault} from "../../src/interfaces/IArrakisMetaVault.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -20,7 +20,7 @@ import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 
 // #endregion mock contracts.
 
-contract ArrakisMetaVaultTokenTest is TestWrapper {
+contract ArrakisMetaVaultPublicTest is TestWrapper {
     // #region constant properties.
 
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -30,7 +30,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
 
     // #region public properties.
 
-    ArrakisMetaVaultToken public vaultToken;
+    ArrakisMetaVaultPublic public vaultToken;
     ManagerMock public manager;
     LpModuleMock public module;
     address public owner;
@@ -42,7 +42,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
         module = new LpModuleMock(USDC, WETH, address(manager));
         owner = vm.addr(1);
 
-        vaultToken = new ArrakisMetaVaultToken(
+        vaultToken = new ArrakisMetaVaultPublic(
             USDC,
             WETH,
             owner,
@@ -62,7 +62,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
             )
         );
 
-        vaultToken = new ArrakisMetaVaultToken(
+        vaultToken = new ArrakisMetaVaultPublic(
             address(0),
             WETH,
             owner,
@@ -80,7 +80,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
             )
         );
 
-        vaultToken = new ArrakisMetaVaultToken(
+        vaultToken = new ArrakisMetaVaultPublic(
             USDC,
             address(0),
             owner,
@@ -93,7 +93,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
     function testConstructorToken0GtToken1() public {
         vm.expectRevert(IArrakisMetaVault.Token0GtToken1.selector);
 
-        vaultToken = new ArrakisMetaVaultToken(
+        vaultToken = new ArrakisMetaVaultPublic(
             WETH,
             USDC,
             owner,
@@ -111,7 +111,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
             )
         );
 
-        vaultToken = new ArrakisMetaVaultToken(
+        vaultToken = new ArrakisMetaVaultPublic(
             USDC,
             WETH,
             address(0),
@@ -129,7 +129,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
             )
         );
 
-        vaultToken = new ArrakisMetaVaultToken(
+        vaultToken = new ArrakisMetaVaultPublic(
             USDC,
             WETH,
             owner,
@@ -239,7 +239,7 @@ contract ArrakisMetaVaultTokenTest is TestWrapper {
             address(manager)
         );
 
-        vaultToken = new ArrakisMetaVaultToken(
+        vaultToken = new ArrakisMetaVaultPublic(
             USDC,
             WETH,
             owner,

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisVaultNFT} from "./interfaces/IArrakisVaultNFT.sol";
+import {IPALMVaultNFT} from "./interfaces/IPALMVaultNFT.sol";
 import {IArrakisMetaVaultFactory} from "./interfaces/IArrakisMetaVaultFactory.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
-import {IArrakisMetaOwned} from "./interfaces/IArrakisMetaOwned.sol";
+import {IArrakisMetaVaultPrivate} from "./interfaces/IArrakisMetaVaultPrivate.sol";
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -12,7 +12,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
-contract ArrakisVaultNFT is IArrakisVaultNFT, ERC721, Ownable {
+contract PALMVaultNFT is IPALMVaultNFT, ERC721, Ownable {
     using SafeERC20 for IERC20;
 
     // #region public immutable properties.
@@ -40,7 +40,7 @@ contract ArrakisVaultNFT is IArrakisVaultNFT, ERC721, Ownable {
     constructor(
         address owner_,
         address nativeToken_
-    ) ERC721("NFT Owned Vault", "NOV") {
+    ) ERC721("Arrakis Modular PALM Vaults", "PALM") {
         if (owner_ == address(0) || nativeToken_ == address(0))
             revert AddressZero();
         _initializeOwner(owner_);
@@ -80,7 +80,7 @@ contract ArrakisVaultNFT is IArrakisVaultNFT, ERC721, Ownable {
         // #region create the owned vault.
 
         address vault = IArrakisMetaVaultFactory(arrakisMetaVaultFactory)
-            .deployOwnedMetaVault(
+            .deployPrivateVault(
                 _salt,
                 token0_,
                 token1_,
@@ -139,7 +139,7 @@ contract ArrakisVaultNFT is IArrakisVaultNFT, ERC721, Ownable {
             _token1.safeIncreaseAllowance(module, maxAmount1_);
         }
 
-        (amount0, amount1) = IArrakisMetaOwned(vault_).deposit{
+        (amount0, amount1) = IArrakisMetaVaultPrivate(vault_).deposit{
             value: msg.value
         }(proportion_);
 
@@ -173,7 +173,7 @@ contract ArrakisVaultNFT is IArrakisVaultNFT, ERC721, Ownable {
     {
         // #region interactions.
 
-        (amount0, amount1) = IArrakisMetaOwned(vault_).withdraw(
+        (amount0, amount1) = IArrakisMetaVaultPrivate(vault_).withdraw(
             proportion_,
             receiver_
         );
