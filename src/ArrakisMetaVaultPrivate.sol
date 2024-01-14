@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import {IArrakisMetaVaultPrivate} from "./interfaces/IArrakisMetaVaultPrivate.sol";
 import {ArrakisMetaVault} from "./abstract/ArrakisMetaVault.sol";
-import {PRIVATE_TYPE} from "./constants/CArrakis.sol";
 
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 
@@ -28,9 +27,5 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
         address receiver_
     ) external onlyOwner returns (uint256 amount0, uint256 amount1) {
         (amount0, amount1) = _withdraw(receiver_, proportion_);
-    }
-
-    function vaultType() external pure override returns (bytes32) {
-        return PRIVATE_TYPE;
     }
 }

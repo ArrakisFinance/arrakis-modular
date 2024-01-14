@@ -5,8 +5,8 @@ interface IPALMVaultNFT {
     // #region errors.
 
     error AddressZero();
-    error ArrakisMetaVaultFactoryAlreadySet();
-    error NoArrakisMetaVaultFactory();
+    error ArrakisManagerAlreadySet();
+    error NoArrakisManager();
     error NotOwner(address caller, address owner);
     error ValueDtMaxAmount(uint256 value, uint256 maxAmount);
 
@@ -14,7 +14,7 @@ interface IPALMVaultNFT {
 
     // #region events.
 
-    event LogSetArrakisMetaVaultFactory(address arrakisMetaVaultFactory);
+    event LogSetArrakisManager(address arrakisManager);
     event LogMint(
         bytes32 salt,
         address creator,
@@ -37,17 +37,13 @@ interface IPALMVaultNFT {
         uint256 amount0,
         uint256 amount1
     );
-    event LogSetManager(address owner, address newManager);
+
     event LogWhiteListedModules(address owner, address[] modules);
     event LogBlackListedModules(address owner, address[] modules);
 
     // #endregion events.
 
     // #region functions.
-
-    function setArrakisMetaVaultFactory(
-        address arrakisMetaVaultFactory_
-    ) external;
 
     function mint(
         bytes32 salt_,
@@ -83,12 +79,6 @@ interface IPALMVaultNFT {
         uint256 proportion_,
         address receiver_
     ) external returns (uint256 amount0, uint256 amount1);
-
-    /// @notice function used by owner to set the Manager
-    /// responsible to rebalance the position.
-    /// @param vault_ address of the owned meta vault where to set manager.
-    /// @param newManager_ address of the new manager.
-    function setManager(address vault_, address newManager_) external;
 
     /// @notice function used to whitelist modules that can used by manager.
     /// @param vault_ address of the owned meta vault where to whitelist modules.

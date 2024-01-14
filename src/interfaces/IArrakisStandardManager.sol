@@ -6,106 +6,118 @@ import {SetupParams} from "../structs/SManager.sol";
 interface IArrakisStandardManager {
     // #region errors.
 
-    error EmptyNftRebalancersArray();
-    error NotWhitelistedNftRebalancer(address nftRebalancer);
-    error AlreadyWhitelistedNftRebalancer(address nftRebalancer);
-    error VaultTypeNotSupported(bytes32 vaultType);
-    error OnlyNftRebalancers(address caller);
-    error EmptyString();
-    error StratAlreadyWhitelisted();
-    error StratNotWhitelisted();
-    error OnlyPrivateVault();
-    error OnlyERC20Vault();
     error OnlyVaultOwner(address caller, address vaultOwner);
     error AlreadyInManagement();
     error NotTheManager(address caller, address manager);
     error SlippageTooHigh();
-    error CoolDownPeriodSetToZero();
-    error ValueDtBalanceInputed(uint256 value, uint256 balance);
+    error CooldownPeriodSetToZero();
     error OnlyOwner();
     error OnlyManagedVault();
-    error DataIsUpdated();
-    error SameStrat();
-    error NotWhitelistedStrat();
-    error NotNativeCoinSent();
-    error NoEnoughBalance();
     error OverMaxSlippage();
+    error NotFeeDecrease();
+    error AlreadyPendingIncrease();
+    error NotFeeIncrease();
+    error TimeNotPassed();
+    error NoPendingIncrease();
+    error NotExecutor();
+    error NotStratAnnouncer();
+    error AddressZero();
+    error NotWhitelistedVault(address vault);
+    error AlreadyWhitelistedVault(address vault);
+    error EmptyVaultsArray();
+    error CallFailed(bytes payload);
+    error StartIndexLtEndIndex(uint256 startIndex, uint256 endIndex);
+    error EndIndexGtNbOfVaults(uint256 endIndex, uint256 numberOfVaults);
 
     // #endregion errors.
 
     // #region events.
 
-    event LogWhitelistNftRebalancers(address[] nftRebalancers);
-    event LogBlacklistNftRebalancers(address[] nftRebalancers);
-    event LogWhitelistStrategies(string[] strategies);
-    event LogInitManagement(
+    event LogSetDefaultReceiver(address oldReceiver, address newReceiver);
+    event LogSetReceiverByToken(address indexed token, address receiver);
+    event LogWithdrawManagerBalance(
+        address indexed receiver0,
+        address indexed receiver1,
+        uint256 amount0,
+        uint256 amount1
+    );
+    event LogRebalance(address indexed vault, bytes[] payloads);
+    event LogSetModule(address indexed vault, address module, bytes[] payloads);
+
+    event LogSetManagementParams(
         address indexed vault,
-        uint256 balance,
-        bytes datas,
+        uint256 cooldownPeriod,
         address oracle,
-        uint24 maxSlippage,
-        uint256 managerFeeBPS,
-        uint256 coolDownPeriod,
-        bytes32 strat
+        address executor,
+        address stratAnnouncer,
+        uint24 maxSlippagePIPS
     );
-    event LogSetVaultData(
+
+    event LogStrategyData(
         address indexed vault,
-        bytes datas
+        bytes data
     );
-    event LogSetVaultStrat(
-        address indexed vault,
-        string strat
-    );
-    event LogFundBalance(
-        address indexed vault,
-        uint256 balance
-    );
-    event LogWithdrawVaultBalance(
-        address indexed vault,
-        uint256 amount,
-        address receiver,
-        uint256 newBalance
-    );
+
+    event LogChangeManagerFee(address indexed vault, uint24 managerFeePIPS);
 
     // #endregion events.
 
-    // #region public functions.
+    /// @notice function used by manager to get his balance of fees earned
+    /// on a vault.
+    /// @param vault_ from which fees will be collected.
+    /// @return amount0 amount of token0 sent to receiver_
+    /// @return amount1 amount of token1 sent to receiver_
+    function withdrawManagerBalance(
+        address vault_
+    ) external returns (uint256 amount0, uint256 amount1);
 
-    function whitelistStrategies(string[] calldata strategies_) external;
+    /// @notice function used to manage vault's strategy.
+    /// @param vault_ address of the vault that need a rebalance.
+    /// @param payloads_ call data to do specific action of vault side.
+    function rebalance(address vault_, bytes[] calldata payloads_) external;
 
-    function whitelistNftRebalancers(
-        address[] calldata nftRebalancers_
+    /// @notice function used to set a new module (strategy) for the vault.
+    /// @param vault_ address of the vault the manager want to change module.
+    /// @param module_ address of the new module.
+    /// @param payloads_ call data to initialize position on the new module.
+    function setModule(
+        address vault_,
+        address module_,
+        bytes[] calldata payloads_
     ) external;
 
-    function blacklistNftRebalancers(
-        address[] calldata nftRebalancers_
+    /// @notice function used to set the default receiver that
+    /// will receive fund when a token don't have a specific receiver addr.
+    /// @param newDefaultReceiver_ address that will receive tokens.
+    function setDefaultReceiver(address newDefaultReceiver_) external;
+
+    /// @notice function used to set the receiver that will receive a
+    /// specific token.
+    /// @param vault_ whitelisted metaVault.
+    /// @param isSetReceiverToken0_ boolean defining if we should set receiver
+    /// token0 or token1 of metaVault inputed.
+    /// @param receiver_ address of the receiver of this specific token.
+    function setReceiverByToken(
+        address vault_,
+        bool isSetReceiverToken0_,
+        address receiver_
     ) external;
 
-    function initManagement(SetupParams calldata params_) external payable;
+    function initManagement(SetupParams calldata params_) external;
 
-    function setVaultData(address vault_, bytes calldata datas_) external;
+    function updateVaultInfo(SetupParams calldata params_) external;
 
-    function setVaultStratByName(address vault_, string calldata strat_) external;
+    // #region view functions.
 
-    function fundVaultBalance(address vault_) external payable;
-
-    function withdrawVaultBalance(address vault_, uint256 amount_, address receiver_) external;
-
-    // #endregion public functions.
-
-    // #region public view functions.
-
-    function whitelistedStrategies()
+    function initializedVaults(
+        uint256 startIndex_,
+        uint256 endIndex_
+    )
         external
         view
-        returns (bytes32[] memory strats);
+        returns (address[] memory);
+    
+    function numInitializedVaults() external view returns (uint256);
 
-    /// @notice function used to get the list of nft rebalancers.
-    /// @return nftRebalancers set of rebalancers for nft vault.
-    function whitelistedNftRebalancers()
-        external
-        view
-        returns (address[] memory nftRebalancers);
-
-    // #endregion public view functions.
+    // #endregion view functions.
 }

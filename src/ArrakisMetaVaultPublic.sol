@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import {IArrakisMetaVaultPublic} from "./interfaces/IArrakisMetaVaultPublic.sol";
 import {ArrakisMetaVault, PIPS} from "./abstract/ArrakisMetaVault.sol";
-import {PUBLIC_TYPE} from "./constants/CArrakis.sol";
 
 import {ERC20} from "@solady/contracts/tokens/ERC20.sol";
 
@@ -63,10 +62,6 @@ contract ArrakisMetaVaultPublic is IArrakisMetaVaultPublic, ArrakisMetaVault, ER
         (amount0, amount1) = _withdraw(receiver_, proportion);
 
         emit LogBurn(shares_, receiver_, amount0, amount1);
-    }
-
-    function vaultType() external pure override returns (bytes32) {
-        return PUBLIC_TYPE;
     }
 
     function name() public view override returns (string memory) {

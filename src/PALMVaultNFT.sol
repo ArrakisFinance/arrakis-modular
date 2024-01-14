@@ -5,32 +5,33 @@ import {IPALMVaultNFT} from "./interfaces/IPALMVaultNFT.sol";
 import {IArrakisMetaVaultFactory} from "./interfaces/IArrakisMetaVaultFactory.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IArrakisMetaVaultPrivate} from "./interfaces/IArrakisMetaVaultPrivate.sol";
+import {IArrakisStandardManager} from "./interfaces/IArrakisStandardManager.sol";
+import {SetupParams} from "./structs/SManager.sol";
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
-import {Ownable} from "@solady/contracts/auth/Ownable.sol";
-
-contract PALMVaultNFT is IPALMVaultNFT, ERC721, Ownable {
+contract PALMVaultNFT is IPALMVaultNFT, ERC721 {
     using SafeERC20 for IERC20;
 
     // #region public immutable properties.
 
     address public immutable nativeToken;
+    address public immutable arrakisMetaVaultFactory;
+    address public immutable arrakisStandardManager;
 
     // #endregion public immutable properties.
 
     // #region public properties.
 
-    address public arrakisMetaVaultFactory;
 
     // #endregion public properties.
 
     // #region modifiers.
 
     modifier OnlyVaultOwner(address vault_) {
-        address o = _ownerOf(uint256(uint160(vault_)));
+        address o = ownerOf(uint256(uint160(vault_)));
         if (msg.sender != o) revert NotOwner(msg.sender, o);
         _;
     }
@@ -38,26 +39,18 @@ contract PALMVaultNFT is IPALMVaultNFT, ERC721, Ownable {
     // #endregion modifiers.
 
     constructor(
-        address owner_,
-        address nativeToken_
+        address nativeToken_,
+        address vaultFactory_,
+        address manager_
     ) ERC721("Arrakis Modular PALM Vaults", "PALM") {
-        if (owner_ == address(0) || nativeToken_ == address(0))
-            revert AddressZero();
-        _initializeOwner(owner_);
+        if (
+            nativeToken_ == address(0) ||
+            vaultFactory_ == address(0) ||
+            manager_ == address(0)
+        ) revert AddressZero();
         nativeToken = nativeToken_;
-    }
-
-    // #region only owner functions.
-
-    function setArrakisMetaVaultFactory(
-        address arrakisMetaVaultFactory_
-    ) external onlyOwner {
-        if (arrakisMetaVaultFactory != address(0))
-            revert ArrakisMetaVaultFactoryAlreadySet();
-        if (arrakisMetaVaultFactory_ == address(0)) revert AddressZero();
-
-        arrakisMetaVaultFactory = arrakisMetaVaultFactory_;
-        emit LogSetArrakisMetaVaultFactory(arrakisMetaVaultFactory_);
+        arrakisMetaVaultFactory = vaultFactory_;
+        arrakisStandardManager = manager_;
     }
 
     // #endregion only owner functions.
@@ -104,6 +97,20 @@ contract PALMVaultNFT is IPALMVaultNFT, ERC721, Ownable {
             tokenId,
             vault
         );
+    }
+
+    function initManagement(
+        SetupParams calldata params_
+    ) external OnlyVaultOwner(params_.vault) {
+        IArrakisMetaVault(params_.vault).setManager(arrakisStandardManager);
+
+        IArrakisStandardManager(arrakisStandardManager).initManagement(params_);
+    }
+
+    function updateVaultManagement(
+        SetupParams calldata params_
+    ) external OnlyVaultOwner(params_.vault) {
+        IArrakisStandardManager(arrakisStandardManager).updateVaultInfo(params_);
     }
 
     function deposit(
@@ -181,15 +188,6 @@ contract PALMVaultNFT is IPALMVaultNFT, ERC721, Ownable {
         // #endregion interactions.
 
         emit LogWithdraw(msg.sender, proportion_, amount0, amount1);
-    }
-
-    function setManager(
-        address vault_,
-        address newManager_
-    ) external OnlyVaultOwner(vault_) {
-        IArrakisMetaVault(vault_).setManager(newManager_);
-
-        emit LogSetManager(msg.sender, newManager_);
     }
 
     function whitelistModules(

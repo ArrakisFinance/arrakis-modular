@@ -89,9 +89,6 @@ interface IArrakisMetaVault {
     /// @return init1 the amount of token1 needed to open a position.
     function getInits() external view returns (uint256 init0, uint256 init1);
 
-    /// @notice function used to get the type of vault.
-    function vaultType() external pure returns (bytes32);
-
     /// @notice function used to get the address of token0.
     function token0() external view returns (address);
 

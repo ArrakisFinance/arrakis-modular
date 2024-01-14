@@ -187,7 +187,7 @@ abstract contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuar
         uint256 proportion_
     ) internal nonReentrant returns (uint256 amount0, uint256 amount1) {
         /// @dev msg.sender should be the tokens provider
-        (uint256 amount0, uint256 amount1) = module.deposit{value: msg.value}(
+        (amount0, amount1) = module.deposit{value: msg.value}(
             msg.sender,
             proportion_
         );
