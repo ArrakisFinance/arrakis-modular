@@ -40,6 +40,7 @@ contract UniV4NativeModule is
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
     using Hooks for IHooks;
+    using Address for address payable;
 
     // #region immutable properties.
 
@@ -654,10 +655,11 @@ contract UniV4NativeModule is
 
         if (amount0 > 0) {
             if (_poolKey.currency0.isNative()) {
+                /// @dev no need to use Address lib for PoolManager.
                 poolManager.settle{value: amount0}(_poolKey.currency0);
                 uint256 ethLeftBalance = address(this).balance;
                 if (ethLeftBalance > 0)
-                    Address.sendValue(payable(depositor_), ethLeftBalance);
+                    payable(depositor_).sendValue(ethLeftBalance);
             } else {
                 token0.safeTransferFrom(
                     depositor_,
@@ -670,10 +672,11 @@ contract UniV4NativeModule is
 
         if (amount1 > 0) {
             if (_poolKey.currency1.isNative())
+                /// @dev no need to use Address lib for PoolManager.
                 poolManager.settle{value: amount1}(_poolKey.currency1);
             uint256 ethLeftBalance = address(this).balance;
             if (ethLeftBalance > 0)
-                Address.sendValue(payable(depositor_), ethLeftBalance);
+                payable(depositor_).sendValue(ethLeftBalance);
             else {
                 token1.safeTransferFrom(
                     depositor_,

@@ -9,10 +9,16 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {PIPS} from "./constants/CArrakis.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
-abstract contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
+abstract contract ArrakisMetaVault is
+    IArrakisMetaVault,
+    Ownable,
+    ReentrancyGuard
+{
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
+    using Address for address payable;
 
     // #region immutable properties.
 
@@ -68,10 +74,8 @@ abstract contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuar
 
     function setManager(address newManager_) external onlyOwner nonReentrant {
         address _manager = manager;
-        if (newManager_ == address(0))
-            revert AddressZero("New Manager");
-        if (newManager_ == _manager)
-            revert SameManager();
+        if (newManager_ == address(0)) revert AddressZero("New Manager");
+        if (newManager_ == _manager) revert SameManager();
         if (_manager != address(0)) _withdrawManagerBalance(module);
         manager = newManager_;
 
@@ -128,8 +132,7 @@ abstract contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuar
         uint256 len = modules_.length;
         for (uint256 i; i < len; i++) {
             address _module = modules_[i];
-            if (_module == address(0))
-                revert AddressZero("Module");
+            if (_module == address(0)) revert AddressZero("Module");
             if (_whitelistedModules.contains(_module))
                 revert AlreadyWhitelisted(_module);
             _whitelistedModules.add(_module);
@@ -187,9 +190,21 @@ abstract contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuar
         uint256 proportion_
     ) internal nonReentrant returns (uint256 amount0, uint256 amount1) {
         /// @dev msg.sender should be the tokens provider
-        (uint256 amount0, uint256 amount1) = module.deposit{value: msg.value}(
+
+        bytes memory data = abi.encodeWithSelector(
+            IArrakisLPModule.deposit.selector,
             msg.sender,
             proportion_
+        );
+
+        bytes memory result = payable(address(module)).functionCallWithValue(
+            data,
+            msg.value
+        );
+
+        (uint256 amount0, uint256 amount1) = abi.decode(
+            result,
+            (uint256, uint256)
         );
         emit LogDeposit(proportion_, amount0, amount1);
     }
