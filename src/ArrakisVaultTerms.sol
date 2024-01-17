@@ -211,11 +211,5 @@ contract ArrakisVaultTerms is IArrakisVaultTerms, IOwnerOf, Ownable {
         owner = ownerByVault[vault_];
     }
 
-    function getTokenIdFromVaultAddr(
-        address vault_
-    ) public pure returns (uint256 tokenID) {
-        return uint256(uint160(vault_));
-    }
-
     // #endregion view/pure functions.
 }

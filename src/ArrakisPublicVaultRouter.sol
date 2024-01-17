@@ -318,11 +318,12 @@ contract ArrakisPublicVaultRouter is
         address token0_,
         address token1_
     ) internal {
+        address module = IArrakisMetaVault(vault_).module();
         if (token0_ != nativeToken) {
-            IERC20(token0_).safeIncreaseAllowance(vault_, amount0_);
+            IERC20(token0_).safeIncreaseAllowance(module, amount0_);
         }
         if (token1_ != nativeToken) {
-            IERC20(token1_).safeIncreaseAllowance(vault_, amount1_);
+            IERC20(token1_).safeIncreaseAllowance(module, amount1_);
         }
 
         uint256 balance0 = IERC20(token0_).balanceOf(address(this));
