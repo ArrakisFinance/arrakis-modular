@@ -4,6 +4,8 @@ pragma solidity ^0.8.20;
 import {IUniV4NativeModule} from "../interfaces/IUniV4NativeModule.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
+import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
+import {IDecimals} from "../interfaces/IDecimals.sol";
 
 import {PIPS} from "../constants/CArrakis.sol";
 import {UnderlyingPayload, Range as PoolRange} from "../structs/SUniswapV4.sol";
@@ -494,6 +496,72 @@ contract UniV4NativeModule is
             }),
             priceX96_
         );
+    }
+
+    /// @notice function used to validate if module state is not manipulated
+    /// before rebalance.
+    /// @param oracle_ oracle that will used to check internal state.
+    /// @param maxDeviation_ maximum deviation allowed.
+    /// rebalance can happen.
+    function validateRebalance(
+        IOracleWrapper oracle_,
+        uint24 maxDeviation_
+    ) external view {
+        // check if pool current price is not too far from oracle price.
+
+        uint8 token0Decimals = IDecimals(address(token0)).decimals();
+        uint8 token1Decimals = IDecimals(address(token1)).decimals();
+
+        // #region compute pool price.
+
+        PoolId poolId = poolKey.toId();
+        (uint160 sqrtPriceX96, , ) = poolManager.getSlot0(poolId);
+
+        uint256 poolPrice;
+
+        if (sqrtPriceX96 <= type(uint128).max) {
+            poolPrice = FullMath.mulDiv(
+                uint256(sqrtPriceX96) * uint256(sqrtPriceX96),
+                10 ** token0Decimals,
+                1 << 192
+            );
+        } else {
+            poolPrice = FullMath.mulDiv(
+                FullMath.mulDiv(
+                    uint256(sqrtPriceX96),
+                    uint256(sqrtPriceX96),
+                    1 << 64
+                ),
+                10 ** token0Decimals,
+                1 << 128
+            );
+        }
+
+        // #endregion compute pool price.
+
+        // #region get oracle price.
+
+        uint256 oraclePrice = oracle_.getPrice0();
+
+        // #endregion get oracle price.
+
+        // #region check deviation.
+
+        uint256 deviation = FullMath.mulDiv(
+            FullMath.mulDiv(
+                poolPrice > oraclePrice
+                    ? poolPrice - oraclePrice
+                    : oraclePrice - poolPrice,
+                10 ** token1Decimals,
+                oraclePrice
+            ),
+            PIPS,
+            10 ** token1Decimals
+        );
+
+        // #endregion check deviation.
+
+        if (deviation > maxDeviation_) revert OverMaxDeviation();
     }
 
     // #endregion view functions.

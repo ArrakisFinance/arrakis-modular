@@ -24,6 +24,7 @@ interface IUniV4NativeModule {
     error OnlyMetaVaultOrManager();
     error SamePool();
     error NoModifyLiquidityHooks();
+    error OverMaxDeviation();
 
     // #endregion errors.
 

@@ -138,6 +138,7 @@ contract StandardManager is IManager, IStandardManager, Ownable {
 
     function rebalance(address vault_, bytes[] calldata payloads_) external {
         bytes32 vaultType = IArrakisMetaVault(vault_).vaultType();
+        IArrakisLPModule module = IArrakisMetaVault(vault_).module();
 
         if (!_vaults.contains(vault_)) revert NotWhitelistedVault(vault_);
 
@@ -160,12 +161,14 @@ contract StandardManager is IManager, IStandardManager, Ownable {
 
         VaultInfo memory info = infosByVault[vault_];
 
+        module.validateRebalance(info.oracle, info.maxDeviation);
+
         uint256 price0 = info.oracle.getPrice0();
 
         uint256 vaultInToken1BeforeRebalance = FullMath.mulDiv(
             amount0,
             price0,
-            10**token0Decimals
+            10 ** token0Decimals
         ) + amount1;
 
         // #endregion get current value of the vault.
@@ -173,9 +176,7 @@ contract StandardManager is IManager, IStandardManager, Ownable {
         uint256 _length = payloads_.length;
 
         for (uint256 i; i < _length; i++) {
-            (bool success, ) = address(IArrakisMetaVault(vault_).module()).call(
-                payloads_[i]
-            );
+            (bool success, ) = address(module).call(payloads_[i]);
 
             if (!success) revert CallFailed(payloads_[i]);
         }
@@ -367,6 +368,7 @@ contract StandardManager is IManager, IStandardManager, Ownable {
             params_.datas,
             address(params_.oracle),
             params_.maxSlippage,
+            params_.maxDeviation,
             defaultFeePIPS,
             params_.coolDownPeriod,
             params_.strat
@@ -532,6 +534,9 @@ contract StandardManager is IManager, IStandardManager, Ownable {
         // check slippage is lower than 10%
         if (params_.maxSlippage > TEN_PERCENT) revert SlippageTooHigh();
 
+        // check deviation is lower than 10%
+        if (params_.maxDeviation > TEN_PERCENT) revert MaxDeviationTooHigh();
+
         // check we have a cooldown period.
         if (params_.coolDownPeriod == 0) revert CoolDownPeriodSetToZero();
 
@@ -553,6 +558,7 @@ contract StandardManager is IManager, IStandardManager, Ownable {
             datas: params_.datas,
             oracle: params_.oracle,
             maxSlippage: params_.maxSlippage,
+            maxDeviation: params_.maxDeviation,
             coolDownPeriod: params_.coolDownPeriod,
             strat: params_.strat
         });

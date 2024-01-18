@@ -20,6 +20,7 @@ interface IStandardManager {
     error AlreadyInManagement();
     error NotTheManager(address caller, address manager);
     error SlippageTooHigh();
+    error MaxDeviationTooHigh();
     error CoolDownPeriodSetToZero();
     error ValueDtBalanceInputed(uint256 value, uint256 balance);
     error OnlyOwner();
@@ -44,6 +45,7 @@ interface IStandardManager {
         bytes datas,
         address oracle,
         uint24 maxSlippage,
+        uint24 maxDeviation,
         uint256 managerFeeBPS,
         uint256 coolDownPeriod,
         bytes32 strat

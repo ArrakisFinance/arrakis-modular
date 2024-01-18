@@ -7,10 +7,13 @@ import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {ISovereignPool} from "../interfaces/ISovereignPool.sol";
 import {ISovereignALM} from "../interfaces/ISovereignALM.sol";
 import {IDecimals} from "../interfaces/IDecimals.sol";
+import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
+import {PIPS} from "../constants/CArrakis.sol";
+
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
-import {PIPS} from "../constants/CArrakis.sol";
 
 contract ValantisModule is IArrakisLPModule, IValantisModule, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -393,6 +396,18 @@ contract ValantisModule is IArrakisLPModule, IValantisModule, ReentrancyGuard {
         uint160 priceX96_
     ) external view returns (uint256 amount0, uint256 amount1) {
         return alm.getReservesAtPrice(priceX96_);
+    }
+
+    /// @notice function used to validate if module state is not manipulated
+    /// before rebalance.
+    /// @param oracle_ oracle that will used to check internal state.
+    /// @param maxDeviation_ maximum deviation allowed.
+    /// rebalance can happen.
+    function validateRebalance(
+        IOracleWrapper oracle_,
+        uint24 maxDeviation_
+    ) external view {
+        revert NotImplemented();
     }
 
     // #region view functions.

@@ -9,6 +9,7 @@ struct VaultInfo {
     bytes datas; // custom bytes that can used to store data needed for rebalance. Is empty for public vault.
     IOracleWrapper oracle;
     uint24 maxSlippage;
+    uint24 maxDeviation;
     uint256 coolDownPeriod;
     bytes32 strat; // strat type
 }
@@ -19,6 +20,7 @@ struct SetupParams {
     bytes datas;
     IOracleWrapper oracle;
     uint24 maxSlippage;
+    uint24 maxDeviation;
     uint256 coolDownPeriod;
     bytes32 strat; // strat type
 }

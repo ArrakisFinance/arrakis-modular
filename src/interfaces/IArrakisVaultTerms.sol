@@ -111,9 +111,5 @@ interface IArrakisVaultTerms {
 
     function arrakisMetaVaultFactory() external view returns (address);
 
-    function getTokenIdFromVaultAddr(
-        address vault_
-    ) external pure returns (uint256 tokenID);
-
     // #endregion view/pure functions.
 }

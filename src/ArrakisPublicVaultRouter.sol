@@ -318,7 +318,7 @@ contract ArrakisPublicVaultRouter is
         address token0_,
         address token1_
     ) internal {
-        address module = IArrakisMetaVault(vault_).module();
+        address module = address(IArrakisMetaVault(vault_).module());
         if (token0_ != nativeToken) {
             IERC20(token0_).safeIncreaseAllowance(module, amount0_);
         }
