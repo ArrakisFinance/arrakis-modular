@@ -3,9 +3,9 @@ pragma solidity ^0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IArrakisMetaVault} from "./IArrakisMetaVault.sol";
+import {IOracleWrapper} from "./IOracleWrapper.sol";
 
 interface IArrakisLPModule {
-
     // #region errors.
 
     error AddressZero();
@@ -14,15 +14,30 @@ interface IArrakisLPModule {
     error ProportionZero();
     error CannotBurnMtTotalSupply();
     error NewFeesGtPIPS(uint256 newFees);
+    error SameManagerFee();
     error InitsAreZeros();
 
     // #endregion errors.
 
     // #region events.
 
-    event LogDeposit(address indexed depositor, uint256 proportion, uint256 amount0, uint256 amount1);
-    event LogWithdraw(address indexed receiver, uint256 proportion, uint256 amount0, uint256 amount1);
-    event LogWithdrawManagerBalance(address manager, uint256 amount0, uint256 amount1);
+    event LogDeposit(
+        address indexed depositor,
+        uint256 proportion,
+        uint256 amount0,
+        uint256 amount1
+    );
+    event LogWithdraw(
+        address indexed receiver,
+        uint256 proportion,
+        uint256 amount0,
+        uint256 amount1
+    );
+    event LogWithdrawManagerBalance(
+        address manager,
+        uint256 amount0,
+        uint256 amount1
+    );
     event LogSetManagerFeePIPS(uint256 oldFee, uint256 newFee);
 
     // #endregion events.
@@ -100,6 +115,15 @@ interface IArrakisLPModule {
     function totalUnderlyingAtPrice(
         uint160 priceX96_
     ) external view returns (uint256 amount0, uint256 amount1);
+
+    /// @notice function used to validate if module state is not manipulated
+    /// before rebalance.
+    /// @param oracle_ oracle that will used to check internal state.
+    /// @param maxDeviation_ maximum deviation allowed.
+    function validateRebalance(
+        IOracleWrapper oracle_,
+        uint24 maxDeviation_
+    ) external view ;
 
     // #endregion view function.
 }

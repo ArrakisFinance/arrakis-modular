@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 
-interface IUniV4NativeModule {
+interface IUniV4StandardModule {
     // #region errors.
 
     error Token0GteToken1();
@@ -22,28 +22,35 @@ interface IUniV4NativeModule {
     error TickLowerOutOfBounds(int24 tickLower);
     error TickUpperOutOfBounds(int24 tickUpper);
     error OnlyMetaVaultOrManager();
-    error NotImplemented();
     error SamePool();
+    error NoModifyLiquidityHooks();
+    error OverMaxDeviation();
 
     // #endregion errors.
+
+    // #region structs.
+
+    struct Range {
+        int24 tickLower;
+        int24 tickUpper;
+    }
+
+    struct LiquidityRange {
+        Range range;
+        int128 liquidity;
+    }
+
+    // #endregion structs.
 
     // #region events.
 
     event LogSetPool(PoolKey oldPoolKey, PoolKey poolKey);
-    event LogAddLiquidity(
-        uint128 liquidityAdded,
-        int24 tickLower,
-        int24 tickUpper,
-        uint256 amount0,
-        uint256 amount1
-    );
-
-    event LogRemoveLiquidity(
-        uint128 liquidityRemoved,
-        int24 tickLower,
-        int24 tickUpper,
-        uint256 amount0,
-        uint256 amount1
+    event LogRebalance(
+        LiquidityRange[] liquidityRanges,
+        uint256 amount0Minted,
+        uint256 amount1Minted,
+        uint256 amount0Burned,
+        uint256 amount1Burned
     );
 
     // #endregion events.
@@ -52,17 +59,13 @@ interface IUniV4NativeModule {
 
     function setPool(PoolKey calldata poolKey_) external;
 
-    function addLiquidity(
-        uint128 liquidityToAdd_,
-        int24 tickLower_,
-        int24 tickUpper_
-    ) external returns (uint256 amount0, uint256 amount1);
-
-    function removeLiquidity(
-        uint128 liquidityToRemove_,
-        int24 tickLower_,
-        int24 tickUpper_
-    ) external returns (uint256 amount0, uint256 amount1);
+    function rebalance(
+        LiquidityRange[] calldata liquidityRanges_
+    ) external returns (
+            uint256 amount0Minted,
+            uint256 amount1Minted,
+            uint256 amount0Burned,
+            uint256 amount1Burned);
 
     // #endregion only manager functions.
 }

@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisMetaToken} from "./interfaces/IArrakisMetaToken.sol";
-import {ERC20} from "@solady/contracts/tokens/ERC20.sol";
-import {ArrakisMetaVault, PIPS} from "./ArrakisMetaVault.sol";
-import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IArrakisMetaVaultPublic} from "./interfaces/IArrakisMetaVaultPublic.sol";
+import {ArrakisMetaVault, PIPS} from "./abstracts/ArrakisMetaVault.sol";
+import {PUBLIC_TYPE} from "./constants/CArrakis.sol";
 
-contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
+import {ERC20} from "@solady/contracts/tokens/ERC20.sol";
+
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+
+contract ArrakisMetaVaultPublic is IArrakisMetaVaultPublic, ArrakisMetaVault, ERC20 {
     string internal _name;
     string internal _symbol;
 
@@ -67,5 +69,10 @@ contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
 
     function symbol() public view override returns (string memory) {
         return _symbol;
+    }
+
+    /// @notice function used to get the type of vault.
+    function vaultType() external pure returns (bytes32) {
+        return PUBLIC_TYPE;
     }
 }

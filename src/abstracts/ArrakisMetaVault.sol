@@ -1,18 +1,27 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
-import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
+import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
+import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
+import {PIPS} from "../constants/CArrakis.sol";
+
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {Ownable} from "@solady/contracts/auth/Ownable.sol";
-import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
-import {PIPS} from "./constants/CArrakis.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
-contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
+import {Ownable} from "@solady/contracts/auth/Ownable.sol";
+
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+
+abstract contract ArrakisMetaVault is
+    IArrakisMetaVault,
+    Ownable,
+    ReentrancyGuard
+{
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
+    using Address for address payable;
 
     // #region immutable properties.
 
@@ -68,10 +77,8 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
 
     function setManager(address newManager_) external onlyOwner nonReentrant {
         address _manager = manager;
-        if (newManager_ == address(0))
-            revert AddressZero("New Manager");
-        if (newManager_ == _manager)
-            revert SameManager();
+        if (newManager_ == address(0)) revert AddressZero("New Manager");
+        if (newManager_ == _manager) revert SameManager();
         if (_manager != address(0)) _withdrawManagerBalance(module);
         manager = newManager_;
 
@@ -105,6 +112,7 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         // #endregion move tokens to the new module.
 
         // #region check if the module is empty.
+
         /// @dev module implementation should take into account
         /// that wrongly implemented module can freeze the modularity
         /// of ArrakisMetaVault if withdrawManagerBalance + withdraw 100%
@@ -127,8 +135,7 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         uint256 len = modules_.length;
         for (uint256 i; i < len; i++) {
             address _module = modules_[i];
-            if (_module == address(0))
-                revert AddressZero("Module");
+            if (_module == address(0)) revert AddressZero("Module");
             if (_whitelistedModules.contains(_module))
                 revert AlreadyWhitelisted(_module);
             _whitelistedModules.add(_module);
@@ -186,9 +193,21 @@ contract ArrakisMetaVault is IArrakisMetaVault, Ownable, ReentrancyGuard {
         uint256 proportion_
     ) internal nonReentrant returns (uint256 amount0, uint256 amount1) {
         /// @dev msg.sender should be the tokens provider
-        (uint256 amount0, uint256 amount1) = module.deposit{value: msg.value}(
+
+        bytes memory data = abi.encodeWithSelector(
+            IArrakisLPModule.deposit.selector,
             msg.sender,
             proportion_
+        );
+
+        bytes memory result = payable(address(module)).functionCallWithValue(
+            data,
+            msg.value
+        );
+
+        (uint256 amount0, uint256 amount1) = abi.decode(
+            result,
+            (uint256, uint256)
         );
         emit LogDeposit(proportion_, amount0, amount1);
     }
