@@ -18,9 +18,7 @@ interface ISovereignPool {
 
     // #region view functions.
 
-    function feePoolManager0() external view returns (uint256);
-
-    function feePoolManager1() external view returns (uint256);
+    function getPoolManagerFees() external view returns (uint256 poolManagerFee0, uint256 poolManagerFee1);
 
     function poolManagerFeeBips() external view returns (uint256);
 

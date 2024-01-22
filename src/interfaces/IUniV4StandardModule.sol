@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 
-interface IUniV4NativeModule {
+interface IUniV4StandardModule {
     // #region errors.
 
     error Token0GteToken1();
@@ -24,6 +24,7 @@ interface IUniV4NativeModule {
     error OnlyMetaVaultOrManager();
     error SamePool();
     error NoModifyLiquidityHooks();
+    error OverMaxDeviation();
 
     // #endregion errors.
 

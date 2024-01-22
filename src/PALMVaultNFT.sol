@@ -1,36 +1,32 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisVaultNFT} from "./interfaces/IArrakisVaultNFT.sol";
+import {IPALMVaultNFT} from "./interfaces/IPALMVaultNFT.sol";
 import {IArrakisMetaVaultFactory} from "./interfaces/IArrakisMetaVaultFactory.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
-import {IArrakisMetaOwned} from "./interfaces/IArrakisMetaOwned.sol";
+import {IArrakisMetaVaultPrivate} from "./interfaces/IArrakisMetaVaultPrivate.sol";
+import {IArrakisStandardManager} from "./interfaces/IArrakisStandardManager.sol";
+import {SetupParams} from "./structs/SManager.sol";
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
-import {Ownable} from "@solady/contracts/auth/Ownable.sol";
-
-contract ArrakisVaultNFT is IArrakisVaultNFT, ERC721, Ownable {
+contract PALMVaultNFT is IPALMVaultNFT, ERC721 {
     using SafeERC20 for IERC20;
 
     // #region public immutable properties.
 
     address public immutable nativeToken;
+    address public immutable arrakisMetaVaultFactory;
+    address public immutable arrakisStandardManager;
 
     // #endregion public immutable properties.
-
-    // #region public properties.
-
-    address public arrakisMetaVaultFactory;
-
-    // #endregion public properties.
 
     // #region modifiers.
 
     modifier OnlyVaultOwner(address vault_) {
-        address o = _ownerOf(uint256(uint160(vault_)));
+        address o = ownerOf(uint256(uint160(vault_)));
         if (msg.sender != o) revert NotOwner(msg.sender, o);
         _;
     }
@@ -38,29 +34,35 @@ contract ArrakisVaultNFT is IArrakisVaultNFT, ERC721, Ownable {
     // #endregion modifiers.
 
     constructor(
-        address owner_,
-        address nativeToken_
-    ) ERC721("NFT Owned Vault", "NOV") {
-        if (owner_ == address(0) || nativeToken_ == address(0))
-            revert AddressZero();
-        _initializeOwner(owner_);
+        address nativeToken_,
+        address vaultFactory_,
+        address manager_
+    ) ERC721("Arrakis Modular PALM Vaults", "PALM") {
+        if (
+            nativeToken_ == address(0) ||
+            vaultFactory_ == address(0) ||
+            manager_ == address(0)
+        ) revert AddressZero();
         nativeToken = nativeToken_;
+        arrakisMetaVaultFactory = vaultFactory_;
+        arrakisStandardManager = manager_;
     }
 
-    // #region only owner functions.
+    function initManagement(
+        SetupParams calldata params_
+    ) external OnlyVaultOwner(params_.vault) {
+        IArrakisMetaVault(params_.vault).setManager(arrakisStandardManager);
 
-    function setArrakisMetaVaultFactory(
-        address arrakisMetaVaultFactory_
-    ) external onlyOwner {
-        if (arrakisMetaVaultFactory != address(0))
-            revert ArrakisMetaVaultFactoryAlreadySet();
-        if (arrakisMetaVaultFactory_ == address(0)) revert AddressZero();
-
-        arrakisMetaVaultFactory = arrakisMetaVaultFactory_;
-        emit LogSetArrakisMetaVaultFactory(arrakisMetaVaultFactory_);
+        IArrakisStandardManager(arrakisStandardManager).initManagement(params_);
     }
 
-    // #endregion only owner functions.
+    function updateVaultManagement(
+        SetupParams calldata params_
+    ) external OnlyVaultOwner(params_.vault) {
+        IArrakisStandardManager(arrakisStandardManager).updateVaultInfo(
+            params_
+        );
+    }
 
     function mint(
         bytes32 salt_,
@@ -77,10 +79,10 @@ contract ArrakisVaultNFT is IArrakisVaultNFT, ERC721, Ownable {
 
         // #endregion compute custom salt.
 
-        // #region create the owned vault.
+        // #region create the private vault.
 
         address vault = IArrakisMetaVaultFactory(arrakisMetaVaultFactory)
-            .deployOwnedMetaVault(
+            .deployPrivateVault(
                 _salt,
                 token0_,
                 token1_,
@@ -90,7 +92,7 @@ contract ArrakisVaultNFT is IArrakisVaultNFT, ERC721, Ownable {
 
         uint256 tokenId = uint256(uint160(vault));
 
-        // #endregion create the owned vault.
+        // #endregion create the private vault.
 
         _mint(receiver_, tokenId);
 
@@ -139,7 +141,7 @@ contract ArrakisVaultNFT is IArrakisVaultNFT, ERC721, Ownable {
             _token1.safeIncreaseAllowance(module, maxAmount1_);
         }
 
-        (amount0, amount1) = IArrakisMetaOwned(vault_).deposit{
+        (amount0, amount1) = IArrakisMetaVaultPrivate(vault_).deposit{
             value: msg.value
         }(proportion_);
 
@@ -173,7 +175,7 @@ contract ArrakisVaultNFT is IArrakisVaultNFT, ERC721, Ownable {
     {
         // #region interactions.
 
-        (amount0, amount1) = IArrakisMetaOwned(vault_).withdraw(
+        (amount0, amount1) = IArrakisMetaVaultPrivate(vault_).withdraw(
             proportion_,
             receiver_
         );
@@ -181,15 +183,6 @@ contract ArrakisVaultNFT is IArrakisVaultNFT, ERC721, Ownable {
         // #endregion interactions.
 
         emit LogWithdraw(msg.sender, proportion_, amount0, amount1);
-    }
-
-    function setManager(
-        address vault_,
-        address newManager_
-    ) external OnlyVaultOwner(vault_) {
-        IArrakisMetaVault(vault_).setManager(newManager_);
-
-        emit LogSetManager(msg.sender, newManager_);
     }
 
     function whitelistModules(

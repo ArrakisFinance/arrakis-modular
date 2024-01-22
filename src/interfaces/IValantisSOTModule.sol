@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {ISovereignPool} from "./ISovereignPool.sol";
-import {ISovereignALM} from "./ISovereignALM.sol";
+import {ISOT} from "./ISOT.sol";
 
 interface IValantisModule {
     // #region errors.
@@ -44,6 +44,13 @@ interface IValantisModule {
     /// let's make it not implemented for now
     function setManager(address newManager_) external;
 
+    function setPriceBounds(
+        uint128 _sqrtPriceLowX96,
+        uint128 _sqrtPriceHighX96,
+        uint160 _expectedSqrtSpotPriceUpperX96,
+        uint160 _expectedSqrtSpotPriceLowerX96
+    ) external;
+
     // #endregion state modifiying functions.
 
     // #region view functions.
@@ -52,7 +59,7 @@ interface IValantisModule {
     function pool() external view returns (ISovereignPool);
 
     /// @notice function used to get the valantis sot alm/ liquidity module.
-    function alm() external view returns (ISovereignALM);
+    function alm() external view returns (ISOT);
 
     // #endregion view functions.
 }
