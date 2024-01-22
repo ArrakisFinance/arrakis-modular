@@ -13,23 +13,23 @@ interface IArrakisMetaVaultFactory {
 
     // #region events.
 
-    event LogTokenVaultCreation(
+    event LogPublicVaultCreation(
         address indexed creator,
         bytes32 salt,
         address token0,
         address token1,
         address owner,
         address module,
-        address tokenVault
+        address publicVault
     );
-    event LogOwnedVaultCreation(
+    event LogPrivateVaultCreation(
         address indexed creator,
         bytes32 salt,
         address token0,
         address token1,
         address owner,
         address module,
-        address ownedVault
+        address privateVault
     );
 
     // #endregion events.
@@ -45,7 +45,7 @@ interface IArrakisMetaVaultFactory {
     /// @param module_ address of the initial module that will be used
     /// by Meta Vault.
     /// @return vault address of the newly created Token Meta Vault.
-    function deployTokenMetaVault(
+    function deployPublicVault(
         bytes32 salt_,
         address token0_,
         address token1_,
@@ -53,7 +53,7 @@ interface IArrakisMetaVaultFactory {
         address module_
     ) external returns (address vault);
 
-    /// @notice function used to deploy ERC20 owned Arrakis
+    /// @notice function used to deploy owned Arrakis
     /// Meta Vault.
     /// @param salt_ bytes32 needed to compute vault address deterministic way.
     /// @param token0_ address of the first token of the token pair.
@@ -61,8 +61,8 @@ interface IArrakisMetaVaultFactory {
     /// @param owner_ address of the owner of the vault.
     /// @param module_ address of the initial module that will be used
     /// by Meta Vault.
-    /// @return vault address of the newly created Owned Meta Vault.
-    function deployOwnedMetaVault(
+    /// @return vault address of the newly created private Meta Vault.
+    function deployPrivateVault(
         bytes32 salt_,
         address token0_,
         address token1_,
@@ -92,31 +92,31 @@ interface IArrakisMetaVaultFactory {
         address token1_
     ) external view returns (string memory);
 
-    /// @notice get a list of token vaults created by this factory
+    /// @notice get a list of public vaults created by this factory
     /// @param startIndex_ start index
     /// @param endIndex_ end index
     /// @return vaults list of all created vaults.
-    function tokenVaults(
+    function publicVaults(
         uint256 startIndex_,
         uint256 endIndex_
     ) external view returns (address[] memory);
 
-    /// @notice numOfTokenVaults counts the total number of token vaults in existence
+    /// @notice numOfPublicVaults counts the total number of token vaults in existence
     /// @return result total number of vaults deployed
-    function numOfTokenVaults() external view returns (uint256 result);
+    function numOfPublicVaults() external view returns (uint256 result);
 
-    /// @notice get a list of owned vaults created by this factory
+    /// @notice get a list of private vaults created by this factory
     /// @param startIndex_ start index
     /// @param endIndex_ end index
     /// @return vaults list of all created vaults.
-    function ownedVaults(
+    function privateVaults(
         uint256 startIndex_,
         uint256 endIndex_
     ) external view returns (address[] memory);
 
-    /// @notice numOfOwnedVaults counts the total number of owned vaults in existence
+    /// @notice numOfPrivateVaults counts the total number of private vaults in existence
     /// @return result total number of vaults deployed
-    function numOfOwnedVaults() external view returns (uint256 result);
+    function numOfPrivateVaults() external view returns (uint256 result);
 
     // #endregion view/pure functions.
 }

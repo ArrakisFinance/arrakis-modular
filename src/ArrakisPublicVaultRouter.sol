@@ -3,9 +3,9 @@ pragma solidity ^0.8.20;
 
 import {IArrakisPublicVaultRouter, AddLiquidityData, SwapAndAddData, RemoveLiquidityData, AddLiquidityPermit2Data, SwapAndAddPermit2Data, RemoveLiquidityPermit2Data} from "./interfaces/IArrakisPublicVaultRouter.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
-import {IArrakisMetaToken} from "./interfaces/IArrakisMetaToken.sol";
+import {IArrakisMetaVaultPublic} from "./interfaces/IArrakisMetaVaultPublic.sol";
 import {IPermit2} from "./interfaces/IPermit2.sol";
-import {ERC20TYPE, PIPS} from "./constants/CArrakis.sol";
+import {PUBLIC_TYPE, PIPS} from "./constants/CArrakis.sol";
 import {SignatureTransferDetails} from "./structs/SPermit2.sol";
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -36,7 +36,7 @@ contract ArrakisPublicVaultRouter is
 
     modifier onlyERC20Type(address vault_) {
         bytes32 vaultType = IArrakisMetaVault(vault_).vaultType();
-        if (vaultType != ERC20TYPE) revert OnlyERC20TypeVault(vaultType);
+        if (vaultType != PUBLIC_TYPE) revert OnlyERC20TypeVault(vaultType);
         _;
     }
 
@@ -329,7 +329,7 @@ contract ArrakisPublicVaultRouter is
         uint256 balance0 = IERC20(token0_).balanceOf(address(this));
         uint256 balance1 = IERC20(token1_).balanceOf(address(this));
 
-        IArrakisMetaToken(vault_).mint(shares_, receiver_);
+        IArrakisMetaVaultPublic(vault_).mint(shares_, receiver_);
 
         // #region assertion check to verify if vault exactly what expected.
         if (balance0 - amount0_ != IERC20(token0_).balanceOf(address(this)))
@@ -405,7 +405,7 @@ contract ArrakisPublicVaultRouter is
     function _removeLiquidity(
         RemoveLiquidityData memory params_
     ) internal returns (uint256 amount0, uint256 amount1) {
-        (amount0, amount1) = IArrakisMetaToken(params_.vault).burn(
+        (amount0, amount1) = IArrakisMetaVaultPublic(params_.vault).burn(
             params_.burnAmount,
             params_.receiver
         );
