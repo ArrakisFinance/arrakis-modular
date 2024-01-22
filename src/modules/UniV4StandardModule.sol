@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IUniV4NativeModule} from "../interfaces/IUniV4NativeModule.sol";
+import {IUniV4StandardModule} from "../interfaces/IUniV4StandardModule.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
@@ -32,10 +32,10 @@ import {ILockCallback} from "@uniswap/v4-core/src/interfaces/callback/ILockCallb
 
 /// @notice this module can only set uni v4 pool that have generic hook,
 /// that don't require specific action to become liquidity provider.
-contract UniV4NativeModule is
+contract UniV4StandardModule is
     ReentrancyGuard,
     IArrakisLPModule,
-    IUniV4NativeModule,
+    IUniV4StandardModule,
     ILockCallback
 {
     using SafeERC20 for IERC20;

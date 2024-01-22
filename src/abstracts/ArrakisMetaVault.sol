@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
-import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
+import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
+import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
+import {PIPS} from "../constants/CArrakis.sol";
+
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {Ownable} from "@solady/contracts/auth/Ownable.sol";
-import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
-import {PIPS} from "./constants/CArrakis.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+
+import {Ownable} from "@solady/contracts/auth/Ownable.sol";
+
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 
 abstract contract ArrakisMetaVault is
     IArrakisMetaVault,
