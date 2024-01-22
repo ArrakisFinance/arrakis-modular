@@ -10,3 +10,6 @@
 [submodule "lib/periphery-next"]
 	path = lib/periphery-next
 	url = https://github.com/Uniswap/periphery-next
+[submodule "lib/create3"]
+	path = lib/create3
+	url = https://github.com/0xsequence/create3
