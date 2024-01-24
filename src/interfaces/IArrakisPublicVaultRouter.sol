@@ -7,7 +7,7 @@ interface IArrakisPublicVaultRouter {
     // #region errors.
 
     error AddressZero();
-    error NoNativeTokenAndValueNotZero();
+    error NotEnoughNativeTokenSent();
     error OnlyERC20TypeVault(bytes32 vaultType);
     error EmptyMaxAmounts();
     error NothingToMint();
@@ -23,6 +23,13 @@ interface IArrakisPublicVaultRouter {
     // #endregion errors.
 
     // #region events.
+
+    event Swapped(
+        bool zeroForOne,
+        uint256 amount0Diff,
+        uint256 amount1Diff,
+        uint256 amountOutSwap
+    );
 
     // #endregion events.
 
