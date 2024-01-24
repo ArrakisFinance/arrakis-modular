@@ -17,6 +17,7 @@ import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 // #region solady dependencies.
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
+
 // #endregion solady dependencies.
 
 contract ArrakisPublicVaultRouter is
@@ -107,9 +108,6 @@ contract ArrakisPublicVaultRouter is
 
         address token0 = IArrakisMetaVault(params_.vault).token0();
         address token1 = IArrakisMetaVault(params_.vault).token1();
-
-        if (token0 != nativeToken && token1 != nativeToken && msg.value > 0)
-            revert NoNativeTokenAndValueNotZero();
 
         // #endregion checks.
 
