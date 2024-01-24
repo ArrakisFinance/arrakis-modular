@@ -53,7 +53,12 @@ contract ArrakisPublicVaultRouter is
         address swapper_,
         address owner_
     ) {
-        if (owner_ == address(0)) revert AddressZero();
+        if (
+            nativeToken_ == address(0) ||
+            permit2_ == address(0) ||
+            swapper_ == address(0) ||
+            owner_ == address(0)
+        ) revert AddressZero();
 
         nativeToken = nativeToken_;
         permit2 = IPermit2(permit2_);
