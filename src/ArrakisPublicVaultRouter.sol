@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {IArrakisPublicVaultRouter, AddLiquidityData, SwapAndAddData, RemoveLiquidityData, AddLiquidityPermit2Data, SwapAndAddPermit2Data, RemoveLiquidityPermit2Data} from "./interfaces/IArrakisPublicVaultRouter.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IArrakisMetaVaultPublic} from "./interfaces/IArrakisMetaVaultPublic.sol";
+import {IRouterSwapExecutor} from "./interfaces/IRouterSwapExecutor.sol";
 import {IPermit2, SignatureTransferDetails} from "./interfaces/IPermit2.sol";
 import {PUBLIC_TYPE, PIPS} from "./constants/CArrakis.sol";
 
@@ -16,6 +17,7 @@ import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 // #region solady dependencies.
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
+
 // #endregion solady dependencies.
 
 contract ArrakisPublicVaultRouter is
@@ -31,6 +33,7 @@ contract ArrakisPublicVaultRouter is
 
     address public immutable nativeToken;
     IPermit2 public immutable permit2;
+    IRouterSwapExecutor public immutable swapper;
 
     // #endregion immutable properties.
 
@@ -44,11 +47,17 @@ contract ArrakisPublicVaultRouter is
 
     // #endregion modifiers.
 
-    constructor(address nativeToken_, address permit2_, address owner_) {
+    constructor(
+        address nativeToken_,
+        address permit2_,
+        address swapper_,
+        address owner_
+    ) {
         if (owner_ == address(0)) revert AddressZero();
 
         nativeToken = nativeToken_;
         permit2 = IPermit2(permit2_);
+        swapper = IRouterSwapExecutor(swapper_);
         _initializeOwner(owner_);
     }
 
@@ -370,7 +379,7 @@ contract ArrakisPublicVaultRouter is
             uint256 amount1Diff
         )
     {
-        (amount0Diff, amount1Diff) = _swap(params_);
+        (amount0Diff, amount1Diff) = swapper.swap(params_);
 
         uint256 amount0Use = (params_.swapData.zeroForOne)
             ? params_.addData.amount0Max - amount0Diff
@@ -473,60 +482,6 @@ contract ArrakisPublicVaultRouter is
             msg.sender,
             params_.signature
         );
-    }
-
-    function _swap(
-        SwapAndAddData memory params_
-    ) internal returns (uint256 amount0Diff, uint256 amount1Diff) {
-        address token0 = IArrakisMetaVault(params_.addData.vault).token0();
-        address token1 = IArrakisMetaVault(params_.addData.vault).token1();
-        uint256 balanceBefore;
-        uint256 valueToSend;
-        if (params_.swapData.zeroForOne) {
-            if (token0 != nativeToken) {
-                balanceBefore = IERC20(token0).balanceOf(address(this));
-                IERC20(token0).safeIncreaseAllowance(
-                    params_.swapData.swapRouter,
-                    params_.swapData.amountInSwap
-                );
-            } else {
-                balanceBefore = address(this).balance;
-                valueToSend = params_.swapData.amountInSwap;
-            }
-        } else {
-            if (token1 != nativeToken) {
-                balanceBefore = IERC20(token1).balanceOf(address(this));
-                IERC20(token1).safeIncreaseAllowance(
-                    params_.swapData.swapRouter,
-                    params_.swapData.amountInSwap
-                );
-            } else {
-                balanceBefore = address(this).balance;
-                valueToSend = params_.swapData.amountInSwap;
-            }
-        }
-        (bool success, ) = params_.swapData.swapRouter.call{value: valueToSend}(
-            params_.swapData.swapPayload
-        );
-        if (!success) revert SwapCallFailed();
-
-        uint256 balance0;
-        uint256 balance1;
-        if (token0 == nativeToken) balance0 = address(this).balance;
-        else balance0 = IERC20(token0).balanceOf(address(this));
-        if (token1 == nativeToken) balance1 = address(this).balance;
-        else balance1 = IERC20(token1).balanceOf(address(this));
-        if (params_.swapData.zeroForOne) {
-            amount0Diff = balanceBefore - balance0;
-            amount1Diff = balance1;
-            if (amount1Diff < params_.swapData.amountOutSwap)
-                revert ReceivedBelowMinimum();
-        } else {
-            amount0Diff = balance0;
-            amount1Diff = balanceBefore - balance1;
-            if (amount0Diff < params_.swapData.amountOutSwap)
-                revert ReceivedBelowMinimum();
-        }
     }
 
     // #endregion internal functions.
