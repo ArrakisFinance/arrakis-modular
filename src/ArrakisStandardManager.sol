@@ -454,7 +454,7 @@ contract ArrakisStandardManager is
         // #endregion interactions.
     }
 
-    function _updateParamsChecks(SetupParams memory params_) internal {
+    function _updateParamsChecks(SetupParams memory params_) internal view {
         // check if standard manager is the vault manager.
         address manager = IArrakisMetaVault(params_.vault).manager();
         if (address(this) != manager)
