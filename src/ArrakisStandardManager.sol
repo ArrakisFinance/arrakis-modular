@@ -448,8 +448,8 @@ contract ArrakisStandardManager is
 
         // #region interactions.
 
-            IArrakisLPModule(IArrakisMetaVault(params_.vault).module())
-                .setManagerFeePIPS(defaultFeePIPS);
+        IArrakisLPModule(IArrakisMetaVault(params_.vault).module())
+            .setManagerFeePIPS(defaultFeePIPS);
 
         // #endregion interactions.
     }
