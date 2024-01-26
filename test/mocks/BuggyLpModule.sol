@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {PIPS} from "../../src/constants/CArrakis.sol";
-import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 contract BuggyLpModuleMock {
     IERC20 public token0;

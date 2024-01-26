@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-interface IArrakisMetaToken {
+interface IArrakisMetaVaultPublic {
     // #region errors.
-
 
     error MintZero();
     error BurnZero();
     error BurnOverflow();
+    error CannotMintProportionZero();
+    error CannotBurnProportionZero();
 
     // #endregion errors.
 

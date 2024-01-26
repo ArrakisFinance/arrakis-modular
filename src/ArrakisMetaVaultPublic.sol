@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisMetaToken} from "./interfaces/IArrakisMetaToken.sol";
-import {ERC20} from "@solady/contracts/tokens/ERC20.sol";
-import {ArrakisMetaVault, PIPS} from "./ArrakisMetaVault.sol";
-import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IArrakisMetaVaultPublic} from "./interfaces/IArrakisMetaVaultPublic.sol";
+import {ArrakisMetaVault, PIPS} from "./abstracts/ArrakisMetaVault.sol";
+import {PUBLIC_TYPE} from "./constants/CArrakis.sol";
 
-contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
+import {ERC20} from "@solady/contracts/tokens/ERC20.sol";
+
+import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
+
+contract ArrakisMetaVaultPublic is
+    IArrakisMetaVaultPublic,
+    ArrakisMetaVault,
+    ERC20
+{
     string internal _name;
     string internal _symbol;
 
@@ -37,6 +43,10 @@ contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
             supply > 0 ? supply : 1 ether
         );
 
+        if (proportion == 0) revert CannotMintProportionZero();
+
+        if (receiver_ == address(0)) revert AddressZero("Receiver");
+
         _mint(receiver_, shares_);
 
         (amount0, amount1) = _deposit(proportion);
@@ -54,6 +64,9 @@ contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
 
         uint256 proportion = FullMath.mulDiv(shares_, PIPS, supply);
 
+        if (proportion == 0) revert CannotBurnProportionZero();
+        if (receiver_ == address(0)) revert AddressZero("Receiver");
+
         _burn(msg.sender, shares_);
 
         (amount0, amount1) = _withdraw(receiver_, proportion);
@@ -67,5 +80,10 @@ contract ArrakisMetaVaultToken is IArrakisMetaToken, ArrakisMetaVault, ERC20 {
 
     function symbol() public view override returns (string memory) {
         return _symbol;
+    }
+
+    /// @notice function used to get the type of vault.
+    function vaultType() external pure returns (bytes32) {
+        return PUBLIC_TYPE;
     }
 }

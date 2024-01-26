@@ -9,33 +9,97 @@ import {IArrakisLPModule} from "./IArrakisLPModule.sol";
 interface IArrakisMetaVault {
     // #region errors.
 
+    /// @dev triggered when an address that should not
+    /// be zero is equal to address zero.
     error AddressZero(string property);
+
+    /// @dev triggered when the caller is different than
+    /// the manager.
     error OnlyManager(address caller, address manager);
-    error OnlyModule(address caller, address module);
-    error ProportionGtPIPS(uint256 proportion);
+
+    /// @dev triggered when a low level call failed during
+    /// execution.
     error CallFailed();
+
+    /// @dev triggered when manager try to set the active
+    /// module as active.
     error SameModule();
+
+    /// @dev triggered when owner of the vault try to set the
+    /// manager with the current manager.
     error SameManager();
+
+    /// @dev triggered when all tokens withdrawal has been done
+    /// during a switch of module.
     error ModuleNotEmpty(uint256 amount0, uint256 amount1);
+
+    /// @dev triggered when owner try to whitelist a module
+    /// that has been already whitelisted.
     error AlreadyWhitelisted(address module);
+
+    /// @dev triggered when owner try to blacklist a module
+    /// that has not been whitelisted.
     error NotWhitelistedModule(address module);
+
+    /// @dev triggered when owner try to blacklist the active module.
     error ActiveModule();
+
+    /// @dev triggered during vault creation if token0 address is greater than
+    /// token1 address.
     error Token0GtToken1();
+
+    /// @dev triggered during vault creation if token0 address is equal to
+    /// token1 address.
     error Token0EqToken1();
 
     // #endregion errors.
 
     // #region events.
 
+    /// @notice Event describing a deposit done by an user inside this vault.
+    /// @param proportion percentage of the current position that depositor want to increase.
+    /// @param amount0 amount of token0 needed to increase the portfolio of "proportion" percent.
+    /// @param amount1 amount of token1 needed to increase the portfolio of "proportion" percent.
     event LogDeposit(uint256 proportion, uint256 amount0, uint256 amount1);
+
+    /// @notice Event describing a withdrawal of participation by an user inside this vault.
+    /// @param proportion percentage of the current position that user want to withdraw.
+    /// @param amount0 amount of token0 withdrawn due to withdraw action.
+    /// @param amount1 amount of token1 withdrawn due to withdraw action.
     event LogWithdraw(uint256 proportion, uint256 amount0, uint256 amount1);
+
+    /// @notice Event describing a manager fee withdrawal.
+    /// @param amount0 amount of token0 that manager has earned and will be transfered.
+    /// @param amount1 amount of token1 that manager has earned and will be transfered.
     event LogWithdrawManagerBalance(uint256 amount0, uint256 amount1);
+
+    /// @notice Event describing owner setting the manager.
+    /// @param oldManager address of manager that was managing the portfolio.
+    /// @param newManager address of manager that will manage the portfolio.
     event LogSetManager(address oldManager, address newManager);
-    event LogSetModule(address module, bytes[] payloads_);
+
+    /// @notice Event describing manager setting the module.
+    /// @param module address of the new active module.
+    /// @param payloads data payloads for initializing positions on the new module.
+    event LogSetModule(address module, bytes[] payloads);
+
+    /// @notice Event describing default module that the vault will be initialized with.
+    /// @param module address of the default module.
     event LogSetFirstModule(address module);
-    event LogWhiteListedModules(address[] modules_);
+
+    /// @notice Event describing list of modules that has been whitelisted by owner.
+    /// @param modules list of addresses corresponding to new modules now available
+    /// to be activated by manager.
+    event LogWhiteListedModules(address[] modules);
+
+    /// @notice Event describing whitelisted of the first module during vault creation.
+    /// @param module default activation.
     event LogWhitelistedModule(address module);
-    event LogBlackListedModules(address[] modules_);
+
+    /// @notice Event describing blacklisting action of modules by owner.
+    /// @param modules list of addresses corresponding to old modules that has been
+    /// blacklisted.
+    event LogBlackListedModules(address[] modules);
 
     // #endregion events.
 
@@ -88,6 +152,10 @@ interface IArrakisMetaVault {
     /// @return init0 the amount of token0 needed to open a position.
     /// @return init1 the amount of token1 needed to open a position.
     function getInits() external view returns (uint256 init0, uint256 init1);
+
+    /// @notice function used to get the type of vault.
+    /// @return vaultType as bytes32.
+    function vaultType() external pure returns (bytes32);
 
     /// @notice function used to get the address of token0.
     function token0() external view returns (address);
