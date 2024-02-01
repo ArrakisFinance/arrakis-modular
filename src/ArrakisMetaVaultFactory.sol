@@ -10,6 +10,7 @@ import {ArrakisMetaVaultPublic} from "./ArrakisMetaVaultPublic.sol";
 import {ArrakisMetaVaultPrivate} from "./ArrakisMetaVaultPrivate.sol";
 import {IArrakisStandardManager} from "./interfaces/IArrakisStandardManager.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
+import {TimeLock} from "./TimeLock.sol";
 
 import {Create3} from "@create3/contracts/Create3.sol";
 
@@ -106,6 +107,24 @@ contract ArrakisMetaVaultFactory is
 
         // #endregion compute salt = salt + msg.sender.
 
+        // #region create timeLock.
+
+        address timeLock;
+
+        {
+            address[] memory proposers = new address[](1);
+            address[] memory executors = new address[](1);
+
+            proposers[0] = owner_;
+            executors[0] = owner_;
+
+            timeLock = address(
+                new TimeLock(2 days, proposers, executors, address(0))
+            );
+        }
+
+        // #endregion create timeLock.
+
         // #region get the creation code for TokenMetaVault.
 
         bytes memory creationCode = abi.encodePacked(
@@ -113,7 +132,7 @@ contract ArrakisMetaVaultFactory is
             abi.encode(
                 token0_,
                 token1_,
-                owner_,
+                timeLock,
                 module_,
                 name,
                 symbol,
@@ -136,7 +155,8 @@ contract ArrakisMetaVaultFactory is
             token1_,
             owner_,
             module_,
-            vault
+            vault,
+            timeLock
         );
     }
 
