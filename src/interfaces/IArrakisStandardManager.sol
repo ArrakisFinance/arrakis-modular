@@ -46,6 +46,10 @@ interface IArrakisStandardManager {
     error CallFailed(bytes payload);
     error StartIndexLtEndIndex(uint256 startIndex, uint256 endIndex);
     error EndIndexGtNbOfVaults(uint256 endIndex, uint256 numberOfVaults);
+    error OnlyGuardian(address caller, address guardian);
+    error FactoryAlreadySet();
+    error OnlyFactory(address caller, address factory);
+    error VaultNotDeployed();
 
     // #endregion errors.
 
@@ -83,6 +87,7 @@ interface IArrakisStandardManager {
     event LogChangeManagerFee(address vault, uint256 newFeePIPS);
     event LogRebalance(address indexed vault, bytes[] payloads);
     event LogSetModule(address indexed vault, address module, bytes[] payloads);
+    event LogSetFactory(address vaultFactory);
 
     // #endregion events.
 
@@ -112,6 +117,10 @@ interface IArrakisStandardManager {
         bytes[] calldata payloads_
     ) external;
 
+    /// @notice function used to set factory.
+    /// @param factory_ address of the meta vault factory.
+    function setFactory(address factory_) external;
+
     function initManagement(SetupParams calldata params_) external;
 
     function updateVaultInfo(SetupParams calldata params_) external;
@@ -126,6 +135,16 @@ interface IArrakisStandardManager {
     ) external view returns (address[] memory);
 
     function numInitializedVaults() external view returns (uint256);
+
+    /// @notice address of the pauser of manager.
+    /// @return pauser address that can pause/unpause manager.
+    function guardian() external view returns(address);
+
+    /// @notice address of the vault factory.
+    /// @return factory address that can deploy meta vault.
+    function factory() external view returns(address);
+
+    function isManaged(address vault_) external view returns(bool);
 
     // #endregion  view functions.
 }

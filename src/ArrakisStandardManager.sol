@@ -9,15 +9,22 @@ import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {IDecimals} from "./interfaces/IDecimals.sol";
 import {VaultInfo, FeeIncrease} from "./structs/SManager.sol";
+import {IGuardian} from "./interfaces/IGuardian.sol";
 
 // #region openzeppelin dependencies.
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 // #endregion openzeppelin dependencies.
+
+// #region openzeppelin upgradeable dependencies.
+
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+// #endregion openzeppelin upgradeable dependencies.
 
 // #region solady dependencies.
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
@@ -27,12 +34,12 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 // #endregion uniswap.
-
+// NOTE admin and owner can be the same address on transparent proxy.
 contract ArrakisStandardManager is
     IArrakisStandardManager,
     Ownable,
-    ReentrancyGuard,
-    Pausable
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable
 {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
@@ -53,12 +60,14 @@ contract ArrakisStandardManager is
     mapping(address => address) public receiversByToken;
     mapping(address => VaultInfo) public vaultInfo;
     mapping(address => FeeIncrease) public pendingFeeIncrease;
+    address public factory;
 
     // #endregion public properties.
 
     // #region internal properties.
 
     EnumerableSet.AddressSet internal _vaults;
+    address internal _guardian;
 
     // #endregion internal properties.
 
@@ -75,40 +84,53 @@ contract ArrakisStandardManager is
         _;
     }
 
+    modifier onlyGuardian() {
+        address pauser = IGuardian(_guardian).pauser();
+        if (msg.sender != pauser) revert OnlyGuardian(msg.sender, pauser);
+        _;
+    }
+
     // #endregion modifiers.
 
     constructor(
-        address owner_,
-        address defaultReceiver_,
         uint256 defaultFeePIPS_,
         address nativeToken_,
-        uint8 nativeTokenDecimals_
+        uint8 nativeTokenDecimals_,
+        address guardian_
     ) {
-        if (
-            owner_ == address(0) ||
-            defaultReceiver_ == address(0) ||
-            nativeToken_ == address(0)
-        ) revert AddressZero();
+        if (nativeToken_ == address(0)) revert AddressZero();
         if (nativeTokenDecimals_ == 0) revert NativeTokenDecimalsZero();
-        _initializeOwner(owner_);
-        defaultReceiver = defaultReceiver_;
+        if (guardian_ == address(0)) revert AddressZero();
         /// @dev we are not checking if the default fee pips is not zero, to have
         /// the option to set 0 as default fee pips.
-        defaultFeePIPS = defaultFeePIPS_;
 
+        defaultFeePIPS = defaultFeePIPS_;
         nativeToken = nativeToken_;
         nativeTokenDecimals = nativeTokenDecimals_;
+        _guardian = guardian_;
+    }
+
+    function initialize(
+        address owner_,
+        address defaultReceiver_
+    ) external initializer {
+        if (owner_ == address(0) || defaultReceiver_ == address(0))
+            revert AddressZero();
+
+        _initializeOwner(owner_);
+        __ReentrancyGuard_init();
+        __Pausable_init();
 
         emit LogSetDefaultReceiver(address(0), defaultReceiver_);
     }
 
     // #region owner settable functions.
 
-    function pause() external onlyOwner {
+    function pause() external onlyGuardian {
         _pause();
     }
 
-    function unpause() external onlyOwner {
+    function unpause() external onlyGuardian {
         _unpause();
     }
 
@@ -330,11 +352,24 @@ contract ArrakisStandardManager is
         emit LogSetModule(vault_, module_, payloads_);
     }
 
+    function setFactory(address factory_) external onlyOwner {
+        if (factory != address(0)) revert FactoryAlreadySet();
+        if (factory_ == address(0)) revert AddressZero();
+
+        factory = factory_;
+
+        emit LogSetFactory(factory);
+    }
+
     // #region initManagements.
 
     function initManagement(
         SetupParams calldata params_
-    ) external whenNotPaused onlyVaultOwner(params_.vault) {
+    ) external whenNotPaused {
+        address _factory = factory;
+
+        if (msg.sender != _factory) revert OnlyFactory(msg.sender, _factory);
+
         _initManagement(params_);
 
         emit LogSetManagementParams(
@@ -409,6 +444,14 @@ contract ArrakisStandardManager is
         return _vaults.length();
     }
 
+    function guardian() external view returns (address) {
+        return IGuardian(_guardian).pauser();
+    }
+
+    function isManaged(address vault_) external view returns(bool) {
+        return _vaults.contains(vault_);
+    }
+
     // #endregion view public functions.
 
     // #region internal functions.
@@ -424,6 +467,9 @@ contract ArrakisStandardManager is
 
         // check is not already in management.
         if (_vaults.contains(params_.vault)) revert AlreadyInManagement();
+
+        // check if the vault is deployed.
+        if(params_.vault.code.length == 0) revert VaultNotDeployed();
 
         _updateParamsChecks(params_);
 

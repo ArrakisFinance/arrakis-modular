@@ -8,6 +8,8 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IArrakisMetaVaultFactory} from "./interfaces/IArrakisMetaVaultFactory.sol";
 import {ArrakisMetaVaultPublic} from "./ArrakisMetaVaultPublic.sol";
 import {ArrakisMetaVaultPrivate} from "./ArrakisMetaVaultPrivate.sol";
+import {IArrakisStandardManager} from "./interfaces/IArrakisStandardManager.sol";
+import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 
 import {Create3} from "@create3/contracts/Create3.sol";
 
@@ -21,17 +23,32 @@ contract ArrakisMetaVaultFactory is
 {
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    // #region immutable properties.
+
+    address public immutable manager;
+    address public immutable moduleRegistry;
+
+    // #endregion immutable properties.
+
     // #region internal properties.
 
     EnumerableSet.AddressSet internal _publicVaults;
     EnumerableSet.AddressSet internal _privateVaults;
 
+    EnumerableSet.AddressSet internal _deployers;
+
     // #endregion internal properties.
 
-    constructor(address owner_) {
-        if (owner_ == address(0)) revert AddressZero();
+    constructor(address owner_, address manager_, address moduleRegistry_) {
+        if (
+            owner_ == address(0) ||
+            manager_ == address(0) ||
+            moduleRegistry_ == address(0)
+        ) revert AddressZero();
 
         _initializeOwner(owner_);
+        manager = manager_;
+        moduleRegistry = moduleRegistry_;
     }
 
     // #region owner functions.
@@ -60,8 +77,15 @@ contract ArrakisMetaVaultFactory is
         address token0_,
         address token1_,
         address owner_,
-        address module_
+        address module_,
+        bytes calldata initManagementPayload_
     ) external whenNotPaused returns (address vault) {
+        // #region check only deployer can create public vault.
+
+        if (!_deployers.contains(msg.sender)) revert NotADeployer();
+
+        // #endregion check only deployer can create public vault.
+
         string memory name = "Arrakis Modular Vault";
         string memory symbol = "AMV";
 
@@ -86,13 +110,24 @@ contract ArrakisMetaVaultFactory is
 
         bytes memory creationCode = abi.encodePacked(
             type(ArrakisMetaVaultPublic).creationCode,
-            abi.encode(token0_, token1_, owner_, module_, name, symbol)
+            abi.encode(
+                token0_,
+                token1_,
+                owner_,
+                module_,
+                name,
+                symbol,
+                moduleRegistry,
+                manager
+            )
         );
 
         // #endregion get the creation code for TokenMetaVault.
 
         vault = Create3.create3(salt, creationCode);
         _publicVaults.add(vault);
+
+        _initManagement(vault, initManagementPayload_);
 
         emit LogPublicVaultCreation(
             msg.sender,
@@ -119,7 +154,8 @@ contract ArrakisMetaVaultFactory is
         address token0_,
         address token1_,
         address owner_,
-        address module_
+        address module_,
+        bytes calldata initManagementPayload_
     ) external whenNotPaused returns (address vault) {
         // #region compute salt = salt + msg.sender.
 
@@ -131,13 +167,22 @@ contract ArrakisMetaVaultFactory is
 
         bytes memory creationCode = abi.encodePacked(
             type(ArrakisMetaVaultPrivate).creationCode,
-            abi.encode(token0_, token1_, owner_, module_)
+            abi.encode(
+                token0_,
+                token1_,
+                owner_,
+                module_,
+                moduleRegistry,
+                manager
+            )
         );
 
         // #endregion get the creation code for TokenMetaVault.
 
         vault = Create3.create3(salt, creationCode);
         _privateVaults.add(vault);
+
+        _initManagement(vault, initManagementPayload_);
 
         emit LogPrivateVaultCreation(
             msg.sender,
@@ -148,6 +193,42 @@ contract ArrakisMetaVaultFactory is
             module_,
             vault
         );
+    }
+
+    function whitelistDeployer(
+        address[] calldata deployers_
+    ) external onlyOwner {
+        uint256 length = deployers_.length;
+
+        for (uint256 i; i < length; i++) {
+            address deployer = deployers_[i];
+
+            if (deployer == address(0)) revert AddressZero();
+            if (_deployers.contains(deployer))
+                revert AlreadyWhitelistedDeployer(deployer);
+
+            _deployers.add(deployer);
+        }
+
+        emit LogWhitelistDeployers(deployers_);
+    }
+
+    function blacklistDeployer(
+        address[] calldata deployers_
+    ) external onlyOwner {
+        uint256 length = deployers_.length;
+
+        for (uint256 i; i < length; i++) {
+            address deployer = deployers_[i];
+
+            if (deployer == address(0)) revert AddressZero();
+            if (_deployers.contains(deployer))
+                revert NotAlreadyADeployer(deployer);
+
+            _deployers.remove(deployer);
+        }
+
+        emit LogBlacklistDeployers(deployers_);
     }
 
     // #region view/pure function.
@@ -236,6 +317,10 @@ contract ArrakisMetaVaultFactory is
         return _privateVaults.length();
     }
 
+    function deployers() external view returns (address[] memory) {
+        return _deployers.values();
+    }
+
     // #endregion view/pure functions.
 
     // #region internal functions.
@@ -247,6 +332,19 @@ contract ArrakisMetaVaultFactory is
         string memory d_
     ) internal pure returns (string memory) {
         return string(abi.encodePacked(a_, b_, c_, d_));
+    }
+
+    function _initManagement(address vault_, bytes memory data_) internal {
+        bytes memory data = abi.encodeWithSelector(
+            IArrakisStandardManager.initManagement.selector,
+            data_
+        );
+        (bool success, ) = manager.call(data);
+
+        if (!success) revert CallFailed();
+
+        if (!IArrakisStandardManager(manager).isManaged(vault_))
+            revert VaultNotManaged();
     }
 
     // #endregion internal functions.

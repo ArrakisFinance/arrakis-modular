@@ -52,15 +52,20 @@ interface IArrakisMetaVault {
     /// token1 address.
     error Token0EqToken1();
 
+    /// @dev triggered when whitelisting action is occuring and module's beacon
+    /// is not whitelisted on module registry.
+    error NotWhitelistedBeacon();
+
+    /// @dev triggered when guardian of the whitelisting module is different than
+    /// the guardian of the registry.
+    error NotSameGuardian();
+
+    /// @dev triggered when a function logic is not implemented.
+    error NotImplemented();
+
     // #endregion errors.
 
     // #region events.
-
-    /// @notice Event describing a deposit done by an user inside this vault.
-    /// @param proportion percentage of the current position that depositor want to increase.
-    /// @param amount0 amount of token0 needed to increase the portfolio of "proportion" percent.
-    /// @param amount1 amount of token1 needed to increase the portfolio of "proportion" percent.
-    event LogDeposit(uint256 proportion, uint256 amount0, uint256 amount1);
 
     /// @notice Event describing a withdrawal of participation by an user inside this vault.
     /// @param proportion percentage of the current position that user want to withdraw.
@@ -74,9 +79,8 @@ interface IArrakisMetaVault {
     event LogWithdrawManagerBalance(uint256 amount0, uint256 amount1);
 
     /// @notice Event describing owner setting the manager.
-    /// @param oldManager address of manager that was managing the portfolio.
-    /// @param newManager address of manager that will manage the portfolio.
-    event LogSetManager(address oldManager, address newManager);
+    /// @param manager address of manager that will manage the portfolio.
+    event LogSetManager(address manager);
 
     /// @notice Event describing manager setting the module.
     /// @param module address of the new active module.
@@ -102,11 +106,6 @@ interface IArrakisMetaVault {
     event LogBlackListedModules(address[] modules);
 
     // #endregion events.
-
-    /// @notice function used by owner to set the Manager
-    /// responsible to rebalance the position.
-    /// @param newManager_ address of the new manager.
-    function setManager(address newManager_) external;
 
     /// @notice function used to set module
     /// @param module_ address of the new module
@@ -169,6 +168,10 @@ interface IArrakisMetaVault {
     /// @notice function used to get module used to
     /// open/close/manager a position.
     function module() external view returns (IArrakisLPModule);
+
+    /// @notice function used to get module registry.
+    /// @return registry address of module registry.
+    function moduleRegistry() external view returns(address registry);
 
     // #endregion view functions.
 }

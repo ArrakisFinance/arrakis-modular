@@ -77,6 +77,14 @@ interface IArrakisLPModule {
 
     // #endregion events.
 
+    /// @notice function used to pause the module.
+    /// @dev only callable by guardian
+    function pause() external;
+
+    /// @notice function used to unpause the module.
+    /// @dev only callable by guardian
+    function unpause() external;
+
     /// @notice function used by metaVault to withdraw tokens from the strategy.
     /// @param receiver_ address that will receive tokens.
     /// @param proportion_ number of share needed to be withdrawn.
@@ -103,6 +111,10 @@ interface IArrakisLPModule {
     /// @notice function used to get metaVault as IArrakisMetaVault.
     /// @return metaVault that implement IArrakisMetaVault.
     function metaVault() external view returns (IArrakisMetaVault);
+
+    /// @notice function used to get the address that can pause the module.
+    /// @return guardian address of the pauser.
+    function guardian() external view returns (address);
 
     /// @notice function used to get manager token0 balance.
     /// @dev amount of fees in token0 that manager have not taken yet.

@@ -27,6 +27,12 @@ interface IArrakisMetaVaultPublic {
         uint256 amount1_
     );
 
+    /// @notice Event describing a deposit done by an user inside this vault.
+    /// @param proportion percentage of the current position that depositor want to increase.
+    /// @param amount0 amount of token0 needed to increase the portfolio of "proportion" percent.
+    /// @param amount1 amount of token1 needed to increase the portfolio of "proportion" percent.
+    event LogDeposit(uint256 proportion, uint256 amount0, uint256 amount1);
+
     // #endregion events.
 
     /// @notice function used to mint share of the vault position
