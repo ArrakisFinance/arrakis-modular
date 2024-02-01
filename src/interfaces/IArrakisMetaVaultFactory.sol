@@ -44,7 +44,8 @@ interface IArrakisMetaVaultFactory {
         address token1,
         address owner,
         address module,
-        address publicVault
+        address publicVault,
+        address timeLock
     );
     event LogPrivateVaultCreation(
         address indexed creator,
