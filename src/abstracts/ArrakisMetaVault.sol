@@ -3,28 +3,27 @@ pragma solidity ^0.8.20;
 
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
+import {IModuleRegistry} from "../interfaces/IModuleRegistry.sol";
 import {PIPS} from "../constants/CArrakis.sol";
+import {IBeaconProxyExtended} from "../interfaces/IBeaconProxyExtended.sol";
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
 abstract contract ArrakisMetaVault is
     IArrakisMetaVault,
     Ownable,
-    ReentrancyGuard,
-    Pausable
+    ReentrancyGuard
 {
     using EnumerableSet for EnumerableSet.AddressSet;
-    using Address for address payable;
 
     // #region immutable properties.
 
     address public immutable token0;
     address public immutable token1;
+    address public immutable moduleRegistry;
 
     // #endregion immutable properties.
 
@@ -50,7 +49,9 @@ abstract contract ArrakisMetaVault is
         address token0_,
         address token1_,
         address owner_,
-        address module_
+        address module_,
+        address moduleRegistry_,
+        address manager_
     ) {
         // #region checks.
 
@@ -60,6 +61,11 @@ abstract contract ArrakisMetaVault is
         if (token0_ == token1_) revert Token0EqToken1();
         if (owner_ == address(0)) revert AddressZero("Owner");
         if (module_ == address(0)) revert AddressZero("Module");
+        if (moduleRegistry_ == address(0))
+            revert AddressZero("Module Registry");
+        if (manager_ == address(0)) revert AddressZero("Manager");
+        _requireWhitelistedBeacon(module_);
+        _requireSameGuardianThanRegistry(module_);
 
         // #endregion checks.
 
@@ -68,35 +74,34 @@ abstract contract ArrakisMetaVault is
         _initializeOwner(owner_);
         _whitelistedModules.add(module_);
         module = IArrakisLPModule(module_);
+        moduleRegistry = moduleRegistry_;
+        manager = manager_;
 
         emit LogSetFirstModule(module_);
         emit LogWhitelistedModule(module_);
+        emit LogSetManager(manager_);
     }
 
-    /// @dev virtual to have the option to paused all palm
-    /// vault directly in one transaction.
-    function pause() external virtual onlyOwner {
-        _pause();
+    // #region Ownable functions.
+
+    function transferOwnership(address) public payable override {
+        revert NotImplemented();
     }
 
-    function unpause() external virtual onlyOwner {
-        _unpause();
+    function renounceOwnership() public payable override {
+        revert NotImplemented();
     }
 
-    function setManager(address newManager_) external onlyOwner nonReentrant {
-        address _manager = manager;
-        if (newManager_ == address(0)) revert AddressZero("New Manager");
-        if (newManager_ == _manager) revert SameManager();
-        if (_manager != address(0)) _withdrawManagerBalance(module);
-        manager = newManager_;
-
-        emit LogSetManager(_manager, newManager_);
+    function completeOwnershipHandover(address) public payable override {
+        revert NotImplemented();
     }
+
+    // #endregion Ownable functions.
 
     function setModule(
         address module_,
         bytes[] calldata payloads_
-    ) external onlyManager whenNotPaused nonReentrant {
+    ) external onlyManager nonReentrant {
         // store in memory to save gas.
         IArrakisLPModule _module = module;
 
@@ -144,6 +149,8 @@ abstract contract ArrakisMetaVault is
         for (uint256 i; i < len; i++) {
             address _module = modules_[i];
             if (_module == address(0)) revert AddressZero("Module");
+            _requireWhitelistedBeacon(_module);
+            _requireSameGuardianThanRegistry(_module);
             if (_whitelistedModules.contains(_module))
                 revert AlreadyWhitelisted(_module);
             _whitelistedModules.add(_module);
@@ -197,29 +204,6 @@ abstract contract ArrakisMetaVault is
 
     // #region internal functions.
 
-    function _deposit(
-        uint256 proportion_
-    ) internal nonReentrant returns (uint256 amount0, uint256 amount1) {
-        /// @dev msg.sender should be the tokens provider
-
-        bytes memory data = abi.encodeWithSelector(
-            IArrakisLPModule.deposit.selector,
-            msg.sender,
-            proportion_
-        );
-
-        bytes memory result = payable(address(module)).functionCallWithValue(
-            data,
-            msg.value
-        );
-
-        (amount0, amount1) = abi.decode(
-            result,
-            (uint256, uint256)
-        );
-        emit LogDeposit(proportion_, amount0, amount1);
-    }
-
     function _withdraw(
         address receiver_,
         uint256 proportion_
@@ -235,6 +219,18 @@ abstract contract ArrakisMetaVault is
         (amount0, amount1) = module_.withdrawManagerBalance();
 
         emit LogWithdrawManagerBalance(amount0, amount1);
+    }
+
+    function _requireWhitelistedBeacon(address module_) internal {
+        address beacon = IBeaconProxyExtended(module_).beacon();
+        if (!IModuleRegistry(moduleRegistry).beaconsContains(beacon))
+            revert NotWhitelistedBeacon();
+    }
+
+    function _requireSameGuardianThanRegistry(address module_) internal {
+        address guardian = IArrakisLPModule(module_).guardian();
+        if (guardian != IModuleRegistry(moduleRegistry).guardian())
+            revert NotSameGuardian();
     }
 
     // #endregion internal functions.

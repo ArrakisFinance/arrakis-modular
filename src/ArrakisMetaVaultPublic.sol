@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {IArrakisMetaVaultPublic} from "./interfaces/IArrakisMetaVaultPublic.sol";
+import {IArrakisLPModulePublic} from "./interfaces/IArrakisLPModulePublic.sol";
 import {ArrakisMetaVault, PIPS} from "./abstracts/ArrakisMetaVault.sol";
 import {PUBLIC_TYPE} from "./constants/CArrakis.sol";
 
@@ -9,11 +10,15 @@ import {ERC20} from "@solady/contracts/tokens/ERC20.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+
 contract ArrakisMetaVaultPublic is
     IArrakisMetaVaultPublic,
     ArrakisMetaVault,
     ERC20
 {
+    using Address for address payable;
+
     string internal _name;
     string internal _symbol;
 
@@ -23,8 +28,19 @@ contract ArrakisMetaVaultPublic is
         address owner_,
         address module_,
         string memory name_,
-        string memory symbol_
-    ) ArrakisMetaVault(token0_, token1_, owner_, module_) {
+        string memory symbol_,
+        address moduleRegistry_,
+        address manager_
+    )
+        ArrakisMetaVault(
+            token0_,
+            token1_,
+            owner_,
+            module_,
+            moduleRegistry_,
+            manager_
+        )
+    {
         _name = name_;
         _symbol = symbol_;
     }
@@ -86,4 +102,28 @@ contract ArrakisMetaVaultPublic is
     function vaultType() external pure returns (bytes32) {
         return PUBLIC_TYPE;
     }
+
+    // #region internal functions.
+
+    function _deposit(
+        uint256 proportion_
+    ) internal nonReentrant returns (uint256 amount0, uint256 amount1) {
+        /// @dev msg.sender should be the tokens provider
+
+        bytes memory data = abi.encodeWithSelector(
+            IArrakisLPModulePublic.deposit.selector,
+            msg.sender,
+            proportion_
+        );
+
+        bytes memory result = payable(address(module)).functionCallWithValue(
+            data,
+            msg.value
+        );
+
+        (amount0, amount1) = abi.decode(result, (uint256, uint256));
+        emit LogDeposit(proportion_, amount0, amount1);
+    }
+
+    // #endregion internal functions.
 }

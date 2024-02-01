@@ -14,6 +14,8 @@ interface IModuleRegistry {
     error ImplementationIsAddressZero();
     error NotBeacon();
     error ModuleNotLinkedToMetaVault();
+    error NotSameGuardian();
+    error NotSameAdmin();
 
     // #endregion errors.
 
@@ -34,6 +36,22 @@ interface IModuleRegistry {
     /// that have module as implementation.
     /// @return beacons list of upgradeable beacon.
     function beacons() external view returns (address[] memory beacons);
+
+    /// @notice function to know if the beacons enumerableSet contain
+    /// beacon_
+    /// @param beacon_ beacon address to check
+    /// @param isContained is true if beacon_ is whitelisted.
+    function beaconsContains(address beacon_) external view returns (bool isContained);
+
+    /// @notice function used to get the guardian address of arrakis protocol.
+    /// @return guardian address of the pauser.
+    function guardian() external view returns(address);
+
+    /// @notice function used to get the admin address that can
+    /// upgrade beacon implementation.
+    /// @dev admin address should be a timelock contract.
+    /// @return admin address that can upgrade beacon implementation.
+    function admin() external view returns(address);
 
     // #endregion view functions.
 

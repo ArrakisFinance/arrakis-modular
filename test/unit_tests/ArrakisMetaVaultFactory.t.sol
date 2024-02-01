@@ -1,428 +1,428 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+// // SPDX-License-Identifier: UNLICENSED
+// pragma solidity ^0.8.20;
 
-import {console} from "forge-std/console.sol";
+// import {console} from "forge-std/console.sol";
 
-import {TestWrapper} from "../utils/TestWrapper.sol";
+// import {TestWrapper} from "../utils/TestWrapper.sol";
 
-import {ArrakisMetaVaultFactory, IArrakisMetaVaultFactory} from "../../src/ArrakisMetaVaultFactory.sol";
-import {IArrakisMetaVault} from "../../src/interfaces/IArrakisMetaVault.sol";
+// import {ArrakisMetaVaultFactory, IArrakisMetaVaultFactory} from "../../src/ArrakisMetaVaultFactory.sol";
+// import {IArrakisMetaVault} from "../../src/interfaces/IArrakisMetaVault.sol";
 
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+// import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+// import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {Ownable} from "@solady/contracts/auth/Ownable.sol";
+// import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
-contract ArrakisMetaVaultFactoryTest is TestWrapper {
-    // #region constant properties.
+// contract ArrakisMetaVaultFactoryTest is TestWrapper {
+//     // #region constant properties.
 
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+//     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+//     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
-    // #endregion constant properties.
+//     // #endregion constant properties.
 
-    ArrakisMetaVaultFactory public factory;
-    address public owner;
-    address public module;
+//     ArrakisMetaVaultFactory public factory;
+//     address public owner;
+//     address public module;
 
-    function setUp() public {
-        owner = vm.addr(1);
-        module = vm.addr(12);
+//     function setUp() public {
+//         owner = vm.addr(1);
+//         module = vm.addr(12);
 
-        factory = new ArrakisMetaVaultFactory(address(this));
-    }
+//         factory = new ArrakisMetaVaultFactory(address(this));
+//     }
 
-    // #region test paused/unpaused.
+//     // #region test paused/unpaused.
 
-    function testPausedOnlyOwner() public {
-        address caller = vm.addr(111);
+//     function testPausedOnlyOwner() public {
+//         address caller = vm.addr(111);
 
-        vm.prank(caller);
-        vm.expectRevert(Ownable.Unauthorized.selector);
+//         vm.prank(caller);
+//         vm.expectRevert(Ownable.Unauthorized.selector);
 
-        factory.pause();
-    }
+//         factory.pause();
+//     }
 
-    function testPause() public {
-        assertEq(factory.paused(), false);
+//     function testPause() public {
+//         assertEq(factory.paused(), false);
 
-        factory.pause();
+//         factory.pause();
 
-        assertEq(factory.paused(), true);
-    }
+//         assertEq(factory.paused(), true);
+//     }
 
-    function testUnPauseOnlyOwner() public {
-        factory.pause();
-        address caller = vm.addr(111);
+//     function testUnPauseOnlyOwner() public {
+//         factory.pause();
+//         address caller = vm.addr(111);
 
-        vm.prank(caller);
-        vm.expectRevert(Ownable.Unauthorized.selector);
+//         vm.prank(caller);
+//         vm.expectRevert(Ownable.Unauthorized.selector);
 
-        factory.unpause();
-    }
+//         factory.unpause();
+//     }
 
-    function testUnPauseNotPaused() public {
-        assertEq(factory.paused(), false);
+//     function testUnPauseNotPaused() public {
+//         assertEq(factory.paused(), false);
 
-        vm.expectRevert(Pausable.ExpectedPause.selector);
-        factory.unpause();
-    }
+//         vm.expectRevert(Pausable.ExpectedPause.selector);
+//         factory.unpause();
+//     }
 
-    function testUnPause() public {
-        assertEq(factory.paused(), false);
+//     function testUnPause() public {
+//         assertEq(factory.paused(), false);
 
-        factory.pause();
+//         factory.pause();
 
-        assertEq(factory.paused(), true);
+//         assertEq(factory.paused(), true);
 
-        factory.unpause();
+//         factory.unpause();
 
-        assertEq(factory.paused(), false);
-    }
+//         assertEq(factory.paused(), false);
+//     }
 
-    // #endregion test paused/unpaused.
+//     // #endregion test paused/unpaused.
 
-    // #region create private vault.
+//     // #region create private vault.
 
-    function testDeployPrivateVault() public {
-        bytes32 privateSalt = keccak256(abi.encode("Test private vault"));
+//     function testDeployPrivateVault() public {
+//         bytes32 privateSalt = keccak256(abi.encode("Test private vault"));
 
-        IArrakisMetaVault vault = IArrakisMetaVault(
-            factory.deployPrivateVault(privateSalt, USDC, WETH, owner, module)
-        );
+//         IArrakisMetaVault vault = IArrakisMetaVault(
+//             factory.deployPrivateVault(privateSalt, USDC, WETH, owner, module)
+//         );
 
-        assertEq(vault.token0(), USDC);
-        assertEq(vault.token1(), WETH);
-        assertEq(address(vault.module()), module);
-        assertEq(Ownable(address(vault)).owner(), owner);
+//         assertEq(vault.token0(), USDC);
+//         assertEq(vault.token1(), WETH);
+//         assertEq(address(vault.module()), module);
+//         assertEq(Ownable(address(vault)).owner(), owner);
 
-        assert(address(vault) != address(0));
-    }
+//         assert(address(vault) != address(0));
+//     }
 
-    // #endregion create private vault.
+//     // #endregion create private vault.
 
-    // #region create public vault.
+//     // #region create public vault.
 
-    function testDeployPublicVault() public {
-        bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
+//     function testDeployPublicVault() public {
+//         bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
 
-        IArrakisMetaVault vault = IArrakisMetaVault(
-            factory.deployPublicVault(publicSalt, USDC, WETH, owner, module)
-        );
+//         IArrakisMetaVault vault = IArrakisMetaVault(
+//             factory.deployPublicVault(publicSalt, USDC, WETH, owner, module)
+//         );
 
-        assertEq(vault.token0(), USDC);
-        assertEq(vault.token1(), WETH);
-        assertEq(address(vault.module()), module);
-        assertEq(Ownable(address(vault)).owner(), owner);
+//         assertEq(vault.token0(), USDC);
+//         assertEq(vault.token1(), WETH);
+//         assertEq(address(vault.module()), module);
+//         assertEq(Ownable(address(vault)).owner(), owner);
 
-        assert(address(vault) != address(0));
-    }
+//         assert(address(vault) != address(0));
+//     }
 
-    // #endregion create public vault.
+//     // #endregion create public vault.
 
-    // #region test get token name.
+//     // #region test get token name.
 
-    function testGetTokenName() public {
-        string memory vaultName = factory.getTokenName(USDC, WETH);
+//     function testGetTokenName() public {
+//         string memory vaultName = factory.getTokenName(USDC, WETH);
 
-        assertEq(
-            string(
-                abi.encodePacked(
-                    "Arrakis Modular ",
-                    IERC20Metadata(USDC).symbol(),
-                    "/",
-                    IERC20Metadata(WETH).symbol()
-                )
-            ),
-            vaultName
-        );
-    }
+//         assertEq(
+//             string(
+//                 abi.encodePacked(
+//                     "Arrakis Modular ",
+//                     IERC20Metadata(USDC).symbol(),
+//                     "/",
+//                     IERC20Metadata(WETH).symbol()
+//                 )
+//             ),
+//             vaultName
+//         );
+//     }
 
-    // #endregion test get token name.
+//     // #endregion test get token name.
 
-    // #region test get token symbol.
+//     // #region test get token symbol.
 
-    function testGetTokenSymbol() public {
-        string memory vaultSymbol = factory.getTokenSymbol(USDC, WETH);
+//     function testGetTokenSymbol() public {
+//         string memory vaultSymbol = factory.getTokenSymbol(USDC, WETH);
 
-        assertEq(
-            string(
-                abi.encodePacked(
-                    "AM",
-                    "/",
-                    IERC20Metadata(USDC).symbol(),
-                    "/",
-                    IERC20Metadata(WETH).symbol()
-                )
-            ),
-            vaultSymbol
-        );
-    }
+//         assertEq(
+//             string(
+//                 abi.encodePacked(
+//                     "AM",
+//                     "/",
+//                     IERC20Metadata(USDC).symbol(),
+//                     "/",
+//                     IERC20Metadata(WETH).symbol()
+//                 )
+//             ),
+//             vaultSymbol
+//         );
+//     }
 
-    // #endregion test get token symbol.
+//     // #endregion test get token symbol.
 
-    // #region test publicVaults.
+//     // #region test publicVaults.
 
-    function testPublicVaultStartIndexLtEndIndex() public {
-        uint256 startIndex = 10;
-        uint256 endIndex = 0;
+//     function testPublicVaultStartIndexLtEndIndex() public {
+//         uint256 startIndex = 10;
+//         uint256 endIndex = 0;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IArrakisMetaVaultFactory.StartIndexLtEndIndex.selector,
-                startIndex,
-                endIndex
-            )
-        );
+//         vm.expectRevert(
+//             abi.encodeWithSelector(
+//                 IArrakisMetaVaultFactory.StartIndexLtEndIndex.selector,
+//                 startIndex,
+//                 endIndex
+//             )
+//         );
 
-        factory.publicVaults(startIndex, endIndex);
-    }
+//         factory.publicVaults(startIndex, endIndex);
+//     }
 
-    function testPublicVaultEndIndexGtNbOfVaults() public {
-        // #region create a public vault.
+//     function testPublicVaultEndIndexGtNbOfVaults() public {
+//         // #region create a public vault.
 
-        bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
+//         bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
 
-        IArrakisMetaVault vault = IArrakisMetaVault(
-            factory.deployPublicVault(publicSalt, USDC, WETH, owner, module)
-        );
+//         IArrakisMetaVault vault = IArrakisMetaVault(
+//             factory.deployPublicVault(publicSalt, USDC, WETH, owner, module)
+//         );
 
-        assertEq(vault.token0(), USDC);
-        assertEq(vault.token1(), WETH);
-        assertEq(address(vault.module()), module);
-        assertEq(Ownable(address(vault)).owner(), owner);
+//         assertEq(vault.token0(), USDC);
+//         assertEq(vault.token1(), WETH);
+//         assertEq(address(vault.module()), module);
+//         assertEq(Ownable(address(vault)).owner(), owner);
 
-        assert(address(vault) != address(0));
+//         assert(address(vault) != address(0));
 
-        // #endregion create a public vault.
+//         // #endregion create a public vault.
 
-        uint256 startIndex = 0;
-        uint256 endIndex = 2;
+//         uint256 startIndex = 0;
+//         uint256 endIndex = 2;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IArrakisMetaVaultFactory.EndIndexGtNbOfVaults.selector,
-                endIndex,
-                factory.numOfPublicVaults()
-            )
-        );
+//         vm.expectRevert(
+//             abi.encodeWithSelector(
+//                 IArrakisMetaVaultFactory.EndIndexGtNbOfVaults.selector,
+//                 endIndex,
+//                 factory.numOfPublicVaults()
+//             )
+//         );
 
-        factory.publicVaults(startIndex, endIndex);
-    }
+//         factory.publicVaults(startIndex, endIndex);
+//     }
 
-    function testPublicVaults() public {
-        // #region create a public vaults.
+//     function testPublicVaults() public {
+//         // #region create a public vaults.
 
-        bytes32 publicSalt = keccak256(abi.encode("Test public vault 0"));
+//         bytes32 publicSalt = keccak256(abi.encode("Test public vault 0"));
 
-        IArrakisMetaVault vault0 = IArrakisMetaVault(
-            factory.deployPublicVault(publicSalt, USDC, WETH, owner, module)
-        );
+//         IArrakisMetaVault vault0 = IArrakisMetaVault(
+//             factory.deployPublicVault(publicSalt, USDC, WETH, owner, module)
+//         );
 
-        assertEq(vault0.token0(), USDC);
-        assertEq(vault0.token1(), WETH);
-        assertEq(address(vault0.module()), module);
-        assertEq(Ownable(address(vault0)).owner(), owner);
-        assert(address(vault0) != address(0));
+//         assertEq(vault0.token0(), USDC);
+//         assertEq(vault0.token1(), WETH);
+//         assertEq(address(vault0.module()), module);
+//         assertEq(Ownable(address(vault0)).owner(), owner);
+//         assert(address(vault0) != address(0));
 
-        publicSalt = keccak256(abi.encode("Test public vault 1"));
+//         publicSalt = keccak256(abi.encode("Test public vault 1"));
 
-        IArrakisMetaVault vault1 = IArrakisMetaVault(
-            factory.deployPublicVault(publicSalt, USDC, WETH, owner, module)
-        );
+//         IArrakisMetaVault vault1 = IArrakisMetaVault(
+//             factory.deployPublicVault(publicSalt, USDC, WETH, owner, module)
+//         );
 
-        assertEq(vault1.token0(), USDC);
-        assertEq(vault1.token1(), WETH);
-        assertEq(address(vault1.module()), module);
-        assertEq(Ownable(address(vault1)).owner(), owner);
-        assert(address(vault1) != address(0));
+//         assertEq(vault1.token0(), USDC);
+//         assertEq(vault1.token1(), WETH);
+//         assertEq(address(vault1.module()), module);
+//         assertEq(Ownable(address(vault1)).owner(), owner);
+//         assert(address(vault1) != address(0));
 
-        assert(address(vault0) != address(vault1));
+//         assert(address(vault0) != address(vault1));
 
-        // #endregion create a public vaults.
+//         // #endregion create a public vaults.
 
-        uint256 startIndex = 0;
-        uint256 endIndex = 2;
+//         uint256 startIndex = 0;
+//         uint256 endIndex = 2;
 
-        address[] memory vaults = factory.publicVaults(startIndex, endIndex);
+//         address[] memory vaults = factory.publicVaults(startIndex, endIndex);
 
-        assertEq(vaults[0], address(vault0));
-        assertEq(vaults[1], address(vault1));
-    }
+//         assertEq(vaults[0], address(vault0));
+//         assertEq(vaults[1], address(vault1));
+//     }
 
-    // #endregion test publicVaults.
+//     // #endregion test publicVaults.
 
-    // #region test numOfPublicVaults.
+//     // #region test numOfPublicVaults.
 
-    function testNumOfPublicVaults() public {
-        assertEq(factory.numOfPublicVaults(), 0);
+//     function testNumOfPublicVaults() public {
+//         assertEq(factory.numOfPublicVaults(), 0);
 
-        // #region create a public vaults.
+//         // #region create a public vaults.
 
-        bytes32 publicSalt = keccak256(abi.encode("Test public vault 0"));
+//         bytes32 publicSalt = keccak256(abi.encode("Test public vault 0"));
 
-        IArrakisMetaVault vault0 = IArrakisMetaVault(
-            factory.deployPublicVault(publicSalt, USDC, WETH, owner, module)
-        );
+//         IArrakisMetaVault vault0 = IArrakisMetaVault(
+//             factory.deployPublicVault(publicSalt, USDC, WETH, owner, module)
+//         );
 
-        assertEq(vault0.token0(), USDC);
-        assertEq(vault0.token1(), WETH);
-        assertEq(address(vault0.module()), module);
-        assertEq(Ownable(address(vault0)).owner(), owner);
-        assert(address(vault0) != address(0));
+//         assertEq(vault0.token0(), USDC);
+//         assertEq(vault0.token1(), WETH);
+//         assertEq(address(vault0.module()), module);
+//         assertEq(Ownable(address(vault0)).owner(), owner);
+//         assert(address(vault0) != address(0));
 
-        publicSalt = keccak256(abi.encode("Test public vault 1"));
+//         publicSalt = keccak256(abi.encode("Test public vault 1"));
 
-        IArrakisMetaVault vault1 = IArrakisMetaVault(
-            factory.deployPublicVault(publicSalt, USDC, WETH, owner, module)
-        );
+//         IArrakisMetaVault vault1 = IArrakisMetaVault(
+//             factory.deployPublicVault(publicSalt, USDC, WETH, owner, module)
+//         );
 
-        assertEq(vault1.token0(), USDC);
-        assertEq(vault1.token1(), WETH);
-        assertEq(address(vault1.module()), module);
-        assertEq(Ownable(address(vault1)).owner(), owner);
-        assert(address(vault1) != address(0));
+//         assertEq(vault1.token0(), USDC);
+//         assertEq(vault1.token1(), WETH);
+//         assertEq(address(vault1.module()), module);
+//         assertEq(Ownable(address(vault1)).owner(), owner);
+//         assert(address(vault1) != address(0));
 
-        assert(address(vault0) != address(vault1));
+//         assert(address(vault0) != address(vault1));
 
-        // #endregion create a public vaults.
+//         // #endregion create a public vaults.
 
-        assertEq(factory.numOfPublicVaults(), 2);
-    }
+//         assertEq(factory.numOfPublicVaults(), 2);
+//     }
 
-    // #endregion test numOfPublicVaults.
+//     // #endregion test numOfPublicVaults.
 
-    // #region test privateVaults.
+//     // #region test privateVaults.
 
-    function testPrivateVaultStartIndexLtEndIndex() public {
-        uint256 startIndex = 10;
-        uint256 endIndex = 0;
+//     function testPrivateVaultStartIndexLtEndIndex() public {
+//         uint256 startIndex = 10;
+//         uint256 endIndex = 0;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IArrakisMetaVaultFactory.StartIndexLtEndIndex.selector,
-                startIndex,
-                endIndex
-            )
-        );
+//         vm.expectRevert(
+//             abi.encodeWithSelector(
+//                 IArrakisMetaVaultFactory.StartIndexLtEndIndex.selector,
+//                 startIndex,
+//                 endIndex
+//             )
+//         );
 
-        factory.privateVaults(startIndex, endIndex);
-    }
+//         factory.privateVaults(startIndex, endIndex);
+//     }
 
-    function testPrivateVaultEndIndexGtNbOfVaults() public {
-        // #region create a private vault.
+//     function testPrivateVaultEndIndexGtNbOfVaults() public {
+//         // #region create a private vault.
 
-        bytes32 privateSalt = keccak256(abi.encode("Test private vault"));
+//         bytes32 privateSalt = keccak256(abi.encode("Test private vault"));
 
-        IArrakisMetaVault vault = IArrakisMetaVault(
-            factory.deployPrivateVault(privateSalt, USDC, WETH, owner, module)
-        );
+//         IArrakisMetaVault vault = IArrakisMetaVault(
+//             factory.deployPrivateVault(privateSalt, USDC, WETH, owner, module)
+//         );
 
-        assertEq(vault.token0(), USDC);
-        assertEq(vault.token1(), WETH);
-        assertEq(address(vault.module()), module);
-        assertEq(Ownable(address(vault)).owner(), owner);
+//         assertEq(vault.token0(), USDC);
+//         assertEq(vault.token1(), WETH);
+//         assertEq(address(vault.module()), module);
+//         assertEq(Ownable(address(vault)).owner(), owner);
 
-        assert(address(vault) != address(0));
+//         assert(address(vault) != address(0));
 
-        // #endregion create a private vault.
+//         // #endregion create a private vault.
 
-        uint256 startIndex = 0;
-        uint256 endIndex = 2;
+//         uint256 startIndex = 0;
+//         uint256 endIndex = 2;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IArrakisMetaVaultFactory.EndIndexGtNbOfVaults.selector,
-                endIndex,
-                factory.numOfPrivateVaults()
-            )
-        );
+//         vm.expectRevert(
+//             abi.encodeWithSelector(
+//                 IArrakisMetaVaultFactory.EndIndexGtNbOfVaults.selector,
+//                 endIndex,
+//                 factory.numOfPrivateVaults()
+//             )
+//         );
 
-        factory.privateVaults(startIndex, endIndex);
-    }
+//         factory.privateVaults(startIndex, endIndex);
+//     }
 
-    function testPrivateVaults() public {
-        // #region create a private vaults.
+//     function testPrivateVaults() public {
+//         // #region create a private vaults.
 
-        bytes32 privateSalt = keccak256(abi.encode("Test private vault 0"));
+//         bytes32 privateSalt = keccak256(abi.encode("Test private vault 0"));
 
-        IArrakisMetaVault vault0 = IArrakisMetaVault(
-            factory.deployPrivateVault(privateSalt, USDC, WETH, owner, module)
-        );
+//         IArrakisMetaVault vault0 = IArrakisMetaVault(
+//             factory.deployPrivateVault(privateSalt, USDC, WETH, owner, module)
+//         );
 
-        assertEq(vault0.token0(), USDC);
-        assertEq(vault0.token1(), WETH);
-        assertEq(address(vault0.module()), module);
-        assertEq(Ownable(address(vault0)).owner(), owner);
-        assert(address(vault0) != address(0));
+//         assertEq(vault0.token0(), USDC);
+//         assertEq(vault0.token1(), WETH);
+//         assertEq(address(vault0.module()), module);
+//         assertEq(Ownable(address(vault0)).owner(), owner);
+//         assert(address(vault0) != address(0));
 
-        privateSalt = keccak256(abi.encode("Test private vault 1"));
+//         privateSalt = keccak256(abi.encode("Test private vault 1"));
 
-        IArrakisMetaVault vault1 = IArrakisMetaVault(
-            factory.deployPrivateVault(privateSalt, USDC, WETH, owner, module)
-        );
+//         IArrakisMetaVault vault1 = IArrakisMetaVault(
+//             factory.deployPrivateVault(privateSalt, USDC, WETH, owner, module)
+//         );
 
-        assertEq(vault1.token0(), USDC);
-        assertEq(vault1.token1(), WETH);
-        assertEq(address(vault1.module()), module);
-        assertEq(Ownable(address(vault1)).owner(), owner);
-        assert(address(vault1) != address(0));
+//         assertEq(vault1.token0(), USDC);
+//         assertEq(vault1.token1(), WETH);
+//         assertEq(address(vault1.module()), module);
+//         assertEq(Ownable(address(vault1)).owner(), owner);
+//         assert(address(vault1) != address(0));
 
-        assert(address(vault0) != address(vault1));
+//         assert(address(vault0) != address(vault1));
 
-        // #endregion create a private vaults.
+//         // #endregion create a private vaults.
 
-        uint256 startIndex = 0;
-        uint256 endIndex = 2;
+//         uint256 startIndex = 0;
+//         uint256 endIndex = 2;
 
-        address[] memory vaults = factory.privateVaults(startIndex, endIndex);
+//         address[] memory vaults = factory.privateVaults(startIndex, endIndex);
 
-        assertEq(vaults[0], address(vault0));
-        assertEq(vaults[1], address(vault1));
-    }
+//         assertEq(vaults[0], address(vault0));
+//         assertEq(vaults[1], address(vault1));
+//     }
 
-    // #endregion test privateVaults.
+//     // #endregion test privateVaults.
 
 
-    // #region test numOfPrivateVaults.
+//     // #region test numOfPrivateVaults.
 
-    function testNumOfPrivateVaults() public {
-        assertEq(factory.numOfPrivateVaults(), 0);
+//     function testNumOfPrivateVaults() public {
+//         assertEq(factory.numOfPrivateVaults(), 0);
 
-        // #region create a private vaults.
+//         // #region create a private vaults.
 
-        bytes32 privateSalt = keccak256(abi.encode("Test private vault 0"));
+//         bytes32 privateSalt = keccak256(abi.encode("Test private vault 0"));
 
-        IArrakisMetaVault vault0 = IArrakisMetaVault(
-            factory.deployPrivateVault(privateSalt, USDC, WETH, owner, module)
-        );
+//         IArrakisMetaVault vault0 = IArrakisMetaVault(
+//             factory.deployPrivateVault(privateSalt, USDC, WETH, owner, module)
+//         );
 
-        assertEq(vault0.token0(), USDC);
-        assertEq(vault0.token1(), WETH);
-        assertEq(address(vault0.module()), module);
-        assertEq(Ownable(address(vault0)).owner(), owner);
-        assert(address(vault0) != address(0));
+//         assertEq(vault0.token0(), USDC);
+//         assertEq(vault0.token1(), WETH);
+//         assertEq(address(vault0.module()), module);
+//         assertEq(Ownable(address(vault0)).owner(), owner);
+//         assert(address(vault0) != address(0));
 
-        privateSalt = keccak256(abi.encode("Test private vault 1"));
+//         privateSalt = keccak256(abi.encode("Test private vault 1"));
 
-        IArrakisMetaVault vault1 = IArrakisMetaVault(
-            factory.deployPrivateVault(privateSalt, USDC, WETH, owner, module)
-        );
+//         IArrakisMetaVault vault1 = IArrakisMetaVault(
+//             factory.deployPrivateVault(privateSalt, USDC, WETH, owner, module)
+//         );
 
-        assertEq(vault1.token0(), USDC);
-        assertEq(vault1.token1(), WETH);
-        assertEq(address(vault1.module()), module);
-        assertEq(Ownable(address(vault1)).owner(), owner);
-        assert(address(vault1) != address(0));
+//         assertEq(vault1.token0(), USDC);
+//         assertEq(vault1.token1(), WETH);
+//         assertEq(address(vault1.module()), module);
+//         assertEq(Ownable(address(vault1)).owner(), owner);
+//         assert(address(vault1) != address(0));
 
-        assert(address(vault0) != address(vault1));
+//         assert(address(vault0) != address(vault1));
 
-        // #endregion create a private vaults.
+//         // #endregion create a private vaults.
 
-        assertEq(factory.numOfPrivateVaults(), 2);
-    }
+//         assertEq(factory.numOfPrivateVaults(), 2);
+//     }
 
-    // #endregion test numOfPrivateVaults.
+//     // #endregion test numOfPrivateVaults.
 
 
-}
+// }

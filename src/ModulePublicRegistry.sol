@@ -7,7 +7,11 @@ import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {PUBLIC_TYPE} from "./constants/CArrakis.sol";
 
 contract ModulePublicRegistry is ModuleRegistry, IModulePublicRegistry {
-    constructor(address owner_) ModuleRegistry(owner_) {}
+    constructor(
+        address owner_,
+        address guardian_,
+        address admin_
+    ) ModuleRegistry(owner_, guardian_, admin_) {}
 
     // #region public state modifying functions.
 
