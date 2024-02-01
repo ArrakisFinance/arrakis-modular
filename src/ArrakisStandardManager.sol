@@ -67,6 +67,7 @@ contract ArrakisStandardManager is
 
     address internal immutable _guardian;
     EnumerableSet.AddressSet internal _vaults;
+    address internal _guardian;
 
     // #endregion internal properties.
 

@@ -411,5 +411,18 @@ contract ArrakisMetaVaultFactory is
         return string(abi.encodePacked(a_, b_, c_, d_));
     }
 
+    function _initManagement(address vault_, bytes memory data_) internal {
+        bytes memory data = abi.encodeWithSelector(
+            IArrakisStandardManager.initManagement.selector,
+            data_
+        );
+        (bool success, ) = manager.call(data);
+
+        if (!success) revert CallFailed();
+
+        if (!IArrakisStandardManager(manager).isManaged(vault_))
+            revert VaultNotManaged();
+    }
+
     // #endregion internal functions.
 }

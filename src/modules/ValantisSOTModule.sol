@@ -43,27 +43,27 @@ contract ValantisModule is
 
     // #endregion public properties.
 
-    // #region internal properties.
+//     // #region internal properties.
 
     uint256 internal _init0;
     uint256 internal _init1;
     address internal _guardian;
 
-    // #endregion internal properties.
+//     // #endregion internal properties.
 
-    // #region modifiers.
+//     // #region modifiers.
 
-    modifier onlyMetaVault() {
-        if (msg.sender != address(metaVault))
-            revert OnlyMetaVault(msg.sender, address(metaVault));
-        _;
-    }
+//     modifier onlyMetaVault() {
+//         if (msg.sender != address(metaVault))
+//             revert OnlyMetaVault(msg.sender, address(metaVault));
+//         _;
+//     }
 
-    modifier onlyManager() {
-        address manager = metaVault.manager();
-        if (manager != msg.sender) revert OnlyManager(msg.sender, manager);
-        _;
-    }
+//     modifier onlyManager() {
+//         address manager = metaVault.manager();
+//         if (manager != msg.sender) revert OnlyManager(msg.sender, manager);
+//         _;
+//     }
 
     modifier onlyGuardian() {
         address pauser = IGuardian(_guardian).pauser();
@@ -91,15 +91,15 @@ contract ValantisModule is
         if (oracle_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
 
-        metaVault = IArrakisMetaVault(metaVault_);
-        pool = ISovereignPool(pool_);
-        alm = ISOT(alm_);
+//         metaVault = IArrakisMetaVault(metaVault_);
+//         pool = ISovereignPool(pool_);
+//         alm = ISOT(alm_);
 
-        token0 = IERC20(metaVault.token0());
-        token1 = IERC20(metaVault.token1());
+//         token0 = IERC20(metaVault.token0());
+//         token1 = IERC20(metaVault.token1());
 
-        _init0 = init0_;
-        _init1 = init1_;
+//         _init0 = init0_;
+//         _init1 = init1_;
 
         maxSlippage = maxSlippage_;
         oracle = IOracleWrapper(oracle_);
@@ -133,44 +133,44 @@ contract ValantisModule is
         if (depositor_ == address(0)) revert AddressZero();
         if (proportion_ == 0) revert ProportionZero();
 
-        // #region effects.
+//         // #region effects.
 
-        {
-            (uint256 _amt0, uint256 _amt1) = alm.getReservesAtPrice(0);
+//         {
+//             (uint256 _amt0, uint256 _amt1) = alm.getReservesAtPrice(0);
 
-            if (_amt0 == 0 && _amt1 == 0) {
-                _amt0 = _init0;
-                _amt1 = _init1;
-            }
+//             if (_amt0 == 0 && _amt1 == 0) {
+//                 _amt0 = _init0;
+//                 _amt1 = _init1;
+//             }
 
-            amount0 = FullMath.mulDiv(proportion_, _amt0, PIPS);
-            amount1 = FullMath.mulDiv(proportion_, _amt1, PIPS);
-        }
+//             amount0 = FullMath.mulDiv(proportion_, _amt0, PIPS);
+//             amount1 = FullMath.mulDiv(proportion_, _amt1, PIPS);
+//         }
 
-        // #endregion effects.
+//         // #endregion effects.
 
-        // #region interactions.
+//         // #region interactions.
 
-        // #region get the tokens from the depositor.
+//         // #region get the tokens from the depositor.
 
-        token0.safeTransferFrom(depositor_, address(this), amount0);
-        token1.safeTransferFrom(depositor_, address(this), amount1);
+//         token0.safeTransferFrom(depositor_, address(this), amount0);
+//         token1.safeTransferFrom(depositor_, address(this), amount1);
 
-        // #endregion get the tokens from the depositor.
+//         // #endregion get the tokens from the depositor.
 
-        // #region increase allowance to alm.
+//         // #region increase allowance to alm.
 
-        token0.safeIncreaseAllowance(address(alm), amount0);
-        token1.safeIncreaseAllowance(address(alm), amount1);
+//         token0.safeIncreaseAllowance(address(alm), amount0);
+//         token1.safeIncreaseAllowance(address(alm), amount1);
 
-        // #endregion increase allowance to alm.
+//         // #endregion increase allowance to alm.
 
-        alm.depositLiquidity(amount0, amount1, 0, 0);
+//         alm.depositLiquidity(amount0, amount1, 0, 0);
 
-        // #endregion interactions.
+//         // #endregion interactions.
 
-        emit LogDeposit(depositor_, proportion_, amount0, amount1);
-    }
+//         emit LogDeposit(depositor_, proportion_, amount0, amount1);
+//     }
 
     function withdraw(
         address receiver_,
@@ -184,47 +184,47 @@ contract ValantisModule is
     {
         // #region checks.
 
-        if (receiver_ == address(0)) revert AddressZero();
-        if (proportion_ == 0) revert ProportionZero();
-        if (proportion_ > PIPS) revert ProportionGtPIPS();
+//         if (receiver_ == address(0)) revert AddressZero();
+//         if (proportion_ == 0) revert ProportionZero();
+//         if (proportion_ > PIPS) revert ProportionGtPIPS();
 
-        // #endregion checks.
+//         // #endregion checks.
 
-        // #region effects.
+//         // #region effects.
 
-        {
-            (uint256 _amt0, uint256 _amt1) = alm.getReservesAtPrice(0);
+//         {
+//             (uint256 _amt0, uint256 _amt1) = alm.getReservesAtPrice(0);
 
-            amount0 = FullMath.mulDiv(proportion_, _amt0, PIPS);
-            amount1 = FullMath.mulDiv(proportion_, _amt1, PIPS);
-        }
+//             amount0 = FullMath.mulDiv(proportion_, _amt0, PIPS);
+//             amount1 = FullMath.mulDiv(proportion_, _amt1, PIPS);
+//         }
 
-        // #endregion effects.
+//         // #endregion effects.
 
-        uint256 balance0 = token0.balanceOf(address(receiver_));
-        uint256 balance1 = token1.balanceOf(address(receiver_));
+//         uint256 balance0 = token0.balanceOf(address(receiver_));
+//         uint256 balance1 = token1.balanceOf(address(receiver_));
 
-        // #region interactions.
+//         // #region interactions.
 
-        // TODO: add receiver to valantis interface.
-        alm.withdrawLiquidity(amount0, amount1, receiver_, 0, 0);
+//         // TODO: add receiver to valantis interface.
+//         alm.withdrawLiquidity(amount0, amount1, receiver_, 0, 0);
 
-        // #endregion interactions.
+//         // #endregion interactions.
 
-        uint256 _actual0 = token0.balanceOf(address(receiver_)) - balance0;
-        uint256 _actual1 = token1.balanceOf(address(receiver_)) - balance1;
+//         uint256 _actual0 = token0.balanceOf(address(receiver_)) - balance0;
+//         uint256 _actual1 = token1.balanceOf(address(receiver_)) - balance1;
 
-        // #region assertions.
+//         // #region assertions.
 
-        if (_actual0 != amount0)
-            revert Actual0DifferentExpected(_actual0, amount0);
-        if (_actual1 != amount1)
-            revert Actual1DifferentExpected(_actual1, amount1);
+//         if (_actual0 != amount0)
+//             revert Actual0DifferentExpected(_actual0, amount0);
+//         if (_actual1 != amount1)
+//             revert Actual1DifferentExpected(_actual1, amount1);
 
-        // #endregion assertions.
+//         // #endregion assertions.
 
-        emit LogWithdraw(receiver_, proportion_, amount0, amount1);
-    }
+//         emit LogWithdraw(receiver_, proportion_, amount0, amount1);
+//     }
 
     function withdrawManagerBalance()
         external
@@ -234,35 +234,35 @@ contract ValantisModule is
     {
         address manager = metaVault.manager();
 
-        (amount0, amount1) = pool.claimPoolManagerFees(0, 0);
+//         (amount0, amount1) = pool.claimPoolManagerFees(0, 0);
 
-        // #region transfer tokens to manager.
+//         // #region transfer tokens to manager.
 
-        if (amount0 > 0) token0.safeTransfer(manager, amount0);
+//         if (amount0 > 0) token0.safeTransfer(manager, amount0);
 
-        if (amount1 > 0) token1.safeTransfer(manager, amount1);
+//         if (amount1 > 0) token1.safeTransfer(manager, amount1);
 
-        // #endregion transfer tokens to manager.
+//         // #endregion transfer tokens to manager.
 
-        emit LogWithdrawManagerBalance(manager, amount0, amount1);
-    }
+//         emit LogWithdrawManagerBalance(manager, amount0, amount1);
+//     }
 
     function setManagerFeePIPS(uint256 newFeePIPS_) external whenNotPaused {
         uint256 _oldFee = pool.poolManagerFeeBips();
 
-        // #region checks.
+//         // #region checks.
 
-        if (msg.sender != metaVault.manager())
-            revert OnlyManager(msg.sender, metaVault.manager());
+//         if (msg.sender != metaVault.manager())
+//             revert OnlyManager(msg.sender, metaVault.manager());
 
-        if (newFeePIPS_ > PIPS) revert NewFeesGtPIPS(newFeePIPS_);
+//         if (newFeePIPS_ > PIPS) revert NewFeesGtPIPS(newFeePIPS_);
 
-        // #endregion checks.
+//         // #endregion checks.
 
-        pool.setPoolManagerFeeBips(newFeePIPS_ / 1e2);
+//         pool.setPoolManagerFeeBips(newFeePIPS_ / 1e2);
 
-        emit LogSetManagerFeePIPS(_oldFee, newFeePIPS_ / 1e2);
-    }
+//         emit LogSetManagerFeePIPS(_oldFee, newFeePIPS_ / 1e2);
+//     }
 
     function swap(
         bool zeroForOne_,
@@ -281,56 +281,56 @@ contract ValantisModule is
             IDecimals(address(token1)).decimals()
         );
 
-        // #endregion checks/effects.
+//         // #endregion checks/effects.
 
-        // #region interactions.
+//         // #region interactions.
 
-        uint256 _amt0;
-        uint256 _amt1;
-        uint256 _actual0;
-        uint256 _actual1;
+//         uint256 _amt0;
+//         uint256 _amt1;
+//         uint256 _actual0;
+//         uint256 _actual1;
 
-        {
-            uint256 balance0 = token0.balanceOf(address(this));
-            uint256 balance1 = token1.balanceOf(address(this));
-            (_amt0, _amt1) = alm.getReservesAtPrice(0);
+//         {
+//             uint256 balance0 = token0.balanceOf(address(this));
+//             uint256 balance1 = token1.balanceOf(address(this));
+//             (_amt0, _amt1) = alm.getReservesAtPrice(0);
 
-            if (zeroForOne_) {
-                if (_amt0 < amountIn_) revert NotEnoughToken0();
-            } else if (_amt1 < amountIn_) revert NotEnoughToken1();
+//             if (zeroForOne_) {
+//                 if (_amt0 < amountIn_) revert NotEnoughToken0();
+//             } else if (_amt1 < amountIn_) revert NotEnoughToken1();
 
-            alm.withdrawLiquidity(_amt0, _amt1, address(this), 0, 0);
+//             alm.withdrawLiquidity(_amt0, _amt1, address(this), 0, 0);
 
-            _actual0 = token0.balanceOf(address(this)) - balance0;
-            _actual1 = token1.balanceOf(address(this)) - balance1;
+//             _actual0 = token0.balanceOf(address(this)) - balance0;
+//             _actual1 = token1.balanceOf(address(this)) - balance1;
 
-            if (_actual0 != _amt0)
-                revert Actual0DifferentExpected(_actual0, _amt0);
-            if (_actual1 != _amt1)
-                revert Actual1DifferentExpected(_actual1, _amt1);
-        }
+//             if (_actual0 != _amt0)
+//                 revert Actual0DifferentExpected(_actual0, _amt0);
+//             if (_actual1 != _amt1)
+//                 revert Actual1DifferentExpected(_actual1, _amt1);
+//         }
 
-        if (zeroForOne_) {
-            token0.safeIncreaseAllowance(router_, amountIn_);
-        } else {
-            token1.safeIncreaseAllowance(router_, amountIn_);
-        }
+//         if (zeroForOne_) {
+//             token0.safeIncreaseAllowance(router_, amountIn_);
+//         } else {
+//             token1.safeIncreaseAllowance(router_, amountIn_);
+//         }
 
-        {
-            (bool success, ) = router_.call(payload_);
-            if (!success) revert SwapCallFailed();
-        }
+//         {
+//             (bool success, ) = router_.call(payload_);
+//             if (!success) revert SwapCallFailed();
+//         }
 
-        // #endregion interactions.
+//         // #endregion interactions.
 
-        // #region assertions.
+//         // #region assertions.
 
-        uint256 balance0 = token0.balanceOf(address(this));
-        uint256 balance1 = token1.balanceOf(address(this));
+//         uint256 balance0 = token0.balanceOf(address(this));
+//         uint256 balance1 = token1.balanceOf(address(this));
 
-        if (zeroForOne_) {
-            if (_actual1 + expectedMinReturn_ > balance1)
-                revert SlippageTooHigh();
+//         if (zeroForOne_) {
+//             if (_actual1 + expectedMinReturn_ > balance1)
+//                 revert SlippageTooHigh();
 
             if (_actual0 - amountIn_ > balance0)
                 revert RouterTakeTooMuchTokenIn();
