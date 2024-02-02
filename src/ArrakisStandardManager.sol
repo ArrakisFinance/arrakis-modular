@@ -22,7 +22,6 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 // #endregion openzeppelin upgradeable dependencies.
 
@@ -126,11 +125,11 @@ contract ArrakisStandardManager is
 
     // #region owner settable functions.
 
-    function pause() external onlyGuardian {
+    function pause() external whenNotPaused onlyGuardian {
         _pause();
     }
 
-    function unpause() external onlyGuardian {
+    function unpause() external whenPaused onlyGuardian {
         _unpause();
     }
 
@@ -448,7 +447,7 @@ contract ArrakisStandardManager is
         return IGuardian(_guardian).pauser();
     }
 
-    function isManaged(address vault_) external view returns(bool) {
+    function isManaged(address vault_) external view returns (bool) {
         return _vaults.contains(vault_);
     }
 
@@ -469,7 +468,7 @@ contract ArrakisStandardManager is
         if (_vaults.contains(params_.vault)) revert AlreadyInManagement();
 
         // check if the vault is deployed.
-        if(params_.vault.code.length == 0) revert VaultNotDeployed();
+        if (params_.vault.code.length == 0) revert VaultNotDeployed();
 
         _updateParamsChecks(params_);
 

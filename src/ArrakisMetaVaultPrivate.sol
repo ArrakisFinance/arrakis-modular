@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import {IArrakisMetaVaultPrivate} from "./interfaces/IArrakisMetaVaultPrivate.sol";
 import {ArrakisMetaVault} from "./abstracts/ArrakisMetaVault.sol";
 import {IArrakisLPModulePrivate} from "./interfaces/IArrakisLPModulePrivate.sol";
-
 import {PRIVATE_TYPE} from "./constants/CArrakis.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
@@ -17,7 +16,6 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
         address token0_,
         address token1_,
         address owner_,
-        address module_,
         address moduleRegistry_,
         address manager_
     )
@@ -25,7 +23,6 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
             token0_,
             token1_,
             owner_,
-            module_,
             moduleRegistry_,
             manager_
         )
@@ -65,7 +62,7 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
             amount1_
         );
 
-        bytes memory result = payable(address(module)).functionCallWithValue(
+        payable(address(module)).functionCallWithValue(
             data,
             msg.value
         );

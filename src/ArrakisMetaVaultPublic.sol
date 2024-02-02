@@ -26,7 +26,6 @@ contract ArrakisMetaVaultPublic is
         address token0_,
         address token1_,
         address owner_,
-        address module_,
         string memory name_,
         string memory symbol_,
         address moduleRegistry_,
@@ -36,7 +35,6 @@ contract ArrakisMetaVaultPublic is
             token0_,
             token1_,
             owner_,
-            module_,
             moduleRegistry_,
             manager_
         )

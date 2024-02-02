@@ -107,6 +107,10 @@ interface IArrakisMetaVault {
 
     // #endregion events.
 
+    /// @notice function used to initialize default module.
+    /// @param module_ address of the default module.
+    function initialize(address module_) external;
+
     /// @notice function used to set module
     /// @param module_ address of the new module
     /// @param payloads_ datas to initialize/rebalance on the new module
