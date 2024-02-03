@@ -412,6 +412,7 @@ contract ArrakisMetaVaultFactory is
     }
 
     function _initManagement(address vault_, bytes memory data_) internal {
+        // NOTE check the first 4 bytes instead of encodewithselector.
         bytes memory data = abi.encodeWithSelector(
             IArrakisStandardManager.initManagement.selector,
             data_
@@ -422,6 +423,15 @@ contract ArrakisMetaVaultFactory is
 
         if (!IArrakisStandardManager(manager).isManaged(vault_))
             revert VaultNotManaged();
+    }
+
+    function _append(
+        string memory a_,
+        string memory b_,
+        string memory c_,
+        string memory d_
+    ) internal pure returns (string memory) {
+        return string(abi.encodePacked(a_, b_, c_, d_));
     }
 
     // #endregion internal functions.

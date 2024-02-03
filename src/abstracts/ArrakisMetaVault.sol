@@ -87,8 +87,6 @@ abstract contract ArrakisMetaVault is
         moduleRegistry = moduleRegistry_;
         manager = manager_;
 
-        emit LogSetFirstModule(module_);
-        emit LogWhitelistedModule(module_);
         emit LogSetManager(manager_);
     }
 
@@ -224,18 +222,6 @@ abstract contract ArrakisMetaVault is
         (amount0, amount1) = module_.withdrawManagerBalance();
 
         emit LogWithdrawManagerBalance(amount0, amount1);
-    }
-
-    function _requireWhitelistedBeacon(address module_) internal {
-        address beacon = IBeaconProxyExtended(module_).beacon();
-        if (!IModuleRegistry(moduleRegistry).beaconsContains(beacon))
-            revert NotWhitelistedBeacon();
-    }
-
-    function _requireSameGuardianThanRegistry(address module_) internal {
-        address guardian = IArrakisLPModule(module_).guardian();
-        if (guardian != IModuleRegistry(moduleRegistry).guardian())
-            revert NotSameGuardian();
     }
 
     // #endregion internal functions.
