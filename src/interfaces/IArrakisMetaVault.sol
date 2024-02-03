@@ -63,6 +63,12 @@ interface IArrakisMetaVault {
     /// @dev triggered when a function logic is not implemented.
     error NotImplemented();
 
+    /// @dev triggered when two arrays suppposed to have the same length, have different length.
+    error ArrayNotSameLength();
+
+    /// @dev triggered when function is called by someone else than the owner.
+    error OnlyOwner();
+
     // #endregion errors.
 
     // #region events.
@@ -117,8 +123,12 @@ interface IArrakisMetaVault {
     function setModule(address module_, bytes[] calldata payloads_) external;
 
     /// @notice function used to whitelist modules that can used by manager.
-    /// @param modules_ array of module addresses to be whitelisted.
-    function whitelistModules(address[] calldata modules_) external;
+    /// @param beacons_ array of beacons addresses to use for modules creation.
+    /// @param data_ array of payload to use for modules creation.
+    function whitelistModules(
+        address[] calldata beacons_,
+        bytes[] calldata data_
+    ) external;
 
     /// @notice function used to blacklist modules that can used by manager.
     /// @param modules_ array of module addresses to be blacklisted.
@@ -175,7 +185,7 @@ interface IArrakisMetaVault {
 
     /// @notice function used to get module registry.
     /// @return registry address of module registry.
-    function moduleRegistry() external view returns(address registry);
+    function moduleRegistry() external view returns (address registry);
 
     // #endregion view functions.
 }

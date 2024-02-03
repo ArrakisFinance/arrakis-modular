@@ -12,9 +12,12 @@ import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
+import {Ownable} from "@solady/contracts/auth/Ownable.sol";
+
 contract ArrakisMetaVaultPublic is
     IArrakisMetaVaultPublic,
     ArrakisMetaVault,
+    Ownable,
     ERC20
 {
     using Address for address payable;
@@ -30,15 +33,9 @@ contract ArrakisMetaVaultPublic is
         string memory symbol_,
         address moduleRegistry_,
         address manager_
-    )
-        ArrakisMetaVault(
-            token0_,
-            token1_,
-            owner_,
-            moduleRegistry_,
-            manager_
-        )
-    {
+    ) ArrakisMetaVault(token0_, token1_, moduleRegistry_, manager_) {
+        if (owner_ == address(0)) revert AddressZero("Owner");
+        _initializeOwner(owner_);
         _name = name_;
         _symbol = symbol_;
     }
@@ -88,6 +85,22 @@ contract ArrakisMetaVaultPublic is
         emit LogBurn(shares_, receiver_, amount0, amount1);
     }
 
+    // #region Ownable functions.
+
+    function transferOwnership(address) public payable override {
+        revert NotImplemented();
+    }
+
+    function renounceOwnership() public payable override {
+        revert NotImplemented();
+    }
+
+    function completeOwnershipHandover(address) public payable override {
+        revert NotImplemented();
+    }
+
+    // #endregion Ownable functions.
+
     function name() public view override returns (string memory) {
         return _name;
     }
@@ -99,6 +112,11 @@ contract ArrakisMetaVaultPublic is
     /// @notice function used to get the type of vault.
     function vaultType() external pure returns (bytes32) {
         return PUBLIC_TYPE;
+    }
+
+    function onlyOwnerCheck() public override view {
+        if(msg.sender != owner())
+            revert OnlyOwner();
     }
 
     // #region internal functions.

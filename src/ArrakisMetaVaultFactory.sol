@@ -12,6 +12,7 @@ import {IArrakisStandardManager} from "./interfaces/IArrakisStandardManager.sol"
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IModuleRegistry} from "./interfaces/IModuleRegistry.sol";
 import {TimeLock} from "./TimeLock.sol";
+import {PALMVaultNFT} from "./PALMVaultNFT.sol";
 
 import {Create3} from "@create3/contracts/Create3.sol";
 
@@ -27,9 +28,11 @@ contract ArrakisMetaVaultFactory is
 
     // #region immutable properties.
 
+    /// NOTE make it settable.
     address public immutable manager;
     address public immutable moduleRegistryPublic;
     address public immutable moduleRegistryPrivate;
+    PALMVaultNFT public immutable nft;
 
     // #endregion immutable properties.
 
@@ -59,6 +62,7 @@ contract ArrakisMetaVaultFactory is
         manager = manager_;
         moduleRegistryPublic = moduleRegistryPublic_;
         moduleRegistryPrivate = moduleRegistryPrivate_;
+        nft = new PALMVaultNFT();
     }
 
     // #region owner functions.
@@ -126,6 +130,7 @@ contract ArrakisMetaVaultFactory is
             proposers[0] = owner_;
             executors[0] = owner_;
 
+            // NOTE let's create3 timelock or remove create3 for public vault.
             timeLock = address(
                 new TimeLock(2 days, proposers, executors, owner_)
             );
@@ -212,12 +217,19 @@ contract ArrakisMetaVaultFactory is
 
         bytes memory creationCode = abi.encodePacked(
             type(ArrakisMetaVaultPrivate).creationCode,
-            abi.encode(token0_, token1_, owner_, moduleRegistryPrivate, manager)
+            abi.encode(
+                token0_,
+                token1_,
+                moduleRegistryPrivate,
+                manager,
+                address(nft)
+            )
         );
 
         // #endregion get the creation code for TokenMetaVault.
 
         vault = Create3.create3(salt, creationCode);
+        nft.mint(owner_, uint256(uint160(vault)));
 
         // #region create a module.
 
@@ -377,6 +389,7 @@ contract ArrakisMetaVaultFactory is
     // #region internal functions.
 
     function _initManagement(address vault_, bytes memory data_) internal {
+        // NOTE check the first 4 bytes instead of encodewithselector.
         bytes memory data = abi.encodeWithSelector(
             IArrakisStandardManager.initManagement.selector,
             data_

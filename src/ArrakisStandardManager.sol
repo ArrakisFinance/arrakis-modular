@@ -65,8 +65,8 @@ contract ArrakisStandardManager is
 
     // #region internal properties.
 
+    address internal immutable _guardian;
     EnumerableSet.AddressSet internal _vaults;
-    address internal _guardian;
 
     // #endregion internal properties.
 
@@ -111,14 +111,16 @@ contract ArrakisStandardManager is
 
     function initialize(
         address owner_,
-        address defaultReceiver_
+        address defaultReceiver_,
+        address factory_
     ) external initializer {
-        if (owner_ == address(0) || defaultReceiver_ == address(0))
+        if (owner_ == address(0) || defaultReceiver_ == address(0) || factory_ == address(0))
             revert AddressZero();
 
         _initializeOwner(owner_);
         __ReentrancyGuard_init();
         __Pausable_init();
+        factory = factory_;
 
         emit LogSetDefaultReceiver(address(0), defaultReceiver_);
     }
