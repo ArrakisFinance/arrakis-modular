@@ -6,7 +6,6 @@ import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
 import {BeaconProxyExtended} from "../proxy/BeaconProxyExtended.sol";
 
-import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 
@@ -135,8 +134,8 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
     ) internal returns (address module) {
         // #region checks.
 
-        if (!_beacons.contains(beacon_)) revert NotWhitelistedBeacon();
         if (vault_ == address(0)) revert AddressZero();
+        if (!_beacons.contains(beacon_)) revert NotWhitelistedBeacon();
 
         // #endregion checks.
 

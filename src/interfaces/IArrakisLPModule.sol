@@ -43,6 +43,10 @@ interface IArrakisLPModule {
     /// @dev triggered when inits values are zeros.
     error InitsAreZeros();
 
+    /// @dev triggered when pause/unpaused function is
+    /// called by someone else than guardian.
+    error OnlyGuardian();
+
     // #endregion errors.
 
     // #region events.

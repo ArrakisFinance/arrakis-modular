@@ -14,5 +14,5 @@ interface IArrakisLPModulePrivate {
         address depositor_,
         uint256 amount0_,
         uint256 amount1_
-    ) external;
+    ) external payable;
 }

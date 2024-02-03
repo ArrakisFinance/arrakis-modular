@@ -73,8 +73,8 @@ interface IArrakisMetaVaultFactory {
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
     /// @param owner_ address of the owner of the vault.
-    /// @param module_ address of the initial module that will be used
-    /// by Meta Vault.
+    /// @param beacon_ address of the beacon that will be used to create the default module.
+    /// @param moduleCreationPayload_ payload for initializing the module.
     /// @param initManagementPayload_ data for initialize management.
     /// @return vault address of the newly created Token Meta Vault.
     function deployPublicVault(
@@ -82,7 +82,8 @@ interface IArrakisMetaVaultFactory {
         address token0_,
         address token1_,
         address owner_,
-        address module_,
+        address beacon_,
+        bytes calldata moduleCreationPayload_,
         bytes calldata initManagementPayload_
     ) external returns (address vault);
 
@@ -92,8 +93,8 @@ interface IArrakisMetaVaultFactory {
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
     /// @param owner_ address of the owner of the vault.
-    /// @param module_ address of the initial module that will be used
-    /// by Meta Vault.
+    /// @param beacon_ address of the beacon that will be used to create the default module.
+    /// @param moduleCreationPayload_ payload for initializing the module.
     /// @param initManagementPayload_ data for initialize management.
     /// @return vault address of the newly created private Meta Vault.
     function deployPrivateVault(
@@ -101,7 +102,8 @@ interface IArrakisMetaVaultFactory {
         address token0_,
         address token1_,
         address owner_,
-        address module_,
+        address beacon_,
+        bytes calldata moduleCreationPayload_,
         bytes calldata initManagementPayload_
     ) external returns (address vault);
 
@@ -173,8 +175,11 @@ interface IArrakisMetaVaultFactory {
     /// @notice function used to get a list of address that can deploy public vault.
     function deployers() external view returns (address[] memory);
 
-    /// @notice function used to get module registry.
-    function moduleRegistry() external view returns (address);
+    /// @notice function used to get public module registry.
+    function moduleRegistryPublic() external view returns (address);
+
+    /// @notice function used to get private module registry.
+    function moduleRegistryPrivate() external view returns (address);
 
     // #endregion view/pure functions.
 }
