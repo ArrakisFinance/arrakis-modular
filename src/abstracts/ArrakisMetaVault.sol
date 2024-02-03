@@ -6,6 +6,7 @@ import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IModuleRegistry} from "../interfaces/IModuleRegistry.sol";
 import {PIPS} from "../constants/CArrakis.sol";
 import {IBeaconProxyExtended} from "../interfaces/IBeaconProxyExtended.sol";
+import {BeaconProxyExtended} from "../proxy/BeaconProxyExtended.sol";
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -16,7 +17,6 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
 abstract contract ArrakisMetaVault is
     IArrakisMetaVault,
-    Ownable,
     ReentrancyGuard,
     Initializable
 {
@@ -41,6 +41,11 @@ abstract contract ArrakisMetaVault is
 
     // #region modifier.
 
+    modifier onlyOwnerCustom() {
+        onlyOwnerCheck();
+        _;
+    }
+
     modifier onlyManager() {
         if (msg.sender != manager) revert OnlyManager(msg.sender, manager);
         _;
@@ -51,7 +56,6 @@ abstract contract ArrakisMetaVault is
     constructor(
         address token0_,
         address token1_,
-        address owner_,
         address moduleRegistry_,
         address manager_
     ) {
@@ -61,7 +65,6 @@ abstract contract ArrakisMetaVault is
         if (token1_ == address(0)) revert AddressZero("Token 1");
         if (token0_ > token1_) revert Token0GtToken1();
         if (token0_ == token1_) revert Token0EqToken1();
-        if (owner_ == address(0)) revert AddressZero("Owner");
         if (moduleRegistry_ == address(0))
             revert AddressZero("Module Registry");
         if (manager_ == address(0)) revert AddressZero("Manager");
@@ -70,7 +73,6 @@ abstract contract ArrakisMetaVault is
 
         token0 = token0_;
         token1 = token1_;
-        _initializeOwner(owner_);
         moduleRegistry = moduleRegistry_;
         manager = manager_;
 
@@ -80,31 +82,12 @@ abstract contract ArrakisMetaVault is
     function initialize(address module_) external initializer {
         if (module_ == address(0)) revert AddressZero("Module");
 
-        _requireWhitelistedBeacon(module_);
-        _requireSameGuardianThanRegistry(module_);
-
         _whitelistedModules.add(module_);
         module = IArrakisLPModule(module_);
 
         emit LogSetFirstModule(module_);
         emit LogWhitelistedModule(module_);
     }
-
-    // #region Ownable functions.
-
-    function transferOwnership(address) public payable override {
-        revert NotImplemented();
-    }
-
-    function renounceOwnership() public payable override {
-        revert NotImplemented();
-    }
-
-    function completeOwnershipHandover(address) public payable override {
-        revert NotImplemented();
-    }
-
-    // #endregion Ownable functions.
 
     function setModule(
         address module_,
@@ -152,22 +135,30 @@ abstract contract ArrakisMetaVault is
         emit LogSetModule(module_, payloads_);
     }
 
-    function whitelistModules(address[] calldata modules_) external onlyOwner {
-        uint256 len = modules_.length;
+    function whitelistModules(
+        address[] calldata beacons_,
+        bytes[] calldata data_
+    ) external onlyOwnerCustom {
+        uint256 len = beacons_.length;
+        if (len != data_.length) revert ArrayNotSameLength();
+
+        address[] memory modules = new address[](len);
         for (uint256 i; i < len; i++) {
-            address _module = modules_[i];
-            if (_module == address(0)) revert AddressZero("Module");
-            _requireWhitelistedBeacon(_module);
-            _requireSameGuardianThanRegistry(_module);
-            if (_whitelistedModules.contains(_module))
-                revert AlreadyWhitelisted(_module);
+            address _module = IModuleRegistry(moduleRegistry).createModule(
+                address(this),
+                beacons_[i],
+                data_[i]
+            );
+
+            modules[i] = _module;
+
             _whitelistedModules.add(_module);
         }
 
-        emit LogWhiteListedModules(modules_);
+        emit LogWhiteListedModules(modules);
     }
 
-    function blacklistModules(address[] calldata modules_) external onlyOwner {
+    function blacklistModules(address[] calldata modules_) external onlyOwnerCustom {
         uint256 len = modules_.length;
         for (uint256 i; i < len; i++) {
             address _module = modules_[i];
@@ -189,6 +180,9 @@ abstract contract ArrakisMetaVault is
     }
 
     // #region view functions.
+
+    /// @notice function used to check ownership of the vault.
+    function onlyOwnerCheck() public virtual view;
 
     function getInits() external view returns (uint256 init0, uint256 init1) {
         return module.getInits();
@@ -227,18 +221,6 @@ abstract contract ArrakisMetaVault is
         (amount0, amount1) = module_.withdrawManagerBalance();
 
         emit LogWithdrawManagerBalance(amount0, amount1);
-    }
-
-    function _requireWhitelistedBeacon(address module_) internal view {
-        address beacon = IBeaconProxyExtended(module_).beacon();
-        if (!IModuleRegistry(moduleRegistry).beaconsContains(beacon))
-            revert NotWhitelistedBeacon();
-    }
-
-    function _requireSameGuardianThanRegistry(address module_) internal view {
-        address guardian = IArrakisLPModule(module_).guardian();
-        if (guardian != IModuleRegistry(moduleRegistry).guardian())
-            revert NotSameGuardian();
     }
 
     // #endregion internal functions.
