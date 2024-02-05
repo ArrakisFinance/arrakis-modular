@@ -8,6 +8,11 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IArrakisMetaVaultFactory} from "./interfaces/IArrakisMetaVaultFactory.sol";
 import {ArrakisMetaVaultPublic} from "./ArrakisMetaVaultPublic.sol";
 import {ArrakisMetaVaultPrivate} from "./ArrakisMetaVaultPrivate.sol";
+import {IArrakisStandardManager} from "./interfaces/IArrakisStandardManager.sol";
+import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
+import {IModuleRegistry} from "./interfaces/IModuleRegistry.sol";
+import {TimeLock} from "./TimeLock.sol";
+import {PALMVaultNFT} from "./PALMVaultNFT.sol";
 
 import {Create3} from "@create3/contracts/Create3.sol";
 
@@ -21,17 +26,43 @@ contract ArrakisMetaVaultFactory is
 {
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    // #region immutable properties.
+
+    /// NOTE make it settable.
+    address public immutable manager;
+    address public immutable moduleRegistryPublic;
+    address public immutable moduleRegistryPrivate;
+    PALMVaultNFT public immutable nft;
+
+    // #endregion immutable properties.
+
     // #region internal properties.
 
     EnumerableSet.AddressSet internal _publicVaults;
     EnumerableSet.AddressSet internal _privateVaults;
 
+    EnumerableSet.AddressSet internal _deployers;
+
     // #endregion internal properties.
 
-    constructor(address owner_) {
-        if (owner_ == address(0)) revert AddressZero();
+    constructor(
+        address owner_,
+        address manager_,
+        address moduleRegistryPublic_,
+        address moduleRegistryPrivate_
+    ) {
+        if (
+            owner_ == address(0) ||
+            manager_ == address(0) ||
+            moduleRegistryPublic_ == address(0) ||
+            moduleRegistryPrivate_ == address(0)
+        ) revert AddressZero();
 
         _initializeOwner(owner_);
+        manager = manager_;
+        moduleRegistryPublic = moduleRegistryPublic_;
+        moduleRegistryPrivate = moduleRegistryPrivate_;
+        nft = new PALMVaultNFT();
     }
 
     // #region owner functions.
@@ -52,16 +83,25 @@ contract ArrakisMetaVaultFactory is
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
     /// @param owner_ address of the owner of the vault.
-    /// @param module_ address of the initial module that will be used
-    /// by Meta Vault.
+    /// @param beacon_ address of the beacon that will be used to create the default module.
+    /// @param moduleCreationPayload_ payload for initializing the module.
+    /// @param initManagementPayload_ payload for initializing management.
     /// @return vault address of the newly created Token Meta Vault.
     function deployPublicVault(
         bytes32 salt_,
         address token0_,
         address token1_,
         address owner_,
-        address module_
+        address beacon_,
+        bytes calldata moduleCreationPayload_,
+        bytes calldata initManagementPayload_
     ) external whenNotPaused returns (address vault) {
+        // #region check only deployer can create public vault.
+
+        if (!_deployers.contains(msg.sender)) revert NotADeployer();
+
+        // #endregion check only deployer can create public vault.
+
         string memory name = "Arrakis Modular Vault";
         string memory symbol = "AMV";
 
@@ -77,22 +117,64 @@ contract ArrakisMetaVaultFactory is
 
         // #region compute salt = salt + msg.sender.
 
-        // TODO maybe we need to modify that if we deploy through an helper contract.
-        bytes32 salt = keccak256(abi.encode(msg.sender, salt_));
-
         // #endregion compute salt = salt + msg.sender.
 
-        // #region get the creation code for TokenMetaVault.
+        // #region create timeLock.
 
-        bytes memory creationCode = abi.encodePacked(
-            type(ArrakisMetaVaultPublic).creationCode,
-            abi.encode(token0_, token1_, owner_, module_, name, symbol)
+        address timeLock;
+
+        {
+            address[] memory proposers = new address[](1);
+            address[] memory executors = new address[](1);
+
+            proposers[0] = owner_;
+            executors[0] = owner_;
+
+            // NOTE let's create3 timelock or remove create3 for public vault.
+            timeLock = address(
+                new TimeLock(2 days, proposers, executors, owner_)
+            );
+        }
+
+        // #endregion create timeLock.
+        {
+            // TODO maybe we need to modify that if we deploy through an helper contract.
+            bytes32 salt = keccak256(abi.encode(msg.sender, salt_));
+
+            // #region get the creation code for TokenMetaVault.
+
+            bytes memory creationCode = abi.encodePacked(
+                type(ArrakisMetaVaultPublic).creationCode,
+                abi.encode(
+                    token0_,
+                    token1_,
+                    timeLock,
+                    name,
+                    symbol,
+                    moduleRegistryPublic,
+                    manager
+                )
+            );
+
+            // #endregion get the creation code for TokenMetaVault.
+            vault = Create3.create3(salt, creationCode);
+        }
+
+        // #region create a module.
+
+        address module = IModuleRegistry(moduleRegistryPublic).createModule(
+            vault,
+            beacon_,
+            moduleCreationPayload_
         );
 
-        // #endregion get the creation code for TokenMetaVault.
+        // #endregion create a module.
 
-        vault = Create3.create3(salt, creationCode);
+        IArrakisMetaVault(vault).initialize(module);
+
         _publicVaults.add(vault);
+
+        _initManagement(vault, initManagementPayload_);
 
         emit LogPublicVaultCreation(
             msg.sender,
@@ -100,8 +182,9 @@ contract ArrakisMetaVaultFactory is
             token0_,
             token1_,
             owner_,
-            module_,
-            vault
+            module,
+            vault,
+            timeLock
         );
     }
 
@@ -111,15 +194,18 @@ contract ArrakisMetaVaultFactory is
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
     /// @param owner_ address of the owner of the vault.
-    /// @param module_ address of the initial module that will be used
-    /// by Meta Vault.
+    /// @param beacon_ address of the beacon that will be used to create the default module.
+    /// @param moduleCreationPayload_ payload for initializing the module.
+    /// @param initManagementPayload_ payload for initializing management.
     /// @return vault address of the newly created Private Meta Vault.
     function deployPrivateVault(
         bytes32 salt_,
         address token0_,
         address token1_,
         address owner_,
-        address module_
+        address beacon_,
+        bytes calldata moduleCreationPayload_,
+        bytes calldata initManagementPayload_
     ) external whenNotPaused returns (address vault) {
         // #region compute salt = salt + msg.sender.
 
@@ -131,13 +217,35 @@ contract ArrakisMetaVaultFactory is
 
         bytes memory creationCode = abi.encodePacked(
             type(ArrakisMetaVaultPrivate).creationCode,
-            abi.encode(token0_, token1_, owner_, module_)
+            abi.encode(
+                token0_,
+                token1_,
+                moduleRegistryPrivate,
+                manager,
+                address(nft)
+            )
         );
 
         // #endregion get the creation code for TokenMetaVault.
 
         vault = Create3.create3(salt, creationCode);
+        nft.mint(owner_, uint256(uint160(vault)));
+
+        // #region create a module.
+
+        address module = IModuleRegistry(moduleRegistryPrivate).createModule(
+            vault,
+            beacon_,
+            moduleCreationPayload_
+        );
+
+        IArrakisMetaVault(vault).initialize(module);
+
+        // #endregion create a module.
+
         _privateVaults.add(vault);
+
+        _initManagement(vault, initManagementPayload_);
 
         emit LogPrivateVaultCreation(
             msg.sender,
@@ -145,9 +253,45 @@ contract ArrakisMetaVaultFactory is
             token0_,
             token1_,
             owner_,
-            module_,
+            module,
             vault
         );
+    }
+
+    function whitelistDeployer(
+        address[] calldata deployers_
+    ) external onlyOwner {
+        uint256 length = deployers_.length;
+
+        for (uint256 i; i < length; i++) {
+            address deployer = deployers_[i];
+
+            if (deployer == address(0)) revert AddressZero();
+            if (_deployers.contains(deployer))
+                revert AlreadyWhitelistedDeployer(deployer);
+
+            _deployers.add(deployer);
+        }
+
+        emit LogWhitelistDeployers(deployers_);
+    }
+
+    function blacklistDeployer(
+        address[] calldata deployers_
+    ) external onlyOwner {
+        uint256 length = deployers_.length;
+
+        for (uint256 i; i < length; i++) {
+            address deployer = deployers_[i];
+
+            if (deployer == address(0)) revert AddressZero();
+            if (_deployers.contains(deployer))
+                revert NotAlreadyADeployer(deployer);
+
+            _deployers.remove(deployer);
+        }
+
+        emit LogBlacklistDeployers(deployers_);
     }
 
     // #region view/pure function.
@@ -236,9 +380,27 @@ contract ArrakisMetaVaultFactory is
         return _privateVaults.length();
     }
 
+    function deployers() external view returns (address[] memory) {
+        return _deployers.values();
+    }
+
     // #endregion view/pure functions.
 
     // #region internal functions.
+
+    function _initManagement(address vault_, bytes memory data_) internal {
+        // NOTE check the first 4 bytes instead of encodewithselector.
+        bytes memory data = abi.encodeWithSelector(
+            IArrakisStandardManager.initManagement.selector,
+            data_
+        );
+        (bool success, ) = manager.call(data);
+
+        if (!success) revert CallFailed();
+
+        if (!IArrakisStandardManager(manager).isManaged(vault_))
+            revert VaultNotManaged();
+    }
 
     function _append(
         string memory a_,

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
+import {IArrakisLPModulePublic} from "../interfaces/IArrakisLPModulePublic.sol";
 import {IValantisSOTModule} from "../interfaces/IValantisSOTModule.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {ISovereignPool} from "../interfaces/ISovereignPool.sol";
@@ -9,33 +10,44 @@ import {ISOT} from "../interfaces/ISOT.sol";
 import {IDecimals} from "../interfaces/IDecimals.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {PIPS} from "../constants/CArrakis.sol";
+import {IGuardian} from "../interfaces/IGuardian.sol";
 
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-contract ValantisModule is IArrakisLPModule, IValantisSOTModule, ReentrancyGuard {
+/// @dev BeaconProxy becareful for changing implementation with upgrade.
+contract ValantisModule is
+    IArrakisLPModule,
+    IArrakisLPModulePublic,
+    IValantisSOTModule,
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     using SafeERC20 for IERC20;
 
-    // #region public immutable properties.
+    // #region public properties.
 
-    IArrakisMetaVault public immutable metaVault;
-    ISovereignPool public immutable pool;
-    ISOT public immutable alm;
-    IERC20 public immutable token0;
-    IERC20 public immutable token1;
+    IArrakisMetaVault public metaVault;
+    ISovereignPool public pool;
+    ISOT public alm;
+    IERC20 public token0;
+    IERC20 public token1;
     /// @dev should we change it to mutable state variable,
     /// and settable by who?
-    uint24 public immutable maxSlippage;
-    IOracleWrapper public immutable oracle;
+    uint24 public maxSlippage;
+    IOracleWrapper public oracle;
 
-    // #endregion public immutable properties.
+    // #endregion public properties.
 
     // #region internal properties.
 
     uint256 internal _init0;
     uint256 internal _init1;
+    address internal _guardian;
 
     // #endregion internal properties.
 
@@ -53,23 +65,31 @@ contract ValantisModule is IArrakisLPModule, IValantisSOTModule, ReentrancyGuard
         _;
     }
 
+    modifier onlyGuardian() {
+        address pauser = IGuardian(_guardian).pauser();
+        if (pauser != msg.sender) revert OnlyGuardian();
+        _;
+    }
+
     // #endregion modifiers.
 
-    constructor(
+    function initialize(
         address metaVault_,
         address pool_,
         address alm_,
         uint256 init0_,
         uint256 init1_,
         uint24 maxSlippage_,
-        address oracle_
-    ) {
+        address oracle_,
+        address guardian_
+    ) external initializer {
         if (metaVault_ == address(0)) revert AddressZero();
         if (pool_ == address(0)) revert AddressZero();
         if (alm_ == address(0)) revert AddressZero();
         if (init0_ == 0 && init1_ == 0) revert InitsAreZeros();
         if (maxSlippage_ > PIPS / 10) revert MaxSlippageGtTenPercent();
         if (oracle_ == address(0)) revert AddressZero();
+        if (guardian_ == address(0)) revert AddressZero();
 
         metaVault = IArrakisMetaVault(metaVault_);
         pool = ISovereignPool(pool_);
@@ -83,7 +103,20 @@ contract ValantisModule is IArrakisLPModule, IValantisSOTModule, ReentrancyGuard
 
         maxSlippage = maxSlippage_;
         oracle = IOracleWrapper(oracle_);
+        _guardian = guardian_;
     }
+
+    // #region guardian functions.
+
+    function pause() external whenNotPaused onlyGuardian {
+        _pause();
+    }
+
+    function unpause() external whenPaused onlyGuardian {
+        _unpause();
+    }
+
+    // #endregion guardian functions.
 
     function deposit(
         address depositor_,
@@ -92,6 +125,7 @@ contract ValantisModule is IArrakisLPModule, IValantisSOTModule, ReentrancyGuard
         external
         payable
         onlyMetaVault
+        whenNotPaused
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
@@ -144,6 +178,7 @@ contract ValantisModule is IArrakisLPModule, IValantisSOTModule, ReentrancyGuard
     )
         external
         onlyMetaVault
+        whenNotPaused
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
@@ -193,6 +228,7 @@ contract ValantisModule is IArrakisLPModule, IValantisSOTModule, ReentrancyGuard
 
     function withdrawManagerBalance()
         external
+        whenNotPaused
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
@@ -211,7 +247,7 @@ contract ValantisModule is IArrakisLPModule, IValantisSOTModule, ReentrancyGuard
         emit LogWithdrawManagerBalance(manager, amount0, amount1);
     }
 
-    function setManagerFeePIPS(uint256 newFeePIPS_) external {
+    function setManagerFeePIPS(uint256 newFeePIPS_) external whenNotPaused {
         uint256 _oldFee = pool.poolManagerFeeBips();
 
         // #region checks.
@@ -232,17 +268,15 @@ contract ValantisModule is IArrakisLPModule, IValantisSOTModule, ReentrancyGuard
         bool zeroForOne_,
         uint256 expectedMinReturn_,
         uint256 amountIn_,
-        uint256 newLiquidity_,
         address router_,
         bytes calldata payload_
-    ) external onlyManager {
+    ) external onlyManager whenNotPaused {
         // #region checks/effects.
 
         _checkMinReturn(
             zeroForOne_,
             expectedMinReturn_,
             amountIn_,
-            maxSlippage,
             IDecimals(address(token0)).decimals(),
             IDecimals(address(token1)).decimals()
         );
@@ -348,7 +382,7 @@ contract ValantisModule is IArrakisLPModule, IValantisSOTModule, ReentrancyGuard
         );
     }
 
-    function setManager(address newManager_) external {
+    function setManager(address) external {
         revert NotImplemented();
     }
 
@@ -395,7 +429,6 @@ contract ValantisModule is IArrakisLPModule, IValantisSOTModule, ReentrancyGuard
         bool zeroForOne_,
         uint256 expectedMinReturn_,
         uint256 amountIn_,
-        uint24 maxSlippage_,
         uint8 decimals0_,
         uint8 decimals1_
     ) internal view {
@@ -418,6 +451,10 @@ contract ValantisModule is IArrakisLPModule, IValantisSOTModule, ReentrancyGuard
                 FullMath.mulDiv(oracle.getPrice1(), PIPS - maxSlippage, PIPS)
             ) revert ExpectedMinReturnTooLow();
         }
+    }
+
+    function guardian() external view returns (address) {
+        return IGuardian(_guardian).pauser();
     }
 
     // #endregion view functions.

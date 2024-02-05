@@ -3,28 +3,30 @@ pragma solidity ^0.8.20;
 
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
+import {IModuleRegistry} from "../interfaces/IModuleRegistry.sol";
 import {PIPS} from "../constants/CArrakis.sol";
+import {IBeaconProxyExtended} from "../interfaces/IBeaconProxyExtended.sol";
+import {BeaconProxyExtended} from "../proxy/BeaconProxyExtended.sol";
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
 abstract contract ArrakisMetaVault is
     IArrakisMetaVault,
-    Ownable,
     ReentrancyGuard,
-    Pausable
+    Initializable
 {
     using EnumerableSet for EnumerableSet.AddressSet;
-    using Address for address payable;
 
     // #region immutable properties.
 
     address public immutable token0;
     address public immutable token1;
+    address public immutable moduleRegistry;
 
     // #endregion immutable properties.
 
@@ -39,6 +41,11 @@ abstract contract ArrakisMetaVault is
 
     // #region modifier.
 
+    modifier onlyOwnerCustom() {
+        onlyOwnerCheck();
+        _;
+    }
+
     modifier onlyManager() {
         if (msg.sender != manager) revert OnlyManager(msg.sender, manager);
         _;
@@ -49,8 +56,8 @@ abstract contract ArrakisMetaVault is
     constructor(
         address token0_,
         address token1_,
-        address owner_,
-        address module_
+        address moduleRegistry_,
+        address manager_
     ) {
         // #region checks.
 
@@ -58,14 +65,23 @@ abstract contract ArrakisMetaVault is
         if (token1_ == address(0)) revert AddressZero("Token 1");
         if (token0_ > token1_) revert Token0GtToken1();
         if (token0_ == token1_) revert Token0EqToken1();
-        if (owner_ == address(0)) revert AddressZero("Owner");
-        if (module_ == address(0)) revert AddressZero("Module");
+        if (moduleRegistry_ == address(0))
+            revert AddressZero("Module Registry");
+        if (manager_ == address(0)) revert AddressZero("Manager");
 
         // #endregion checks.
 
         token0 = token0_;
         token1 = token1_;
-        _initializeOwner(owner_);
+        moduleRegistry = moduleRegistry_;
+        manager = manager_;
+
+        emit LogSetManager(manager_);
+    }
+
+    function initialize(address module_) external initializer {
+        if (module_ == address(0)) revert AddressZero("Module");
+
         _whitelistedModules.add(module_);
         module = IArrakisLPModule(module_);
 
@@ -73,30 +89,10 @@ abstract contract ArrakisMetaVault is
         emit LogWhitelistedModule(module_);
     }
 
-    /// @dev virtual to have the option to paused all palm
-    /// vault directly in one transaction.
-    function pause() external virtual onlyOwner {
-        _pause();
-    }
-
-    function unpause() external virtual onlyOwner {
-        _unpause();
-    }
-
-    function setManager(address newManager_) external onlyOwner nonReentrant {
-        address _manager = manager;
-        if (newManager_ == address(0)) revert AddressZero("New Manager");
-        if (newManager_ == _manager) revert SameManager();
-        if (_manager != address(0)) _withdrawManagerBalance(module);
-        manager = newManager_;
-
-        emit LogSetManager(_manager, newManager_);
-    }
-
     function setModule(
         address module_,
         bytes[] calldata payloads_
-    ) external onlyManager whenNotPaused nonReentrant {
+    ) external onlyManager nonReentrant {
         // store in memory to save gas.
         IArrakisLPModule _module = module;
 
@@ -139,20 +135,30 @@ abstract contract ArrakisMetaVault is
         emit LogSetModule(module_, payloads_);
     }
 
-    function whitelistModules(address[] calldata modules_) external onlyOwner {
-        uint256 len = modules_.length;
+    function whitelistModules(
+        address[] calldata beacons_,
+        bytes[] calldata data_
+    ) external onlyOwnerCustom {
+        uint256 len = beacons_.length;
+        if (len != data_.length) revert ArrayNotSameLength();
+
+        address[] memory modules = new address[](len);
         for (uint256 i; i < len; i++) {
-            address _module = modules_[i];
-            if (_module == address(0)) revert AddressZero("Module");
-            if (_whitelistedModules.contains(_module))
-                revert AlreadyWhitelisted(_module);
+            address _module = IModuleRegistry(moduleRegistry).createModule(
+                address(this),
+                beacons_[i],
+                data_[i]
+            );
+
+            modules[i] = _module;
+
             _whitelistedModules.add(_module);
         }
 
-        emit LogWhiteListedModules(modules_);
+        emit LogWhiteListedModules(modules);
     }
 
-    function blacklistModules(address[] calldata modules_) external onlyOwner {
+    function blacklistModules(address[] calldata modules_) external onlyOwnerCustom {
         uint256 len = modules_.length;
         for (uint256 i; i < len; i++) {
             address _module = modules_[i];
@@ -175,6 +181,9 @@ abstract contract ArrakisMetaVault is
 
     // #region view functions.
 
+    /// @notice function used to check ownership of the vault.
+    function onlyOwnerCheck() public virtual view;
+
     function getInits() external view returns (uint256 init0, uint256 init1) {
         return module.getInits();
     }
@@ -196,29 +205,6 @@ abstract contract ArrakisMetaVault is
     // #endregion view functions.
 
     // #region internal functions.
-
-    function _deposit(
-        uint256 proportion_
-    ) internal nonReentrant returns (uint256 amount0, uint256 amount1) {
-        /// @dev msg.sender should be the tokens provider
-
-        bytes memory data = abi.encodeWithSelector(
-            IArrakisLPModule.deposit.selector,
-            msg.sender,
-            proportion_
-        );
-
-        bytes memory result = payable(address(module)).functionCallWithValue(
-            data,
-            msg.value
-        );
-
-        (amount0, amount1) = abi.decode(
-            result,
-            (uint256, uint256)
-        );
-        emit LogDeposit(proportion_, amount0, amount1);
-    }
 
     function _withdraw(
         address receiver_,

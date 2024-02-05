@@ -43,22 +43,13 @@ interface IArrakisLPModule {
     /// @dev triggered when inits values are zeros.
     error InitsAreZeros();
 
+    /// @dev triggered when pause/unpaused function is
+    /// called by someone else than guardian.
+    error OnlyGuardian();
+
     // #endregion errors.
 
     // #region events.
-
-    /// @notice Event describing a deposit done by an user inside this module.
-    /// @dev deposit action can be indexed by depositor.
-    /// @param depositor address of the tokens provider.
-    /// @param proportion percentage of the current position that depositor want to increase.
-    /// @param amount0 amount of token0 needed to increase the portfolio of "proportion" percent.
-    /// @param amount1 amount of token1 needed to increase the portfolio of "proportion" percent.
-    event LogDeposit(
-        address indexed depositor,
-        uint256 proportion,
-        uint256 amount0,
-        uint256 amount1
-    );
 
     /// @notice Event describing a withdrawal of participation by an user inside this module.
     /// @dev withdraw action can be indexed by receiver.
@@ -90,15 +81,13 @@ interface IArrakisLPModule {
 
     // #endregion events.
 
-    /// @notice function used by metaVault to deposit tokens into the strategy.
-    /// @param depositor_ address that will provide the tokens.
-    /// @param proportion_ number of share needed to be add.
-    /// @return amount0 amount of token0 deposited.
-    /// @return amount1 amount of token1 deposited.
-    function deposit(
-        address depositor_,
-        uint256 proportion_
-    ) external payable returns (uint256 amount0, uint256 amount1);
+    /// @notice function used to pause the module.
+    /// @dev only callable by guardian
+    function pause() external;
+
+    /// @notice function used to unpause the module.
+    /// @dev only callable by guardian
+    function unpause() external;
 
     /// @notice function used by metaVault to withdraw tokens from the strategy.
     /// @param receiver_ address that will receive tokens.
@@ -126,6 +115,10 @@ interface IArrakisLPModule {
     /// @notice function used to get metaVault as IArrakisMetaVault.
     /// @return metaVault that implement IArrakisMetaVault.
     function metaVault() external view returns (IArrakisMetaVault);
+
+    /// @notice function used to get the address that can pause the module.
+    /// @return guardian address of the pauser.
+    function guardian() external view returns (address);
 
     /// @notice function used to get manager token0 balance.
     /// @dev amount of fees in token0 that manager have not taken yet.

@@ -14,6 +14,25 @@ interface IArrakisMetaVaultFactory {
     /// and end index of the query is bigger the biggest index of the vaults array.
     error EndIndexGtNbOfVaults(uint256 endIndex, uint256 numberOfVaults);
 
+    /// @dev triggered when owner want to whitelist a deployer that has been already
+    /// whitelisted.
+    error AlreadyWhitelistedDeployer(address deployer);
+
+    /// @dev triggered when owner want to blackist a deployer that is not a current
+    /// deployer.
+    error NotAlreadyADeployer(address deployer);
+
+    /// @dev triggered when public vault deploy function is
+    /// called by an address that is not a deployer.
+    error NotADeployer();
+
+    /// @dev triggered when init management low level failed.
+    error CallFailed();
+
+    /// @dev triggered when init management happened and still the vault is
+    /// not under management by manager.
+    error VaultNotManaged();
+
     // #endregion errors.
 
     // #region events.
@@ -25,7 +44,8 @@ interface IArrakisMetaVaultFactory {
         address token1,
         address owner,
         address module,
-        address publicVault
+        address publicVault,
+        address timeLock
     );
     event LogPrivateVaultCreation(
         address indexed creator,
@@ -35,6 +55,12 @@ interface IArrakisMetaVaultFactory {
         address owner,
         address module,
         address privateVault
+    );
+    event LogWhitelistDeployers(
+        address[] deployers
+    );
+    event LogBlacklistDeployers(
+        address[] deployers
     );
 
     // #endregion events.
@@ -47,15 +73,18 @@ interface IArrakisMetaVaultFactory {
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
     /// @param owner_ address of the owner of the vault.
-    /// @param module_ address of the initial module that will be used
-    /// by Meta Vault.
+    /// @param beacon_ address of the beacon that will be used to create the default module.
+    /// @param moduleCreationPayload_ payload for initializing the module.
+    /// @param initManagementPayload_ data for initialize management.
     /// @return vault address of the newly created Token Meta Vault.
     function deployPublicVault(
         bytes32 salt_,
         address token0_,
         address token1_,
         address owner_,
-        address module_
+        address beacon_,
+        bytes calldata moduleCreationPayload_,
+        bytes calldata initManagementPayload_
     ) external returns (address vault);
 
     /// @notice function used to deploy owned Arrakis
@@ -64,16 +93,31 @@ interface IArrakisMetaVaultFactory {
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
     /// @param owner_ address of the owner of the vault.
-    /// @param module_ address of the initial module that will be used
-    /// by Meta Vault.
+    /// @param beacon_ address of the beacon that will be used to create the default module.
+    /// @param moduleCreationPayload_ payload for initializing the module.
+    /// @param initManagementPayload_ data for initialize management.
     /// @return vault address of the newly created private Meta Vault.
     function deployPrivateVault(
         bytes32 salt_,
         address token0_,
         address token1_,
         address owner_,
-        address module_
+        address beacon_,
+        bytes calldata moduleCreationPayload_,
+        bytes calldata initManagementPayload_
     ) external returns (address vault);
+
+    /// @notice function used to grant the role to deploy to a list of addresses.
+    /// @param deployers_ list of addresses that owner want to grant permission to deploy. 
+    function whitelistDeployer(
+        address[] calldata deployers_
+    ) external;
+
+    /// @notice function used to grant the role to deploy to a list of addresses.
+    /// @param deployers_ list of addresses that owner want to grant permission to deploy. 
+    function blacklistDeployer(
+        address[] calldata deployers_
+    ) external;
 
     // #endregion state changing functions.
 
@@ -122,6 +166,20 @@ interface IArrakisMetaVaultFactory {
     /// @notice numOfPrivateVaults counts the total number of private vaults in existence
     /// @return result total number of vaults deployed
     function numOfPrivateVaults() external view returns (uint256 result);
+
+    /// @notice function used to get the manager of newly deployed vault.
+    /// @return manager address that will manager vault that will be
+    /// created.
+    function manager() external view returns (address);
+
+    /// @notice function used to get a list of address that can deploy public vault.
+    function deployers() external view returns (address[] memory);
+
+    /// @notice function used to get public module registry.
+    function moduleRegistryPublic() external view returns (address);
+
+    /// @notice function used to get private module registry.
+    function moduleRegistryPrivate() external view returns (address);
 
     // #endregion view/pure functions.
 }
