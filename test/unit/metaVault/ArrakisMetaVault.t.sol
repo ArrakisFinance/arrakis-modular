@@ -10,7 +10,7 @@ contract ArrakisMetaVaultTest is Test {
 
     // - [ ] constructor
     //     - [ ] storage is properly set
-    //     - [ ] emits LogSetManager event
+    //     - [ ] emits `LogSetManager` event
     //     - [ ] reverts on zero address token0
     //     - [ ] reverts on zero address token1
     //     - [ ] reverts on zero address manager
@@ -27,20 +27,20 @@ contract ArrakisMetaVaultTest is Test {
 
     // - [ ] initialize
     //     - [ ] module is whitelisted and set
-    //     - [ ] emits LogSetFirstModule event
-    //     - [ ] emits LogWhitelistedModule event
+    //     - [ ] emits `LogSetFirstModule` event
+    //     - [ ] emits `LogWhitelistedModule` event
     //     - [ ] reverts on zero address module
     function test_initialize() public {}
     function testRevert_addressZero_module() public {}
 
     // - [ ] setModule
     //     - [ ] module is properly set
-    //     - [ ] old module manager funds are withdrawn
-    //     - [ ] old module is emptied
+    //     - [ ] calls `withdraw()` on the old module
+    //     - [ ] calls `withdrawManagerBalance()` on the old module
     //     - [ ] new module is called with the input payloads
-    //     - [ ] emits LogWithdraw event
-    //     - [ ] emits LogWithdrawManagerBalance event
-    //     - [ ] emits LogSetModule event
+    //     - [ ] emits `LogWithdraw` event
+    //     - [ ] emits `LogWithdrawManagerBalance` event
+    //     - [ ] emits `LogSetModule` event
     //     - [ ] reverts if `msg.sender` is not the manager
     //     - [ ] reverts if module is already set
     //     - [ ] reverts if module is not whitelisted
@@ -57,7 +57,7 @@ contract ArrakisMetaVaultTest is Test {
 
     // - [ ] whitelistModules
     //     - [ ] modules are properly deployed and whitelisted
-    //     - [ ] emits LogWhiteListedModules event
+    //     - [ ] emits `LogWhiteListedModules` event
     //     - [ ] reverts if onlyOwnerCheck check fails 
     //     - [ ] reverts if beacons and data have different lengths
     function test_whitelistModules() public {}
@@ -66,7 +66,7 @@ contract ArrakisMetaVaultTest is Test {
 
     // - [ ] blacklistModules
     //     - [ ] modules are properly removed from the whitelist
-    //     - [ ] emits LogBlackListedModules event
+    //     - [ ] emits `LogBlackListedModules` event
     //     - [ ] reverts if onlyOwnerCheck check fails 
     //     - [ ] reverts if a module is not whitelisted
     //     - [ ] reverts if a module is active
@@ -78,14 +78,14 @@ contract ArrakisMetaVaultTest is Test {
     // -- GETTER FUNCTIONS ----------------------------------------------------
 
     // - [ ] getInits
-    //     - [ ] calls `getInits` on the module
+    //     - [ ] calls `getInits()` on the module
     function test_getInits() public {}
 
     // - [ ] totalUnderlying
-    //     - [ ] calls `totalUnderlying` on the module
+    //     - [ ] calls `totalUnderlying()` on the module
     function test_totalUnderlying() public {}
 
     // - [ ] totalUnderlyingAtPrice
-    //     - [ ] calls `totalUnderlyingAtPrice` on the module
+    //     - [ ] calls `totalUnderlyingAtPrice()` on the module
     function test_totalUnderlyingAtPrice() public {}
 }

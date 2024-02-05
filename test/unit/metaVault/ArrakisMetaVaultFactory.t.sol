@@ -22,14 +22,14 @@ contract ArrakisMetaVaultFactoryTest is Test {
 
     // - [ ] pause
     //     - [ ] storage is properly updated
-    //     - [ ] emits pause event
+    //     - [ ] emits `pause` event
     //     - [ ] reverts when `msg.sender` is not the owner
     function test_pause() public {}
     function testRevert_pause_notOwner() public {}
 
     // - [ ] unpause
     //     - [ ] storage is properly updated
-    //     - [ ] emits unpause event
+    //     - [ ] emits `unpause` event
     //     - [ ] reverts when `msg.sender` is not the owner
     function test_unpause() public {}
     function testRevert_unpause_notOwner() public {}
@@ -44,7 +44,7 @@ contract ArrakisMetaVaultFactoryTest is Test {
     //     - [ ] adds vault to public vaults set
     //     - [ ] initializes the vault
     //     - [ ] initializes the vault's management on the manager
-    //     - [ ] emits LogPublicVaultCreation event
+    //     - [ ] emits `LogPublicVaultCreation` event
     //     - [ ] reverts when paused
     //     - [ ] reverts when `msg.sender` is not a deployer
     //     - [ ] reverts when the management initialization fails
@@ -60,7 +60,7 @@ contract ArrakisMetaVaultFactoryTest is Test {
     //     - [ ] adds vault to private vaults set
     //     - [ ] initializes the vault
     //     - [ ] initializes the vault's management on the manager
-    //     - [ ] emits LogPrivateVaultCreation event
+    //     - [ ] emits `LogPrivateVaultCreation` event
     //     - [ ] reverts when paused
     //     - [ ] reverts when the management initialization fails
     function test_deployPrivateVault() public {}

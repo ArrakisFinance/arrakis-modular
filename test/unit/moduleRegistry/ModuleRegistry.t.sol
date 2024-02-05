@@ -20,7 +20,7 @@ contract ModuleRegistryTest is Test {
 
     // - [ ] whitelistBeacons
     //     - [ ] storage is properly updated
-    //     - [ ] emits LogWhitelistBeacons event
+    //     - [ ] emits `LogWhitelistBeacons` event
     //     - [ ] reverts when `msg.sender` is not the owner
     //     - [ ] reverts when a beacon implementation is zero address
     //     - [ ] reverts when a beacon owner is not the admin
@@ -33,7 +33,7 @@ contract ModuleRegistryTest is Test {
 
     // - [ ] blacklistBeacons
     //     - [ ] storage is properly updated
-    //     - [ ] emits LogWhitelistBeacons event
+    //     - [ ] emits `LogWhitelistBeacons` event
     //     - [ ] reverts when `msg.sender` is not the owner
     //     - [ ] reverts when a beacon is not whitelisted
     function test_blacklistBeacons() public {}
@@ -61,6 +61,6 @@ contract ModuleRegistryTest is Test {
     function test_beaconsContains() public {}
 
     // - [ ] guardian
-    //     - [ ] calls `pauser` on the guardian
+    //     - [ ] calls `pauser()` on the guardian
     function test_guardian() public {}
 }
