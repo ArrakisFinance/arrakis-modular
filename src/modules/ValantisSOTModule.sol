@@ -7,12 +7,12 @@ import {IValantisSOTModule} from "../interfaces/IValantisSOTModule.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {ISovereignPool} from "../interfaces/ISovereignPool.sol";
 import {ISOT} from "../interfaces/ISOT.sol";
-import {IDecimals} from "../interfaces/IDecimals.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {PIPS} from "../constants/CArrakis.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
 
-import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
@@ -27,15 +27,15 @@ contract ValantisModule is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20Metadata;
 
     // #region public properties.
 
     IArrakisMetaVault public metaVault;
     ISovereignPool public pool;
     ISOT public alm;
-    IERC20 public token0;
-    IERC20 public token1;
+    IERC20Metadata public token0;
+    IERC20Metadata public token1;
     /// @dev should we change it to mutable state variable,
     /// and settable by who?
     uint24 public maxSlippage;
@@ -206,8 +206,8 @@ contract ValantisModule is
 
         // #endregion interactions.
 
-        uint256 _actual0 = token0.balanceOf(address(receiver_)) - balance0;
-        uint256 _actual1 = token1.balanceOf(address(receiver_)) - balance1;
+        uint256 _actual0 = token0.balanceOf(receiver_) - balance0;
+        uint256 _actual1 = token1.balanceOf(receiver_) - balance1;
 
         // #region assertions.
 
@@ -271,8 +271,8 @@ contract ValantisModule is
             zeroForOne_,
             expectedMinReturn_,
             amountIn_,
-            IDecimals(address(token0)).decimals(),
-            IDecimals(address(token1)).decimals()
+            token0.decimals(),
+            token1.decimals()
         );
 
         // #endregion checks/effects.

@@ -426,6 +426,13 @@ contract ArrakisPublicVaultRouter is
 
         (amount0Diff, amount1Diff) = swapper.swap{value: valueToSend}(params_);
 
+        emit Swapped(
+            params_.swapData.zeroForOne,
+            amount0Diff,
+            amount1Diff,
+            params_.swapData.amountOutSwap
+        );
+
         uint256 amount0Use = (params_.swapData.zeroForOne)
             ? params_.addData.amount0Max - amount0Diff
             : params_.addData.amount0Max + amount0Diff;

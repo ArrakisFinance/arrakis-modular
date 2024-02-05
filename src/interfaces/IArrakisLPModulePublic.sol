@@ -7,6 +7,12 @@ pragma solidity ^0.8.20;
 interface IArrakisLPModulePublic {
     // #region events.
 
+    /// @notice Event describing a deposit done by an user inside this module.
+    /// @dev deposit action can be indexed by depositor.
+    /// @param depositor address of the tokens provider.
+    /// @param proportion percentage of the current position that depositor want to increase.
+    /// @param amount0 amount of token0 needed to increase the portfolio of "proportion" percent.
+    /// @param amount1 amount of token1 needed to increase the portfolio of "proportion" percent.
     event LogDeposit(
         address depositor,
         uint256 proportion,

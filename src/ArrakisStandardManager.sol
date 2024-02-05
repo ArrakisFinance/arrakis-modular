@@ -7,15 +7,15 @@ import {TEN_PERCENT, PIPS, WEEK} from "./constants/CArrakis.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
-import {IDecimals} from "./interfaces/IDecimals.sol";
 import {VaultInfo, FeeIncrease} from "./structs/SManager.sol";
 import {IGuardian} from "./interfaces/IGuardian.sol";
 
 // #region openzeppelin dependencies.
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 // #endregion openzeppelin dependencies.
 
 // #region openzeppelin upgradeable dependencies.
@@ -41,7 +41,7 @@ contract ArrakisStandardManager is
     PausableUpgradeable
 {
     using EnumerableSet for EnumerableSet.AddressSet;
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20Metadata;
     using Address for address payable;
 
     // #region public immutable.
@@ -238,16 +238,16 @@ contract ArrakisStandardManager is
             amount0 = address(this).balance;
             if (amount0 > 0) payable(_receiver0).sendValue(amount0);
         } else {
-            amount0 = IERC20(_token0).balanceOf(address(this));
-            if (amount0 > 0) IERC20(_token0).safeTransfer(_receiver0, amount0);
+            amount0 = IERC20Metadata(_token0).balanceOf(address(this));
+            if (amount0 > 0) IERC20Metadata(_token0).safeTransfer(_receiver0, amount0);
         }
 
         if (_token1 == nativeToken) {
             amount1 = address(this).balance;
             if (amount1 > 0) payable(_receiver1).sendValue(amount1);
         } else {
-            amount1 = IERC20(_token1).balanceOf(address(this));
-            if (amount1 > 0) IERC20(_token1).safeTransfer(_receiver1, amount1);
+            amount1 = IERC20Metadata(_token1).balanceOf(address(this));
+            if (amount1 > 0) IERC20Metadata(_token1).safeTransfer(_receiver1, amount1);
         }
 
         emit LogWithdrawManagerBalance(
@@ -271,7 +271,7 @@ contract ArrakisStandardManager is
         address token0 = IArrakisMetaVault(vault_).token0();
         uint8 token0Decimals = token0 == nativeToken
             ? nativeTokenDecimals
-            : IDecimals(token0).decimals();
+            : IERC20Metadata(token0).decimals();
 
         VaultInfo memory info = vaultInfo[vault_];
 

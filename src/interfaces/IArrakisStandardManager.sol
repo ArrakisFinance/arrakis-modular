@@ -121,30 +121,42 @@ interface IArrakisStandardManager {
     /// @param factory_ address of the meta vault factory.
     function setFactory(address factory_) external;
 
+    /// @notice function used to init management of a meta vault.
+    /// @param params_ struct containing all the data for initialize the vault.
     function initManagement(SetupParams calldata params_) external;
 
+    /// @notice function used to update meta vault management informations.
+    /// @param params_ struct containing all the data for updating the vault.
     function updateVaultInfo(SetupParams calldata params_) external;
 
     // #endregion functions.
 
     // #region view functions.
 
+    /// @notice function used to get a list of managed vaults.
+    /// @param startIndex_ starting index from which the caller want to read the array of managed vaults.
+    /// @param endIndex_ ending index until which the caller want to read the array of managed vaults.
     function initializedVaults(
         uint256 startIndex_,
         uint256 endIndex_
     ) external view returns (address[] memory);
 
-    function numInitializedVaults() external view returns (uint256);
+    /// @notice function used to get the number of vault under management.
+    /// @param numberOfVaults number of under management vault.
+    function numInitializedVaults() external view returns (uint256 numberOfVaults);
 
     /// @notice address of the pauser of manager.
     /// @return pauser address that can pause/unpause manager.
-    function guardian() external view returns(address);
+    function guardian() external view returns (address);
 
     /// @notice address of the vault factory.
     /// @return factory address that can deploy meta vault.
-    function factory() external view returns(address);
+    function factory() external view returns (address);
 
-    function isManaged(address vault_) external view returns(bool);
+    /// @notice function used to know if a vault is under management by this manager.
+    /// @param vault_ address of the meta vault the caller want to check.
+    /// @return isManaged boolean which is true if the vault is under management, false otherwise.
+    function isManaged(address vault_) external view returns (bool isManaged);
 
     // #endregion  view functions.
 }
