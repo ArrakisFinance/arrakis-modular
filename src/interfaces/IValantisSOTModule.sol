@@ -40,6 +40,21 @@ interface IValantisSOTModule {
 
     // #region state modifying functions.
 
+    /// @notice function to swap token0->token1 or token1->token0 and then change
+    /// inventory.
+    /// @param zeroForOne_ boolean if true token0->token1, if false token1->token0.
+    /// @param expectedMinReturn_ minimum amount of tokenOut expected.
+    /// @param amountIn_ amount of tokenIn used during swap.
+    /// @param router_ address of routerSwapExecutor.
+    /// @param payload_ data payload used for swapping.
+     function swap(
+        bool zeroForOne_,
+        uint256 expectedMinReturn_,
+        uint256 amountIn_,
+        address router_,
+        bytes calldata payload_
+    ) external;
+
     /// @notice function used to set new manager
     /// @dev setting a manager different than the module,
     /// will make the module unusable.

@@ -93,6 +93,50 @@ interface IArrakisStandardManager {
 
     // #region functions.
 
+    /// @notice function used to pause the manager.
+    /// @dev only callable by guardian
+    function pause() external;
+
+    /// @notice function used to unpause the manager.
+    /// @dev only callable by guardian
+    function unpause() external;
+
+    /// @notice function used to set the default receiver of tokens earned.
+    /// @param newDefaultReceiver_ address of the new default receiver of tokens.
+    function setDefaultReceiver(address newDefaultReceiver_) external;
+
+    /// @notice function used to set receiver of a specific token.
+    /// @param vault_ address of the meta vault that contain the specific token.
+    /// @param isSetReceiverToken0_ boolean if true means that receiver is for token0
+    /// if not it's for token1.
+    /// @param receiver_ address of the receiver of this specific token.
+    function setReceiverByToken(
+        address vault_,
+        bool isSetReceiverToken0_,
+        address receiver_
+    ) external;
+
+    /// @notice function used to decrease the fees taken by manager for a specific managed vault.
+    /// @param vault_ address of the vault.
+    /// @param newFeePIPS_ fees in pips to set on the specific vault.
+    function decreaseManagerFeePIPS(
+        address vault_,
+        uint24 newFeePIPS_
+    ) external;
+
+    /// @notice function used to finalize a time lock fees increase on a vault.
+    /// @param vault_ address of the vault where the fees increase will be
+    /// applied.
+    function finalizeIncreaseManagerFeePIPS(address vault_) external;
+
+    /// @notice function used to submit a fees increase in a managed vault.
+    /// @param vault_ address of the vault where fees will be increase after timeLock.
+    /// @param newFeePIPS_ fees in pips to set on the specific managed vault.
+    function submitIncreaseManagerFeePIPS(
+        address vault_,
+        uint24 newFeePIPS_
+    ) external;
+
     /// @notice function used by manager to get his balance of fees earned
     /// on a vault.
     /// @param vault_ from which fees will be collected.
@@ -143,7 +187,10 @@ interface IArrakisStandardManager {
 
     /// @notice function used to get the number of vault under management.
     /// @param numberOfVaults number of under management vault.
-    function numInitializedVaults() external view returns (uint256 numberOfVaults);
+    function numInitializedVaults()
+        external
+        view
+        returns (uint256 numberOfVaults);
 
     /// @notice address of the pauser of manager.
     /// @return pauser address that can pause/unpause manager.

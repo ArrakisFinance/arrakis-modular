@@ -41,6 +41,14 @@ interface IArrakisPublicVaultRouter {
 
     // #region functions.
 
+    /// @notice function used to pause the router.
+    /// @dev only callable by owner
+    function pause() external;
+
+    /// @notice function used to unpause the router.
+    /// @dev only callable by owner
+    function unpause() external;
+
     /// @notice addLiquidity adds liquidity to meta vault of iPnterest (mints L tokens)
     /// @param params_ AddLiquidityData struct containing data for adding liquidity
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`

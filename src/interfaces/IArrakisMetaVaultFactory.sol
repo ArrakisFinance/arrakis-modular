@@ -93,6 +93,14 @@ interface IArrakisMetaVaultFactory {
 
     // #region state changing functions.
 
+    /// @notice function used to pause the factory.
+    /// @dev only callable by owner.
+    function pause() external;
+
+    /// @notice function used to unpause the factory.
+    /// @dev only callable by owner.
+    function unpause() external;
+
     /// @notice function used to deploy ERC20 token wrapped Arrakis
     /// Meta Vault.
     /// @param salt_ bytes32 used to get a deterministic all chains address.

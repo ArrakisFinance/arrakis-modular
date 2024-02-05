@@ -67,11 +67,15 @@ contract ArrakisMetaVaultFactory is
 
     // #region owner functions.
 
-    function pause() external onlyOwner {
+    /// @notice function used to pause the factory.
+    /// @dev only callable by owner.
+    function pause() external whenNotPaused onlyOwner {
         _pause();
     }
 
-    function unpause() external onlyOwner {
+    /// @notice function used to unpause the factory.
+    /// @dev only callable by owner.
+    function unpause() external whenPaused onlyOwner {
         _unpause();
     }
 
@@ -79,13 +83,13 @@ contract ArrakisMetaVaultFactory is
 
     /// @notice function used to deploy ERC20 token wrapped Arrakis
     /// Meta Vault.
-    /// @param salt_ bytes32 needed to compute vault address deterministic way.
+    /// @param salt_ bytes32 used to get a deterministic all chains address.
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
     /// @param owner_ address of the owner of the vault.
     /// @param beacon_ address of the beacon that will be used to create the default module.
     /// @param moduleCreationPayload_ payload for initializing the module.
-    /// @param initManagementPayload_ payload for initializing management.
+    /// @param initManagementPayload_ data for initialize management.
     /// @return vault address of the newly created Token Meta Vault.
     function deployPublicVault(
         bytes32 salt_,
@@ -189,15 +193,15 @@ contract ArrakisMetaVaultFactory is
     }
 
     /// @notice function used to deploy owned Arrakis
-    /// Meta Vault (private).
+    /// Meta Vault.
     /// @param salt_ bytes32 needed to compute vault address deterministic way.
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
     /// @param owner_ address of the owner of the vault.
     /// @param beacon_ address of the beacon that will be used to create the default module.
     /// @param moduleCreationPayload_ payload for initializing the module.
-    /// @param initManagementPayload_ payload for initializing management.
-    /// @return vault address of the newly created Private Meta Vault.
+    /// @param initManagementPayload_ data for initialize management.
+    /// @return vault address of the newly created private Meta Vault.
     function deployPrivateVault(
         bytes32 salt_,
         address token0_,
@@ -258,6 +262,8 @@ contract ArrakisMetaVaultFactory is
         );
     }
 
+    /// @notice function used to grant the role to deploy to a list of addresses.
+    /// @param deployers_ list of addresses that owner want to grant permission to deploy. 
     function whitelistDeployer(
         address[] calldata deployers_
     ) external onlyOwner {
@@ -276,6 +282,8 @@ contract ArrakisMetaVaultFactory is
         emit LogWhitelistDeployers(deployers_);
     }
 
+    /// @notice function used to grant the role to deploy to a list of addresses.
+    /// @param deployers_ list of addresses that owner want to grant permission to deploy.
     function blacklistDeployer(
         address[] calldata deployers_
     ) external onlyOwner {
@@ -380,6 +388,7 @@ contract ArrakisMetaVaultFactory is
         return _privateVaults.length();
     }
 
+    /// @notice function used to get a list of address that can deploy public vault.
     function deployers() external view returns (address[] memory) {
         return _deployers.values();
     }
