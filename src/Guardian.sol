@@ -21,6 +21,7 @@ contract Guardian is Ownable, IGuardian {
 
     // #region state modifying functions.
 
+    /// @notice function to set the pauser of Arrakis protocol.
     function setPauser(address newPauser_) external onlyOwner {
         if (newPauser_ == address(0)) revert AddressZero();
 

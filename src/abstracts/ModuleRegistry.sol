@@ -42,16 +42,25 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
 
     // #region public view functions.
 
+    /// @notice function to get the whitelisted list of IBeacon
+    /// that have module as implementation.
+    /// @return beacons list of upgradeable beacon.
     function beacons() external view returns (address[] memory) {
         return _beacons.values();
     }
 
+    /// @notice function to know if the beacons enumerableSet contain
+    /// beacon_
+    /// @param beacon_ beacon address to check
+    /// @param isContained is true if beacon_ is whitelisted.
     function beaconsContains(
         address beacon_
     ) external view returns (bool isContained) {
         return _beacons.contains(beacon_);
     }
 
+    /// @notice function used to get the guardian address of arrakis protocol.
+    /// @return guardian address of the pauser.
     function guardian() external view returns (address) {
         return IGuardian(_guardian).pauser();
     }
@@ -60,6 +69,9 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
 
     // #region public state modifying functions.
 
+    /// @notice function used to whitelist IBeacon  that contain
+    /// implementation of valid module.
+    /// @param beacons_ list of beacon to whitelist.
     function whitelistBeacons(address[] calldata beacons_) external onlyOwner {
         uint256 length = beacons_.length;
 
@@ -96,6 +108,9 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
         // #endregion events.
     }
 
+    /// @notice function used to blacklist IBeacon that contain
+    /// implementation of unvalid (from now) module.
+    /// @param beacons_ list of beacon to blacklist.
     function blacklistBeacons(address[] calldata beacons_) external onlyOwner {
         uint256 length = beacons_.length;
 

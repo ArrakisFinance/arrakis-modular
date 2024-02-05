@@ -27,6 +27,10 @@ contract RouterSwapExecutor is IRouterSwapExecutor {
         nativeToken = nativeToken_;
     }
 
+    /// @notice function used to swap tokens.
+    /// @param params_ struct containing all the informations for swapping.
+    /// @return amount0Diff the difference in token0 amount before and after the swap.
+    /// @return amount1Diff the difference in token1 amount before and after the swap.
     function swap(
         SwapAndAddData memory params_
     )

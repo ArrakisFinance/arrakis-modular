@@ -108,16 +108,27 @@ contract ValantisModule is
 
     // #region guardian functions.
 
+    /// @notice function used to pause the module.
+    /// @dev only callable by guardian
     function pause() external whenNotPaused onlyGuardian {
         _pause();
     }
 
+    /// @notice function used to unpause the module.
+    /// @dev only callable by guardian
     function unpause() external whenPaused onlyGuardian {
         _unpause();
     }
 
     // #endregion guardian functions.
 
+    /// @notice deposit function for public vault.
+    /// @param depositor_ address that will provide the tokens.
+    /// @param proportion_ percentage of portfolio position vault want to expand.
+    /// @return amount0 amount of token0 needed to expand the portfolio by "proportion"
+    /// percent.
+    /// @return amount1 amount of token1 needed to expand the portfolio by "proportion"
+    /// percent.
     function deposit(
         address depositor_,
         uint256 proportion_
@@ -172,6 +183,11 @@ contract ValantisModule is
         emit LogDeposit(depositor_, proportion_, amount0, amount1);
     }
 
+    /// @notice function used by metaVault to withdraw tokens from the strategy.
+    /// @param receiver_ address that will receive tokens.
+    /// @param proportion_ number of share needed to be withdrawn.
+    /// @return amount0 amount of token0 withdrawn.
+    /// @return amount1 amount of token1 withdrawn.
     function withdraw(
         address receiver_,
         uint256 proportion_
@@ -226,6 +242,9 @@ contract ValantisModule is
         emit LogWithdraw(receiver_, proportion_, amount0, amount1);
     }
 
+    /// @notice function used by metaVault or manager to get manager fees.
+    /// @return amount0 amount of token0 sent to manager.
+    /// @return amount1 amount of token1 sent to manager.
     function withdrawManagerBalance()
         external
         whenNotPaused
@@ -247,6 +266,8 @@ contract ValantisModule is
         emit LogWithdrawManagerBalance(manager, amount0, amount1);
     }
 
+    /// @notice function used to set manager fees.
+    /// @param newFeePIPS_ new fee that will be applied.
     function setManagerFeePIPS(uint256 newFeePIPS_) external whenNotPaused {
         uint256 _oldFee = pool.poolManagerFeeBips();
 
@@ -264,6 +285,13 @@ contract ValantisModule is
         emit LogSetManagerFeePIPS(_oldFee, newFeePIPS_ / 1e2);
     }
 
+    /// @notice function to swap token0->token1 or token1->token0 and then change
+    /// inventory.
+    /// @param zeroForOne_ boolean if true token0->token1, if false token1->token0.
+    /// @param expectedMinReturn_ minimum amount of tokenOut expected.
+    /// @param amountIn_ amount of tokenIn used during swap.
+    /// @param router_ address of routerSwapExecutor.
+    /// @param payload_ data payload used for swapping.
     function swap(
         bool zeroForOne_,
         uint256 expectedMinReturn_,
@@ -368,6 +396,13 @@ contract ValantisModule is
         emit LogSwap(_actual0, _actual1, balance0, balance1);
     }
 
+    /// @notice fucntion used to set range on valantis AMM
+    /// @param sqrtPriceLowX96_ lower bound of the range in sqrt price.
+    /// @param sqrtPriceHighX96_ upper bound of the range in sqrt price.
+    /// @param expectedSqrtSpotPriceUpperX96_ expected lower limit of current spot
+    /// price (to prevent sandwich attack and manipulation).
+    /// @param expectedSqrtSpotPriceLowerX96_ expected upper limit of current spot
+    /// price (to prevent sandwich attack and manipulation).
     function setPriceBounds(
         uint128 sqrtPriceLowX96_,
         uint128 sqrtPriceHighX96_,
@@ -382,26 +417,45 @@ contract ValantisModule is
         );
     }
 
+    /// @notice function used to set new manager
+    /// @dev setting a manager different than the module,
+    /// will make the module unusable.
+    /// let's make it not implemented for now
     function setManager(address) external {
         revert NotImplemented();
     }
 
+    /// @notice function used to get manager token0 balance.
+    /// @dev amount of fees in token0 that manager have not taken yet.
+    /// @return fees0 amount of token0 that manager earned.
     function managerBalance0() external view returns (uint256 fees0) {
         (fees0, ) = pool.getPoolManagerFees();
     }
 
+    /// @notice function used to get manager token1 balance.
+    /// @dev amount of fees in token1 that manager have not taken yet.
+    /// @return fees1 amount of token1 that manager earned.
     function managerBalance1() external view returns (uint256 fees1) {
         (, fees1) = pool.getPoolManagerFees();
     }
 
+    /// @notice function used to get manager fees.
+    /// @return managerFeePIPS amount of token1 that manager earned.
     function managerFeePIPS() external view returns (uint256) {
         return pool.poolManagerFeeBips() * 1e2;
     }
 
+    /// @notice function used to get the initial amounts needed to open a position.
+    /// @return init0 the amount of token0 needed to open a position.
+    /// @return init1 the amount of token1 needed to open a position.
     function getInits() external view returns (uint256 init0, uint256 init1) {
         return (_init0, _init1);
     }
 
+    /// @notice function used to get the amount of token0 and token1 sitting
+    /// on the position.
+    /// @return amount0 the amount of token0 sitting on the position.
+    /// @return amount1 the amount of token1 sitting on the position.
     function totalUnderlying()
         external
         view
@@ -410,17 +464,19 @@ contract ValantisModule is
         return alm.getReservesAtPrice(0);
     }
 
+    /// @notice function used to get the amounts of token0 and token1 sitting
+    /// on the position for a specific price.
+    /// @param priceX96_ price at which we want to simulate our tokens composition
+    /// @return amount0 the amount of token0 sitting on the position for priceX96.
+    /// @return amount1 the amount of token1 sitting on the position for priceX96.
     function totalUnderlyingAtPrice(
         uint160 priceX96_
     ) external view returns (uint256 amount0, uint256 amount1) {
         return alm.getReservesAtPrice(priceX96_);
     }
 
-    // TODO: check if during any action we are validation that the valantis pool price
-    // is near the oracle price??
     /// @notice function used to validate if module state is not manipulated
     /// before rebalance.
-    /// rebalance can happen.
     function validateRebalance(IOracleWrapper, uint24) external view {}
 
     // #region view functions.
@@ -453,6 +509,8 @@ contract ValantisModule is
         }
     }
 
+    /// @notice function used to get the address that can pause the module.
+    /// @return guardian address of the pauser.
     function guardian() external view returns (address) {
         return IGuardian(_guardian).pauser();
     }

@@ -13,6 +13,8 @@ contract TimeLock is TimelockController, ITimeLock {
         address admin
     ) TimelockController(minDelay, proposers, executors, admin) {}
 
+    /// @dev override updateDelay function of TimelockController to not allow
+    /// update of delay.
     function updateDelay(uint256) external pure override {
         revert NotImplemented();
     }
