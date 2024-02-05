@@ -42,7 +42,7 @@ abstract contract ArrakisMetaVault is
     // #region modifier.
 
     modifier onlyOwnerCustom() {
-        onlyOwnerCheck();
+        _onlyOwnerCheck();
         _;
     }
 
@@ -89,6 +89,9 @@ abstract contract ArrakisMetaVault is
         emit LogWhitelistedModule(module_);
     }
 
+    /// @notice function used to set module
+    /// @param module_ address of the new module
+    /// @param payloads_ datas to initialize/rebalance on the new module
     function setModule(
         address module_,
         bytes[] calldata payloads_
@@ -135,6 +138,9 @@ abstract contract ArrakisMetaVault is
         emit LogSetModule(module_, payloads_);
     }
 
+    /// @notice function used to whitelist modules that can used by manager.
+    /// @param beacons_ array of beacons addresses to use for modules creation.
+    /// @param data_ array of payload to use for modules creation.
     function whitelistModules(
         address[] calldata beacons_,
         bytes[] calldata data_
@@ -158,6 +164,8 @@ abstract contract ArrakisMetaVault is
         emit LogWhiteListedModules(modules);
     }
 
+    /// @notice function used to blacklist modules that can used by manager.
+    /// @param modules_ array of module addresses to be blacklisted.
     function blacklistModules(address[] calldata modules_) external onlyOwnerCustom {
         uint256 len = modules_.length;
         for (uint256 i; i < len; i++) {
@@ -171,6 +179,8 @@ abstract contract ArrakisMetaVault is
         emit LogBlackListedModules(modules_);
     }
 
+    /// @notice function used to get the list of modules whitelisted.
+    /// @return modules whitelisted modules addresses.
     function whitelistedModules()
         external
         view
@@ -181,13 +191,17 @@ abstract contract ArrakisMetaVault is
 
     // #region view functions.
 
-    /// @notice function used to check ownership of the vault.
-    function onlyOwnerCheck() public virtual view;
-
+    /// @notice function used to get the initial amounts needed to open a position.
+    /// @return init0 the amount of token0 needed to open a position.
+    /// @return init1 the amount of token1 needed to open a position.
     function getInits() external view returns (uint256 init0, uint256 init1) {
         return module.getInits();
     }
 
+    /// @notice function used to get the amount of token0 and token1 sitting
+    /// on the position.
+    /// @return amount0 the amount of token0 sitting on the position.
+    /// @return amount1 the amount of token1 sitting on the position.
     function totalUnderlying()
         public
         view
@@ -196,6 +210,11 @@ abstract contract ArrakisMetaVault is
         return module.totalUnderlying();
     }
 
+    /// @notice function used to get the amounts of token0 and token1 sitting
+    /// on the position for a specific price.
+    /// @param priceX96_ price at which we want to simulate our tokens composition
+    /// @return amount0 the amount of token0 sitting on the position for priceX96.
+    /// @return amount1 the amount of token1 sitting on the position for priceX96.
     function totalUnderlyingAtPrice(
         uint160 priceX96_
     ) external view returns (uint256 amount0, uint256 amount1) {
@@ -222,6 +241,8 @@ abstract contract ArrakisMetaVault is
 
         emit LogWithdrawManagerBalance(amount0, amount1);
     }
+
+    function _onlyOwnerCheck() internal virtual view;
 
     // #endregion internal functions.
 }

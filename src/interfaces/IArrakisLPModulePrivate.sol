@@ -6,6 +6,16 @@ pragma solidity ^0.8.20;
 /// @dev this deposit feature will be used by
 /// private actor.
 interface IArrakisLPModulePrivate {
+    // #region events.
+
+    /// @notice event emitted when owner of private fund the private vault.
+    /// @param depositor address that are sending the tokens, the owner.
+    /// @param amount0 amount of token0 sent by depositor.
+    /// @param amount1 amount of token1 sent by depositor.
+    event LogFund(address depositor, uint256 amount0, uint256 amount1);
+
+    // #endregion events.
+
     /// @notice deposit function for private vault.
     /// @param depositor_ address that will provide the tokens.
     /// @param amount0_ amount of token0 that depositor want to send to module.

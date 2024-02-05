@@ -28,6 +28,10 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
         nft = nft_;
     }
 
+    /// @notice function used to deposit tokens or expand position inside the
+    /// inherent strategy.
+    /// @param amount0_ amount of token0 need to increase the position by proportion_;
+    /// @param amount1_ amount of token1 need to increase the position by proportion_;
     function deposit(
         uint256 amount0_,
         uint256 amount1_
@@ -35,6 +39,12 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
         _deposit(amount0_, amount1_);
     }
 
+    /// @notice function used to withdraw tokens or position contraction of the
+    /// underpin strategy.
+    /// @param proportion_ the proportion of position contraction.
+    /// @param receiver_ the address that will receive withdrawn tokens.
+    /// @return amount0 amount of token0 returned.
+    /// @return amount1 amount of token1 returned.
     function withdraw(
         uint256 proportion_,
         address receiver_
@@ -43,6 +53,7 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
     }
 
     /// @notice function used to get the type of vault.
+    /// @return vaultType as bytes32.
     function vaultType() external pure returns (bytes32) {
         return PRIVATE_TYPE;
     }
@@ -67,7 +78,7 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
         emit LogDeposit(amount0_, amount1_);
     }
 
-    function onlyOwnerCheck() public view override {
+    function _onlyOwnerCheck() internal view override {
         if (msg.sender != IERC721(nft).ownerOf(uint256(uint160(address(this)))))
             revert OnlyOwner();
     }

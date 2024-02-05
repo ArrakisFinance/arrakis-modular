@@ -37,6 +37,15 @@ interface IArrakisMetaVaultFactory {
 
     // #region events.
 
+    /// @notice event emitted when public vault is created by a deployer.
+    /// @param creator address that is creating the public vault, a deployer.
+    /// @param salt salt used for create3.
+    /// @param token0 first token of the token pair.
+    /// @param token1 second token of the token pair.
+    /// @param owner address of the owner.
+    /// @param module default module that will be used by the meta vault.
+    /// @param publicVault address of the deployed meta vault.
+    /// @param timeLock timeLock that will owned the meta vault.
     event LogPublicVaultCreation(
         address indexed creator,
         bytes32 salt,
@@ -47,6 +56,15 @@ interface IArrakisMetaVaultFactory {
         address publicVault,
         address timeLock
     );
+
+    /// @notice event emitted when private vault is created.
+    /// @param creator address that is deploying the vault.
+    /// @param salt salt used for create3.
+    /// @param token0 address of the first token of the pair.
+    /// @param token1 address of the second token of the pair.
+    /// @param owner address that will owned the private vault.
+    /// @param module address of the default module.
+    /// @param privateVault address of the deployed meta vault.
     event LogPrivateVaultCreation(
         address indexed creator,
         bytes32 salt,
@@ -56,9 +74,17 @@ interface IArrakisMetaVaultFactory {
         address module,
         address privateVault
     );
+
+    /// @notice event emitted when whitelisting an array of public vault
+    /// deployers.
+    /// @param deployers list of deployers added to the whitelist.
     event LogWhitelistDeployers(
         address[] deployers
     );
+
+    /// @notice event emitted when blacklisting an array of public vault
+    /// deployers.
+    /// @param deployers list of deployers removed from the whitelist.
     event LogBlacklistDeployers(
         address[] deployers
     );
@@ -66,6 +92,14 @@ interface IArrakisMetaVaultFactory {
     // #endregion events.
 
     // #region state changing functions.
+
+    /// @notice function used to pause the factory.
+    /// @dev only callable by owner.
+    function pause() external;
+
+    /// @notice function used to unpause the factory.
+    /// @dev only callable by owner.
+    function unpause() external;
 
     /// @notice function used to deploy ERC20 token wrapped Arrakis
     /// Meta Vault.

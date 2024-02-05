@@ -11,6 +11,9 @@ interface IGuardian {
 
     // #region events.
 
+    /// @notice event emitted when the pauser is set by the owner of the Guardian.
+    /// @param oldPauser address of the previous pauser.
+    /// @param newPauser address of the current pauser.
     event LogSetPauser(address oldPauser, address newPauser);
 
     // #endregion events.

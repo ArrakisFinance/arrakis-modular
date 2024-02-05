@@ -68,16 +68,25 @@ contract ArrakisPublicVaultRouter is
 
     // #region owner functions.
 
-    function pause() external onlyOwner {
+    /// @notice function used to pause the router.
+    /// @dev only callable by owner
+    function pause() external whenNotPaused onlyOwner {
         _pause();
     }
 
-    function unpause() external onlyOwner {
+    /// @notice function used to unpause the router.
+    /// @dev only callable by owner
+    function unpause() external whenPaused onlyOwner {
         _unpause();
     }
 
     // #endregion owner functions.
 
+    /// @notice addLiquidity adds liquidity to meta vault of iPnterest (mints L tokens)
+    /// @param params_ AddLiquidityData struct containing data for adding liquidity
+    /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
+    /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
+    /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     function addLiquidity(
         AddLiquidityData memory params_
     )
@@ -142,6 +151,13 @@ contract ArrakisPublicVaultRouter is
         // #endregion interactions.
     }
 
+    /// @notice swapAndAddLiquidity transfer tokens to and calls RouterSwapExecutor
+    /// @param params_ SwapAndAddData struct containing data for swap
+    /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
+    /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
+    /// @return sharesReceived amount of public vault tokens transferred to `receiver`
+    /// @return amount0Diff token0 balance difference post swap
+    /// @return amount1Diff token1 balance difference post swap
     function swapAndAddLiquidity(
         SwapAndAddData memory params_
     )
@@ -212,6 +228,10 @@ contract ArrakisPublicVaultRouter is
         ) = _swapAndAddLiquidity(params_, token0, token1);
     }
 
+    /// @notice removeLiquidity removes liquidity from vault and burns LP tokens
+    /// @param params_ RemoveLiquidityData struct containing data for withdrawals
+    /// @return amount0 actual amount of token0 transferred to receiver for burning `burnAmount`
+    /// @return amount1 actual amount of token1 transferred to receiver for burning `burnAmount`
     function removeLiquidity(
         RemoveLiquidityData memory params_
     )
@@ -232,6 +252,11 @@ contract ArrakisPublicVaultRouter is
         (amount0, amount1) = _removeLiquidity(params_);
     }
 
+    /// @notice addLiquidityPermit2 adds liquidity to public vault of interest (mints LP tokens)
+    /// @param params_ AddLiquidityPermit2Data struct containing data for adding liquidity
+    /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
+    /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
+    /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     function addLiquidityPermit2(
         AddLiquidityPermit2Data memory params_
     )
@@ -281,6 +306,13 @@ contract ArrakisPublicVaultRouter is
         );
     }
 
+    /// @notice swapAndAddLiquidityPermit2 transfer tokens to and calls RouterSwapExecutor
+    /// @param params_ SwapAndAddPermit2Data struct containing data for swap
+    /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
+    /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
+    /// @return sharesReceived amount of public vault tokens transferred to `receiver`
+    /// @return amount0Diff token0 balance difference post swap
+    /// @return amount1Diff token1 balance difference post swap
     function swapAndAddLiquidityPermit2(
         SwapAndAddPermit2Data memory params_
     )
@@ -321,6 +353,10 @@ contract ArrakisPublicVaultRouter is
         ) = _swapAndAddLiquidity(params_.swapAndAddData, token0, token1);
     }
 
+    /// @notice removeLiquidityPermit2 removes liquidity from vault and burns LP tokens
+    /// @param params_ RemoveLiquidityPermit2Data struct containing data for withdrawals
+    /// @return amount0 actual amount of token0 transferred to receiver for burning `burnAmount`
+    /// @return amount1 actual amount of token1 transferred to receiver for burning `burnAmount`
     function removeLiquidityPermit2(
         RemoveLiquidityPermit2Data memory params_
     )
@@ -425,6 +461,13 @@ contract ArrakisPublicVaultRouter is
         }
 
         (amount0Diff, amount1Diff) = swapper.swap{value: valueToSend}(params_);
+
+        emit Swapped(
+            params_.swapData.zeroForOne,
+            amount0Diff,
+            amount1Diff,
+            params_.swapData.amountOutSwap
+        );
 
         uint256 amount0Use = (params_.swapData.zeroForOne)
             ? params_.addData.amount0Max - amount0Diff

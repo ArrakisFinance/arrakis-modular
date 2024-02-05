@@ -15,6 +15,11 @@ contract ModulePrivateRegistry is ModuleRegistry, IModulePrivateRegistry {
 
     // #region public state modifying functions.
 
+    /// @notice function used to create module instance that can be
+    /// whitelisted as module inside a vault.
+    /// @param beacon_ which whitelisted beacon's implementation we want to
+    /// create an instance of.
+    /// @param payload_ payload to create the module.
     function createModule(
         address vault_,
         address beacon_,

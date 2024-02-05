@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IArrakisMetaVault} from "./IArrakisMetaVault.sol";
 import {IOracleWrapper} from "./IOracleWrapper.sol";
 
@@ -134,13 +134,13 @@ interface IArrakisLPModule {
     /// @return managerFeePIPS amount of token1 that manager earned.
     function managerFeePIPS() external view returns (uint256);
 
-    /// @notice function used to get token0 as IERC20.
-    /// @return token0 as IERC20.
-    function token0() external view returns (IERC20);
+    /// @notice function used to get token0 as IERC20Metadata.
+    /// @return token0 as IERC20Metadata.
+    function token0() external view returns (IERC20Metadata);
 
-    /// @notice function used to get token0 as IERC20.
-    /// @return token1 as IERC20.
-    function token1() external view returns (IERC20);
+    /// @notice function used to get token0 as IERC20Metadata.
+    /// @return token1 as IERC20Metadata.
+    function token1() external view returns (IERC20Metadata);
 
     /// @notice function used to get the initial amounts needed to open a position.
     /// @return init0 the amount of token0 needed to open a position.
