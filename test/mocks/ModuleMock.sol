@@ -9,7 +9,8 @@ import {PIPS} from "../../src/constants/CArrakis.sol";
 
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
@@ -19,7 +20,7 @@ contract ModuleMock is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20Metadata;
 
     // #region errors.
 
@@ -30,8 +31,8 @@ contract ModuleMock is
     // #region public properties.
 
     IArrakisMetaVault public metaVault;
-    IERC20 public token0;
-    IERC20 public token1;
+    IERC20Metadata public token0;
+    IERC20Metadata public token1;
 
     // #endregion public properties.
 
@@ -84,8 +85,8 @@ contract ModuleMock is
         __ReentrancyGuard_init();
         metaVault = IArrakisMetaVault(metaVault_);
 
-        token0 = IERC20(metaVault.token0());
-        token1 = IERC20(metaVault.token1());
+        token0 = IERC20Metadata(metaVault.token0());
+        token1 = IERC20Metadata(metaVault.token1());
 
         _init0 = init0_;
         _init1 = init1_;

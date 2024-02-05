@@ -84,10 +84,9 @@ abstract contract ArrakisMetaVault is
 
         _whitelistedModules.add(module_);
         module = IArrakisLPModule(module_);
-        moduleRegistry = moduleRegistry_;
-        manager = manager_;
 
-        emit LogSetManager(manager_);
+        emit LogSetFirstModule(module_);
+        emit LogWhitelistedModule(module_);
     }
 
     function setModule(
