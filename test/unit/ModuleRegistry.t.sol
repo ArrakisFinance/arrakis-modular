@@ -6,7 +6,7 @@ import {console, Test} from "forge-std/Test.sol";
 contract ModuleRegistryTest is Test {
     function setUp() public {}
 
-    // -- SETUP AND BASIC FUNCTIONS -------------------------------------------
+    // -- SETUP AND PERMISSIONED FUNCTIONS ------------------------------------
 
     // - [ ] constructor
     //     - [ ] storage is properly set
@@ -40,7 +40,7 @@ contract ModuleRegistryTest is Test {
     function testRevert_blacklistBeacons_notOwner() public {}
     function testRevert_blacklistBeacons_notWhitelisted() public {}
 
-    // -- MODULE DEPLOYMENT FUNCTIONS -------------------------------------------
+    // -- MODULE DEPLOYMENT FUNCTIONS -----------------------------------------
 
     // - [ ] _createModule
     //     - [ ] deploys a new module

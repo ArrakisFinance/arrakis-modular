@@ -6,7 +6,7 @@ import {console, Test} from "forge-std/Test.sol";
 contract ArrakisMetaVaultFactoryTest is Test {
     function setUp() public {}
 
-    // -- SETUP AND BASIC FUNCTIONS -------------------------------------------
+    // -- SETUP AND PERMISSIONED FUNCTIONS ------------------------------------
 
     // - [ ] constructor
     //     - [ ] storage is properly set
@@ -34,7 +34,7 @@ contract ArrakisMetaVaultFactoryTest is Test {
     function test_unpause() public {}
     function testRevert_unpause_notOwner() public {}
 
-    // -- VAULT DEPLOYMENT FUNCTIONS -------------------------------------------
+    // -- VAULT DEPLOYMENT FUNCTIONS ------------------------------------------
 
     // - [ ] deployPublicVault
     //     - [ ] `owner_` is set as a timelock proposer and executor
@@ -68,7 +68,7 @@ contract ArrakisMetaVaultFactoryTest is Test {
     function testRevert_deployPrivateVault_notDeployer() public {}
     function testRevert_deployPrivateVault_initManagementFails() public {}
 
-    // -- GETTER FUNCTIONS -----------------------------------------------------
+    // -- GETTER FUNCTIONS ----------------------------------------------------
 
     // - [ ] getTokenName
     //     - [ ] returns correct token name
