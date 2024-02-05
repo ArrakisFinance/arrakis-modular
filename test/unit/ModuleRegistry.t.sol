@@ -49,4 +49,18 @@ contract ModuleRegistryTest is Test {
     function test_createModule() public {}
     function testRevert_createModule_addressZero() public {}
     function testRevert_createModule_distinctGuardian() public {}
+
+    // -- GETTER FUNCTIONS ----------------------------------------------------
+
+    // - [ ] beacons
+    //     - [ ] returns all beacon addresses
+    function test_beacons() public {}
+
+    // - [ ] beaconsContains
+    //     - [ ] whether a beacon is in the registry
+    function test_beaconsContains() public {}
+
+    // - [ ] guardian
+    //     - [ ] calls `pauser` on the guardian
+    function test_guardian() public {}
 }

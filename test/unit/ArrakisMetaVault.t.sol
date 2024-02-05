@@ -74,4 +74,18 @@ contract ArrakisMetaVaultTest is Test {
     function testRevert_blacklistModules_onlyOwnerCheck() public {}
     function testRevert_blacklistModules_notWhitelisted() public {}
     function testRevert_blacklistModules_stillActive() public {}
+
+    // -- GETTER FUNCTIONS ----------------------------------------------------
+
+    // - [ ] getInits
+    //     - [ ] calls `getInits` on the module
+    function test_getInits() public {}
+
+    // - [ ] totalUnderlying
+    //     - [ ] calls `totalUnderlying` on the module
+    function test_totalUnderlying() public {}
+
+    // - [ ] totalUnderlyingAtPrice
+    //     - [ ] calls `totalUnderlyingAtPrice` on the module
+    function test_totalUnderlyingAtPrice() public {}
 }
