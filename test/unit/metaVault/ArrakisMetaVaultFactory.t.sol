@@ -21,14 +21,14 @@ contract ArrakisMetaVaultFactoryTest is Test {
     function testRevert_constructor_zeroAddress_privateRegistry() public {}
 
     // - [ ] pause
-    //     - [ ] storage is properly updated
+    //     - [ ] contract is paused
     //     - [ ] emits `pause` event
     //     - [ ] reverts if `msg.sender` is not the owner
     function test_pause() public {}
     function testRevert_pause_notOwner() public {}
 
     // - [ ] unpause
-    //     - [ ] storage is properly updated
+    //     - [ ] contract is unpaused
     //     - [ ] emits `unpause` event
     //     - [ ] reverts if `msg.sender` is not the owner
     function test_unpause() public {}

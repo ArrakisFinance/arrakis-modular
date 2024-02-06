@@ -44,6 +44,7 @@ contract ArrakisStandardManagerTest is Test {
 
     // - [ ] pause
     //     - [ ] contract is paused
+    //     - [ ] emits `pause` event
     //     - [ ] reverts if `msg.sender` is not the guardian
     //     - [ ] reverts if the contract is already paused
     function test_pause() public {}
@@ -52,6 +53,7 @@ contract ArrakisStandardManagerTest is Test {
 
     // - [ ] unpause
     //     - [ ] contract is paused
+    //     - [ ] emits `pause` event
     //     - [ ] reverts if `msg.sender` is not the guardian
     //     - [ ] reverts if the contract is not paused
     function test_unpause() public {}
@@ -154,8 +156,7 @@ contract ArrakisStandardManagerTest is Test {
     function testRevert_updateVaultInfo_params_maxSlippagePIPS() public {}
     function testRevert_updateVaultInfo_params_zeroCooldownPeriod() public {}
 
-
-    // -- ECONOMIC FUNCTIONS ----------------------------------------------------
+    // -- OPERATIONAL FUNCTIONS -----------------------------------------------
 
     // - [ ] withdrawManagerBalance
     //     - [ ] calls `withdrawManagerBalance` on the module
