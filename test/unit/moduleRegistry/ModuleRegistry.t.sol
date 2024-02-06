@@ -10,13 +10,13 @@ contract ModuleRegistryTest is Test {
 
     // - [ ] constructor
     //     - [ ] storage is properly set
-    //     - [ ] reverts on zero address owner
-    //     - [ ] reverts on zero address guardian
-    //     - [ ] reverts on zero address admin
+    //     - [ ] reverts if owner is zero address
+    //     - [ ] reverts if guardian is zero address
+    //     - [ ] reverts if admin is zero address
     function test_constructor() public {}
-    function testRevert_constructor_addressZero_owner() public {}
-    function testRevert_constructor_addressZero_guardian() public {}
-    function testRevert_constructor_addressZero_admin() public {}
+    function testRevert_constructor_zeroAddress_owner() public {}
+    function testRevert_constructor_zeroAddress_guardian() public {}
+    function testRevert_constructor_zeroAddress_admin() public {}
 
     // - [ ] whitelistBeacons
     //     - [ ] storage is properly updated

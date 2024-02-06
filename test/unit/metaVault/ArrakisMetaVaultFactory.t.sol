@@ -10,15 +10,15 @@ contract ArrakisMetaVaultFactoryTest is Test {
 
     // - [ ] constructor
     //     - [ ] storage is properly set
-    //     - [ ] reverts on zero address owner
-    //     - [ ] reverts on zero address manager
-    //     - [ ] reverts on zero address moduleRegistryPublic
-    //     - [ ] reverts on zero address moduleRegistryPrivate
+    //     - [ ] reverts if owner is zero address
+    //     - [ ] reverts if manager is zero address
+    //     - [ ] reverts if moduleRegistry is zero addressPublic
+    //     - [ ] reverts if moduleRegistry is zero addressPrivate
     function test_constructor() public {}
-    function testRevert_constructor_addressZero_owner() public {}
-    function testRevert_constructor_addressZero_manager() public {}
-    function testRevert_constructor_addressZero_publicRegistry() public {}
-    function testRevert_constructor_addressZero_privateRegistry() public {}
+    function testRevert_constructor_zeroAddress_owner() public {}
+    function testRevert_constructor_zeroAddress_manager() public {}
+    function testRevert_constructor_zeroAddress_publicRegistry() public {}
+    function testRevert_constructor_zeroAddress_privateRegistry() public {}
 
     // - [ ] pause
     //     - [ ] storage is properly updated

@@ -11,17 +11,17 @@ contract ArrakisMetaVaultTest is Test {
     // - [ ] constructor
     //     - [ ] storage is properly set
     //     - [ ] emits `LogSetManager` event
-    //     - [ ] reverts on zero address token0
-    //     - [ ] reverts on zero address token1
-    //     - [ ] reverts on zero address manager
-    //     - [ ] reverts on zero address moduleRegistry
+    //     - [ ] reverts if token0 is zero address
+    //     - [ ] reverts if token1 is zero address
+    //     - [ ] reverts if manager is zero address
+    //     - [ ] reverts if moduleRegistry is zero address
     //     - [ ] reverts if token0 is greater than token1
     //     - [ ] reverts if token0 equals token1
     function test_constructor() public {}
-    function testRevert_constructor_addressZero_token0() public {}
-    function testRevert_constructor_addressZero_token1() public {}
-    function testRevert_constructor_addressZero_manager() public {}
-    function testRevert_constructor_addressZero_moduleRegistry() public {}
+    function testRevert_constructor_zeroAddress_token0() public {}
+    function testRevert_constructor_zeroAddress_token1() public {}
+    function testRevert_constructor_zeroAddress_manager() public {}
+    function testRevert_constructor_zeroAddress_moduleRegistry() public {}
     function testRevert_constructor_wrongTokenOrder() public {}
     function testRevert_constructor_sameTokens() public {}
 
@@ -29,9 +29,9 @@ contract ArrakisMetaVaultTest is Test {
     //     - [ ] module is whitelisted and set
     //     - [ ] emits `LogSetFirstModule` event
     //     - [ ] emits `LogWhitelistedModule` event
-    //     - [ ] reverts on zero address module
+    //     - [ ] reverts if module is zero address
     function test_initialize() public {}
-    function testRevert_addressZero_module() public {}
+    function testRevert_zeroAddress_module() public {}
 
     // - [ ] setModule
     //     - [ ] module is properly set
