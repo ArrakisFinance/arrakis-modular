@@ -21,10 +21,10 @@ contract ModuleRegistryTest is Test {
     // - [ ] whitelistBeacons
     //     - [ ] storage is properly updated
     //     - [ ] emits `LogWhitelistBeacons` event
-    //     - [ ] reverts when `msg.sender` is not the owner
-    //     - [ ] reverts when a beacon implementation is zero address
-    //     - [ ] reverts when a beacon owner is not the admin
-    //     - [ ] reverts when a beacon is already whitelisted
+    //     - [ ] reverts if `msg.sender` is not the owner
+    //     - [ ] reverts if a beacon implementation is zero address
+    //     - [ ] reverts if a beacon owner is not the admin
+    //     - [ ] reverts if a beacon is already whitelisted
     function test_whitelistBeacons() public {}
     function testRevert_whitelistBeacons_notOwner() public {}
     function testRevert_whitelistBeacons_beaconImplementation_addressZero() public {}
@@ -34,21 +34,11 @@ contract ModuleRegistryTest is Test {
     // - [ ] blacklistBeacons
     //     - [ ] storage is properly updated
     //     - [ ] emits `LogWhitelistBeacons` event
-    //     - [ ] reverts when `msg.sender` is not the owner
-    //     - [ ] reverts when a beacon is not whitelisted
+    //     - [ ] reverts if `msg.sender` is not the owner
+    //     - [ ] reverts if a beacon is not whitelisted
     function test_blacklistBeacons() public {}
     function testRevert_blacklistBeacons_notOwner() public {}
     function testRevert_blacklistBeacons_notWhitelisted() public {}
-
-    // -- MODULE DEPLOYMENT FUNCTIONS -----------------------------------------
-
-    // - [ ] _createModule
-    //     - [ ] deploys a new module
-    //     - [ ] reverts when the module is not linked to the vault
-    //     - [ ] reverts when the module guardian is not the registry guardian
-    function test_createModule() public {}
-    function testRevert_createModule_addressZero() public {}
-    function testRevert_createModule_distinctGuardian() public {}
 
     // -- GETTER FUNCTIONS ----------------------------------------------------
 

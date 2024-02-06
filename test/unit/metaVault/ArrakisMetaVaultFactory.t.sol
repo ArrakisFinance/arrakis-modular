@@ -23,14 +23,14 @@ contract ArrakisMetaVaultFactoryTest is Test {
     // - [ ] pause
     //     - [ ] storage is properly updated
     //     - [ ] emits `pause` event
-    //     - [ ] reverts when `msg.sender` is not the owner
+    //     - [ ] reverts if `msg.sender` is not the owner
     function test_pause() public {}
     function testRevert_pause_notOwner() public {}
 
     // - [ ] unpause
     //     - [ ] storage is properly updated
     //     - [ ] emits `unpause` event
-    //     - [ ] reverts when `msg.sender` is not the owner
+    //     - [ ] reverts if `msg.sender` is not the owner
     function test_unpause() public {}
     function testRevert_unpause_notOwner() public {}
 
@@ -45,9 +45,9 @@ contract ArrakisMetaVaultFactoryTest is Test {
     //     - [ ] initializes the vault
     //     - [ ] initializes the vault's management on the manager
     //     - [ ] emits `LogPublicVaultCreation` event
-    //     - [ ] reverts when paused
-    //     - [ ] reverts when `msg.sender` is not a deployer
-    //     - [ ] reverts when the management initialization fails
+    //     - [ ] reverts if paused
+    //     - [ ] reverts if `msg.sender` is not a deployer
+    //     - [ ] reverts if the management initialization fails
     function test_deployPublicVault() public {}
     function testRevert_deployPublicVault_paused() public {}
     function testRevert_deployPublicVault_notDeployer() public {}
@@ -61,8 +61,8 @@ contract ArrakisMetaVaultFactoryTest is Test {
     //     - [ ] initializes the vault
     //     - [ ] initializes the vault's management on the manager
     //     - [ ] emits `LogPrivateVaultCreation` event
-    //     - [ ] reverts when paused
-    //     - [ ] reverts when the management initialization fails
+    //     - [ ] reverts if paused
+    //     - [ ] reverts if the management initialization fails
     function test_deployPrivateVault() public {}
     function testRevert_deployPrivateVault_paused() public {}
     function testRevert_deployPrivateVault_notDeployer() public {}
@@ -80,8 +80,8 @@ contract ArrakisMetaVaultFactoryTest is Test {
 
     // - [ ] publicVaults
     //     - [ ] returns correct range of vault addresses
-    //     - [ ] reverts when `start` is greater than `end`
-    //     - [ ] reverts when `end` is greater than the number of public vaults
+    //     - [ ] reverts if `start` is greater than `end`
+    //     - [ ] reverts if `end` is greater than the number of public vaults
     function test_publicVaults() public {}
     function testRevert_publicVaults_startGtEnd() public {}
     function testRevert_publicVaults_endGtNbVaults() public {}
@@ -92,8 +92,8 @@ contract ArrakisMetaVaultFactoryTest is Test {
 
     // - [ ] privateVaults
     //     - [ ] returns correct range of vault addresses
-    //     - [ ] reverts when `start` is greater than `end`
-    //     - [ ] reverts when `end` is greater than the number of private vaults
+    //     - [ ] reverts if `start` is greater than `end`
+    //     - [ ] reverts if `end` is greater than the number of private vaults
     function test_privateVaults() public {}
     function testRevert_privateVaults_startGtEnd() public {}
     function testRevert_privateVaults_endGtNbVaults() public {}
