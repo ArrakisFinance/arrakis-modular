@@ -209,6 +209,8 @@ contract ArrakisStandardManager is
             submitTimestamp: block.timestamp,
             newFeePIPS: newFeePIPS_
         });
+
+        emit LogIncreaseManagerFeeSubmission(vault_, newFeePIPS_);
     }
 
     function withdrawManagerBalance(
