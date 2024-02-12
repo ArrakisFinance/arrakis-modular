@@ -232,6 +232,8 @@ contract ArrakisStandardManager is
             submitTimestamp: block.timestamp,
             newFeePIPS: newFeePIPS_
         });
+
+        emit LogIncreaseManagerFeeSubmission(vault_, newFeePIPS_);
     }
 
     /// @notice function used by manager to get his balance of fees earned

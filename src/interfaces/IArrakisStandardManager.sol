@@ -85,6 +85,7 @@ interface IArrakisStandardManager {
         uint256 amount1
     );
     event LogChangeManagerFee(address vault, uint256 newFeePIPS);
+    event LogIncreaseManagerFeeSubmission(address vault, uint256 newFeePIPS);
     event LogRebalance(address indexed vault, bytes[] payloads);
     event LogSetModule(address indexed vault, address module, bytes[] payloads);
     event LogSetFactory(address vaultFactory);
