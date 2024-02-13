@@ -215,6 +215,8 @@ contract ValantisModule is
             amount1 = FullMath.mulDiv(proportion_, _amt1, PIPS);
         }
 
+        if (amount0 == 0 && amount1 == 0) revert TotalSupplyZero();
+
         // #endregion effects.
 
         uint256 balance0 = token0.balanceOf(receiver_);

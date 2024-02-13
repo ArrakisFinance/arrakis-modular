@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {IArrakisMetaVaultPrivate} from "./interfaces/IArrakisMetaVaultPrivate.sol";
+import {IOwnable} from "./interfaces/IOwnable.sol";
 import {ArrakisMetaVault} from "./abstracts/ArrakisMetaVault.sol";
 import {IArrakisLPModulePrivate} from "./interfaces/IArrakisLPModulePrivate.sol";
 import {PRIVATE_TYPE} from "./constants/CArrakis.sol";
@@ -9,7 +10,11 @@ import {PRIVATE_TYPE} from "./constants/CArrakis.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
+contract ArrakisMetaVaultPrivate is
+    ArrakisMetaVault,
+    IArrakisMetaVaultPrivate,
+    IOwnable
+{
     using Address for address payable;
 
     // #region immutable properties.
@@ -25,6 +30,7 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
         address manager_,
         address nft_
     ) ArrakisMetaVault(token0_, token1_, moduleRegistry_, manager_) {
+        if (nft_ == address(0)) revert AddressZero("NFT");
         nft = nft_;
     }
 
@@ -56,6 +62,11 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
     /// @return vaultType as bytes32.
     function vaultType() external pure returns (bytes32) {
         return PRIVATE_TYPE;
+    }
+
+    /// @notice function used to get the owner of this contract.
+    function owner() external view returns (address) {
+        return IERC721(nft).ownerOf(uint256(uint160(address(this))));
     }
 
     // #region internal functions.

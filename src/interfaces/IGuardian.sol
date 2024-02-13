@@ -6,6 +6,7 @@ interface IGuardian {
     // #region errors.
 
     error AddressZero();
+    error SamePauser();
 
     // #endregion errors.
 

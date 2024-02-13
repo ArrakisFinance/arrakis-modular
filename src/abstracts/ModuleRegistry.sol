@@ -80,14 +80,9 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
 
             // #region checks.
 
-            try IBeacon(beacon).implementation() returns (address impl) {
-                if (impl == address(0)) revert ImplementationIsAddressZero();
-            } catch {
-                revert NotBeacon();
-            }
+            if(beacon.code.length == 0) revert NotBeacon();
 
-            if(Ownable(beacon).owner() != admin)
-                revert NotSameAdmin();
+            if (Ownable(beacon).owner() != admin) revert NotSameAdmin();
 
             if (_beacons.contains(beacon))
                 revert AlreadyWhitelistedBeacon(beacon);
@@ -149,7 +144,6 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
     ) internal returns (address module) {
         // #region checks.
 
-        if (vault_ == address(0)) revert AddressZero();
         if (!_beacons.contains(beacon_)) revert NotWhitelistedBeacon();
 
         // #endregion checks.
@@ -176,6 +170,10 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
         ) revert NotSameGuardian();
 
         // #endregion assertions.
+    }
+
+    function _checkVaultNotAddressZero(address vault_) internal {
+        if (vault_ == address(0)) revert AddressZero();
     }
 
     // #endregion internal state modifying functions.

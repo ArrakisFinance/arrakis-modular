@@ -11,7 +11,6 @@ interface IModuleRegistry {
     error AlreadyWhitelistedBeacon(address beacon);
     error NotAlreadyWhitelistedBeacon(address beacon);
     error NotWhitelistedBeacon();
-    error ImplementationIsAddressZero();
     error NotBeacon();
     error ModuleNotLinkedToMetaVault();
     error NotSameGuardian();

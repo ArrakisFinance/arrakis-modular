@@ -8,7 +8,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IArrakisMetaVaultFactory} from "./interfaces/IArrakisMetaVaultFactory.sol";
 import {ArrakisMetaVaultPublic} from "./ArrakisMetaVaultPublic.sol";
 import {ArrakisMetaVaultPrivate} from "./ArrakisMetaVaultPrivate.sol";
-import {IArrakisStandardManager} from "./interfaces/IArrakisStandardManager.sol";
+import {IManager} from "./interfaces/IManager.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IModuleRegistry} from "./interfaces/IModuleRegistry.sol";
 import {TimeLock} from "./TimeLock.sol";
@@ -165,12 +165,20 @@ contract ArrakisMetaVaultFactory is
         }
 
         // #region create a module.
+        address module;
 
-        address module = IModuleRegistry(moduleRegistryPublic).createModule(
-            vault,
-            beacon_,
-            moduleCreationPayload_
-        );
+        {
+            bytes memory moduleCreationPayload = abi.encodePacked(
+                moduleCreationPayload_,
+                bytes32(uint256(uint160(vault)))
+            );
+
+            module = IModuleRegistry(moduleRegistryPublic).createModule(
+                vault,
+                beacon_,
+                moduleCreationPayload
+            );
+        }
 
         // #endregion create a module.
 
@@ -237,11 +245,20 @@ contract ArrakisMetaVaultFactory is
 
         // #region create a module.
 
-        address module = IModuleRegistry(moduleRegistryPrivate).createModule(
-            vault,
-            beacon_,
-            moduleCreationPayload_
-        );
+        address module;
+
+        {
+            bytes memory moduleCreationPayload = abi.encodePacked(
+                moduleCreationPayload_,
+                bytes32(uint256(uint160(vault)))
+            );
+
+            module = IModuleRegistry(moduleRegistryPrivate).createModule(
+                vault,
+                beacon_,
+                moduleCreationPayload
+            );
+        }
 
         IArrakisMetaVault(vault).initialize(module);
 
@@ -263,7 +280,7 @@ contract ArrakisMetaVaultFactory is
     }
 
     /// @notice function used to grant the role to deploy to a list of addresses.
-    /// @param deployers_ list of addresses that owner want to grant permission to deploy. 
+    /// @param deployers_ list of addresses that owner want to grant permission to deploy.
     function whitelistDeployer(
         address[] calldata deployers_
     ) external onlyOwner {
@@ -292,8 +309,7 @@ contract ArrakisMetaVaultFactory is
         for (uint256 i; i < length; i++) {
             address deployer = deployers_[i];
 
-            if (deployer == address(0)) revert AddressZero();
-            if (_deployers.contains(deployer))
+            if (!_deployers.contains(deployer))
                 revert NotAlreadyADeployer(deployer);
 
             _deployers.remove(deployer);
@@ -399,15 +415,25 @@ contract ArrakisMetaVaultFactory is
 
     function _initManagement(address vault_, bytes memory data_) internal {
         // NOTE check the first 4 bytes instead of encodewithselector.
-        bytes memory data = abi.encodeWithSelector(
-            IArrakisStandardManager.initManagement.selector,
-            data_
-        );
+
+        bytes4 selector = IManager(manager).getInitManagementSelector();
+
+        bytes memory data = data_.length == 0
+            ? abi.encodeWithSelector(
+                selector,
+                vault_
+            )
+            : abi.encodeWithSelector(
+                selector,
+                vault_,
+                data_
+            );
+
         (bool success, ) = manager.call(data);
 
         if (!success) revert CallFailed();
 
-        if (!IArrakisStandardManager(manager).isManaged(vault_))
+        if (!IManager(manager).isManaged(vault_))
             revert VaultNotManaged();
     }
 

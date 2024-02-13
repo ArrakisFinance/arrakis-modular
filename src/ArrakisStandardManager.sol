@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {IArrakisStandardManager} from "./interfaces/IArrakisStandardManager.sol";
+import {IManager} from "./interfaces/IManager.sol";
 import {SetupParams} from "./structs/SManager.sol";
 import {TEN_PERCENT, PIPS, WEEK} from "./constants/CArrakis.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
@@ -36,6 +37,7 @@ import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 // NOTE admin and owner can be the same address on transparent proxy.
 contract ArrakisStandardManager is
     IArrakisStandardManager,
+    IManager,
     Ownable,
     ReentrancyGuardUpgradeable,
     PausableUpgradeable
@@ -109,6 +111,10 @@ contract ArrakisStandardManager is
         _guardian = guardian_;
     }
 
+    /// @notice function used to initialize standard manager proxy.
+    /// @param owner_ address of the owner of standard manager.
+    /// @param defaultReceiver_ address of the receiver of tokens (by default).
+    /// @param factory_ ArrakisMetaVaultFactory contract address.
     function initialize(
         address owner_,
         address defaultReceiver_,
@@ -123,6 +129,7 @@ contract ArrakisStandardManager is
         _initializeOwner(owner_);
         __ReentrancyGuard_init();
         __Pausable_init();
+        defaultReceiver = defaultReceiver_;
         factory = factory_;
 
         emit LogSetDefaultReceiver(address(0), defaultReceiver_);
@@ -489,7 +496,11 @@ contract ArrakisStandardManager is
 
     /// @notice function used to get the number of vault under management.
     /// @param numberOfVaults number of under management vault.
-    function numInitializedVaults() external view returns (uint256 numberOfVaults) {
+    function numInitializedVaults()
+        external
+        view
+        returns (uint256 numberOfVaults)
+    {
         return _vaults.length();
     }
 
@@ -504,6 +515,16 @@ contract ArrakisStandardManager is
     /// @return isManaged boolean which is true if the vault is under management, false otherwise.
     function isManaged(address vault_) external view returns (bool) {
         return _vaults.contains(vault_);
+    }
+
+    /// @notice function used to know the selector of initManagement functions.
+    /// @param selector bytes4 defining the init management selector.
+    function getInitManagementSelector()
+        external
+        pure
+        returns (bytes4 selector)
+    {
+        return IArrakisStandardManager.initManagement.selector;
     }
 
     // #endregion view public functions.

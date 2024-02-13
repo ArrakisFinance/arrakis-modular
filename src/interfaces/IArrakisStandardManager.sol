@@ -200,10 +200,21 @@ interface IArrakisStandardManager {
     /// @return factory address that can deploy meta vault.
     function factory() external view returns (address);
 
-    /// @notice function used to know if a vault is under management by this manager.
-    /// @param vault_ address of the meta vault the caller want to check.
-    /// @return isManaged boolean which is true if the vault is under management, false otherwise.
-    function isManaged(address vault_) external view returns (bool isManaged);
+    /// @notice function used to get the default fee applied on manager vault.
+    /// @return defaultFeePIPS amount of default fees.
+    function defaultFeePIPS() external view returns (uint256);
+
+    /// @notice function used to get the native token/coin of the chain.
+    /// @return nativeToken address of the native token/coin of the chain.
+    function nativeToken() external view returns (address);
+
+    /// @notice function used to get the native token/coin decimals precision.
+    /// @return nativeTokenDecimals decimals precision of the native coin.
+    function nativeTokenDecimals() external view returns (uint8);
+
+    /// @notice function used to get the default receiver of tokens earned in managed vault.
+    /// @return defaultReceiver address of the default receiver.
+    function defaultReceiver() external view returns(address);
 
     // #endregion  view functions.
 }

@@ -25,10 +25,11 @@ contract ModulePrivateRegistry is ModuleRegistry, IModulePrivateRegistry {
         address beacon_,
         bytes calldata payload_
     ) external returns (address module) {
+        _checkVaultNotAddressZero(vault_);
         if (IArrakisMetaVault(vault_).vaultType() != PRIVATE_TYPE)
             revert NotPrivateVault();
 
-        _createModule(vault_, beacon_, payload_);
+        module = _createModule(vault_, beacon_, payload_);
 
         emit LogCreatePrivateModule(
             beacon_,
