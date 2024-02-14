@@ -21,7 +21,6 @@ interface IValantisSOTModule {
     error NotEnoughToken1();
     error SwapCallFailed();
     error SlippageTooHigh();
-    error RouterTakeTooMuchTokenIn();
     error NotDepositedAllToken0();
     error NotDepositedAllToken1();
 
@@ -54,12 +53,6 @@ interface IValantisSOTModule {
         address router_,
         bytes calldata payload_
     ) external;
-
-    /// @notice function used to set new manager
-    /// @dev setting a manager different than the module,
-    /// will make the module unusable.
-    /// let's make it not implemented for now
-    function setManager(address newManager_) external;
 
     /// @notice fucntion used to set range on valantis AMM
     /// @param _sqrtPriceLowX96 lower bound of the range in sqrt price.

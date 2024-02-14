@@ -19,6 +19,8 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
+import {console} from "forge-std/console.sol";
+
 /// @dev BeaconProxy becareful for changing implementation with upgrade.
 contract ValantisModule is
     IArrakisLPModule,
@@ -319,10 +321,12 @@ contract ValantisModule is
         uint256 _amt1;
         uint256 _actual0;
         uint256 _actual1;
+        uint256 _initBalance0;
+        uint256 _initBalance1;
 
         {
-            uint256 balance0 = token0.balanceOf(address(this));
-            uint256 balance1 = token1.balanceOf(address(this));
+            _initBalance0 = token0.balanceOf(address(this));
+            _initBalance1 = token1.balanceOf(address(this));
             (_amt0, _amt1) = alm.getReservesAtPrice(0);
 
             if (zeroForOne_) {
@@ -331,8 +335,8 @@ contract ValantisModule is
 
             alm.withdrawLiquidity(_amt0, _amt1, address(this), 0, 0);
 
-            _actual0 = token0.balanceOf(address(this)) - balance0;
-            _actual1 = token1.balanceOf(address(this)) - balance1;
+            _actual0 = token0.balanceOf(address(this)) - _initBalance0;
+            _actual1 = token1.balanceOf(address(this)) - _initBalance1;
 
             if (_actual0 != _amt0)
                 revert Actual0DifferentExpected(_actual0, _amt0);
@@ -355,20 +359,15 @@ contract ValantisModule is
 
         // #region assertions.
 
-        uint256 balance0 = token0.balanceOf(address(this));
-        uint256 balance1 = token1.balanceOf(address(this));
+        uint256 balance0 = token0.balanceOf(address(this)) - _initBalance0;
+        uint256 balance1 = token1.balanceOf(address(this)) - _initBalance1;
 
         if (zeroForOne_) {
             if (_actual1 + expectedMinReturn_ > balance1)
                 revert SlippageTooHigh();
-
-            if (_actual0 - amountIn_ > balance0)
-                revert RouterTakeTooMuchTokenIn();
         } else {
             if (_actual0 + expectedMinReturn_ > balance0)
                 revert SlippageTooHigh();
-            if (_actual1 - amountIn_ > balance1)
-                revert RouterTakeTooMuchTokenIn();
         }
 
         // #endregion assertions.
@@ -385,8 +384,8 @@ contract ValantisModule is
         // #region assertions.
 
         {
-            uint256 newbalance0 = token0.balanceOf(address(this));
-            uint256 newbalance1 = token1.balanceOf(address(this));
+            uint256 newbalance0 = token0.balanceOf(address(this)) - _initBalance0;
+            uint256 newbalance1 = token1.balanceOf(address(this)) - _initBalance1;
 
             if (newbalance0 > 0) revert NotDepositedAllToken0();
 
@@ -417,14 +416,6 @@ contract ValantisModule is
             expectedSqrtSpotPriceUpperX96_,
             expectedSqrtSpotPriceLowerX96_
         );
-    }
-
-    /// @notice function used to set new manager
-    /// @dev setting a manager different than the module,
-    /// will make the module unusable.
-    /// let's make it not implemented for now
-    function setManager(address) external {
-        revert NotImplemented();
     }
 
     /// @notice function used to get manager token0 balance.

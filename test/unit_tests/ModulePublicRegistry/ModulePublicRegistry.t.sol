@@ -44,6 +44,16 @@ contract ModulePublicRegistryTest is TestWrapper {
         guardian = new GuardianMock();
 
         guardian.setPauser(pauser);
+
+        // #region create public module registry.
+
+        modulePublicRegistry = new ModulePublicRegistry(
+            owner,
+            address(guardian),
+            admin
+        );
+
+        // #endregion create public module registry.
     }
 
     // #region test constructor.
@@ -169,15 +179,6 @@ contract ModulePublicRegistryTest is TestWrapper {
         );
 
         // #endregion create a upgradeable beacon.
-        // #region create public module registry.
-
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner,
-            address(guardian),
-            admin
-        );
-
-        // #endregion create public module registry.
 
         address[] memory beacons = new address[](1);
         beacons[0] = address(beacon);
@@ -215,15 +216,6 @@ contract ModulePublicRegistryTest is TestWrapper {
         );
 
         // #endregion create a upgradeable beacon.
-        // #region create public module registry.
-
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner,
-            address(guardian),
-            admin
-        );
-
-        // #endregion create public module registry.
 
         address[] memory beacons = new address[](1);
         beacons[0] = address(beacon);
@@ -244,36 +236,15 @@ contract ModulePublicRegistryTest is TestWrapper {
     function testBlacklistBeaconsOnlyOwner() public {
         address notOwner = vm.addr(uint256(keccak256(abi.encode("Not Owner"))));
 
-        vm.prank(notOwner);
-
-        // #region create public module registry.
-
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner,
-            address(guardian),
-            admin
-        );
-
-        // #endregion create public module registry.
-
         address[] memory beacons = new address[](0);
 
         vm.expectRevert(Ownable.Unauthorized.selector);
+        vm.prank(notOwner);
 
         modulePublicRegistry.blacklistBeacons(beacons);
     }
 
     function testBlacklistBeaconsNotAlreadyWhitelistedBeacon() public {
-        // #region create public module registry.
-
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner,
-            address(guardian),
-            admin
-        );
-
-        // #endregion create public module registry.
-
         // #region create a upgradeable beacon.
 
         address beaconAdmin = vm.addr(
@@ -303,16 +274,6 @@ contract ModulePublicRegistryTest is TestWrapper {
     }
 
     function testBlacklistBeacons() public {
-        // #region create public module registry.
-
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner,
-            address(guardian),
-            admin
-        );
-
-        // #endregion create public module registry.
-
         // #region create a upgradeable beacon.
 
         address beaconAdmin = vm.addr(
@@ -356,15 +317,6 @@ contract ModulePublicRegistryTest is TestWrapper {
     // #region test createModule.
 
     function testCreateModuleOnlyPublicVault() public {
-        // #region create public module registry.
-
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner,
-            address(guardian),
-            admin
-        );
-
-        // #endregion create public module registry.
         // #region create a private mock vault.
 
         ArrakisPrivateVaultMock privateVault = new ArrakisPrivateVaultMock();
@@ -413,15 +365,6 @@ contract ModulePublicRegistryTest is TestWrapper {
     }
 
     function testCreateModuleVaultAddressZero() public {
-        // #region create public module registry.
-
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner,
-            address(guardian),
-            admin
-        );
-
-        // #endregion create public module registry.
         // #region create module payload.
 
         bytes memory payload = abi.encodeWithSelector(
@@ -451,15 +394,6 @@ contract ModulePublicRegistryTest is TestWrapper {
     }
 
     function testCreateModuleNotAlreadyWhitelistedBeacon() public {
-        // #region create public module registry.
-
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner,
-            address(guardian),
-            admin
-        );
-
-        // #endregion create public module registry.
         // #region create a public mock vault.
 
         ArrakisPublicVaultMock publicVault = new ArrakisPublicVaultMock();
@@ -498,15 +432,6 @@ contract ModulePublicRegistryTest is TestWrapper {
     }
 
     function testCreateModuleMetaVaultNotInputedVault() public {
-        // #region create public module registry.
-
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner,
-            address(guardian),
-            admin
-        );
-
-        // #endregion create public module registry.
         // #region create a public mock vault.
 
         ArrakisPublicVaultMock publicVault = new ArrakisPublicVaultMock();
@@ -555,15 +480,6 @@ contract ModulePublicRegistryTest is TestWrapper {
     }
 
     function testCreateModuleNotSameGuardian() public {
-        // #region create public module registry.
-
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner,
-            address(guardian),
-            admin
-        );
-
-        // #endregion create public module registry.
         // #region create a public mock vault.
 
         ArrakisPublicVaultMock publicVault = new ArrakisPublicVaultMock();
@@ -615,15 +531,6 @@ contract ModulePublicRegistryTest is TestWrapper {
     }
 
     function testCreateModule() public {
-        // #region create public module registry.
-
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner,
-            address(guardian),
-            admin
-        );
-
-        // #endregion create public module registry.
         // #region create a public mock vault.
 
         ArrakisPublicVaultMock publicVault = new ArrakisPublicVaultMock();
@@ -675,4 +582,41 @@ contract ModulePublicRegistryTest is TestWrapper {
     }
 
     // #endregion test createModule.
+
+    // #region test beaconsContains.
+
+    function testBeaconsContains() public {
+        // #region whitelist beacons.
+
+        // #region create a upgradeable beacon.
+
+        address beaconAdmin = vm.addr(
+            uint256(keccak256(abi.encode("Beacon Address")))
+        );
+        BeaconImplementation implementation = new BeaconImplementation();
+
+        UpgradeableBeacon beacon = new UpgradeableBeacon(
+            address(implementation),
+            admin
+        );
+
+        // #endregion create a upgradeable beacon.
+
+        address[] memory beacons = new address[](1);
+        beacons[0] = address(beacon);
+
+        vm.prank(owner);
+
+        modulePublicRegistry.whitelistBeacons(beacons);
+
+        beacons = modulePublicRegistry.beacons();
+
+        assertEq(address(beacon), beacons[0]);
+
+        // #endregion whitelist beacons.
+
+        assert(modulePublicRegistry.beaconsContains(address(beacon)));
+    }
+
+    // #endregion test beaconsContains.
 }

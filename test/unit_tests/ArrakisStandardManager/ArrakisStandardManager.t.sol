@@ -35,6 +35,7 @@ import {GuardianMock} from "./mocks/GuardianMock.sol";
 import {ArrakisMetaVaultFactoryMock} from "./mocks/ArrakisMetaVaultFactoryMock.sol";
 import {ArrakisMetaVaultMock} from "./mocks/ArrakisMetaVaultMock.sol";
 import {LpModuleMock} from "./mocks/LpModuleMock.sol";
+import {OracleMock} from "./mocks/OracleMock.sol";
 
 // #endregion mock contracts.
 
@@ -1543,6 +1544,174 @@ contract ArrakisStandardManagerTest is TestWrapper {
         assertEq(IERC20(USDC).balanceOf(usdcReceiver), 2000e6);
     }
 
+    function testWithdrawManagerBalanceETHAsToken0() public {
+        // #region init management.
+
+        uint24 maxDeviation = TEN_PERCENT; // 10%
+        uint256 cooldownPeriod = 60; // 60 seconds.
+        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        uint24 maxSlippagePIPS = TEN_PERCENT;
+
+        // #region create module.
+
+        LpModuleMock module = new LpModuleMock();
+
+        // #endregion create module.
+
+        // #region create vault.
+
+        ArrakisMetaVaultMock vault = new ArrakisMetaVaultMock();
+        vault.setManager(address(manager));
+        vault.setModule(address(module));
+        vault.setTokenOAndToken1(NATIVE_COIN, WETH);
+
+        // #endregion create vault.
+
+        // #region create oracle.
+
+        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+
+        // #endregion create oracle.
+
+        // #region set params.
+
+        SetupParams memory params = SetupParams({
+            vault: address(vault),
+            oracle: IOracleWrapper(oracle),
+            maxDeviation: maxDeviation,
+            cooldownPeriod: cooldownPeriod,
+            executor: executor,
+            stratAnnouncer: stratAnnouncer,
+            maxSlippagePIPS: maxSlippagePIPS
+        });
+
+        // #endregion set params.
+
+        // #region call through the factory initManagement.
+
+        vm.prank(factory);
+        manager.initManagement(params);
+
+        // #endregion call through the factory initManagement.
+
+        address usdcReceiver = vm.addr(
+            uint256(keccak256(abi.encode("USDC Receiver")))
+        );
+
+        // #endregion init management.
+
+        // #region mock usdc fees on module.
+
+        module.setToken0AndToken1(NATIVE_COIN, WETH);
+        module.setManager(address(manager));
+        vm.deal(address(module), 1 ether);
+
+        // #endregion mock usdc fees on module.
+
+        assertEq(defaultReceiver.balance, 0);
+
+        vm.prank(owner);
+
+        uint256 g = gasleft();
+
+        (uint256 ethManagerFee, ) = manager.withdrawManagerBalance(
+            address(vault)
+        );
+
+        console.logString("Withdraw manager balances, only eth withdrawal (gas): ");
+        console.logUint(g - gasleft());
+
+        assertEq(defaultReceiver.balance, ethManagerFee);
+        assertEq(defaultReceiver.balance, 1 ether);
+    }
+
+    function testWithdrawManagerBalanceETHAsToken1() public {
+        // #region init management.
+
+        uint24 maxDeviation = TEN_PERCENT; // 10%
+        uint256 cooldownPeriod = 60; // 60 seconds.
+        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        uint24 maxSlippagePIPS = TEN_PERCENT;
+
+        // #region create module.
+
+        LpModuleMock module = new LpModuleMock();
+
+        // #endregion create module.
+
+        // #region create vault.
+
+        ArrakisMetaVaultMock vault = new ArrakisMetaVaultMock();
+        vault.setManager(address(manager));
+        vault.setModule(address(module));
+        vault.setTokenOAndToken1(USDC, NATIVE_COIN);
+
+        // #endregion create vault.
+
+        // #region create oracle.
+
+        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+
+        // #endregion create oracle.
+
+        // #region set params.
+
+        SetupParams memory params = SetupParams({
+            vault: address(vault),
+            oracle: IOracleWrapper(oracle),
+            maxDeviation: maxDeviation,
+            cooldownPeriod: cooldownPeriod,
+            executor: executor,
+            stratAnnouncer: stratAnnouncer,
+            maxSlippagePIPS: maxSlippagePIPS
+        });
+
+        // #endregion set params.
+
+        // #region call through the factory initManagement.
+
+        vm.prank(factory);
+        manager.initManagement(params);
+
+        // #endregion call through the factory initManagement.
+
+        address usdcReceiver = vm.addr(
+            uint256(keccak256(abi.encode("USDC Receiver")))
+        );
+
+        // #endregion init management.
+
+        // #region mock usdc fees on module.
+
+        module.setToken0AndToken1(USDC, NATIVE_COIN);
+        module.setManager(address(manager));
+        vm.deal(address(module), 1 ether);
+
+        // #endregion mock usdc fees on module.
+
+        assertEq(defaultReceiver.balance, 0);
+
+        vm.prank(owner);
+
+        uint256 g = gasleft();
+
+        (, uint256 ethManagerFee) = manager.withdrawManagerBalance(
+            address(vault)
+        );
+
+        console.logString("Withdraw manager balances, only eth withdrawal (gas): ");
+        console.logUint(g - gasleft());
+
+        assertEq(defaultReceiver.balance, ethManagerFee);
+        assertEq(defaultReceiver.balance, 1 ether);
+    }
+
     function testWithdrawManagerBalanceUSDCWETH() public {
         // #region init management.
 
@@ -1780,7 +1949,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         manager.setModule(address(vault), anotherModule, payloads);
 
-        assertEq(vault.module(), anotherModule);
+        assertEq(address(vault.module()), anotherModule);
     }
 
     // #endregion test setModule.
@@ -2600,4 +2769,846 @@ contract ArrakisStandardManagerTest is TestWrapper {
     }
 
     // #endregion test updateVaultInfo.
+
+    // #region test rebalance.
+
+    function testRebalanceOnlyWhitelistedVault() public {
+        address vault = vm.addr(uint256(keccak256(abi.encode("Meta Vault"))));
+        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+
+        vm.expectRevert(abi.encodeWithSelector(IArrakisStandardManager.NotWhitelistedVault.selector, vault));
+        vm.prank(executor);
+
+        bytes[] memory rebalancePayloads = new bytes[](0);
+
+        manager.rebalance(vault, rebalancePayloads);
+    }
+
+    function testRebalanceNotExecutor() public {
+        // #region init management of vault.
+
+        // #region init management.
+
+        uint24 maxDeviation = TEN_PERCENT; // 10%
+        uint256 cooldownPeriod = 60; // 60 seconds.
+        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        uint24 maxSlippagePIPS = TEN_PERCENT;
+        ArrakisMetaVaultMock vault;
+
+        {
+            // #region create module.
+
+            LpModuleMock module = new LpModuleMock();
+
+            // #endregion create module.
+
+            // #region create vault.
+
+            vault = new ArrakisMetaVaultMock();
+            vault.setManager(address(manager));
+            vault.setModule(address(module));
+
+            // #endregion create vault.
+        }
+
+        // #region create oracle.
+
+        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+
+        // #endregion create oracle.
+
+        {
+            // #region set params.
+
+            SetupParams memory params = SetupParams({
+                vault: address(vault),
+                oracle: IOracleWrapper(oracle),
+                maxDeviation: maxDeviation,
+                cooldownPeriod: cooldownPeriod,
+                executor: executor,
+                stratAnnouncer: stratAnnouncer,
+                maxSlippagePIPS: maxSlippagePIPS
+            });
+
+            // #endregion set params.
+
+            // #region call through the factory initManagement.
+
+            vm.prank(factory);
+            manager.initManagement(params);
+
+            // #endregion call through the factory initManagement.
+        }
+
+        // #endregion init management.
+
+        // #region assertions.
+
+        (
+            ,
+            uint256 actualCooldownPeriod,
+            IOracleWrapper actualOracle,
+            uint24 actualMaxDeviation,
+            address actualExecutor,
+            address actualStratAnnouncer,
+            uint24 actualMaxSlippagePIPS,
+            uint24 actualManagerFeePIPS
+        ) = manager.vaultInfo(address(vault));
+
+        assertEq(address(actualOracle), oracle);
+        assertEq(actualMaxDeviation, maxDeviation);
+        assertEq(actualCooldownPeriod, cooldownPeriod);
+        assertEq(actualExecutor, executor);
+        assertEq(actualStratAnnouncer, stratAnnouncer);
+        assertEq(actualMaxSlippagePIPS, maxSlippagePIPS);
+        assertEq(actualManagerFeePIPS, defaultFeePIPS);
+
+        // #endregion assertions.
+
+        // #endregion init management of vault.
+
+        address notExecutor = vm.addr(uint256(keccak256(abi.encode("Not Executor"))));
+
+        vm.expectRevert(IArrakisStandardManager.NotExecutor.selector);
+        vm.prank(notExecutor);
+
+        bytes[] memory rebalancePayloads = new bytes[](0);
+
+        manager.rebalance(address(vault), rebalancePayloads);
+    }
+
+    function testRebalanceCallFailed() public {
+        // #region init management of vault.
+
+        // #region init management.
+
+        uint24 maxDeviation = TEN_PERCENT; // 10%
+        uint256 cooldownPeriod = 60; // 60 seconds.
+        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        uint24 maxSlippagePIPS = TEN_PERCENT;
+        ArrakisMetaVaultMock vault;
+
+        {
+            // #region create module.
+
+            LpModuleMock module = new LpModuleMock();
+            module.setToken0AndToken1(USDC, NATIVE_COIN);
+            deal(USDC, address(module), 2000e6);
+            deal(address(module), 1 ether);
+
+            // #endregion create module.
+
+            // #region create vault.
+
+            vault = new ArrakisMetaVaultMock();
+            vault.setManager(address(manager));
+            vault.setModule(address(module));
+            vault.setTokenOAndToken1(USDC, NATIVE_COIN);
+
+            // #endregion create vault.
+        }
+
+        // #region create oracle.
+
+        address oracle = address(new OracleMock());
+
+        // #endregion create oracle.
+
+        {
+            // #region set params.
+
+            SetupParams memory params = SetupParams({
+                vault: address(vault),
+                oracle: IOracleWrapper(oracle),
+                maxDeviation: maxDeviation,
+                cooldownPeriod: cooldownPeriod,
+                executor: executor,
+                stratAnnouncer: stratAnnouncer,
+                maxSlippagePIPS: maxSlippagePIPS
+            });
+
+            // #endregion set params.
+
+            // #region call through the factory initManagement.
+
+            vm.prank(factory);
+            manager.initManagement(params);
+
+            // #endregion call through the factory initManagement.
+        }
+
+        // #endregion init management.
+
+        // #region assertions.
+
+        (
+            ,
+            uint256 actualCooldownPeriod,
+            IOracleWrapper actualOracle,
+            uint24 actualMaxDeviation,
+            address actualExecutor,
+            address actualStratAnnouncer,
+            uint24 actualMaxSlippagePIPS,
+            uint24 actualManagerFeePIPS
+        ) = manager.vaultInfo(address(vault));
+
+        assertEq(address(actualOracle), oracle);
+        assertEq(actualMaxDeviation, maxDeviation);
+        assertEq(actualCooldownPeriod, cooldownPeriod);
+        assertEq(actualExecutor, executor);
+        assertEq(actualStratAnnouncer, stratAnnouncer);
+        assertEq(actualMaxSlippagePIPS, maxSlippagePIPS);
+        assertEq(actualManagerFeePIPS, defaultFeePIPS);
+
+        // #endregion assertions.
+
+        // #endregion init management of vault.
+        
+        bytes[] memory rebalancePayloads = new bytes[](1);
+        rebalancePayloads[0] = abi.encodeWithSelector(LpModuleMock.thirdRebalanceFunction.selector);
+
+        vm.prank(executor);
+        vm.expectRevert(abi.encodeWithSelector(IArrakisStandardManager.CallFailed.selector, rebalancePayloads[0]));
+
+        manager.rebalance(address(vault), rebalancePayloads);
+    }
+
+    function testRebalanceOverMaxSlippage() public {
+        // #region init management of vault.
+
+        // #region init management.
+
+        uint24 maxDeviation = TEN_PERCENT; // 10%
+        uint256 cooldownPeriod = 60; // 60 seconds.
+        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        uint24 maxSlippagePIPS = TEN_PERCENT;
+        ArrakisMetaVaultMock vault;
+
+        {
+            // #region create module.
+
+            address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            LpModuleMock module = new LpModuleMock();
+            module.setToken0AndToken1(USDC, WETH);
+            module.setDepositor(depositor);
+            deal(USDC, address(module), 2000e6);
+            deal(WETH, address(module), 1 ether);
+
+            deal(WETH, depositor, 0.5 ether);
+
+            vm.prank(depositor);
+            IERC20(WETH).approve(address(module), 0.5 ether);
+
+            // #endregion create module.
+
+            // #region create vault.
+
+            vault = new ArrakisMetaVaultMock();
+            vault.setManager(address(manager));
+            vault.setModule(address(module));
+            vault.setTokenOAndToken1(USDC, WETH);
+
+            // #endregion create vault.
+        }
+
+        // #region create oracle.
+
+        address oracle = address(new OracleMock());
+
+        // #endregion create oracle.
+
+        {
+            // #region set params.
+
+            SetupParams memory params = SetupParams({
+                vault: address(vault),
+                oracle: IOracleWrapper(oracle),
+                maxDeviation: maxDeviation,
+                cooldownPeriod: cooldownPeriod,
+                executor: executor,
+                stratAnnouncer: stratAnnouncer,
+                maxSlippagePIPS: maxSlippagePIPS
+            });
+
+            // #endregion set params.
+
+            // #region call through the factory initManagement.
+
+            vm.prank(factory);
+            manager.initManagement(params);
+
+            // #endregion call through the factory initManagement.
+        }
+
+        // #endregion init management.
+
+        // #region assertions.
+
+        (
+            ,
+            uint256 actualCooldownPeriod,
+            IOracleWrapper actualOracle,
+            uint24 actualMaxDeviation,
+            address actualExecutor,
+            address actualStratAnnouncer,
+            uint24 actualMaxSlippagePIPS,
+            uint24 actualManagerFeePIPS
+        ) = manager.vaultInfo(address(vault));
+
+        assertEq(address(actualOracle), oracle);
+        assertEq(actualMaxDeviation, maxDeviation);
+        assertEq(actualCooldownPeriod, cooldownPeriod);
+        assertEq(actualExecutor, executor);
+        assertEq(actualStratAnnouncer, stratAnnouncer);
+        assertEq(actualMaxSlippagePIPS, maxSlippagePIPS);
+        assertEq(actualManagerFeePIPS, defaultFeePIPS);
+
+        // #endregion assertions.
+
+        // #endregion init management of vault.
+        
+        bytes[] memory rebalancePayloads = new bytes[](2);
+        rebalancePayloads[0] = abi.encodeWithSelector(LpModuleMock.firstRebalanceFunction.selector,  0.0005 ether);
+        rebalancePayloads[1] = abi.encodeWithSelector(LpModuleMock.secondRebalanceFunction.selector);
+
+        vm.prank(executor);
+        vm.expectRevert(IArrakisStandardManager.OverMaxSlippage.selector);
+
+        manager.rebalance(address(vault), rebalancePayloads);
+    }
+
+    function testRebalance() public {
+        // #region init management of vault.
+
+        // #region init management.
+
+        uint24 maxDeviation = TEN_PERCENT; // 10%
+        uint256 cooldownPeriod = 60; // 60 seconds.
+        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        uint24 maxSlippagePIPS = TEN_PERCENT;
+        ArrakisMetaVaultMock vault;
+
+        {
+            // #region create module.
+
+            address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            LpModuleMock module = new LpModuleMock();
+            module.setToken0AndToken1(USDC, WETH);
+            module.setDepositor(depositor);
+            deal(USDC, address(module), 2000e6);
+            deal(WETH, address(module), 1 ether);
+
+            deal(WETH, depositor, 0.5 ether);
+
+            vm.prank(depositor);
+            IERC20(WETH).approve(address(module), 0.5 ether);
+
+            // #endregion create module.
+
+            // #region create vault.
+
+            vault = new ArrakisMetaVaultMock();
+            vault.setManager(address(manager));
+            vault.setModule(address(module));
+            vault.setTokenOAndToken1(USDC, WETH);
+
+            // #endregion create vault.
+        }
+
+        // #region create oracle.
+
+        address oracle = address(new OracleMock());
+
+        // #endregion create oracle.
+
+        {
+            // #region set params.
+
+            SetupParams memory params = SetupParams({
+                vault: address(vault),
+                oracle: IOracleWrapper(oracle),
+                maxDeviation: maxDeviation,
+                cooldownPeriod: cooldownPeriod,
+                executor: executor,
+                stratAnnouncer: stratAnnouncer,
+                maxSlippagePIPS: maxSlippagePIPS
+            });
+
+            // #endregion set params.
+
+            // #region call through the factory initManagement.
+
+            vm.prank(factory);
+            manager.initManagement(params);
+
+            // #endregion call through the factory initManagement.
+        }
+
+        // #endregion init management.
+
+        // #region assertions.
+
+        (
+            ,
+            uint256 actualCooldownPeriod,
+            IOracleWrapper actualOracle,
+            uint24 actualMaxDeviation,
+            address actualExecutor,
+            address actualStratAnnouncer,
+            uint24 actualMaxSlippagePIPS,
+            uint24 actualManagerFeePIPS
+        ) = manager.vaultInfo(address(vault));
+
+        assertEq(address(actualOracle), oracle);
+        assertEq(actualMaxDeviation, maxDeviation);
+        assertEq(actualCooldownPeriod, cooldownPeriod);
+        assertEq(actualExecutor, executor);
+        assertEq(actualStratAnnouncer, stratAnnouncer);
+        assertEq(actualMaxSlippagePIPS, maxSlippagePIPS);
+        assertEq(actualManagerFeePIPS, defaultFeePIPS);
+
+        // #endregion assertions.
+
+        // #endregion init management of vault.
+        
+        bytes[] memory rebalancePayloads = new bytes[](1);
+        rebalancePayloads[0] = abi.encodeWithSelector(LpModuleMock.firstRebalanceFunction.selector,  0.0005 ether);
+
+        vm.prank(executor);
+
+        manager.rebalance(address(vault), rebalancePayloads);
+    }
+
+    function testRebalanceTimeNotPassed() public {
+        // #region init management of vault.
+
+        // #region init management.
+
+        uint24 maxDeviation = TEN_PERCENT; // 10%
+        uint256 cooldownPeriod = 60; // 60 seconds.
+        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        uint24 maxSlippagePIPS = TEN_PERCENT;
+        ArrakisMetaVaultMock vault;
+
+        {
+            // #region create module.
+
+            address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            LpModuleMock module = new LpModuleMock();
+            module.setToken0AndToken1(USDC, WETH);
+            module.setDepositor(depositor);
+            deal(USDC, address(module), 2000e6);
+            deal(WETH, address(module), 1 ether);
+
+            deal(WETH, depositor, 0.5 ether);
+
+            vm.prank(depositor);
+            IERC20(WETH).approve(address(module), 0.5 ether);
+
+            // #endregion create module.
+
+            // #region create vault.
+
+            vault = new ArrakisMetaVaultMock();
+            vault.setManager(address(manager));
+            vault.setModule(address(module));
+            vault.setTokenOAndToken1(USDC, WETH);
+
+            // #endregion create vault.
+        }
+
+        // #region create oracle.
+
+        address oracle = address(new OracleMock());
+
+        // #endregion create oracle.
+
+        {
+            // #region set params.
+
+            SetupParams memory params = SetupParams({
+                vault: address(vault),
+                oracle: IOracleWrapper(oracle),
+                maxDeviation: maxDeviation,
+                cooldownPeriod: cooldownPeriod,
+                executor: executor,
+                stratAnnouncer: stratAnnouncer,
+                maxSlippagePIPS: maxSlippagePIPS
+            });
+
+            // #endregion set params.
+
+            // #region call through the factory initManagement.
+
+            vm.prank(factory);
+            manager.initManagement(params);
+
+            // #endregion call through the factory initManagement.
+        }
+
+        // #endregion init management.
+
+        // #region assertions.
+
+        (
+            ,
+            uint256 actualCooldownPeriod,
+            IOracleWrapper actualOracle,
+            uint24 actualMaxDeviation,
+            address actualExecutor,
+            address actualStratAnnouncer,
+            uint24 actualMaxSlippagePIPS,
+            uint24 actualManagerFeePIPS
+        ) = manager.vaultInfo(address(vault));
+
+        assertEq(address(actualOracle), oracle);
+        assertEq(actualMaxDeviation, maxDeviation);
+        assertEq(actualCooldownPeriod, cooldownPeriod);
+        assertEq(actualExecutor, executor);
+        assertEq(actualStratAnnouncer, stratAnnouncer);
+        assertEq(actualMaxSlippagePIPS, maxSlippagePIPS);
+        assertEq(actualManagerFeePIPS, defaultFeePIPS);
+
+        // #endregion assertions.
+
+        // #endregion init management of vault.
+        
+        bytes[] memory rebalancePayloads = new bytes[](1);
+        rebalancePayloads[0] = abi.encodeWithSelector(LpModuleMock.firstRebalanceFunction.selector,  0.0005 ether);
+
+        vm.startPrank(executor);
+
+        manager.rebalance(address(vault), rebalancePayloads);
+
+        vm.expectRevert(IArrakisStandardManager.TimeNotPassed.selector);
+
+        manager.rebalance(address(vault), rebalancePayloads);
+
+        vm.stopPrank();
+    }
+
+    // #endregion test rebalance.
+
+    // #region test initializedVaults.
+
+    function testInitializedVaultsStartIndexLtEndIndex() public {
+        uint256 startIndex = 10;
+        uint256 endIndex = 1;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisStandardManager.StartIndexLtEndIndex.selector,
+                startIndex, endIndex)
+        );
+
+        manager.initializedVaults(startIndex, endIndex);
+    }
+
+    function testInitializedVaultsEndIndexGtNbOfVaults() public {
+        uint256 startIndex = 0;
+        uint256 endIndex = 10;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisStandardManager.EndIndexGtNbOfVaults.selector,
+                endIndex, 0)
+        );
+
+        manager.initializedVaults(startIndex, endIndex);
+    }
+
+    function testInitializedVaults() public {
+        // #region init management.
+
+        uint24 maxDeviation = TEN_PERCENT; // 10%
+        uint256 cooldownPeriod = 60; // 60 seconds.
+        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        uint24 maxSlippagePIPS = TEN_PERCENT;
+        ArrakisMetaVaultMock vault;
+
+        {
+            // #region create module.
+
+            LpModuleMock module = new LpModuleMock();
+
+            // #endregion create module.
+
+            // #region create vault.
+
+            vault = new ArrakisMetaVaultMock();
+            vault.setManager(address(manager));
+            vault.setModule(address(module));
+
+            // #endregion create vault.
+        }
+
+        // #region create oracle.
+
+        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+
+        // #endregion create oracle.
+
+        {
+            // #region set params.
+
+            SetupParams memory params = SetupParams({
+                vault: address(vault),
+                oracle: IOracleWrapper(oracle),
+                maxDeviation: maxDeviation,
+                cooldownPeriod: cooldownPeriod,
+                executor: executor,
+                stratAnnouncer: stratAnnouncer,
+                maxSlippagePIPS: maxSlippagePIPS
+            });
+
+            // #endregion set params.
+
+            // #region call through the factory initManagement.
+
+            vm.prank(factory);
+            manager.initManagement(params);
+
+            // #endregion call through the factory initManagement.
+        }
+
+        // #endregion init management.
+
+        // #region assertions.
+
+        (
+            ,
+            uint256 actualCooldownPeriod,
+            IOracleWrapper actualOracle,
+            uint24 actualMaxDeviation,
+            address actualExecutor,
+            address actualStratAnnouncer,
+            uint24 actualMaxSlippagePIPS,
+            uint24 actualManagerFeePIPS
+        ) = manager.vaultInfo(address(vault));
+
+        assertEq(address(actualOracle), oracle);
+        assertEq(actualMaxDeviation, maxDeviation);
+        assertEq(actualCooldownPeriod, cooldownPeriod);
+        assertEq(actualExecutor, executor);
+        assertEq(actualStratAnnouncer, stratAnnouncer);
+        assertEq(actualMaxSlippagePIPS, maxSlippagePIPS);
+        assertEq(actualManagerFeePIPS, defaultFeePIPS);
+
+        // #endregion assertions.
+
+        uint256 startIndex = 0;
+        uint256 endIndex = 1;
+
+        address[] memory vaults = manager.initializedVaults(startIndex, endIndex);
+
+        assertEq(vaults.length, 1);
+        assertEq(vaults[0], address(vault));
+    }
+
+    // #endregion test initializedVaults.
+
+    // #region test isManaged.
+
+    function testIsManaged() public {
+                // #region init management.
+
+        uint24 maxDeviation = TEN_PERCENT; // 10%
+        uint256 cooldownPeriod = 60; // 60 seconds.
+        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        uint24 maxSlippagePIPS = TEN_PERCENT;
+        ArrakisMetaVaultMock vault;
+
+        {
+            // #region create module.
+
+            LpModuleMock module = new LpModuleMock();
+
+            // #endregion create module.
+
+            // #region create vault.
+
+            vault = new ArrakisMetaVaultMock();
+            vault.setManager(address(manager));
+            vault.setModule(address(module));
+
+            // #endregion create vault.
+        }
+
+        // #region create oracle.
+
+        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+
+        // #endregion create oracle.
+
+        {
+            // #region set params.
+
+            SetupParams memory params = SetupParams({
+                vault: address(vault),
+                oracle: IOracleWrapper(oracle),
+                maxDeviation: maxDeviation,
+                cooldownPeriod: cooldownPeriod,
+                executor: executor,
+                stratAnnouncer: stratAnnouncer,
+                maxSlippagePIPS: maxSlippagePIPS
+            });
+
+            // #endregion set params.
+
+            // #region call through the factory initManagement.
+
+            vm.prank(factory);
+            manager.initManagement(params);
+
+            // #endregion call through the factory initManagement.
+        }
+
+        // #endregion init management.
+
+        // #region assertions.
+
+        (
+            ,
+            uint256 actualCooldownPeriod,
+            IOracleWrapper actualOracle,
+            uint24 actualMaxDeviation,
+            address actualExecutor,
+            address actualStratAnnouncer,
+            uint24 actualMaxSlippagePIPS,
+            uint24 actualManagerFeePIPS
+        ) = manager.vaultInfo(address(vault));
+
+        assertEq(address(actualOracle), oracle);
+        assertEq(actualMaxDeviation, maxDeviation);
+        assertEq(actualCooldownPeriod, cooldownPeriod);
+        assertEq(actualExecutor, executor);
+        assertEq(actualStratAnnouncer, stratAnnouncer);
+        assertEq(actualMaxSlippagePIPS, maxSlippagePIPS);
+        assertEq(actualManagerFeePIPS, defaultFeePIPS);
+
+        // #endregion assertions.
+
+        assert(manager.isManaged(address(vault)));
+    }
+
+    // #endregion test isManaged.
+
+    // #region test numInitializedVaults.
+
+    function testNumInitializedVaults() public {
+                // #region init management.
+
+        uint24 maxDeviation = TEN_PERCENT; // 10%
+        uint256 cooldownPeriod = 60; // 60 seconds.
+        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        uint24 maxSlippagePIPS = TEN_PERCENT;
+        ArrakisMetaVaultMock vault;
+
+        {
+            // #region create module.
+
+            LpModuleMock module = new LpModuleMock();
+
+            // #endregion create module.
+
+            // #region create vault.
+
+            vault = new ArrakisMetaVaultMock();
+            vault.setManager(address(manager));
+            vault.setModule(address(module));
+
+            // #endregion create vault.
+        }
+
+        // #region create oracle.
+
+        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+
+        // #endregion create oracle.
+
+        {
+            // #region set params.
+
+            SetupParams memory params = SetupParams({
+                vault: address(vault),
+                oracle: IOracleWrapper(oracle),
+                maxDeviation: maxDeviation,
+                cooldownPeriod: cooldownPeriod,
+                executor: executor,
+                stratAnnouncer: stratAnnouncer,
+                maxSlippagePIPS: maxSlippagePIPS
+            });
+
+            // #endregion set params.
+
+            // #region call through the factory initManagement.
+
+            vm.prank(factory);
+            manager.initManagement(params);
+
+            // #endregion call through the factory initManagement.
+        }
+
+        // #endregion init management.
+
+        // #region assertions.
+
+        (
+            ,
+            uint256 actualCooldownPeriod,
+            IOracleWrapper actualOracle,
+            uint24 actualMaxDeviation,
+            address actualExecutor,
+            address actualStratAnnouncer,
+            uint24 actualMaxSlippagePIPS,
+            uint24 actualManagerFeePIPS
+        ) = manager.vaultInfo(address(vault));
+
+        assertEq(address(actualOracle), oracle);
+        assertEq(actualMaxDeviation, maxDeviation);
+        assertEq(actualCooldownPeriod, cooldownPeriod);
+        assertEq(actualExecutor, executor);
+        assertEq(actualStratAnnouncer, stratAnnouncer);
+        assertEq(actualMaxSlippagePIPS, maxSlippagePIPS);
+        assertEq(actualManagerFeePIPS, defaultFeePIPS);
+
+        // #endregion assertions.
+
+        assertEq(manager.numInitializedVaults(), 1);
+    }
+
+    // #endregion test numInitializedVaults.
+
+    // #region test getInitManagementSelector.
+
+    function testGetInitManagementSelector() public {
+        assertEq(manager.getInitManagementSelector(), IArrakisStandardManager.initManagement.selector);
+    }
+
+    // #endregion test getInitManagementSelector.
 }

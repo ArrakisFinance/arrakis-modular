@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-contract SovereignALMMock {
+contract SovereignALMBuggy3Mock {
     address public token0;
     address public token1;
 
@@ -26,7 +26,7 @@ contract SovereignALMMock {
         uint160,
         uint160
     ) external {
-        IERC20(token0).transferFrom(msg.sender, address(this), amount0);
+        IERC20(token0).transferFrom(msg.sender, address(this), amount0/ 2);
         IERC20(token1).transferFrom(msg.sender, address(this), amount1);
     }
 
@@ -39,14 +39,5 @@ contract SovereignALMMock {
     ) external {
         IERC20(token0).transfer(receiver, amount0);
         IERC20(token1).transfer(receiver, amount1);
-    }
-
-    function setPriceBounds(
-        uint128 _sqrtPriceLowX96,
-        uint128 _sqrtPriceHighX96,
-        uint160 _expectedSqrtSpotPriceUpperX96,
-        uint160 _expectedSqrtSpotPriceLowerX96
-    ) external {
-        
     }
 }

@@ -4,12 +4,15 @@ pragma solidity ^0.8.20;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IOwnable} from "../../../../src/interfaces/IOwnable.sol";
+import {IArrakisLPModule} from "../../../../src/interfaces/IArrakisLPModule.sol";
+
+import {LpModuleMock} from "./LpModuleMock.sol";
 
 contract ArrakisMetaVaultMock is IOwnable {
 
     address public _owner;
 
-    address public module;
+    IArrakisLPModule public module;
     address public manager;
 
     IERC20 public token0;
@@ -21,11 +24,11 @@ contract ArrakisMetaVaultMock is IOwnable {
     }
 
     function setModule(address module_) external {
-        module = module_;
+        module = IArrakisLPModule(module_);
     }
 
     function setModule(address module_, bytes[] calldata) external {
-        module = module_;
+        module = IArrakisLPModule(module_);
     }
 
     function setManager(address manager_) external {
@@ -38,5 +41,9 @@ contract ArrakisMetaVaultMock is IOwnable {
 
     function owner() external view returns(address) {
         return _owner;
+    }
+
+    function totalUnderlying() external view returns (uint256 amount0, uint256 amount1) {
+        return module.totalUnderlying();
     }
 }

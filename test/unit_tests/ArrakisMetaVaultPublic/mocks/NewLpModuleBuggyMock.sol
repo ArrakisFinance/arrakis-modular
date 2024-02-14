@@ -7,7 +7,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-contract LpModuleMock {
+contract NewLpModuleBuggyMock {
     IERC20 public token0;
     IERC20 public token1;
 
@@ -24,17 +24,6 @@ contract LpModuleMock {
     uint256 public someValue;
 
     // #endregion testing.
-
-    function fund(
-        address depositor_,
-        uint256 amount0_,
-        uint256 amount1_
-    ) external {
-        if (amount0_ > 0)
-            token0.transferFrom(depositor_, address(this), amount0_);
-        if (amount1_ > 0)
-            token1.transferFrom(depositor_, address(this), amount1_);
-    }
 
     function deposit(
         address depositor_,
@@ -82,7 +71,7 @@ contract LpModuleMock {
     }
 
     function smallCall(uint256 someValue_) external {
-        someValue = someValue_;
+        revert("Something go wrong");
     }
 
     function setManagerBalance0AndBalance1(

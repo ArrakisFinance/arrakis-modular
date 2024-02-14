@@ -70,7 +70,7 @@ contract LpModuleMock {
         manager = manager_;
     }
 
-    function testCall(uint256 someValue_) external {
+    function smallCall(uint256 someValue_) external {
         someValue = someValue_;
     }
 

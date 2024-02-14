@@ -32,7 +32,6 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
 // #region uniswap.
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
-
 // #endregion uniswap.
 // NOTE admin and owner can be the same address on transparent proxy.
 contract ArrakisStandardManager is
@@ -133,6 +132,7 @@ contract ArrakisStandardManager is
         factory = factory_;
 
         emit LogSetDefaultReceiver(address(0), defaultReceiver_);
+        emit LogSetFactory(factory_);
     }
 
     // #region owner settable functions.
@@ -302,6 +302,12 @@ contract ArrakisStandardManager is
         address vault_,
         bytes[] calldata payloads_
     ) external nonReentrant whenNotPaused onlyWhitelistedVault(vault_) {
+        VaultInfo memory info = vaultInfo[vault_];
+
+        if (info.executor != msg.sender) revert NotExecutor();
+        if (info.cooldownPeriod + info.lastRebalance >= block.timestamp)
+            revert TimeNotPassed();
+
         IArrakisLPModule module = IArrakisMetaVault(vault_).module();
 
         // #region get current value of the vault.
@@ -312,12 +318,6 @@ contract ArrakisStandardManager is
         uint8 token0Decimals = token0 == nativeToken
             ? nativeTokenDecimals
             : IERC20Metadata(token0).decimals();
-
-        VaultInfo memory info = vaultInfo[vault_];
-
-        if (info.executor != msg.sender) revert NotExecutor();
-        if (info.cooldownPeriod + info.lastRebalance >= block.timestamp)
-            revert TimeNotPassed();
 
         module.validateRebalance(info.oracle, info.maxDeviation);
 
@@ -352,7 +352,7 @@ contract ArrakisStandardManager is
             uint256 vaultInToken1AfterRebalance = FullMath.mulDiv(
                 amount0,
                 price0,
-                token0Decimals
+                10 ** token0Decimals
             ) + amount1;
 
             uint256 currentSlippage = vaultInToken1BeforeRebalance >
@@ -395,17 +395,6 @@ contract ArrakisStandardManager is
         IArrakisMetaVault(vault_).setModule(module_, payloads_);
 
         emit LogSetModule(vault_, module_, payloads_);
-    }
-
-    /// @notice function used to set factory.
-    /// @param factory_ address of the meta vault factory.
-    function setFactory(address factory_) external onlyOwner {
-        if (factory != address(0)) revert FactoryAlreadySet();
-        if (factory_ == address(0)) revert AddressZero();
-
-        factory = factory_;
-
-        emit LogSetFactory(factory);
     }
 
     // #region initManagements.

@@ -7,6 +7,7 @@ import {TestWrapper} from "../../utils/TestWrapper.sol";
 
 import {GuardianMock} from "./mocks/GuardianMock.sol";
 import {ArrakisPublicVaultMock} from "./mocks/ArrakisPublicVaultMock.sol";
+import {ArrakisPrivateVaultMock} from "./mocks/ArrakisPrivateVaultMock.sol";
 import {BeaconImplementation} from "./mocks/BeaconImplementation.sol";
 
 import {ModulePrivateRegistry} from "../../../src/ModulePrivateRegistry.sol";
@@ -45,11 +46,11 @@ contract ModulePrivateRegistryTest is TestWrapper {
     // #region test create module for private vault.
 
     function testCreateModuleForOnlyPrivateVault() public {
-        // #region create a private mock vault.
+        // #region create a public mock vault.
 
         ArrakisPublicVaultMock publicVault = new ArrakisPublicVaultMock();
 
-        // #endregion create a private mock vault.
+        // #endregion create a public mock vault.
 
         // #region create module payload.
 
@@ -88,6 +89,53 @@ contract ModulePrivateRegistryTest is TestWrapper {
 
         modulePrivateRegistry.createModule(
             address(publicVault),
+            address(beacon),
+            payload
+        );
+    }
+
+    function testCreateModule() public {
+        // #region create a private mock vault.
+
+        ArrakisPrivateVaultMock privateVault = new ArrakisPrivateVaultMock();
+
+        // #endregion create a private mock vault.
+
+        // #region create module payload.
+
+        bytes memory payload = abi.encodeWithSelector(
+            BeaconImplementation.setGuardianAndMetaVault.selector,
+            pauser,
+            address(privateVault)
+        );
+
+        // #endregion create module payload.
+        // #region create a upgradeable beacon.
+
+        address beaconAdmin = vm.addr(
+            uint256(keccak256(abi.encode("Beacon Address")))
+        );
+        BeaconImplementation implementation = new BeaconImplementation();
+
+        UpgradeableBeacon beacon = new UpgradeableBeacon(
+            address(implementation),
+            admin
+        );
+
+        // #endregion create a upgradeable beacon.
+        // #region whitelist beacon.
+
+        address[] memory beacons = new address[](1);
+        beacons[0] = address(beacon);
+
+        vm.prank(owner);
+
+        modulePrivateRegistry.whitelistBeacons(beacons);
+
+        // #endregion whitelist beacon.
+
+        modulePrivateRegistry.createModule(
+            address(privateVault),
             address(beacon),
             payload
         );

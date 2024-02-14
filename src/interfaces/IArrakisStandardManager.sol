@@ -161,10 +161,6 @@ interface IArrakisStandardManager {
         bytes[] calldata payloads_
     ) external;
 
-    /// @notice function used to set factory.
-    /// @param factory_ address of the meta vault factory.
-    function setFactory(address factory_) external;
-
     /// @notice function used to init management of a meta vault.
     /// @param params_ struct containing all the data for initialize the vault.
     function initManagement(SetupParams calldata params_) external;

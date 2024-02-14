@@ -8,7 +8,7 @@ import {TestWrapper} from "../../utils/TestWrapper.sol";
 import {ArrakisMetaVaultPublic} from "../../../src/ArrakisMetaVaultPublic.sol";
 import {IArrakisMetaVaultPublic} from "../../../src/interfaces/IArrakisMetaVaultPublic.sol";
 import {IArrakisMetaVault} from "../../../src/interfaces/IArrakisMetaVault.sol";
-import {PIPS} from "../../../src/constants/CArrakis.sol";
+import {PIPS, PUBLIC_TYPE} from "../../../src/constants/CArrakis.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -78,7 +78,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
             WETH,
             owner,
             "Arrakis Vault Token",
-            "AVK",
+            "AVT",
             address(moduleRegistry),
             address(manager)
         );
@@ -448,6 +448,48 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         vault.setModule(newModule, payloads);
     }
 
+    function testSetModuleBuggyNewModule() public {
+        // #region initialize.
+
+        vault.initialize(address(module));
+
+        address actualModule = address(vault.module());
+
+        address[] memory whitelistedModules = vault.whitelistedModules();
+
+        assert(whitelistedModules.length == 1);
+        assertEq(whitelistedModules[0], address(module));
+        assertEq(actualModule, address(module));
+
+        // #endregion initialize.
+
+        address[] memory beacons = new address[](1);
+        bytes[] memory datas = new bytes[](1);
+
+        datas[0] = abi.encode(1);
+
+        address beacon = vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+
+        beacons[0] = beacon;
+
+        // #region whitelist module.
+
+        vm.prank(owner);
+        vault.whitelistModules(beacons, datas);
+
+        address newModule = (vault.whitelistedModules())[1];
+
+        // #endregion whitelist module.
+
+        bytes[] memory payloads = new bytes[](1);
+
+        payloads[0] = abi.encodeWithSelector(LpModuleMock.smallCall.selector, 10);
+
+        vm.prank(address(manager));
+        vm.expectRevert(IArrakisMetaVault.CallFailed.selector);
+        vault.setModule(newModule, payloads);
+    }
+
     function testSetModule() public {
         // #region initialize.
 
@@ -483,6 +525,47 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         vm.prank(address(manager));
         vault.setModule(newModule, payloads);
+    }
+
+    function testSetModuleNewModuleWithPayload() public {
+        // #region initialize.
+
+        vault.initialize(address(module));
+
+        address actualModule = address(vault.module());
+
+        address[] memory whitelistedModules = vault.whitelistedModules();
+
+        assert(whitelistedModules.length == 1);
+        assertEq(whitelistedModules[0], address(module));
+        assertEq(actualModule, address(module));
+
+        // #endregion initialize.
+
+        address[] memory beacons = new address[](1);
+        bytes[] memory datas = new bytes[](1);
+
+        address beacon = vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+
+        beacons[0] = beacon;
+
+        // #region whitelist module.
+
+        vm.prank(owner);
+        vault.whitelistModules(beacons, datas);
+
+        address newModule = (vault.whitelistedModules())[1];
+
+        // #endregion whitelist module.
+
+        bytes[] memory payloads = new bytes[](1);
+
+        payloads[0] = abi.encodeWithSelector(LpModuleMock.smallCall.selector, 10);
+
+        vm.prank(address(manager));
+        vault.setModule(newModule, payloads);
+
+        assertEq(LpModuleMock(newModule).someValue(), 10);
     }
 
     // #endregion test setModule functions.
@@ -1127,7 +1210,9 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         // #endregion mint.
         vm.stopPrank();
 
-        address withdrawer = vm.addr(uint256(keccak256(abi.encode("Withdrawer"))));
+        address withdrawer = vm.addr(
+            uint256(keccak256(abi.encode("Withdrawer")))
+        );
         address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
 
         vm.prank(caller);
@@ -1194,7 +1279,9 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion mint.
 
-        address withdrawer = vm.addr(uint256(keccak256(abi.encode("Withdrawer"))));
+        address withdrawer = vm.addr(
+            uint256(keccak256(abi.encode("Withdrawer")))
+        );
 
         vm.expectRevert(IArrakisMetaVaultPublic.BurnOverflow.selector);
         vm.prank(receiver);
@@ -1260,9 +1347,9 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion mint.
 
-        address withdrawer = vm.addr(uint256(keccak256(abi.encode("Withdrawer"))));
-
-        // #endregion mint first.
+        address withdrawer = vm.addr(
+            uint256(keccak256(abi.encode("Withdrawer")))
+        );
 
         vm.prank(receiver);
         vm.expectRevert(IArrakisMetaVaultPublic.BurnZero.selector);
@@ -1329,7 +1416,9 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion mint.
 
-        address withdrawer = vm.addr(uint256(keccak256(abi.encode("Withdrawer"))));
+        address withdrawer = vm.addr(
+            uint256(keccak256(abi.encode("Withdrawer")))
+        );
 
         vm.prank(receiver);
 
@@ -1406,14 +1495,17 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         vm.prank(receiver);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IArrakisMetaVault.AddressZero.selector, "Receiver")
+            abi.encodeWithSelector(
+                IArrakisMetaVault.AddressZero.selector,
+                "Receiver"
+            )
         );
 
         vault.burn(shares, withdrawer);
     }
 
     function testBurn() public {
-                // #region mint.
+        // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
         address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
@@ -1471,7 +1563,9 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion mint.
 
-        address withdrawer = vm.addr(uint256(keccak256(abi.encode("Withdrawer"))));
+        address withdrawer = vm.addr(
+            uint256(keccak256(abi.encode("Withdrawer")))
+        );
 
         vm.prank(receiver);
 
@@ -1484,4 +1578,63 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     }
 
     // #endregion test burn.
+
+    // #region test transferOwnership.
+
+    function testTransferOwnership() public {
+        address newOwner = vm.addr(uint256(keccak256(abi.encode("New Owner"))));
+        vm.expectRevert(IArrakisMetaVault.NotImplemented.selector);
+
+        vault.transferOwnership(newOwner);
+    }
+
+    // #endregion test transferOwnership.
+
+    // #region test renounceOwnership.
+
+    function testRenounceOwnership() public {
+        vm.expectRevert(IArrakisMetaVault.NotImplemented.selector);
+
+        vault.renounceOwnership();
+    }
+
+    // #endregion test renounceOwnership.
+
+    // #region test completeOwnershipHandover.
+
+    function testCompleteOwnershipHandover() public {
+        address newOwner = vm.addr(uint256(keccak256(abi.encode("New Owner"))));
+        vm.expectRevert(IArrakisMetaVault.NotImplemented.selector);
+
+        vault.completeOwnershipHandover(newOwner);
+    }
+
+    // #endregion test renounceOwnership.
+
+    // #region test name.
+
+    function testName() public {
+        string memory name = vault.name();
+        assertEq(name, "Arrakis Vault Token");
+    }
+
+    // #endregion test name.
+
+    // #region test symbol.
+
+    function testSymbol() public {
+        string memory symbol = vault.symbol();
+        assertEq(symbol, "AVT");
+    }
+
+    // #endregion test symbol.
+
+    // #region test vaultType.
+
+    function testVaultType() public {
+        bytes32 vaultType = vault.vaultType();
+        assertEq(vaultType, PUBLIC_TYPE);
+    }
+
+    // #endregion test vaultType.
 }
