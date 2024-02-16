@@ -6,7 +6,7 @@ import {console} from "forge-std/console.sol";
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 // #endregion foundry.
 // #region Valantis Module.
-import {ValantisModule} from "../../../src/modules/ValantisSOTModule.sol";
+import {ValantisModulePublic} from "../../../src/modules/ValantisSOTModulePublic.sol";
 import {IValantisSOTModule} from "../../../src/interfaces/IValantisSOTModule.sol";
 import {IArrakisLPModule} from "../../../src/interfaces/IArrakisLPModule.sol";
 // #endregion Valantis Module.
@@ -14,6 +14,7 @@ import {IArrakisLPModule} from "../../../src/interfaces/IArrakisLPModule.sol";
 // #region openzeppelin.
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 // #endregion openzeppelin.
 
 // #region constants.
@@ -34,6 +35,7 @@ import {GuardianMock} from "./mocks/GuardianMock.sol";
 // #endregion mocks.
 
 import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol"; 
+import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol"; 
 
 contract ValantisSOTModuleTest is TestWrapper {
     // #region constant properties.
@@ -47,7 +49,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
     // #endregion constant properties.
 
-    ValantisModule public module;
+    ValantisModulePublic public module;
     ArrakisMetaVaultMock public metaVault;
     address public manager;
     SovereignPoolMock public sovereignPool;
@@ -57,6 +59,9 @@ contract ValantisSOTModuleTest is TestWrapper {
     address public owner;
     address public pauser;
 
+    uint160 public expectedSqrtSpotPriceUpperX96;
+    uint160 public expectedSqrtSpotPriceLowerX96;
+
     function setUp() public {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
@@ -65,6 +70,13 @@ contract ValantisSOTModuleTest is TestWrapper {
         // #region create oracle.
 
         oracle = new OracleMock();
+        
+        uint256 price0 = oracle.getPrice0();
+        uint256 uPrice0 = FullMath.mulDiv(price0, 10_100, 10_000);
+        uint256 lPrice0 = FullMath.mulDiv(price0, 9_900, 10_000);
+
+        expectedSqrtSpotPriceUpperX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(uPrice0), 2**96, 1));
+        expectedSqrtSpotPriceLowerX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(lPrice0), 2**96, 1));
 
         // #endregion create oracle.
 
@@ -95,7 +107,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         // #region create valantis module.
 
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
         module.initialize(
             address(metaVault),
             address(sovereignPool),
@@ -113,7 +125,7 @@ contract ValantisSOTModuleTest is TestWrapper {
     // #region test constructor.
 
     function testConstructorMetaVaultAddressZero() public {
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
@@ -130,7 +142,7 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testConstructorSovereignPoolAddressZero() public {
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
@@ -147,7 +159,7 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testConstructorSovereignALMAddressZero() public {
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
@@ -164,7 +176,7 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testConstructorInitsAreZeros() public {
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
 
         vm.expectRevert(IArrakisLPModule.InitsAreZeros.selector);
 
@@ -181,7 +193,7 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testConstructorSlippageBiggerThanTenPercent() public {
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
 
         vm.expectRevert(IValantisSOTModule.MaxSlippageGtTenPercent.selector);
 
@@ -198,7 +210,7 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testConstructorOracleAddressZero() public {
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
@@ -215,7 +227,7 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testConstructorGuardianAddressZero() public {
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
@@ -607,7 +619,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
         module.initialize(
             address(metaVault),
             address(sovereignPool),
@@ -656,7 +668,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
         module.initialize(
             address(metaVault),
             address(sovereignPool),
@@ -713,7 +725,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(abi.encodeWithSelector(IArrakisLPModule.OnlyManager.selector, address(this), manager));
 
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, payload);
+        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
     }
 
     function testSwapExpectedMinReturnTooLow() public {
@@ -725,7 +737,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(IValantisSOTModule.ExpectedMinReturnTooLow.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, payload);
+        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
     }
 
     function testSwapExpectedMinReturnTooLow2() public {
@@ -737,7 +749,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(IValantisSOTModule.ExpectedMinReturnTooLow.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, payload);
+        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
     }
 
     function testSwapNotEnoughToken0() public {
@@ -751,7 +763,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(IValantisSOTModule.NotEnoughToken0.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, payload);
+        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
     }
 
     function testSwapNotEnoughToken1() public {
@@ -765,7 +777,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(IValantisSOTModule.NotEnoughToken1.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, payload);
+        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
     }
 
     function testSwapActual0DifferenThanExpected() public {
@@ -773,7 +785,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
         module.initialize(
             address(metaVault),
             address(sovereignPool),
@@ -797,7 +809,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(abi.encodeWithSelector(IValantisSOTModule.Actual0DifferentExpected.selector, amountIn/2, amountIn));
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, payload);
+        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
     }
 
     function testSwapActual1DifferenThanExpected() public {
@@ -805,7 +817,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
         module.initialize(
             address(metaVault),
             address(sovereignPool),
@@ -829,7 +841,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(abi.encodeWithSelector(IValantisSOTModule.Actual1DifferentExpected.selector, amountIn/2, amountIn));
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, payload);
+        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
     }
 
     function testSwapCallFailed() public {
@@ -843,7 +855,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(IValantisSOTModule.SwapCallFailed.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, payload);
+        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
     }
 
     function testSwapZeroForOneSlippageTooHigh() public {
@@ -857,7 +869,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(IValantisSOTModule.SlippageTooHigh.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, payload);
+        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
     }
 
     function testSwapOneForZeroSlippageTooHigh() public {
@@ -871,7 +883,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(IValantisSOTModule.SlippageTooHigh.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, payload);
+        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
     }
 
     function testSwapNotDepositedAllToken0() public {
@@ -879,7 +891,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
         module.initialize(
             address(metaVault),
             address(sovereignPool),
@@ -903,7 +915,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(IValantisSOTModule.NotDepositedAllToken0.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, payload);
+        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
     }
 
     function testSwapNotDepositedAllToken1() public {
@@ -911,7 +923,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModule();
+        module = new ValantisModulePublic();
         module.initialize(
             address(metaVault),
             address(sovereignPool),
@@ -935,7 +947,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(IValantisSOTModule.NotDepositedAllToken1.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, payload);
+        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
     }
 
     function testSwap() public {
@@ -948,7 +960,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(USDC, address(sovereignALM), amountIn);
 
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, payload);
+        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
     }
 
     // #endregion test swap.

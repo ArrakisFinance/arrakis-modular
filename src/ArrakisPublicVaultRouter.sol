@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {IArrakisPublicVaultRouter, AddLiquidityData, SwapAndAddData, RemoveLiquidityData, AddLiquidityPermit2Data, SwapAndAddPermit2Data, RemoveLiquidityPermit2Data} from "./interfaces/IArrakisPublicVaultRouter.sol";
+import {TokenPermissions} from "./structs/SPermit2.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IArrakisMetaVaultPublic} from "./interfaces/IArrakisMetaVaultPublic.sol";
 import {IRouterSwapExecutor} from "./interfaces/IRouterSwapExecutor.sol";
@@ -17,8 +18,9 @@ import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 // #region solady dependencies.
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
-
 // #endregion solady dependencies.
+
+import {console} from "forge-std/console.sol";
 
 contract ArrakisPublicVaultRouter is
     IArrakisPublicVaultRouter,
@@ -288,12 +290,9 @@ contract ArrakisPublicVaultRouter is
         address token0 = IArrakisMetaVault(params_.addData.vault).token0();
         address token1 = IArrakisMetaVault(params_.addData.vault).token1();
 
-        if (token0 == nativeToken || token1 == nativeToken)
-            revert NoNativeToken();
-
         // #endregion checks.
 
-        _permit2Add(params_, amount0, amount1);
+        _permit2Add(params_, token0, token1, amount0, amount1);
 
         _addLiquidity(
             params_.addData.vault,
@@ -339,10 +338,7 @@ contract ArrakisPublicVaultRouter is
         address token1 = IArrakisMetaVault(params_.swapAndAddData.addData.vault)
             .token1();
 
-        if (token0 == nativeToken || token1 == nativeToken)
-            revert NoNativeToken();
-
-        _permit2SwapAndAdd(params_);
+        _permit2SwapAndAdd(params_, token0, token1);
 
         (
             amount0,
@@ -385,6 +381,29 @@ contract ArrakisPublicVaultRouter is
 
     receive() external payable {}
 
+    // #region external view functions.
+
+    /// @notice getMintAmounts used to get the shares we can mint from some max amounts.
+    /// @param vault_ meta vault address.
+    /// @param maxAmount0_ maximum amount of token0 user want to contribute.
+    /// @param maxAmount1_ maximum amount of token1 user want to contribute.
+    /// @return shareToMint maximum amount of share user can get for 'maxAmount0_' and 'maxAmount1_'.
+    /// @return amount0ToDeposit amount of token0 user should deposit into the vault for minting 'shareToMint'.
+    /// @return amount1ToDeposit amount of token1 user should deposit into the vault for minting 'shareToMint'.
+    function getMintAmounts(
+        address vault_,
+        uint256 maxAmount0_,
+        uint256 maxAmount1_
+    ) external view returns (
+            uint256 shareToMint,
+            uint256 amount0ToDeposit,
+            uint256 amount1ToDeposit
+        ) {
+            return _getMintAmounts(vault_, maxAmount0_, maxAmount1_);
+        }
+
+    // #endregion external view functions.
+
     // #region internal functions.
 
     function _addLiquidity(
@@ -422,9 +441,11 @@ contract ArrakisPublicVaultRouter is
         );
 
         // #region assertion check to verify if vault exactly what expected.
-        if (balance0 - amount0_ != IERC20(token0_).balanceOf(address(this)))
+        if((token0_ == nativeToken && balance0 - amount0_ != address(this).balance) || (token0_ != nativeToken && balance0 - amount0_ != IERC20(token0_).balanceOf(address(this))))
             revert Deposit0();
-        if (balance1 - amount1_ != IERC20(token1_).balanceOf(address(this)))
+        // if (balance0 - amount0_ != IERC20(token0_).balanceOf(address(this)))
+        //     revert Deposit0();
+        if ((token1_ == nativeToken && balance1 - amount1_ != address(this).balance) || (token1_ != nativeToken && balance1 - amount1_ != IERC20(token1_).balanceOf(address(this))))
             revert Deposit1();
         // #endregion  assertion check to verify if vault exactly what expected.
     }
@@ -500,12 +521,10 @@ contract ArrakisPublicVaultRouter is
             token1_
         );
 
-        if (msg.value > 0) {
-            if (token0_ == nativeToken && amount0Use > amount0) {
-                payable(msg.sender).sendValue(amount0Use - amount0);
-            } else if (token1_ == nativeToken && amount1Use > amount1) {
-                payable(msg.sender).sendValue(amount1Use - amount1);
-            }
+        if (token0_ == nativeToken && amount0Use > amount0) {
+            payable(msg.sender).sendValue(amount0Use - amount0);
+        } else if (token1_ == nativeToken && amount1Use > amount1) {
+            payable(msg.sender).sendValue(amount1Use - amount1);
         }
 
         if (amount0Use > amount0 && token0_ != nativeToken) {
@@ -530,20 +549,35 @@ contract ArrakisPublicVaultRouter is
 
     function _permit2Add(
         AddLiquidityPermit2Data memory params_,
+        address token0_,
+        address token1_,
         uint256 amount0_,
         uint256 amount1_
     ) internal {
-        if (params_.permit.permitted.length != 2) revert LengthMismatch();
-        SignatureTransferDetails[]
-            memory transfers = new SignatureTransferDetails[](2);
-        transfers[0] = SignatureTransferDetails({
-            to: address(this),
-            requestedAmount: amount0_
-        });
-        transfers[1] = SignatureTransferDetails({
-            to: address(this),
-            requestedAmount: amount1_
-        });
+        uint256 permittedLength = params_.permit.permitted.length;
+        if (permittedLength != 2 && permittedLength != 1) {
+            revert LengthMismatch();
+        }
+
+        SignatureTransferDetails[] memory transfers = new SignatureTransferDetails[](permittedLength);
+
+        for(uint256 i; i < permittedLength; i++) {
+            TokenPermissions memory tokenPermission = params_.permit.permitted[i];
+
+            if(tokenPermission.token == token0_) {
+                transfers[i] = SignatureTransferDetails({
+                    to: address(this),
+                    requestedAmount: amount0_
+                });
+            }
+            if(tokenPermission.token == token1_) {
+                transfers[i] = SignatureTransferDetails({
+                    to: address(this),
+                    requestedAmount: amount1_
+                });
+            }
+        }
+
         permit2.permitTransferFrom(
             params_.permit,
             transfers,
@@ -552,18 +586,35 @@ contract ArrakisPublicVaultRouter is
         );
     }
 
-    function _permit2SwapAndAdd(SwapAndAddPermit2Data memory params_) internal {
-        if (params_.permit.permitted.length != 2) revert LengthMismatch();
-        SignatureTransferDetails[]
-            memory transfers = new SignatureTransferDetails[](2);
-        transfers[0] = SignatureTransferDetails({
-            to: address(this),
-            requestedAmount: params_.swapAndAddData.addData.amount0Max
-        });
-        transfers[1] = SignatureTransferDetails({
-            to: address(this),
-            requestedAmount: params_.swapAndAddData.addData.amount1Max
-        });
+    function _permit2SwapAndAdd(
+        SwapAndAddPermit2Data memory params_,
+        address token0_,
+        address token1_
+    ) internal {
+        uint256 permittedLength = params_.permit.permitted.length;
+        if (permittedLength != 2 && permittedLength != 1) {
+            revert LengthMismatch();
+        }
+
+        SignatureTransferDetails[] memory transfers = new SignatureTransferDetails[](permittedLength);
+
+        for(uint256 i; i < permittedLength; i++) {
+            TokenPermissions memory tokenPermission = params_.permit.permitted[i];
+
+            if(tokenPermission.token == token0_) {
+                transfers[i] = SignatureTransferDetails({
+                    to: address(this),
+                    requestedAmount: params_.swapAndAddData.addData.amount0Max
+                });
+            }
+            if(tokenPermission.token == token1_) {
+                transfers[i] = SignatureTransferDetails({
+                    to: address(this),
+                    requestedAmount: params_.swapAndAddData.addData.amount1Max
+                });
+            }
+        }
+
         permit2.permitTransferFrom(
             params_.permit,
             transfers,
@@ -597,10 +648,11 @@ contract ArrakisPublicVaultRouter is
 
         if (amount0 == 0 && amount1 == 0) {
             (amount0, amount1) = IArrakisMetaVault(vault_).getInits();
+            supply = 1 ether;
         }
 
-        uint256 proportion0 = FullMath.mulDiv(maxAmount0_, PIPS, amount0);
-        uint256 proportion1 = FullMath.mulDiv(maxAmount1_, PIPS, amount1);
+        uint256 proportion0 = amount0 == 0 ? type(uint256).max : FullMath.mulDiv(maxAmount0_, PIPS, amount0);
+        uint256 proportion1 = amount1 == 0 ? type(uint256).max :  FullMath.mulDiv(maxAmount1_, PIPS, amount1);
 
         uint256 proportion = proportion0 < proportion1
             ? proportion0

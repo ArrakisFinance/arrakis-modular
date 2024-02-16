@@ -18,8 +18,7 @@ struct RemoveLiquidityData {
     uint256 amount0Min;
     uint256 amount1Min;
     address vault;
-    address payable receiver;
-    bool receiveETH;
+    address payable receiver; // not need to have receiveETH if reciever is payable.
 }
 
 struct SwapData {

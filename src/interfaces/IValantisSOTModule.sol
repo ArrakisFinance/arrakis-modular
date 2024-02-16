@@ -45,12 +45,16 @@ interface IValantisSOTModule {
     /// @param expectedMinReturn_ minimum amount of tokenOut expected.
     /// @param amountIn_ amount of tokenIn used during swap.
     /// @param router_ address of routerSwapExecutor.
+    /// @param expectedSqrtSpotPriceUpperX96_ upper bound of current price.
+    /// @param expectedSqrtSpotPriceLowerX96_ lower bound of current price.
     /// @param payload_ data payload used for swapping.
      function swap(
         bool zeroForOne_,
         uint256 expectedMinReturn_,
         uint256 amountIn_,
         address router_,
+        uint160 expectedSqrtSpotPriceUpperX96_,
+        uint160 expectedSqrtSpotPriceLowerX96_,
         bytes calldata payload_
     ) external;
 

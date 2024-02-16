@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
-import {IArrakisLPModulePublic} from "../interfaces/IArrakisLPModulePublic.sol";
 import {IValantisSOTModule} from "../interfaces/IValantisSOTModule.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {ISovereignPool} from "../interfaces/ISovereignPool.sol";
@@ -19,12 +18,9 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-import {console} from "forge-std/console.sol";
-
-/// @dev BeaconProxy becareful for changing implementation with upgrade.
-contract ValantisModule is
+/// @dev BeaconProxy be careful for changing implementation with upgrade.
+abstract contract ValantisModule is
     IArrakisLPModule,
-    IArrakisLPModulePublic,
     IValantisSOTModule,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable
@@ -123,67 +119,6 @@ contract ValantisModule is
     }
 
     // #endregion guardian functions.
-
-    /// @notice deposit function for public vault.
-    /// @param depositor_ address that will provide the tokens.
-    /// @param proportion_ percentage of portfolio position vault want to expand.
-    /// @return amount0 amount of token0 needed to expand the portfolio by "proportion"
-    /// percent.
-    /// @return amount1 amount of token1 needed to expand the portfolio by "proportion"
-    /// percent.
-    function deposit(
-        address depositor_,
-        uint256 proportion_
-    )
-        external
-        payable
-        onlyMetaVault
-        whenNotPaused
-        nonReentrant
-        returns (uint256 amount0, uint256 amount1)
-    {
-        if (msg.value > 0) revert NoNativeToken();
-        if (depositor_ == address(0)) revert AddressZero();
-        if (proportion_ == 0) revert ProportionZero();
-
-        // #region effects.
-
-        {
-            (uint256 _amt0, uint256 _amt1) = alm.getReservesAtPrice(0);
-
-            if (_amt0 == 0 && _amt1 == 0) {
-                _amt0 = _init0;
-                _amt1 = _init1;
-            }
-
-            amount0 = FullMath.mulDiv(proportion_, _amt0, PIPS);
-            amount1 = FullMath.mulDiv(proportion_, _amt1, PIPS);
-        }
-
-        // #endregion effects.
-
-        // #region interactions.
-
-        // #region get the tokens from the depositor.
-
-        token0.safeTransferFrom(depositor_, address(this), amount0);
-        token1.safeTransferFrom(depositor_, address(this), amount1);
-
-        // #endregion get the tokens from the depositor.
-
-        // #region increase allowance to alm.
-
-        token0.safeIncreaseAllowance(address(alm), amount0);
-        token1.safeIncreaseAllowance(address(alm), amount1);
-
-        // #endregion increase allowance to alm.
-
-        alm.depositLiquidity(amount0, amount1, 0, 0);
-
-        // #endregion interactions.
-
-        emit LogDeposit(depositor_, proportion_, amount0, amount1);
-    }
 
     /// @notice function used by metaVault to withdraw tokens from the strategy.
     /// @param receiver_ address that will receive tokens.
@@ -295,12 +230,16 @@ contract ValantisModule is
     /// @param expectedMinReturn_ minimum amount of tokenOut expected.
     /// @param amountIn_ amount of tokenIn used during swap.
     /// @param router_ address of routerSwapExecutor.
+    /// @param expectedSqrtSpotPriceUpperX96_ upper bound of current price.
+    /// @param expectedSqrtSpotPriceLowerX96_ lower bound of current price.
     /// @param payload_ data payload used for swapping.
     function swap(
         bool zeroForOne_,
         uint256 expectedMinReturn_,
         uint256 amountIn_,
         address router_,
+        uint160 expectedSqrtSpotPriceUpperX96_,
+        uint160 expectedSqrtSpotPriceLowerX96_,
         bytes calldata payload_
     ) external onlyManager whenNotPaused {
         // #region checks/effects.
@@ -317,8 +256,6 @@ contract ValantisModule is
 
         // #region interactions.
 
-        uint256 _amt0;
-        uint256 _amt1;
         uint256 _actual0;
         uint256 _actual1;
         uint256 _initBalance0;
@@ -327,7 +264,7 @@ contract ValantisModule is
         {
             _initBalance0 = token0.balanceOf(address(this));
             _initBalance1 = token1.balanceOf(address(this));
-            (_amt0, _amt1) = alm.getReservesAtPrice(0);
+            (uint256 _amt0, uint256 _amt1) = alm.getReservesAtPrice(0);
 
             if (zeroForOne_) {
                 if (_amt0 < amountIn_) revert NotEnoughToken0();
@@ -377,7 +314,7 @@ contract ValantisModule is
         token0.safeIncreaseAllowance(address(alm), balance0);
         token1.safeIncreaseAllowance(address(alm), balance1);
 
-        alm.depositLiquidity(balance0, balance1, 0, 0);
+        alm.depositLiquidity(balance0, balance1, expectedSqrtSpotPriceUpperX96_, expectedSqrtSpotPriceLowerX96_);
 
         // #endregion deposit.
 

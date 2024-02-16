@@ -9,6 +9,7 @@ import {PRIVATE_TYPE} from "./constants/CArrakis.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract ArrakisMetaVaultPrivate is
     ArrakisMetaVault,
@@ -16,12 +17,19 @@ contract ArrakisMetaVaultPrivate is
     IOwnable
 {
     using Address for address payable;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     // #region immutable properties.
 
     address public immutable nft;
 
     // #endregion immutable properties.
+
+    // #region internal properties.
+
+    EnumerableSet.AddressSet internal _depositors;
+
+    // #endregion internal properties.
 
     constructor(
         address token0_,
@@ -41,7 +49,9 @@ contract ArrakisMetaVaultPrivate is
     function deposit(
         uint256 amount0_,
         uint256 amount1_
-    ) external payable onlyOwnerCustom {
+    ) external payable {
+        // NOTE: should we also allow owner to be a depositor by default?
+        if(!_depositors.contains(msg.sender)) revert OnlyDepositor();
         _deposit(amount0_, amount1_);
     }
 
@@ -58,16 +68,57 @@ contract ArrakisMetaVaultPrivate is
         (amount0, amount1) = _withdraw(receiver_, proportion_);
     }
 
+    /// @notice function used to whitelist depositors.
+    /// @param depositors_  list of address that will be granted to depositor role.
+    function whitelistDepositors(address[] calldata depositors_) external onlyOwnerCustom {
+        uint256 length = depositors_.length;
+        for(uint256 i; i < length; i++) {
+            address depositor = depositors_[i];
+
+            if(depositor == address(0)) revert AddressZero("Depositor");
+            if(_depositors.contains(depositor)) revert DepositorAlreadyWhitelisted();
+
+            _depositors.add(depositor);
+        }
+
+        emit LogWhitelistDepositors(depositors_);
+    }
+
+    /// @notice function used to blacklist depositors.
+    /// @param depositors_ list of address who depositor role will be revoked.
+    function blacklistDepositors(address[] calldata depositors_) external onlyOwnerCustom() {
+        uint256 length = depositors_.length;
+        for(uint256 i; i < length; i++) {
+            address depositor = depositors_[i];
+
+            if(!_depositors.contains(depositor)) revert NotAlreadyWhitelistedDepositor();
+
+            _depositors.remove(depositor);
+        }
+
+        emit LogBlacklistDepositors(depositors_);
+    }
+
+    // #region external view/pure functions.
+
+    /// @notice function used to get the owner of this contract.
+    function owner() external view returns (address) {
+        return IERC721(nft).ownerOf(uint256(uint160(address(this))));
+    }
+
+    /// @notice function used to get the list of depositors.
+    /// @return depositors list of address granted to depositor role.
+    function depositors() external view returns(address[] memory) {
+        return _depositors.values();
+    }
+
     /// @notice function used to get the type of vault.
     /// @return vaultType as bytes32.
     function vaultType() external pure returns (bytes32) {
         return PRIVATE_TYPE;
     }
 
-    /// @notice function used to get the owner of this contract.
-    function owner() external view returns (address) {
-        return IERC721(nft).ownerOf(uint256(uint160(address(this))));
-    }
+    // #endregion  external view/pure functions.
 
     // #region internal functions.
 

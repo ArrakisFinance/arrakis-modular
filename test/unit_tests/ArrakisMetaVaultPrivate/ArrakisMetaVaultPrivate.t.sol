@@ -6,6 +6,7 @@ import {console} from "forge-std/console.sol";
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 
 import {ArrakisMetaVaultPrivate} from "../../../src/ArrakisMetaVaultPrivate.sol";
+import {IArrakisMetaVaultPrivate} from "../../../src/interfaces/IArrakisMetaVaultPrivate.sol";
 import {IArrakisMetaVault} from "../../../src/interfaces/IArrakisMetaVault.sol";
 import {PIPS, PRIVATE_TYPE} from "../../../src/constants/CArrakis.sol";
 import {PALMVaultNFT} from "../../../src/PALMVaultNFT.sol";
@@ -32,7 +33,7 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     ArrakisMetaVaultPrivate public vault;
     LpModuleMock public module;
     PALMVaultNFT public nft;
-    address public owner;
+    address public receiver;
     address public manager;
     address public moduleRegistry;
 
@@ -41,7 +42,7 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         moduleRegistry = vm.addr(
             uint256(keccak256(abi.encode("Module Registry")))
         );
-        owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
+        receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
         // #region create module.
 
@@ -104,7 +105,7 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
 
     // #region test deposit.
 
-    function testDepositNotOwner() public {
+    function testDepositNotDepositor() public {
         address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
 
         uint256 amount0 = 2000e6;
@@ -122,7 +123,7 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
 
         // #endregion approve module.
 
-        vm.expectRevert(IArrakisMetaVault.OnlyOwner.selector);
+        vm.expectRevert(IArrakisMetaVaultPrivate.OnlyDepositor.selector);
 
         vault.deposit(amount0, amount1);
 
@@ -130,11 +131,32 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     }
 
     function testDeposit() public {
+        // #region whitelist depositor.
+
+        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address[] memory depositors = new address[](1);
+        depositors[0] = depositor;
+
+        address[] memory currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 0);
+
+        vault.whitelistDepositors(depositors);
+
+        currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 1);
+        assertEq(currentDepositors[0], depositor);
+
+        // #endregion whitelist depositor.
+
         uint256 amount0 = 2000e6;
         uint256 amount1 = 1e18;
 
-        deal(USDC, address(this), amount0);
-        deal(WETH, address(this), amount1);
+        deal(USDC, address(depositor), amount0);
+        deal(WETH, address(depositor), amount1);
+
+        vm.startPrank(depositor);
 
         // #region approve module.
 
@@ -142,8 +164,10 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         IERC20(WETH).approve(address(module), amount1);
 
         // #endregion approve module.
-
+        
         vault.deposit(amount0, amount1);
+
+        vm.stopPrank();
     }
 
     // #endregion test deposit.
@@ -154,11 +178,32 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
         // #region deposit.
 
+        // #region whitelist depositor.
+
+        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address[] memory depositors = new address[](1);
+        depositors[0] = depositor;
+
+        address[] memory currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 0);
+
+        vault.whitelistDepositors(depositors);
+
+        currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 1);
+        assertEq(currentDepositors[0], depositor);
+
+        // #endregion whitelist depositor.
+
         uint256 amount0 = 2000e6;
         uint256 amount1 = 1e18;
 
-        deal(USDC, address(this), amount0);
-        deal(WETH, address(this), amount1);
+        deal(USDC, address(depositor), amount0);
+        deal(WETH, address(depositor), amount1);
+
+        vm.startPrank(depositor);
 
         // #region approve module.
 
@@ -166,8 +211,10 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         IERC20(WETH).approve(address(module), amount1);
 
         // #endregion approve module.
-
+        
         vault.deposit(amount0, amount1);
+
+        vm.stopPrank();
 
         // #endregion deposit.
 
@@ -176,18 +223,39 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
 
         vm.expectRevert(IArrakisMetaVault.OnlyOwner.selector);
         vm.prank(caller);
-        vault.withdraw(PIPS, owner);
+        vault.withdraw(PIPS, receiver);
     }
 
     function testWithdraw() public {
         address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
         // #region deposit.
 
+        // #region whitelist depositor.
+
+        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address[] memory depositors = new address[](1);
+        depositors[0] = depositor;
+
+        address[] memory currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 0);
+
+        vault.whitelistDepositors(depositors);
+
+        currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 1);
+        assertEq(currentDepositors[0], depositor);
+
+        // #endregion whitelist depositor.
+
         uint256 amount0 = 2000e6;
         uint256 amount1 = 1e18;
 
-        deal(USDC, address(this), amount0);
-        deal(WETH, address(this), amount1);
+        deal(USDC, address(depositor), amount0);
+        deal(WETH, address(depositor), amount1);
+
+        vm.startPrank(depositor);
 
         // #region approve module.
 
@@ -195,21 +263,133 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         IERC20(WETH).approve(address(module), amount1);
 
         // #endregion approve module.
-
+        
         vault.deposit(amount0, amount1);
+
+        vm.stopPrank();
 
         // #endregion deposit.
 
         assertEq(IERC20(USDC).balanceOf(address(this)), 0);
         assertEq(IERC20(WETH).balanceOf(address(this)), 0);
 
-        vault.withdraw(PIPS, owner);
+        vault.withdraw(PIPS, receiver);
 
-        assertEq(IERC20(USDC).balanceOf(owner), amount0);
-        assertEq(IERC20(WETH).balanceOf(owner), amount1);
+        assertEq(IERC20(USDC).balanceOf(receiver), amount0);
+        assertEq(IERC20(WETH).balanceOf(receiver), amount1);
     }
 
     // #endregion test withdraw.
+
+    // #region test whitelist depositors.
+
+    function testWhitelistDepositorOnlyOwner() public {
+        address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+
+        address[] memory depositors = new address[](0);
+        vm.prank(caller);
+        vm.expectRevert(IArrakisMetaVault.OnlyOwner.selector);
+
+        vault.whitelistDepositors(depositors);
+    }
+
+    function testWhitelistDepositorAddressZero() public {
+        address[] memory depositors = new address[](1);
+
+        vm.expectRevert(abi.encodeWithSelector(IArrakisMetaVault.AddressZero.selector, "Depositor"));
+
+        vault.whitelistDepositors(depositors);
+    }
+
+    function testWhitelistDepositor() public {
+        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address[] memory depositors = new address[](1);
+        depositors[0] = depositor;
+
+        address[] memory currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 0);
+
+        vault.whitelistDepositors(depositors);
+
+        currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 1);
+        assertEq(currentDepositors[0], depositor);
+    }
+
+    function testWhitelistDepositorAlreadyADepositor() public {
+        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address[] memory depositors = new address[](1);
+        depositors[0] = depositor;
+
+        address[] memory currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 0);
+
+        vault.whitelistDepositors(depositors);
+
+        currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 1);
+        assertEq(currentDepositors[0], depositor);
+
+        vm.expectRevert(IArrakisMetaVaultPrivate.DepositorAlreadyWhitelisted.selector);
+
+        vault.whitelistDepositors(depositors);
+    }
+
+    // #endregion test whitelist depositors.
+
+    // #region test blacklist depositors.
+
+    function testBlacklistDepositorsOnlyOwner() public {
+        address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+
+        address[] memory depositors = new address[](0);
+        vm.prank(caller);
+        vm.expectRevert(IArrakisMetaVault.OnlyOwner.selector);
+
+        vault.blacklistDepositors(depositors);
+    }
+
+    function testBlacklistDepositorsNotAlreadyWhitelistedDepositor() public {
+        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address[] memory depositors = new address[](1);
+        depositors[0] = depositor;
+        vm.expectRevert(IArrakisMetaVaultPrivate.NotAlreadyWhitelistedDepositor.selector);
+
+        vault.blacklistDepositors(depositors);
+    }
+
+    function testBlacklistDepositors() public {
+        // #region whitelist depositor.
+
+        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address[] memory depositors = new address[](1);
+        depositors[0] = depositor;
+
+        address[] memory currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 0);
+
+        vault.whitelistDepositors(depositors);
+
+        currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 1);
+        assertEq(currentDepositors[0], depositor);
+
+        // #endregion whitelist depositor.
+
+        vault.blacklistDepositors(depositors);
+
+        currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 0);
+    }
+
+    // #endregion test blacklist depositors.
 
     // #region test vault type.
 
