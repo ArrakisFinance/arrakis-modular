@@ -22,5 +22,7 @@ interface ISovereignPool {
 
     function poolManagerFeeBips() external view returns (uint256);
 
+    function getReserves() external view returns (uint256, uint256);
+
     // #endregion view functions.
 }

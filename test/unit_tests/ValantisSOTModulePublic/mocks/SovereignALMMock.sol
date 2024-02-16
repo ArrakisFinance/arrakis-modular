@@ -8,6 +8,12 @@ contract SovereignALMMock {
     address public token0;
     address public token1;
 
+    uint160 public sqrtSpotPriceX96;
+
+    function setSqrtSpotPriceX96(uint160 sqrtSpotPriceX96_) external {
+        sqrtSpotPriceX96 = sqrtSpotPriceX96_;
+    }
+
     function setToken0AndToken1(address token0_, address token1_) external {
         token0 = token0_;
         token1 = token1_;
@@ -48,5 +54,16 @@ contract SovereignALMMock {
         uint160 _expectedSqrtSpotPriceLowerX96
     ) external {
         
+    }
+
+    function getAmmState()
+        external
+        view
+    returns (
+        uint160,
+        uint160,
+        uint160
+    ) {
+        return (sqrtSpotPriceX96, 0, 0); 
     }
 }

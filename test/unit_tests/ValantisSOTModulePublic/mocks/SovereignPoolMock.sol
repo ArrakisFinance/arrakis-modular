@@ -12,6 +12,14 @@ contract SovereignPoolMock {
 
     uint256 public managerFeeBIPS;
 
+    uint256 public reserves0;
+    uint256 public reserves1;
+
+    function setReserves(uint256 reserves0_, uint256 reserves1_) external {
+        reserves0 = reserves0_;
+        reserves1 = reserves1_;
+    }
+
     function setToken0AndToken1(address token0_, address token1_) external {
         token0 = token0_;
         token1 = token1_;
@@ -61,6 +69,10 @@ contract SovereignPoolMock {
 
     function poolManagerFeeBips() external view returns (uint256) {
         return managerFeeBIPS;
+    }
+
+    function getReserves() external view returns (uint256, uint256) {
+        return (reserves0, reserves1);
     }
 
     // #endregion view functions.

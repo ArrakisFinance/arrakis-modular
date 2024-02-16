@@ -23,6 +23,7 @@ interface IValantisSOTModule {
     error SlippageTooHigh();
     error NotDepositedAllToken0();
     error NotDepositedAllToken1();
+    error OverMaxDeviation();
 
     // #endregion errors.
 

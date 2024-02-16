@@ -27,4 +27,9 @@ interface ISOT {
     function getReservesAtPrice(
         uint160 sqrtPriceX96_
     ) external view returns (uint128 reserves0, uint128 reserves1);
+
+    function getAmmState()
+        external
+        view
+        returns (uint160 sqrtSpotPriceX96, uint160 sqrtPriceLowX96, uint160 sqrtPriceHighX96);
 }

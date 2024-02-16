@@ -146,7 +146,7 @@ abstract contract ValantisModule is
         // #region effects.
 
         {
-            (uint256 _amt0, uint256 _amt1) = alm.getReservesAtPrice(0);
+            (uint256 _amt0, uint256 _amt1) = pool.getReserves();
 
             amount0 = FullMath.mulDiv(proportion_, _amt0, PIPS);
             amount1 = FullMath.mulDiv(proportion_, _amt1, PIPS);
@@ -264,7 +264,7 @@ abstract contract ValantisModule is
         {
             _initBalance0 = token0.balanceOf(address(this));
             _initBalance1 = token1.balanceOf(address(this));
-            (uint256 _amt0, uint256 _amt1) = alm.getReservesAtPrice(0);
+            (uint256 _amt0, uint256 _amt1) = pool.getReserves();
 
             if (zeroForOne_) {
                 if (_amt0 < amountIn_) revert NotEnoughToken0();
@@ -391,7 +391,7 @@ abstract contract ValantisModule is
         view
         returns (uint256 amount0, uint256 amount1)
     {
-        return alm.getReservesAtPrice(0);
+        return pool.getReserves();
     }
 
     /// @notice function used to get the amounts of token0 and token1 sitting
@@ -407,7 +407,41 @@ abstract contract ValantisModule is
 
     /// @notice function used to validate if module state is not manipulated
     /// before rebalance.
-    function validateRebalance(IOracleWrapper, uint24) external view {}
+    /// @param oracle_ onchain oracle to check the current amm price against.
+    /// @param maxDeviation_ maximum deviation tolerated by management.
+    function validateRebalance(IOracleWrapper oracle_, uint24 maxDeviation_) external view {
+        uint256 oraclePrice = oracle_.getPrice0();
+        uint8 decimals0 = token0.decimals();
+
+        uint256 sqrtSpotPriceX96;
+        (sqrtSpotPriceX96,,) = alm.getAmmState();
+
+        uint256 currentPrice;
+
+        if (sqrtSpotPriceX96 <= type(uint128).max) {
+            currentPrice = FullMath.mulDiv(
+                sqrtSpotPriceX96 * sqrtSpotPriceX96,
+                10 ** decimals0,
+                2 ** 192
+            );
+        } else {
+            currentPrice = FullMath.mulDiv(
+                FullMath.mulDiv(sqrtSpotPriceX96, sqrtSpotPriceX96, 1 << 64),
+                10 ** decimals0,
+                1 << 128
+            );
+        }
+
+        uint256 deviation = FullMath.mulDiv(
+                currentPrice > oraclePrice
+                    ? currentPrice - oraclePrice
+                    : oraclePrice - currentPrice,
+                PIPS,
+                oraclePrice
+            );
+
+        if(deviation > maxDeviation_) revert OverMaxDeviation();
+    }
 
     // #region view functions.
 

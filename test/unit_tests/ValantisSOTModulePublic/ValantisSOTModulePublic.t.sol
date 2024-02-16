@@ -75,8 +75,8 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 uPrice0 = FullMath.mulDiv(price0, 10_100, 10_000);
         uint256 lPrice0 = FullMath.mulDiv(price0, 9_900, 10_000);
 
-        expectedSqrtSpotPriceUpperX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(uPrice0), 2**96, 1));
-        expectedSqrtSpotPriceLowerX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(lPrice0), 2**96, 1));
+        expectedSqrtSpotPriceUpperX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(uPrice0), 2**96, Math.sqrt(1e6)));
+        expectedSqrtSpotPriceLowerX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(lPrice0), 2**96, Math.sqrt(1e6)));
 
         // #endregion create oracle.
 
@@ -605,7 +605,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         // #endregion deposit.
 
         address receiver = vm.addr(20);
-
+        sovereignPool.setReserves(expectedAmount0, expectedAmount1);
         vm.prank(address(metaVault));
 
         module.withdraw(receiver, PIPS);
@@ -656,7 +656,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         // #endregion deposit.
 
         address receiver = vm.addr(20);
-
+        sovereignPool.setReserves(expectedAmount0, expectedAmount1);
         vm.prank(address(metaVault));
         vm.expectRevert(abi.encodeWithSelector(IValantisSOTModule.Actual0DifferentExpected.selector, expectedAmount0 / 2, expectedAmount0));
 
@@ -705,7 +705,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         // #endregion deposit.
 
         address receiver = vm.addr(20);
-
+        sovereignPool.setReserves(expectedAmount0, expectedAmount1);
         vm.prank(address(metaVault));
         vm.expectRevert(abi.encodeWithSelector(IValantisSOTModule.Actual1DifferentExpected.selector, expectedAmount1 / 2, expectedAmount1));
 
@@ -805,6 +805,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         address router = address(this);
         bytes memory payload = abi.encodeWithSelector(this.swap.selector);
 
+        sovereignPool.setReserves(amountIn, 0);
         deal(USDC, address(buggySovereignALM), amountIn);
 
         vm.expectRevert(abi.encodeWithSelector(IValantisSOTModule.Actual0DifferentExpected.selector, amountIn/2, amountIn));
@@ -837,6 +838,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         address router = address(this);
         bytes memory payload = abi.encodeWithSelector(this.swap.selector);
 
+        sovereignPool.setReserves(0, amountIn);
         deal(WETH, address(buggySovereignALM), amountIn);
 
         vm.expectRevert(abi.encodeWithSelector(IValantisSOTModule.Actual1DifferentExpected.selector, amountIn/2, amountIn));
@@ -851,6 +853,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         address router = address(this);
         bytes memory payload = abi.encodeWithSelector(this.failedSwap.selector);
 
+        sovereignPool.setReserves(0, amountIn);
         deal(WETH, address(sovereignALM), amountIn);
 
         vm.expectRevert(IValantisSOTModule.SwapCallFailed.selector);
@@ -865,6 +868,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         address router = address(this);
         bytes memory payload = abi.encodeWithSelector(this.swap.selector);
 
+        sovereignPool.setReserves(amountIn, 0);
         deal(USDC, address(sovereignALM), amountIn);
 
         vm.expectRevert(IValantisSOTModule.SlippageTooHigh.selector);
@@ -879,6 +883,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         address router = address(this);
         bytes memory payload = abi.encodeWithSelector(this.swap1.selector);
 
+        sovereignPool.setReserves(0, amountIn);
         deal(WETH, address(sovereignALM), amountIn);
 
         vm.expectRevert(IValantisSOTModule.SlippageTooHigh.selector);
@@ -911,6 +916,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         address router = address(this);
         bytes memory payload = abi.encodeWithSelector(this.swap2.selector);
 
+        sovereignPool.setReserves(0, amountIn);
         deal(WETH, address(buggySovereignALM), amountIn);
 
         vm.expectRevert(IValantisSOTModule.NotDepositedAllToken0.selector);
@@ -943,6 +949,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         address router = address(this);
         bytes memory payload = abi.encodeWithSelector(this.swap3.selector);
 
+        sovereignPool.setReserves(amountIn, 0);
         deal(USDC, address(buggySovereignALM), amountIn);
 
         vm.expectRevert(IValantisSOTModule.NotDepositedAllToken1.selector);
@@ -957,6 +964,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         address router = address(this);
         bytes memory payload = abi.encodeWithSelector(this.swap3.selector);
 
+        sovereignPool.setReserves(amountIn, 0);
         deal(USDC, address(sovereignALM), amountIn);
 
         vm.prank(manager);
@@ -992,6 +1000,52 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     // #endregion test setPriceBounds.
+
+    // #region test validate rebalance.
+
+    function testValidatedRebalanceOverMaxDeviation() public {
+        uint256 price0 = oracle.getPrice0();
+
+        price0 = FullMath.mulDiv(price0, 88, 100);
+
+        uint160 sqrtSpotPriceX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(price0), 2**96, Math.sqrt(1e6)));
+        // #region set amm sqrtSpotPriceX96.
+
+        sovereignALM.setSqrtSpotPriceX96(SafeCast.toUint160(sqrtSpotPriceX96));
+
+        // #endregion set amm sqrtSpotPriceX96.
+
+        vm.expectRevert(IValantisSOTModule.OverMaxDeviation.selector);
+        module.validateRebalance(oracle, TEN_PERCENT);
+    }
+
+    function testValidatedRebalanceOverMaxDeviation2() public {
+        // #region set amm sqrtSpotPriceX96.
+
+        sovereignALM.setSqrtSpotPriceX96(type(uint160).max - 1);
+
+        // #endregion set amm sqrtSpotPriceX96.
+
+        vm.expectRevert(IValantisSOTModule.OverMaxDeviation.selector);
+        module.validateRebalance(oracle, TEN_PERCENT);
+    }
+
+    function testValidatedRebalance() public {
+        uint256 price0 = oracle.getPrice0();
+
+        price0 = FullMath.mulDiv(price0, 95, 100);
+
+        uint160 sqrtSpotPriceX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(price0), 2**96, Math.sqrt(1e6)));
+        // #region set amm sqrtSpotPriceX96.
+
+        sovereignALM.setSqrtSpotPriceX96(SafeCast.toUint160(sqrtSpotPriceX96));
+
+        // #endregion set amm sqrtSpotPriceX96.
+
+        module.validateRebalance(oracle, TEN_PERCENT);
+    }
+
+    // #endregion test validate rebalance.
 
     // #region test withdraw manager balances.
 
@@ -1101,8 +1155,7 @@ contract ValantisSOTModuleTest is TestWrapper {
     // #region total underlying.
 
     function testTotalUnderlying() public {
-        deal(USDC, address(sovereignALM), 2000e6);
-        deal(WETH, address(sovereignALM), 1e18);
+        sovereignPool.setReserves(2000e6, 1e18);
 
         (uint256 amount0, uint256 amount1) = module.totalUnderlying();
 
