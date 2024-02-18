@@ -13,6 +13,7 @@
 - [IArrakisStandardManager](IArrakisStandardManager.sol/interface.IArrakisStandardManager.md)
 - [IBeaconProxyExtended](IBeaconProxyExtended.sol/interface.IBeaconProxyExtended.md)
 - [IGuardian](IGuardian.sol/interface.IGuardian.md)
+- [IManager](IManager.sol/interface.IManager.md)
 - [IModulePrivateRegistry](IModulePrivateRegistry.sol/interface.IModulePrivateRegistry.md)
 - [IModulePublicRegistry](IModulePublicRegistry.sol/interface.IModulePublicRegistry.md)
 - [IModuleRegistry](IModuleRegistry.sol/interface.IModuleRegistry.md)

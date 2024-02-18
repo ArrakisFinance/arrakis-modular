@@ -1,5 +1,5 @@
 # ModuleRegistry
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/abstracts/ModuleRegistry.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/abstracts/ModuleRegistry.sol)
 
 **Inherits:**
 [IModuleRegistry](/src/interfaces/IModuleRegistry.sol/interface.IModuleRegistry.md), Ownable
@@ -121,5 +121,12 @@ function blacklistBeacons(address[] calldata beacons_) external onlyOwner;
 
 ```solidity
 function _createModule(address vault_, address beacon_, bytes calldata payload_) internal returns (address module);
+```
+
+### _checkVaultNotAddressZero
+
+
+```solidity
+function _checkVaultNotAddressZero(address vault_) internal;
 ```
 
