@@ -1,5 +1,5 @@
 # IArrakisMetaVaultPublic
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/interfaces/IArrakisMetaVaultPublic.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/IArrakisMetaVaultPublic.sol)
 
 
 ## Functions
@@ -47,36 +47,6 @@ function burn(uint256 shares_, address receiver_) external returns (uint256 amou
 |----|----|-----------|
 |`amount0`|`uint256`|amount of token0 withdrawn.|
 |`amount1`|`uint256`|amount of token1 withdrawn.|
-
-
-### name
-
-function used to get the name of the LP token.
-
-
-```solidity
-function name() external returns (string memory name);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`name`|`string`|string value containing the name.|
-
-
-### symbol
-
-function used to get the symbol of the LP token.
-
-
-```solidity
-function symbol() external returns (string memory symbol);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`symbol`|`string`|string value containing the symbol.|
 
 
 ## Events

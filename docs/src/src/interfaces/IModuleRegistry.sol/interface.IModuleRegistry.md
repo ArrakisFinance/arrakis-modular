@@ -1,5 +1,5 @@
 # IModuleRegistry
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/interfaces/IModuleRegistry.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/IModuleRegistry.sol)
 
 **Author:**
 Arrakis Team.
@@ -175,12 +175,6 @@ error NotAlreadyWhitelistedBeacon(address beacon);
 
 ```solidity
 error NotWhitelistedBeacon();
-```
-
-### ImplementationIsAddressZero
-
-```solidity
-error ImplementationIsAddressZero();
 ```
 
 ### NotBeacon

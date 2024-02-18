@@ -1,5 +1,5 @@
 # ISovereignPool
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/interfaces/ISovereignPool.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/ISovereignPool.sol)
 
 
 ## Functions
@@ -38,5 +38,12 @@ function getPoolManagerFees() external view returns (uint256 poolManagerFee0, ui
 
 ```solidity
 function poolManagerFeeBips() external view returns (uint256);
+```
+
+### getReserves
+
+
+```solidity
+function getReserves() external view returns (uint256, uint256);
 ```
 

@@ -1,5 +1,5 @@
 # IArrakisPublicVaultRouter
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/interfaces/IArrakisPublicVaultRouter.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/IArrakisPublicVaultRouter.sol)
 
 
 ## Functions
@@ -177,6 +177,34 @@ function removeLiquidityPermit2(RemoveLiquidityPermit2Data memory params_)
 |----|----|-----------|
 |`amount0`|`uint256`|actual amount of token0 transferred to receiver for burning `burnAmount`|
 |`amount1`|`uint256`|actual amount of token1 transferred to receiver for burning `burnAmount`|
+
+
+### getMintAmounts
+
+getMintAmounts used to get the shares we can mint from some max amounts.
+
+
+```solidity
+function getMintAmounts(address vault_, uint256 maxAmount0_, uint256 maxAmount1_)
+    external
+    view
+    returns (uint256 shareToMint, uint256 amount0ToDeposit, uint256 amount1ToDeposit);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault_`|`address`|meta vault address.|
+|`maxAmount0_`|`uint256`|maximum amount of token0 user want to contribute.|
+|`maxAmount1_`|`uint256`|maximum amount of token1 user want to contribute.|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`shareToMint`|`uint256`|maximum amount of share user can get for 'maxAmount0_' and 'maxAmount1_'.|
+|`amount0ToDeposit`|`uint256`|amount of token0 user should deposit into the vault for minting 'shareToMint'.|
+|`amount1ToDeposit`|`uint256`|amount of token1 user should deposit into the vault for minting 'shareToMint'.|
 
 
 ## Events
