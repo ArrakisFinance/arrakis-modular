@@ -8,7 +8,7 @@ import {TestWrapper} from "../../utils/TestWrapper.sol";
 import {ArrakisMetaVaultPublic} from "../../../src/ArrakisMetaVaultPublic.sol";
 import {IArrakisMetaVaultPublic} from "../../../src/interfaces/IArrakisMetaVaultPublic.sol";
 import {IArrakisMetaVault} from "../../../src/interfaces/IArrakisMetaVault.sol";
-import {PIPS, PUBLIC_TYPE} from "../../../src/constants/CArrakis.sol";
+import {PIPS} from "../../../src/constants/CArrakis.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -74,8 +74,6 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         // #endregion create module registry.
 
         vault = new ArrakisMetaVaultPublic(
-            USDC,
-            WETH,
             owner,
             "Arrakis Vault Token",
             "AVT",
@@ -86,72 +84,6 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
     // #region test constructor.
 
-    function testConstructorToken0IsAddressZero() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IArrakisMetaVault.AddressZero.selector,
-                "Token 0"
-            )
-        );
-
-        vault = new ArrakisMetaVaultPublic(
-            address(0),
-            WETH,
-            owner,
-            "Arrakis Vault Token",
-            "AVK",
-            address(moduleRegistry),
-            address(manager)
-        );
-    }
-
-    function testConstructorToken1IsAddressZero() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IArrakisMetaVault.AddressZero.selector,
-                "Token 1"
-            )
-        );
-
-        vault = new ArrakisMetaVaultPublic(
-            USDC,
-            address(0),
-            owner,
-            "Arrakis Vault Token",
-            "AVK",
-            address(moduleRegistry),
-            address(manager)
-        );
-    }
-
-    function testConstructorToken0GtToken1() public {
-        vm.expectRevert(IArrakisMetaVault.Token0GtToken1.selector);
-
-        vault = new ArrakisMetaVaultPublic(
-            WETH,
-            USDC,
-            owner,
-            "Arrakis Vault Token",
-            "AVK",
-            address(moduleRegistry),
-            address(manager)
-        );
-    }
-
-    function testConstructorToken0EqToken1() public {
-        vm.expectRevert(IArrakisMetaVault.Token0EqToken1.selector);
-
-        vault = new ArrakisMetaVaultPublic(
-            USDC,
-            USDC,
-            owner,
-            "Arrakis Vault Token",
-            "AVK",
-            address(moduleRegistry),
-            address(manager)
-        );
-    }
-
     function testConstructorRegistryAddressZero() public {
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -161,8 +93,6 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         );
 
         vault = new ArrakisMetaVaultPublic(
-            USDC,
-            WETH,
             owner,
             "Arrakis Vault Token",
             "AVK",
@@ -180,8 +110,6 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         );
 
         vault = new ArrakisMetaVaultPublic(
-            USDC,
-            WETH,
             owner,
             "Arrakis Vault Token",
             "AVK",
@@ -199,8 +127,6 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         );
 
         vault = new ArrakisMetaVaultPublic(
-            USDC,
-            WETH,
             address(0),
             "Arrakis Vault Token",
             "AVK",
@@ -211,8 +137,6 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
     function testConstructor() public {
         vault = new ArrakisMetaVaultPublic(
-            USDC,
-            WETH,
             owner,
             "Arrakis Vault Token",
             "AVK",
@@ -223,16 +147,12 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         // #region assertions.
 
         address actualOwner = vault.owner();
-        address token0 = vault.token0();
-        address token1 = vault.token1();
         string memory name = vault.name();
         string memory symbol = vault.symbol();
         address actualModuleRegistry = vault.moduleRegistry();
         address actualManager = vault.manager();
 
         assertEq(actualOwner, owner);
-        assertEq(token0, USDC);
-        assertEq(token1, WETH);
         assertEq(name, "Arrakis Vault Token");
         assertEq(symbol, "AVK");
         assertEq(actualModuleRegistry, address(moduleRegistry));
@@ -245,6 +165,88 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
     // #region test initialize.
 
+    function testInitializeToken0IsAddressZero() public {
+        // #region create tModule mock.
+
+        address tModule = vm.addr(
+            uint256(keccak256(abi.encode("Test Module")))
+        );
+
+        // #endregion create tModule mock.
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisMetaVault.AddressZero.selector,
+                "Token 0"
+            )
+        );
+
+        vault.initialize(
+            address(0),
+            WETH,
+            tModule
+        );
+    }
+
+    function testInitializeToken1IsAddressZero() public {
+        // #region create tModule mock.
+
+        address tModule = vm.addr(
+            uint256(keccak256(abi.encode("Test Module")))
+        );
+
+        // #endregion create tModule mock.
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisMetaVault.AddressZero.selector,
+                "Token 1"
+            )
+        );
+
+        vault.initialize(
+            USDC,
+            address(0),
+            tModule
+        );
+    }
+
+    function testInitializeToken0GtToken1() public {
+        // #region create tModule mock.
+
+        address tModule = vm.addr(
+            uint256(keccak256(abi.encode("Test Module")))
+        );
+
+        // #endregion create tModule mock.
+
+        vm.expectRevert(IArrakisMetaVault.Token0GtToken1.selector);
+
+        vault.initialize(
+            WETH,
+            USDC,
+            tModule
+        );
+    }
+
+    function testInitializeToken0EqToken1() public {
+        // #region create tModule mock.
+
+        address tModule = vm.addr(
+            uint256(keccak256(abi.encode("Test Module")))
+        );
+
+        // #endregion create tModule mock.
+
+        vm.expectRevert(IArrakisMetaVault.Token0EqToken1.selector);
+
+        vault.initialize(
+            USDC,
+            USDC,
+            tModule
+        );
+    }
+
     function testInitializeModuleAddressZero() public {
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -253,7 +255,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
             )
         );
 
-        vault.initialize(address(0));
+        vault.initialize(USDC, WETH, address(0));
     }
 
     function testInitialize() public {
@@ -261,12 +263,16 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
             uint256(keccak256(abi.encode("Test Module")))
         );
 
-        vault.initialize(tModule);
+        vault.initialize(USDC, WETH, tModule);
 
+        address token0 = vault.token0();
+        address token1 = vault.token1();
         address actualModule = address(vault.module());
 
         address[] memory whitelistedModules = vault.whitelistedModules();
 
+        assertEq(token0, USDC);
+        assertEq(token1, WETH);
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], tModule);
         assertEq(actualModule, tModule);
@@ -283,7 +289,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
             uint256(keccak256(abi.encode("Test Module")))
         );
 
-        vault.initialize(tModule);
+        vault.initialize(USDC, WETH, tModule);
 
         address actualModule = address(vault.module());
 
@@ -335,7 +341,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
             uint256(keccak256(abi.encode("Test Module")))
         );
 
-        vault.initialize(tModule);
+        vault.initialize(USDC, WETH, tModule);
 
         address actualModule = address(vault.module());
 
@@ -362,7 +368,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
             uint256(keccak256(abi.encode("Test Module")))
         );
 
-        vault.initialize(tModule);
+        vault.initialize(USDC, WETH, tModule);
 
         address actualModule = address(vault.module());
 
@@ -396,7 +402,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         BuggyLpModuleMock buggyModule = new BuggyLpModuleMock();
 
-        vault.initialize(address(buggyModule));
+        vault.initialize(USDC, WETH, address(buggyModule));
 
         address actualModule = address(vault.module());
 
@@ -451,7 +457,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testSetModuleBuggyNewModule() public {
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -493,7 +499,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testSetModule() public {
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -530,7 +536,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testSetModuleNewModuleWithPayload() public {
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -591,7 +597,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testWhitelistModulesNotSameLengthArray() public {
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -622,7 +628,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testWhitelistModules() public {
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -663,7 +669,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testBlacklistModulesOnlyOwner() public {
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -731,7 +737,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testBlacklistModulesActiveModule() public {
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -757,7 +763,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testBlacklistModules() public {
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -808,7 +814,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testWhitelistedModules() public {
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -849,7 +855,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testGetInits() public {
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -883,7 +889,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testTotalUnderlying() public {
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -916,7 +922,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testTotalUnderlyingAtPrice() public {
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -952,7 +958,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -988,7 +994,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -1041,7 +1047,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address receiver = address(0);
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -1097,7 +1103,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -1159,7 +1165,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -1227,7 +1233,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -1295,7 +1301,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -1364,7 +1370,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -1438,7 +1444,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -1511,7 +1517,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
@@ -1628,13 +1634,4 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     }
 
     // #endregion test symbol.
-
-    // #region test vaultType.
-
-    function testVaultType() public {
-        bytes32 vaultType = vault.vaultType();
-        assertEq(vaultType, PUBLIC_TYPE);
-    }
-
-    // #endregion test vaultType.
 }

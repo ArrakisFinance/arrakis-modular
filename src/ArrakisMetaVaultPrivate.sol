@@ -5,7 +5,6 @@ import {IArrakisMetaVaultPrivate} from "./interfaces/IArrakisMetaVaultPrivate.so
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {ArrakisMetaVault} from "./abstracts/ArrakisMetaVault.sol";
 import {IArrakisLPModulePrivate} from "./interfaces/IArrakisLPModulePrivate.sol";
-import {PRIVATE_TYPE} from "./constants/CArrakis.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -32,12 +31,10 @@ contract ArrakisMetaVaultPrivate is
     // #endregion internal properties.
 
     constructor(
-        address token0_,
-        address token1_,
         address moduleRegistry_,
         address manager_,
         address nft_
-    ) ArrakisMetaVault(token0_, token1_, moduleRegistry_, manager_) {
+    ) ArrakisMetaVault(moduleRegistry_, manager_) {
         if (nft_ == address(0)) revert AddressZero("NFT");
         nft = nft_;
     }
@@ -53,6 +50,8 @@ contract ArrakisMetaVaultPrivate is
         // NOTE: should we also allow owner to be a depositor by default?
         if(!_depositors.contains(msg.sender)) revert OnlyDepositor();
         _deposit(amount0_, amount1_);
+
+        emit LogDeposit(amount0_, amount1_);
     }
 
     /// @notice function used to withdraw tokens or position contraction of the
@@ -66,6 +65,8 @@ contract ArrakisMetaVaultPrivate is
         address receiver_
     ) external onlyOwnerCustom returns (uint256 amount0, uint256 amount1) {
         (amount0, amount1) = _withdraw(receiver_, proportion_);
+
+        emit LogWithdraw(proportion_, amount0, amount1);
     }
 
     /// @notice function used to whitelist depositors.
@@ -112,12 +113,6 @@ contract ArrakisMetaVaultPrivate is
         return _depositors.values();
     }
 
-    /// @notice function used to get the type of vault.
-    /// @return vaultType as bytes32.
-    function vaultType() external pure returns (bytes32) {
-        return PRIVATE_TYPE;
-    }
-
     // #endregion  external view/pure functions.
 
     // #region internal functions.
@@ -136,8 +131,6 @@ contract ArrakisMetaVaultPrivate is
         );
 
         payable(address(module)).functionCallWithValue(data, msg.value);
-
-        emit LogDeposit(amount0_, amount1_);
     }
 
     function _onlyOwnerCheck() internal view override {

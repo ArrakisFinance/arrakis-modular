@@ -152,16 +152,18 @@ abstract contract ValantisModule is
             amount1 = FullMath.mulDiv(proportion_, _amt1, PIPS);
         }
 
-        if (amount0 == 0 && amount1 == 0) revert TotalSupplyZero();
+        // NOTE : Rename it. check if needed.
+        if (amount0 == 0 && amount1 == 0) revert AmountsZeros();
 
         // #endregion effects.
+
+        // NOTE:  check with Ed for rebase tokens.
 
         uint256 balance0 = token0.balanceOf(receiver_);
         uint256 balance1 = token1.balanceOf(receiver_);
 
         // #region interactions.
 
-        // TODO: add receiver to valantis interface.
         alm.withdrawLiquidity(amount0, amount1, receiver_, 0, 0);
 
         // #endregion interactions.

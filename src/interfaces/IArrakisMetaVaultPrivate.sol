@@ -20,6 +20,12 @@ interface IArrakisMetaVaultPrivate {
     /// @param amount1 amount of token1 needed to increase the portfolio of "proportion" percent.
     event LogDeposit(uint256 amount0, uint256 amount1);
 
+    /// @notice Event describing a withdrawal of participation by an user inside this vault.
+    /// @param proportion percentage of the current position that user want to withdraw.
+    /// @param amount0 amount of token0 withdrawn due to withdraw action.
+    /// @param amount1 amount of token1 withdrawn due to withdraw action.
+    event LogWithdraw(uint256 proportion, uint256 amount0, uint256 amount1);
+
     /// @notice Event describing the whitelist of fund depositor.
     /// @param depositors list of address that are granted to depositor role.
     event LogWhitelistDepositors(address[] depositors);

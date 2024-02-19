@@ -3,11 +3,12 @@ pragma solidity ^0.8.20;
 
 import {IArrakisPublicVaultRouter, AddLiquidityData, SwapAndAddData, RemoveLiquidityData, AddLiquidityPermit2Data, SwapAndAddPermit2Data, RemoveLiquidityPermit2Data} from "./interfaces/IArrakisPublicVaultRouter.sol";
 import {TokenPermissions} from "./structs/SPermit2.sol";
+import {IArrakisMetaVaultFactory} from "./interfaces/IArrakisMetaVaultFactory.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IArrakisMetaVaultPublic} from "./interfaces/IArrakisMetaVaultPublic.sol";
 import {IRouterSwapExecutor} from "./interfaces/IRouterSwapExecutor.sol";
 import {IPermit2, SignatureTransferDetails} from "./interfaces/IPermit2.sol";
-import {PUBLIC_TYPE, PIPS} from "./constants/CArrakis.sol";
+import {PIPS} from "./constants/CArrakis.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -34,14 +35,14 @@ contract ArrakisPublicVaultRouter is
     address public immutable nativeToken;
     IPermit2 public immutable permit2;
     IRouterSwapExecutor public immutable swapper;
+    IArrakisMetaVaultFactory public immutable factory;
 
     // #endregion immutable properties.
 
     // #region modifiers.
 
-    modifier onlyERC20Type(address vault_) {
-        bytes32 vaultType = IArrakisMetaVault(vault_).vaultType();
-        if (vaultType != PUBLIC_TYPE) revert OnlyERC20TypeVault(vaultType);
+    modifier onlyPublicVault(address vault_) {
+        if (!factory.isPublicVault(vault_)) revert OnlyPublicVault();
         _;
     }
 
@@ -51,19 +52,22 @@ contract ArrakisPublicVaultRouter is
         address nativeToken_,
         address permit2_,
         address swapper_,
-        address owner_
+        address owner_,
+        address factory_
     ) {
         if (
             nativeToken_ == address(0) ||
             permit2_ == address(0) ||
             swapper_ == address(0) ||
-            owner_ == address(0)
+            owner_ == address(0) ||
+            factory_ == address(0)
         ) revert AddressZero();
 
         nativeToken = nativeToken_;
         permit2 = IPermit2(permit2_);
         swapper = IRouterSwapExecutor(swapper_);
         _initializeOwner(owner_);
+        factory = IArrakisMetaVaultFactory(factory_);
     }
 
     // #region owner functions.
@@ -94,7 +98,7 @@ contract ArrakisPublicVaultRouter is
         payable
         nonReentrant
         whenNotPaused
-        onlyERC20Type(params_.vault)
+        onlyPublicVault(params_.vault)
         returns (uint256 amount0, uint256 amount1, uint256 sharesReceived)
     {
         // #region checks.
@@ -165,7 +169,7 @@ contract ArrakisPublicVaultRouter is
         payable
         nonReentrant
         whenNotPaused
-        onlyERC20Type(params_.addData.vault)
+        onlyPublicVault(params_.addData.vault)
         returns (
             uint256 amount0,
             uint256 amount1,
@@ -238,7 +242,7 @@ contract ArrakisPublicVaultRouter is
         external
         nonReentrant
         whenNotPaused
-        onlyERC20Type(params_.vault)
+        onlyPublicVault(params_.vault)
         returns (uint256 amount0, uint256 amount1)
     {
         if (params_.burnAmount == 0) revert NothingToBurn();
@@ -264,7 +268,7 @@ contract ArrakisPublicVaultRouter is
         payable
         nonReentrant
         whenNotPaused
-        onlyERC20Type(params_.addData.vault)
+        onlyPublicVault(params_.addData.vault)
         returns (uint256 amount0, uint256 amount1, uint256 sharesReceived)
     {
         // #region checks.
@@ -317,7 +321,7 @@ contract ArrakisPublicVaultRouter is
         payable
         nonReentrant
         whenNotPaused
-        onlyERC20Type(params_.swapAndAddData.addData.vault)
+        onlyPublicVault(params_.swapAndAddData.addData.vault)
         returns (
             uint256 amount0,
             uint256 amount1,
@@ -357,7 +361,7 @@ contract ArrakisPublicVaultRouter is
         external
         nonReentrant
         whenNotPaused
-        onlyERC20Type(params_.removeData.vault)
+        onlyPublicVault(params_.removeData.vault)
         returns (uint256 amount0, uint256 amount1)
     {
         if (params_.removeData.burnAmount == 0) revert NothingToBurn();
@@ -439,10 +443,9 @@ contract ArrakisPublicVaultRouter is
         );
 
         // #region assertion check to verify if vault exactly what expected.
+        // NOTE: check rebase edge case?
         if((token0_ == nativeToken && balance0 - amount0_ != address(this).balance) || (token0_ != nativeToken && balance0 - amount0_ != IERC20(token0_).balanceOf(address(this))))
             revert Deposit0();
-        // if (balance0 - amount0_ != IERC20(token0_).balanceOf(address(this)))
-        //     revert Deposit0();
         if ((token1_ == nativeToken && balance1 - amount1_ != address(this).balance) || (token1_ != nativeToken && balance1 - amount1_ != IERC20(token1_).balanceOf(address(this))))
             revert Deposit1();
         // #endregion  assertion check to verify if vault exactly what expected.

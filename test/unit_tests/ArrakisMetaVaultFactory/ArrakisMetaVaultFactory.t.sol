@@ -221,6 +221,47 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
     // #endregion test paused/unpaused.
 
+    // #region test setManager.
+
+    function testSetManagerOnlyOwner() public {
+        address newManager = vm.addr(uint256(keccak256(abi.encode("New Manager"))));
+        address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+
+        vm.expectRevert(Ownable.Unauthorized.selector);
+        vm.prank(caller);
+
+        factory.setManager(newManager);
+    }
+
+    function testSetManagerAddressZero() public {
+        address newManager = address(0);
+
+        vm.expectRevert(IArrakisMetaVaultFactory.AddressZero.selector);
+
+        factory.setManager(newManager);
+    }
+
+    function testSetManagerSameManager() public {
+        vm.expectRevert(IArrakisMetaVaultFactory.SameManager.selector);
+
+        factory.setManager(address(manager));
+    }
+
+    function testSetManager() public {
+        address newManager = vm.addr(uint256(keccak256(abi.encode("New Manager"))));
+
+        address currentManager = factory.manager();
+        assertEq(currentManager, address(manager));
+
+        factory.setManager(newManager);
+
+        currentManager = factory.manager();
+
+        assertEq(currentManager, newManager);
+    }
+
+    // #endregion test setManager.
+
     // #region create private vault.
 
     function testDeployPrivateVault() public {
@@ -981,6 +1022,63 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
     // #endregion test numOfPublicVaults.
 
+    // #region test isPublicVault.
+
+    function testIsPublicVaultFalse() public {
+        address notAPublicVault = vm.addr(uint256(keccak256(abi.encode("Not a public vault"))));
+
+        bool isPublicVault = factory.isPublicVault(notAPublicVault);
+
+        assertEq(isPublicVault, false);
+    }
+
+    function testIsPublicVaultTrue() public {
+        // #region create a public vaults.
+
+        bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
+        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+
+        // #region create module payload.
+
+        bytes memory payload = abi.encodeWithSelector(
+            BeaconImplementation.setGuardianAndMetaVault.selector,
+            pauser
+        );
+
+        // #endregion create module payload.
+
+        // #region whitelist deployer.
+        address deployer1 = vm.addr(
+            uint256(keccak256(abi.encode("Deployer 1")))
+        );
+        address[] memory deployers = new address[](1);
+        deployers[0] = deployer1;
+
+        factory.whitelistDeployer(deployers);
+
+        // #endregion whitelist deployer.
+
+        vm.prank(deployer1);
+
+        address vault = factory.deployPublicVault(
+            publicSalt,
+            USDC,
+            WETH,
+            owner,
+            beacon,
+            payload,
+            ""
+        );
+
+        // #endregion create a public vaults.
+
+        bool isPublicVault = factory.isPublicVault(vault);
+
+        assertEq(isPublicVault, true);
+    }
+
+    // #endregion test isPublicVault.
+
     // #region test privateVaults.
 
     function testPrivateVaultStartIndexLtEndIndex() public {
@@ -1136,4 +1234,49 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     }
 
     // #endregion test numOfPrivateVaults.
+
+    // #region test isPrivateVault.
+
+    function testIsPrivateVaultFalse() public {
+        address notAPrivateVault = vm.addr(uint256(keccak256(abi.encode("Not a private vault"))));
+
+        bool isPrivateVault = factory.isPrivateVault(notAPrivateVault);
+
+        assertEq(isPrivateVault, false);
+    }
+
+    function testIsPrivateVaultTrue() public {
+        // #region create private vault.
+
+        bytes32 privateSalt = keccak256(abi.encode("Test private vault"));
+        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+
+        // #region create module payload.
+
+        bytes memory payload = abi.encodeWithSelector(
+            BeaconImplementation.setGuardianAndMetaVault.selector,
+            pauser
+        );
+
+        // #endregion create module payload.
+
+        address vault = 
+            factory.deployPrivateVault(
+                privateSalt,
+                USDC,
+                WETH,
+                owner,
+                beacon,
+                payload,
+                ""
+        );
+
+        // #endregion create private vault.
+
+        bool isPrivateVault = factory.isPrivateVault(vault);
+
+        assertEq(isPrivateVault, true);
+    }
+
+    // #endregion test isPrivateVault.
 }

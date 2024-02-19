@@ -9,7 +9,7 @@ interface IArrakisPublicVaultRouter {
     error AddressZero();
     error NotEnoughNativeTokenSent();
     error NoNativeTokenAndValueNotZero();
-    error OnlyERC20TypeVault(bytes32 vaultType);
+    error OnlyPublicVault();
     error EmptyMaxAmounts();
     error NothingToMint();
     error NothingToBurn();

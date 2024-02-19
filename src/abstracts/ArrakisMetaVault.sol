@@ -24,14 +24,14 @@ abstract contract ArrakisMetaVault is
 
     // #region immutable properties.
 
-    address public immutable token0;
-    address public immutable token1;
     address public immutable moduleRegistry;
 
     // #endregion immutable properties.
 
     // #region public properties.
 
+    address public token0;
+    address public token1;
     IArrakisLPModule public module;
     address public manager;
 
@@ -54,34 +54,32 @@ abstract contract ArrakisMetaVault is
     // #endregion modifier.
 
     constructor(
-        address token0_,
-        address token1_,
         address moduleRegistry_,
         address manager_
     ) {
         // #region checks.
 
-        if (token0_ == address(0)) revert AddressZero("Token 0");
-        if (token1_ == address(0)) revert AddressZero("Token 1");
-        if (token0_ > token1_) revert Token0GtToken1();
-        if (token0_ == token1_) revert Token0EqToken1();
         if (moduleRegistry_ == address(0))
             revert AddressZero("Module Registry");
         if (manager_ == address(0)) revert AddressZero("Manager");
 
         // #endregion checks.
 
-        token0 = token0_;
-        token1 = token1_;
         moduleRegistry = moduleRegistry_;
         manager = manager_;
 
         emit LogSetManager(manager_);
     }
 
-    function initialize(address module_) external initializer {
+    function initialize(address token0_, address token1_, address module_) external initializer {
+        if (token0_ == address(0)) revert AddressZero("Token 0");
+        if (token1_ == address(0)) revert AddressZero("Token 1");
+        if (token0_ > token1_) revert Token0GtToken1();
+        if (token0_ == token1_) revert Token0EqToken1();
         if (module_ == address(0)) revert AddressZero("Module");
 
+        token0 = token0_;
+        token1 = token1_;
         _whitelistedModules.add(module_);
         module = IArrakisLPModule(module_);
 
@@ -230,8 +228,6 @@ abstract contract ArrakisMetaVault is
         uint256 proportion_
     ) internal returns (uint256 amount0, uint256 amount1) {
         (amount0, amount1) = module.withdraw(receiver_, proportion_);
-
-        emit LogWithdraw(proportion_, amount0, amount1);
     }
 
     function _withdrawManagerBalance(

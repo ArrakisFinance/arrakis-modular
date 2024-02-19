@@ -11,6 +11,7 @@ interface IArrakisMetaVault {
 
     /// @dev triggered when an address that should not
     /// be zero is equal to address zero.
+    // TODO remove the argument.
     error AddressZero(string property);
 
     /// @dev triggered when the caller is different than
@@ -73,12 +74,6 @@ interface IArrakisMetaVault {
 
     // #region events.
 
-    /// @notice Event describing a withdrawal of participation by an user inside this vault.
-    /// @param proportion percentage of the current position that user want to withdraw.
-    /// @param amount0 amount of token0 withdrawn due to withdraw action.
-    /// @param amount1 amount of token1 withdrawn due to withdraw action.
-    event LogWithdraw(uint256 proportion, uint256 amount0, uint256 amount1);
-
     /// @notice Event describing a manager fee withdrawal.
     /// @param amount0 amount of token0 that manager has earned and will be transfered.
     /// @param amount1 amount of token1 that manager has earned and will be transfered.
@@ -114,8 +109,10 @@ interface IArrakisMetaVault {
     // #endregion events.
 
     /// @notice function used to initialize default module.
+    /// @param token0_ address of the first token of the token pair.
+    /// @param token1_ address of the second token of the token pair.
     /// @param module_ address of the default module.
-    function initialize(address module_) external;
+    function initialize(address token0_, address token1_, address module_) external;
 
     /// @notice function used to set module
     /// @param module_ address of the new module
@@ -165,10 +162,6 @@ interface IArrakisMetaVault {
     /// @return init0 the amount of token0 needed to open a position.
     /// @return init1 the amount of token1 needed to open a position.
     function getInits() external view returns (uint256 init0, uint256 init1);
-
-    /// @notice function used to get the type of vault.
-    /// @return vaultType as bytes32.
-    function vaultType() external pure returns (bytes32);
 
     /// @notice function used to get the address of token0.
     function token0() external view returns (address);

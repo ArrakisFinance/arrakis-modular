@@ -11,7 +11,7 @@ interface IValantisSOTModule {
     /// @notice 
     error NoNativeToken();
     error OnlyPool(address caller, address pool);
-    error TotalSupplyZero();
+    error AmountsZeros();
     error Actual0DifferentExpected(uint256 actual0, uint256 expected0);
     error Actual1DifferentExpected(uint256 actual1, uint256 expected1);
     error NotImplemented();

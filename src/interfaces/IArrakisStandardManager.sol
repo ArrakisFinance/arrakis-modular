@@ -9,7 +9,6 @@ interface IArrakisStandardManager {
     error EmptyNftRebalancersArray();
     error NotWhitelistedNftRebalancer(address nftRebalancer);
     error AlreadyWhitelistedNftRebalancer(address nftRebalancer);
-    error VaultTypeNotSupported(bytes32 vaultType);
     error OnlyNftRebalancers(address caller);
     error EmptyString();
     error StratAlreadyWhitelisted();

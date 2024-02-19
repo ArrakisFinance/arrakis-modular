@@ -571,12 +571,12 @@ contract ValantisSOTModuleTest is TestWrapper {
         module.withdraw(receiver, PIPS + 1);
     }
 
-    function testWithdrawTotalSupplyZero() public {
+    function testWithdrawAmountsZeros() public {
         address receiver = vm.addr(20);
 
         vm.prank(address(metaVault));
 
-        vm.expectRevert(IValantisSOTModule.TotalSupplyZero.selector);
+        vm.expectRevert(IValantisSOTModule.AmountsZeros.selector);
 
         module.withdraw(receiver, PIPS);
     }

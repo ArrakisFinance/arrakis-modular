@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {PUBLIC_TYPE, NATIVE_COIN} from "../../../../src/constants/CArrakis.sol";
+import {NATIVE_COIN} from "../../../../src/constants/CArrakis.sol";
 import {IArrakisLPModule} from "../../../../src/interfaces/IArrakisLPModule.sol";
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -52,10 +52,6 @@ contract ArrakisPublicVaultMock is ERC20{
     function setTokens(address token0_, address token1_) external {
         token0 = IERC20(token0_);
         token1 = IERC20(token1_);
-    }
-
-    function vaultType() external pure returns (bytes32) {
-        return PUBLIC_TYPE;
     }
 
     function setManager(address manager_) external {
