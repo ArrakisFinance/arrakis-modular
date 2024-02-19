@@ -152,7 +152,6 @@ abstract contract ValantisModule is
             amount1 = FullMath.mulDiv(proportion_, _amt1, PIPS);
         }
 
-        // NOTE : Rename it. check if needed.
         if (amount0 == 0 && amount1 == 0) revert AmountsZeros();
 
         // #endregion effects.
