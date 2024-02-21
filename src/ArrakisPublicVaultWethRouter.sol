@@ -5,10 +5,8 @@ import {
     ArrakisPublicVaultRouter,
     AddLiquidityData,
     SwapAndAddData,
-    RemoveLiquidityData,
     AddLiquidityPermit2Data,
-    SwapAndAddPermit2Data,
-    RemoveLiquidityPermit2Data
+    SwapAndAddPermit2Data
 } from "./ArrakisPublicVaultRouter.sol";
 import {IArrakisPublicVaultWethRouter} from "./interfaces/IArrakisPublicVaultWethRouter.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
@@ -42,12 +40,12 @@ contract ArrakisPublicVaultWethRouter is ArrakisPublicVaultRouter, IArrakisPubli
         weth = IWETH9(weth_);
     }
 
-    /// @notice wethAndAddLiquidity wrap eth and adds liquidity to meta vault of iPnterest (mints L tokens)
+    /// @notice wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of iPnterest (mints L tokens)
     /// @param params_ AddLiquidityData struct containing data for adding liquidity
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
-    function wethAndAddLiquidity(
+    function wrapAndAddLiquidity(
         AddLiquidityData memory params_
     )
         external
@@ -125,14 +123,14 @@ contract ArrakisPublicVaultWethRouter is ArrakisPublicVaultRouter, IArrakisPubli
         // #endregion interactions.
     }
 
-    /// @notice wethAndSwapAndAddLiquidity wrap eth and transfer tokens to and calls RouterSwapExecutor
+    /// @notice wrapAndSwapAndAddLiquidity wrap eth and transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddData struct containing data for swap
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
-    function wethAndSwapAndAddLiquidity(
+    function wrapAndSwapAndAddLiquidity(
         SwapAndAddData memory params_
     )
         external
@@ -230,66 +228,12 @@ contract ArrakisPublicVaultWethRouter is ArrakisPublicVaultRouter, IArrakisPubli
         }
     }
 
-    /// @notice removeLiquidityAndUnwrap removes liquidity from vault and burns LP tokens and then wrap weth
-    /// to send it to receiver.
-    /// @param params_ RemoveLiquidityData struct containing data for withdrawals
-    /// @return amount0 actual amount of token0 transferred to receiver for burning `burnAmount`
-    /// @return amount1 actual amount of token1 transferred to receiver for burning `burnAmount`
-    function removeLiquidityAndUnwrap(
-        RemoveLiquidityData memory params_
-    ) 
-        external
-        nonReentrant
-        whenNotPaused
-        onlyPublicVault(params_.vault)
-        returns (uint256 amount0, uint256 amount1) 
-    {
-        if (params_.burnAmount == 0) revert NothingToBurn();
-
-        address token0 = IArrakisMetaVault(params_.vault).token0();
-        address token1 = IArrakisMetaVault(params_.vault).token1();
-
-        if(token0 == nativeToken || token1 == nativeToken)
-            revert NativeTokenNotSupported();
-        if(token0 != address(weth) && token1 != address(weth))
-            revert NoWethToken();
-
-        IERC20(params_.vault).safeTransferFrom(
-            msg.sender,
-            address(this),
-            params_.burnAmount
-        );
-
-        address receiver = params_.receiver;
-        params_.receiver = payable(address(this));
-
-        (amount0, amount1) = _removeLiquidity(params_);
-
-
-        if(amount0 > 0) {
-            if(token0 == address(weth)) {
-                weth.withdraw(amount0);
-                payable(receiver).sendValue(amount0);
-            } else {
-                IERC20(token0).safeTransfer(receiver, amount0);
-            }
-        }
-        if(amount1 > 0) {
-            if(token1 == address(weth)) {
-                weth.withdraw(amount1);
-                payable(receiver).sendValue(amount1);
-            } else {
-                IERC20(token1).safeTransfer(receiver, amount1);
-            }
-        }
-    }
-
-    /// @notice wethAddLiquidityPermit2 wrap eth and adds liquidity to public vault of interest (mints LP tokens)
+    /// @notice wrapAndAddLiquidityPermit2 wrap eth and adds liquidity to public vault of interest (mints LP tokens)
     /// @param params_ AddLiquidityPermit2Data struct containing data for adding liquidity
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
-    function wethAddLiquidityPermit2(
+    function wrapAndAddLiquidityPermit2(
         AddLiquidityPermit2Data memory params_
     )
         external
@@ -356,14 +300,14 @@ contract ArrakisPublicVaultWethRouter is ArrakisPublicVaultRouter, IArrakisPubli
         }
     }
     
-    /// @notice wethSwapAndAddLiquidityPermit2 wrap eth and transfer tokens to and calls RouterSwapExecutor
+    /// @notice wrapAndSwapAndAddLiquidityPermit2 wrap eth and transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddPermit2Data struct containing data for swap
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
-    function wethSwapAndAddLiquidityPermit2(
+    function wrapAndSwapAndAddLiquidityPermit2(
         SwapAndAddPermit2Data memory params_
     )
         external
@@ -442,65 +386,6 @@ contract ArrakisPublicVaultWethRouter is ArrakisPublicVaultRouter, IArrakisPubli
                 payable(msg.sender).sendValue(amount1Use - amount1);
             } else {
                 IERC20(token1).safeTransfer(msg.sender, amount1Use - amount1);
-            }
-        }
-    }
-
-    /// @notice removeLiquidityPermit2AndUnwrap removes liquidity from vault and burns LP tokens and then wrap weth
-    /// to send it to receiver.
-    /// @param params_ RemoveLiquidityPermit2Data struct containing data for withdrawals
-    /// @return amount0 actual amount of token0 transferred to receiver for burning `burnAmount`
-    /// @return amount1 actual amount of token1 transferred to receiver for burning `burnAmount`
-    function removeLiquidityPermit2AndUnwrap(
-         RemoveLiquidityPermit2Data memory params_
-    )
-        external
-        nonReentrant
-        whenNotPaused
-        onlyPublicVault(params_.removeData.vault)
-        returns (uint256 amount0, uint256 amount1)
-    {
-        if (params_.removeData.burnAmount == 0) revert NothingToBurn();
-
-        address token0 = IArrakisMetaVault(params_.removeData.vault).token0();
-        address token1 = IArrakisMetaVault(params_.removeData.vault).token1();
-
-        if(token0 == nativeToken || token1 == nativeToken)
-            revert NativeTokenNotSupported();
-        if(token0 != address(weth) && token1 != address(weth))
-            revert NoWethToken();
-
-        SignatureTransferDetails
-            memory transferDetails = SignatureTransferDetails({
-                to: address(this),
-                requestedAmount: params_.removeData.burnAmount
-            });
-        permit2.permitTransferFrom(
-            params_.permit,
-            transferDetails,
-            msg.sender,
-            params_.signature
-        );
-
-        address receiver = params_.removeData.receiver;
-        params_.removeData.receiver = payable(address(this));
-
-        (amount0, amount1) = _removeLiquidity(params_.removeData);
-
-        if(amount0 > 0) {
-            if(token0 == address(weth)) {
-                weth.withdraw(amount0);
-                payable(receiver).sendValue(amount0);
-            } else {
-                IERC20(token0).safeTransfer(receiver, amount0);
-            }
-        }
-        if(amount1 > 0) {
-            if(token1 == address(weth)) {
-                weth.withdraw(amount1);
-                payable(receiver).sendValue(amount1);
-            } else {
-                IERC20(token1).safeTransfer(receiver, amount1);
             }
         }
     }

@@ -14,10 +14,8 @@ import {
     ArrakisPublicVaultWethRouter,
     AddLiquidityData,
     SwapAndAddData,
-    RemoveLiquidityData,
     AddLiquidityPermit2Data,
-    SwapAndAddPermit2Data,
-    RemoveLiquidityPermit2Data
+    SwapAndAddPermit2Data
 } from "../../../src/ArrakisPublicVaultWethRouter.sol";
 import {SwapData} from "../../../src/structs/SRouter.sol";
 import {TokenPermissions, PermitBatchTransferFrom, PermitTransferFrom} from "../../../src/structs/SPermit2.sol";
@@ -94,7 +92,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
     // #endregion test constructor.
 
-    // #region test wethAndAddLiquidity.
+    // #region test wrapAndAddLiquidity.
 
     function testWethAndAddLiquidityOnlyPublicVault() public {
         // #region create private vault.
@@ -115,7 +113,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
 
-        router.wethAndAddLiquidity(params);
+        router.wrapAndAddLiquidity(params);
     }
 
     function testWethAndAddLiquidityMsgValueZero() public {
@@ -142,7 +140,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.MsgValueZero.selector);
 
-        router.wethAndAddLiquidity(params);
+        router.wrapAndAddLiquidity(params);
     }
 
     function testWethAndAddLiquidityEmptyMaxAmounts() public {
@@ -173,7 +171,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.EmptyMaxAmounts.selector);
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndAddLiquidityNothingToMint() public {
@@ -206,7 +204,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.NothingToMint.selector);
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndAddLiquidityNothingToMint2() public {
@@ -239,7 +237,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.NothingToMint.selector);
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndAddLiquidityNothingToMint3() public {
@@ -273,7 +271,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.NothingToMint.selector);
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndAddLiquidityBelowMinAmounts() public {
@@ -308,7 +306,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.BelowMinAmounts.selector);
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndAddLiquidityBelowMinAmounts2() public {
@@ -343,7 +341,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.BelowMinAmounts.selector);
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndAddLiquidityNativeTokenNotSupported() public {
@@ -378,7 +376,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.NativeTokenNotSupported.selector);
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndAddLiquidityNativeTokenNotSupported2() public {
@@ -413,7 +411,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.NativeTokenNotSupported.selector);
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndAddLiquidityNoWethToken() public {
@@ -448,7 +446,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.NoWethToken.selector);
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndAddLiquidityNoWethToken2() public {
@@ -483,7 +481,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.NoWethToken.selector);
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndAddLiquidity() public {
@@ -518,7 +516,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
     }
@@ -555,7 +553,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
     }
@@ -596,7 +594,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         IERC20(USDC).approve(address(router), 2000e6);
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
@@ -638,7 +636,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         IERC20(USDC).approve(address(router), 2000e6);
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
@@ -678,7 +676,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         uint256 balanceBefore = address(this).balance;
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
 
         uint256 balanceAfter = address(this).balance;
 
@@ -720,7 +718,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         uint256 balanceBefore = address(this).balance;
 
-        router.wethAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
 
         uint256 balanceAfter = address(this).balance;
 
@@ -728,9 +726,9 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
         assertEq(balanceBefore - balanceAfter, 1e18);
     }
 
-    // #endregion test wethAndAddLiquidity.
+    // #endregion test wrapAndAddLiquidity.
 
-    // #region test wethAndSwapAndAddLiquidity.
+    // #region test wrapAndSwapAndAddLiquidity.
 
     function testWethAndSwapAndAddLiquidityOnlyPublicVault() public {
         // #region create private vault.
@@ -764,7 +762,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
 
-        router.wethAndSwapAndAddLiquidity(params);
+        router.wrapAndSwapAndAddLiquidity(params);
     }
 
     function testWethAndSwapAndAddLiquidityMsgValueZero() public {
@@ -804,7 +802,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.MsgValueZero.selector);
 
-        router.wethAndSwapAndAddLiquidity(params);
+        router.wrapAndSwapAndAddLiquidity(params);
     }
 
     function testWethAndSwapAndAddLiquidityEmptyMaxAmounts() public {
@@ -854,7 +852,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.EmptyMaxAmounts.selector);
 
-        router.wethAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndSwapAndAddLiquidityNativeTokenNotSupported() public {
@@ -904,7 +902,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.NativeTokenNotSupported.selector);
 
-        router.wethAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndSwapAndAddLiquidityNativeTokenNotSupported2() public {
@@ -954,7 +952,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.NativeTokenNotSupported.selector);
 
-        router.wethAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndSwapAndAddLiquidityNoWethToken() public {
@@ -1004,7 +1002,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.NoWethToken.selector);
 
-        router.wethAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndSwapAndAddLiquidityMsgValueDTMaxAmount() public {
@@ -1054,7 +1052,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.MsgValueDTMaxAmount.selector);
 
-        router.wethAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndSwapAndAddLiquidityMsgValueDTMaxAmount2() public {
@@ -1104,7 +1102,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.MsgValueDTMaxAmount.selector);
 
-        router.wethAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAndSwapAndAddLiquidity() public {
@@ -1153,7 +1151,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
             addData: addData
         });
 
-        router.wethAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
@@ -1208,7 +1206,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
         deal(USDC, address(this), 2000e6);
         IERC20(USDC).approve(address(router), 2000e6);
 
-        router.wethAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 8000e6);
@@ -1263,7 +1261,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
         deal(USDC, address(this), 2000e6);
         IERC20(USDC).approve(address(router), 2000e6);
 
-        router.wethAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 8000e6);
@@ -1320,7 +1318,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         uint256 balanceBefore = address(this).balance;
 
-        router.wethAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
 
         uint256 balanceAfter = address(this).balance;
 
@@ -1380,7 +1378,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         uint256 balanceBefore = address(this).balance;
 
-        router.wethAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
 
         uint256 balanceAfter = address(this).balance;
 
@@ -1438,7 +1436,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
         deal(USDC, address(this), 2000e6 + 10);
         IERC20(USDC).approve(address(router), 2000e6 + 10);
 
-        router.wethAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 8000e6);
@@ -1494,340 +1492,16 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
         deal(USDC, address(this), 2000e6 + 10);
         IERC20(USDC).approve(address(router), 2000e6 + 10);
 
-        router.wethAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidity{value: wethAmountToWrapAndAdd}(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 8000e6);
         assertEq(IERC20(USDC).balanceOf(address(this)), 10);
     }
 
-    // #endregion test wethAndSwapAndAddLiquidity.
+    // #endregion test wrapAndSwapAndAddLiquidity.
 
-    // #region test removeLiquidityAndUnwrap.
-
-    function testRemoveLiquidityAndUnwrapOnlyPublicVault() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region create private vault.
-
-        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
-
-        // #endregion create private vault.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory params = RemoveLiquidityData({
-            burnAmount: 0,
-            amount0Min: 2000e6,
-            amount1Min: 1e18,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
-
-        router.removeLiquidityAndUnwrap(params);
-    }
-
-    function testRemoveLiquidityAndUnwrapNothingToBurn() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory params = RemoveLiquidityData({
-            burnAmount: 0,
-            amount0Min: 2000e6,
-            amount1Min: 1e18,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vm.expectRevert(IArrakisPublicVaultRouter.NothingToBurn.selector);
-
-        router.removeLiquidityAndUnwrap(params);
-    }
-
-    function testRemoveLiquidityAndUnwrapNativeTokenNotSupported() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(USDC, NATIVE_COIN);
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory params = RemoveLiquidityData({
-            burnAmount: 1 ether,
-            amount0Min: 2000e6,
-            amount1Min: 1e18,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vm.expectRevert(IArrakisPublicVaultWethRouter.NativeTokenNotSupported.selector);
-
-        router.removeLiquidityAndUnwrap(params);
-    }
-
-    function testRemoveLiquidityAndUnwrapNativeTokenNotSupported2() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(NATIVE_COIN, USDC);
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory params = RemoveLiquidityData({
-            burnAmount: 1 ether,
-            amount0Min: 1e18,
-            amount1Min: 2000e6,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vm.expectRevert(IArrakisPublicVaultWethRouter.NativeTokenNotSupported.selector);
-
-        router.removeLiquidityAndUnwrap(params);
-    }
-
-    function testRemoveLiquidityAndUnwrapNoWethToken() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(UNI, USDC);
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory params = RemoveLiquidityData({
-            burnAmount: 1 ether,
-            amount0Min: 1e18,
-            amount1Min: 7e6,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vm.expectRevert(IArrakisPublicVaultWethRouter.NoWethToken.selector);
-
-        router.removeLiquidityAndUnwrap(params);
-    }
-
-    function testRemoveLiquidityAndUnwrap() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(WETH, USDC);
-        vault.mintLPToken(address(this), 1 ether);
-        vault.setAmountToTake(1e18, 2000e6);
-        vault.setModule(address(vault));
-        deal(WETH, address(vault), 1e18);
-        deal(USDC, address(vault), 2000e6);
-        vault.setInits(1e18, 2000e6);
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory params = RemoveLiquidityData({
-            burnAmount: 1 ether,
-            amount0Min: 1e18,
-            amount1Min: 2000e6,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vault.setAmountToGive(1e18, 2000e6);
-        IERC20(address(vault)).approve(address(router), 1 ether);
-
-        assertEq(receiver.balance, 0);
-        assertEq(IERC20(USDC).balanceOf(receiver), 0);
-
-        router.removeLiquidityAndUnwrap(params);
-
-        assertEq(receiver.balance, 1e18);
-        assertEq(IERC20(USDC).balanceOf(receiver), 2000e6);
-    }
-
-    function testRemoveLiquidityAndUnwrap2() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(WETH, USDC);
-        vault.mintLPToken(address(this), 1 ether);
-        vault.setAmountToTake(0, 2000e6);
-        vault.setModule(address(vault));
-        deal(USDC, address(vault), 2000e6);
-        vault.setInits(0, 2000e6);
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory params = RemoveLiquidityData({
-            burnAmount: 1 ether,
-            amount0Min: 0,
-            amount1Min: 2000e6,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vault.setAmountToGive(0, 2000e6);
-        IERC20(address(vault)).approve(address(router), 1 ether);
-
-        assertEq(receiver.balance, 0);
-        assertEq(IERC20(USDC).balanceOf(receiver), 0);
-
-        router.removeLiquidityAndUnwrap(params);
-
-        assertEq(receiver.balance, 0);
-        assertEq(IERC20(USDC).balanceOf(receiver), 2000e6);
-    }
-
-    function testRemoveLiquidityAndUnwrap3() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(WETH, USDC);
-        vault.mintLPToken(address(this), 1 ether);
-        vault.setAmountToTake(1e18, 0);
-        vault.setModule(address(vault));
-        deal(WETH, address(vault), 1e18);
-        vault.setInits(1e18, 0);
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory params = RemoveLiquidityData({
-            burnAmount: 1 ether,
-            amount0Min: 1e18,
-            amount1Min: 0,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vault.setAmountToGive(1e18, 0);
-        IERC20(address(vault)).approve(address(router), 1 ether);
-
-        assertEq(receiver.balance, 0);
-        assertEq(IERC20(USDC).balanceOf(receiver), 0);
-
-        router.removeLiquidityAndUnwrap(params);
-
-        assertEq(receiver.balance, 1e18);
-        assertEq(IERC20(USDC).balanceOf(receiver), 0);
-    }
-
-    function testRemoveLiquidityAndUnwrap4() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(USDC, WETH);
-        vault.mintLPToken(address(this), 1 ether);
-        vault.setAmountToTake(2000e6, 1e18);
-        vault.setModule(address(vault));
-        deal(WETH, address(vault), 1e18);
-        deal(USDC, address(vault), 2000e6);
-        vault.setInits(2000e6, 1e18);
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory params = RemoveLiquidityData({
-            burnAmount: 1 ether,
-            amount0Min: 2000e6,
-            amount1Min: 1e18,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vault.setAmountToGive(2000e6, 1e18);
-        IERC20(address(vault)).approve(address(router), 1 ether);
-
-        assertEq(receiver.balance, 0);
-        assertEq(IERC20(USDC).balanceOf(receiver), 0);
-
-        router.removeLiquidityAndUnwrap(params);
-
-        assertEq(receiver.balance, 1e18);
-        assertEq(IERC20(USDC).balanceOf(receiver), 2000e6);
-    }
-    // #endregion test removeLiquidityAndUnwrap.
-
-    // #region test wethAddLiquidityPermit2.
+    // #region test wrapAndAddLiquidityPermit2.
 
     function testWethAddLiquidityPermit2OnlyPublicVault() public {
         // #region create private vault.
@@ -1862,7 +1536,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
 
-        router.wethAddLiquidityPermit2(params);
+        router.wrapAndAddLiquidityPermit2(params);
     }
 
     function testWethAddLiquidityPermit2MsgValueZero() public {
@@ -1902,7 +1576,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.MsgValueZero.selector);
 
-        router.wethAddLiquidityPermit2(params);
+        router.wrapAndAddLiquidityPermit2(params);
     }
 
     function testWethAddLiquidityPermit2EmptyMaxAmounts() public {
@@ -1949,7 +1623,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.EmptyMaxAmounts.selector);
 
-        router.wethAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAddLiquidityPermit2NothingToMint() public {
@@ -1999,7 +1673,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.NothingToMint.selector);
 
-        router.wethAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAddLiquidityPermit2BelowMinAmounts() public {
@@ -2051,7 +1725,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.BelowMinAmounts.selector);
 
-        router.wethAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAddLiquidityPermit2BelowMinAmounts2() public {
@@ -2103,7 +1777,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.BelowMinAmounts.selector);
 
-        router.wethAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAddLiquidityPermit2NativeTokenNotSupported() public {
@@ -2155,7 +1829,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.NativeTokenNotSupported.selector);
 
-        router.wethAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAddLiquidityPermit2NativeTokenNotSupported2() public {
@@ -2207,7 +1881,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.NativeTokenNotSupported.selector);
 
-        router.wethAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAddLiquidityPermit2NoWethToken() public {
@@ -2259,7 +1933,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.NoWethToken.selector);
 
-        router.wethAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAddLiquidityPermit2LengthMismatch() public {
@@ -2311,7 +1985,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.LengthMismatch.selector);
 
-        router.wethAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAddLiquidityPermit2Permit2WethNotAuthorized() public {
@@ -2366,7 +2040,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
         IERC20(WETH).approve(address(PERMIT2), 1e18);
         vm.expectRevert(IArrakisPublicVaultWethRouter.Permit2WethNotAuthorized.selector);
 
-        router.wethAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethAddLiquidityPermit2() public {
@@ -2425,7 +2099,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
         assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
 
-        router.wethAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
@@ -2489,7 +2163,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         uint256 balanceBefore = address(this).balance;
 
-        router.wethAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
 
         uint256 balanceAfter = address(this).balance;
 
@@ -2556,7 +2230,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         uint256 balanceBefore = address(this).balance;
 
-        router.wethAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
 
         uint256 balanceAfter = address(this).balance;
 
@@ -2565,9 +2239,9 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
         assertEq(balanceBefore - balanceAfter, 1e18);
     }
 
-    // #endregion test wethAddLiquidityPermit2.
+    // #endregion test wrapAndAddLiquidityPermit2.
 
-    // #region test wethSwapAndAddLiquidityPermit2.
+    // #region test wrapAndSwapAndAddLiquidityPermit2.
 
     function testWethSwapAndAddLiquidityPermit2OnlyPublicVault() public {
         // #region create private vault.
@@ -2615,7 +2289,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
 
-        router.wethSwapAndAddLiquidityPermit2(params);
+        router.wrapAndSwapAndAddLiquidityPermit2(params);
     }
 
     function testWethSwapAndAddLiquidityPermit2MsgValueZero() public {
@@ -2669,7 +2343,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.MsgValueZero.selector);
 
-        router.wethSwapAndAddLiquidityPermit2(params);
+        router.wrapAndSwapAndAddLiquidityPermit2(params);
     }
 
     function testWethSwapAndAddLiquidityPermit2EmptyMaxAmounts() public {
@@ -2729,7 +2403,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.EmptyMaxAmounts.selector);
 
-        router.wethSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethSwapAndAddLiquidityPermit2NativeTokenNotSupported() public {
@@ -2795,7 +2469,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.NativeTokenNotSupported.selector);
 
-        router.wethSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethSwapAndAddLiquidityPermit2NativeTokenNotSupported2() public {
@@ -2861,7 +2535,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.NativeTokenNotSupported.selector);
 
-        router.wethSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethSwapAndAddLiquidityPermit2NoWethToken() public {
@@ -2927,7 +2601,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.NoWethToken.selector);
 
-        router.wethSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethSwapAndAddLiquidityPermit2MsgValueDTMaxAmount() public {
@@ -2993,7 +2667,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.MsgValueDTMaxAmount.selector);
 
-        router.wethSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethSwapAndAddLiquidityPermit2MsgValueDTMaxAmount2() public {
@@ -3059,7 +2733,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultWethRouter.MsgValueDTMaxAmount.selector);
 
-        router.wethSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethSwapAndAddLiquidityPermit2LengthMismatch() public {
@@ -3125,7 +2799,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         vm.expectRevert(IArrakisPublicVaultRouter.LengthMismatch.selector);
 
-        router.wethSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethSwapAndAddLiquidityPermit2Permit2WethNotAuthorized() public {
@@ -3194,7 +2868,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
         IERC20(WETH).approve(address(PERMIT2), 1e18);
         vm.expectRevert(IArrakisPublicVaultWethRouter.Permit2WethNotAuthorized.selector);
 
-        router.wethSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
     }
 
     function testWethSwapAndAddLiquidityPermit2() public {
@@ -3266,7 +2940,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
         assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
 
-        router.wethSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 8000e6);
@@ -3343,7 +3017,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         uint256 balanceBefore = address(this).balance;
 
-        router.wethSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
 
         uint256 balanceAfter = address(this).balance;
 
@@ -3421,7 +3095,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
         assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
 
-        router.wethSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 8000e6);
@@ -3497,7 +3171,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
         assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
 
-        router.wethSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 8000e6);
@@ -3575,7 +3249,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
 
         uint256 balanceBefore = address(this).balance;
 
-        router.wethSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
+        router.wrapAndSwapAndAddLiquidityPermit2{value: wethAmountToWrapAndAdd}(params);
 
         uint256 balanceAfter = address(this).balance;
 
@@ -3584,374 +3258,7 @@ contract ArrakisPublicVaultWethRouterTest is TestWrapper {
         assertEq(balanceBefore - balanceAfter, 2e18);
     }
 
-    // #endregion test wethSwapAndAddLiquidityPermit2.
-
-    // #region test removeLiquidityPermit2AndUnwrap.
-
-    function testRemoveLiquidityPermit2AndUnwrapOnlyPublicVault() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-
-        // #region create private vault.
-
-        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
-
-        // #endregion create private vault.
-
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory removeData = RemoveLiquidityData({
-            burnAmount: 0,
-            amount0Min: 2000e6,
-            amount1Min: 1e18,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        TokenPermissions memory permitted = TokenPermissions({
-            token: address(vault),
-            amount: 0
-        });
-
-        PermitTransferFrom memory permit = PermitTransferFrom({
-            permitted: permitted,
-            nonce: 1,
-            deadline: type(uint256).max
-        });
-
-        RemoveLiquidityPermit2Data memory params = RemoveLiquidityPermit2Data({
-            removeData: removeData,
-            permit: permit,
-            signature: ""
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
-
-        router.removeLiquidityPermit2AndUnwrap(params);
-    }
-
-    function testRemoveLiquidityPermit2AndUnwrapNothingToBurn() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory removeData = RemoveLiquidityData({
-            burnAmount: 0,
-            amount0Min: 2000e6,
-            amount1Min: 1e18,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        TokenPermissions memory permitted = TokenPermissions({
-            token: address(vault),
-            amount: 0
-        });
-
-        PermitTransferFrom memory permit = PermitTransferFrom({
-            permitted: permitted,
-            nonce: 1,
-            deadline: type(uint256).max
-        });
-
-        RemoveLiquidityPermit2Data memory params = RemoveLiquidityPermit2Data({
-            removeData: removeData,
-            permit: permit,
-            signature: ""
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vm.expectRevert(IArrakisPublicVaultRouter.NothingToBurn.selector);
-
-        router.removeLiquidityPermit2AndUnwrap(params);
-    }
-
-    function testRemoveLiquidityPermit2AndUnwrapNativeTokenNotSupported() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(USDC, NATIVE_COIN);
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory removeData = RemoveLiquidityData({
-            burnAmount: 1 ether,
-            amount0Min: 2000e6,
-            amount1Min: 1e18,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        TokenPermissions memory permitted = TokenPermissions({
-            token: address(vault),
-            amount: 0
-        });
-
-        PermitTransferFrom memory permit = PermitTransferFrom({
-            permitted: permitted,
-            nonce: 1,
-            deadline: type(uint256).max
-        });
-
-        RemoveLiquidityPermit2Data memory params = RemoveLiquidityPermit2Data({
-            removeData: removeData,
-            permit: permit,
-            signature: ""
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vm.expectRevert(IArrakisPublicVaultWethRouter.NativeTokenNotSupported.selector);
-
-        router.removeLiquidityPermit2AndUnwrap(params);
-    }
-
-    function testRemoveLiquidityPermit2AndUnwrapNativeTokenNotSupported2() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(NATIVE_COIN, USDC);
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory removeData = RemoveLiquidityData({
-            burnAmount: 1 ether,
-            amount0Min: 1e18,
-            amount1Min: 2000e6,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        TokenPermissions memory permitted = TokenPermissions({
-            token: address(vault),
-            amount: 0
-        });
-
-        PermitTransferFrom memory permit = PermitTransferFrom({
-            permitted: permitted,
-            nonce: 1,
-            deadline: type(uint256).max
-        });
-
-        RemoveLiquidityPermit2Data memory params = RemoveLiquidityPermit2Data({
-            removeData: removeData,
-            permit: permit,
-            signature: ""
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vm.expectRevert(IArrakisPublicVaultWethRouter.NativeTokenNotSupported.selector);
-
-        router.removeLiquidityPermit2AndUnwrap(params);
-    }
-
-    function testRemoveLiquidityPermit2AndUnwrapNoWethToken() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(UNI, USDC);
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory removeData = RemoveLiquidityData({
-            burnAmount: 1 ether,
-            amount0Min: 1e18,
-            amount1Min: 7e6,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        TokenPermissions memory permitted = TokenPermissions({
-            token: address(vault),
-            amount: 0
-        });
-
-        PermitTransferFrom memory permit = PermitTransferFrom({
-            permitted: permitted,
-            nonce: 1,
-            deadline: type(uint256).max
-        });
-
-        RemoveLiquidityPermit2Data memory params = RemoveLiquidityPermit2Data({
-            removeData: removeData,
-            permit: permit,
-            signature: ""
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vm.expectRevert(IArrakisPublicVaultWethRouter.NoWethToken.selector);
-
-        router.removeLiquidityPermit2AndUnwrap(params);
-    }
-
-    function testRemoveLiquidityPermit2AndUnwrap() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(WETH, USDC);
-        vault.mintLPToken(address(this), 1 ether);
-        vault.setAmountToTake(1e18, 2000e6);
-        vault.setModule(address(vault));
-        deal(WETH, address(vault), 1e18);
-        deal(USDC, address(vault), 2000e6);
-        vault.setInits(1e18, 2000e6);
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory removeData = RemoveLiquidityData({
-            burnAmount: 1 ether,
-            amount0Min: 1e18,
-            amount1Min: 2000e6,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        TokenPermissions memory permitted = TokenPermissions({
-            token: address(vault),
-            amount: 1 ether
-        });
-
-        PermitTransferFrom memory permit = PermitTransferFrom({
-            permitted: permitted,
-            nonce: 1,
-            deadline: type(uint256).max
-        });
-
-        RemoveLiquidityPermit2Data memory params = RemoveLiquidityPermit2Data({
-            removeData: removeData,
-            permit: permit,
-            signature: ""
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vault.setAmountToGive(1e18, 2000e6);
-
-        IERC20(address(vault)).approve(address(PERMIT2), 1 ether);
-        assertEq(receiver.balance, 0);
-        assertEq(IERC20(USDC).balanceOf(receiver), 0);
-
-        router.removeLiquidityPermit2AndUnwrap(params);
-
-        assertEq(receiver.balance, 1e18);
-        assertEq(IERC20(USDC).balanceOf(receiver), 2000e6);
-    }
-
-    function testRemoveLiquidityPermit2AndUnwrap2() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-
-        // #region create private vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(USDC, WETH);
-        vault.mintLPToken(address(this), 1 ether);
-        vault.setAmountToTake(2000e6, 1e18);
-        vault.setModule(address(vault));
-        deal(WETH, address(vault), 1e18);
-        deal(USDC, address(vault), 2000e6);
-        vault.setInits(2000e6, 1e18);
-
-        // #endregion create private vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        // #region create RemoveLiquidityData struct.
-
-        RemoveLiquidityData memory removeData = RemoveLiquidityData({
-            burnAmount: 1 ether,
-            amount0Min: 2000e6,
-            amount1Min: 1e18,
-            vault: address(vault),
-            receiver: payable(receiver)
-        });
-
-        TokenPermissions memory permitted = TokenPermissions({
-            token: address(vault),
-            amount: 1 ether
-        });
-
-        PermitTransferFrom memory permit = PermitTransferFrom({
-            permitted: permitted,
-            nonce: 1,
-            deadline: type(uint256).max
-        });
-
-        RemoveLiquidityPermit2Data memory params = RemoveLiquidityPermit2Data({
-            removeData: removeData,
-            permit: permit,
-            signature: ""
-        });
-
-        // #endregion create RemoveLiquidityData struct.
-
-        vault.setAmountToGive(2000e6, 1e18);
-
-        IERC20(address(vault)).approve(address(PERMIT2), 1 ether);
-        assertEq(receiver.balance, 0);
-        assertEq(IERC20(USDC).balanceOf(receiver), 0);
-
-        router.removeLiquidityPermit2AndUnwrap(params);
-
-        assertEq(receiver.balance, 1e18);
-        assertEq(IERC20(USDC).balanceOf(receiver), 2000e6);
-    }
-
-    // #endregion test removeLiquidityPermit2AndUnwrap.
+    // #endregion test wrapAndSwapAndAddLiquidityPermit2.
 
     /// @dev to receiver ether.
     receive() external payable {}
