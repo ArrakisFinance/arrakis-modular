@@ -64,7 +64,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             address(PERMIT2),
             address(this),
             owner,
-            address(factory)
+            address(factory),
+            WETH
         );
     }
 
@@ -78,7 +79,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             address(PERMIT2),
             address(this),
             owner,
-            address(factory)
+            address(factory),
+            WETH
         );
     }
 
@@ -90,7 +92,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             address(0),
             address(this),
             owner,
-            address(factory)
+            address(factory),
+            WETH
         );
     }
 
@@ -102,7 +105,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             address(PERMIT2),
             address(0),
             owner,
-            address(factory)
+            address(factory),
+            WETH
         );
     }
 
@@ -114,7 +118,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             address(PERMIT2),
             address(this),
             address(0),
-            address(factory)
+            address(factory),
+            WETH
         );
     }
 
@@ -126,7 +131,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             address(PERMIT2),
             address(this),
             owner,
-            address(0)
+            address(0),
+            WETH
         );
     }
 

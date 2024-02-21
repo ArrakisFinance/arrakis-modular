@@ -20,7 +20,11 @@ interface IArrakisPublicVaultRouter {
     error NoNativeToken();
     error Deposit0();
     error Deposit1();
-
+    error MsgValueZero();
+    error NativeTokenNotSupported();
+    error MsgValueDTMaxAmount();
+    error NoWethToken();
+    error Permit2WethNotAuthorized();
     // #endregion errors.
 
     // #region events.
@@ -128,6 +132,43 @@ interface IArrakisPublicVaultRouter {
     function removeLiquidityPermit2(
         RemoveLiquidityPermit2Data memory params_
     ) external returns (uint256 amount0, uint256 amount1);
+
+    function wrapAndAddLiquidity(
+        AddLiquidityData memory params_
+    ) external payable returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);
+
+    function wrapAndSwapAndAddLiquidity(
+        SwapAndAddData memory params_
+    )
+        external
+        payable
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 sharesReceived,
+            uint256 amount0Diff,
+            uint256 amount1Diff
+        );
+
+    function wrapAndAddLiquidityPermit2(
+        AddLiquidityPermit2Data memory params_
+    )
+        external
+        payable
+        returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);
+
+    function wrapAndSwapAndAddLiquidityPermit2(
+        SwapAndAddPermit2Data memory params_
+    )
+        external
+        payable
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 sharesReceived,
+            uint256 amount0Diff,
+            uint256 amount1Diff
+        );
 
     // #endregion functions.
 
