@@ -6,24 +6,24 @@
 
 
 ## State Variables
+### moduleRegistry
+
+```solidity
+address public immutable moduleRegistry;
+```
+
+
 ### token0
 
 ```solidity
-address public immutable token0;
+address public token0;
 ```
 
 
 ### token1
 
 ```solidity
-address public immutable token1;
-```
-
-
-### moduleRegistry
-
-```solidity
-address public immutable moduleRegistry;
+address public token1;
 ```
 
 
@@ -67,14 +67,14 @@ modifier onlyManager();
 
 
 ```solidity
-constructor(address token0_, address token1_, address moduleRegistry_, address manager_);
+constructor(address moduleRegistry_, address manager_);
 ```
 
 ### initialize
 
 
 ```solidity
-function initialize(address module_) external initializer;
+function initialize(address token0_, address token1_, address module_) external initializer;
 ```
 
 ### setModule
@@ -192,7 +192,7 @@ function totalUnderlyingAtPrice(uint160 priceX96_) external view returns (uint25
 
 |Name|Type|Description|
 |----|----|-----------|
-|`priceX96_`|`uint160`||
+|`priceX96_`|`uint160`|price at which we want to simulate our tokens composition|
 
 **Returns**
 

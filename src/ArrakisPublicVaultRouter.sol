@@ -229,7 +229,7 @@ contract ArrakisPublicVaultRouter is
             sharesReceived,
             amount0Diff,
             amount1Diff
-        ) = _swapAndAddLiquidity(params_, token0, token1);
+        ) = _swapAndAddLiquiditySendBackLeftOver(params_, token0, token1);
     }
 
     /// @notice removeLiquidity removes liquidity from vault and burns LP tokens
@@ -294,7 +294,7 @@ contract ArrakisPublicVaultRouter is
 
         // #endregion checks.
 
-        _permit2Add(params_, token0, token1, amount0, amount1);
+        _permit2AddLengthOneOrTwo(params_, token0, token1, amount0, amount1);
 
         _addLiquidity(
             params_.addData.vault,
@@ -340,7 +340,7 @@ contract ArrakisPublicVaultRouter is
         address token1 = IArrakisMetaVault(params_.swapAndAddData.addData.vault)
             .token1();
 
-        _permit2SwapAndAdd(params_, token0, token1);
+        _permit2SwapAndAddLengthOneOrTwo(params_, token0, token1);
 
         (
             amount0,
@@ -348,7 +348,7 @@ contract ArrakisPublicVaultRouter is
             sharesReceived,
             amount0Diff,
             amount1Diff
-        ) = _swapAndAddLiquidity(params_.swapAndAddData, token0, token1);
+        ) = _swapAndAddLiquiditySendBackLeftOver(params_.swapAndAddData, token0, token1);
     }
 
     /// @notice removeLiquidityPermit2 removes liquidity from vault and burns LP tokens
@@ -458,6 +458,8 @@ contract ArrakisPublicVaultRouter is
     )
         internal
         returns (
+            uint256 amount0Use,
+            uint256 amount1Use,
             uint256 amount0,
             uint256 amount1,
             uint256 sharesReceived,
@@ -491,10 +493,10 @@ contract ArrakisPublicVaultRouter is
             params_.swapData.amountOutSwap
         );
 
-        uint256 amount0Use = (params_.swapData.zeroForOne)
+        amount0Use = (params_.swapData.zeroForOne)
             ? params_.addData.amount0Max - amount0Diff
             : params_.addData.amount0Max + amount0Diff;
-        uint256 amount1Use = (params_.swapData.zeroForOne)
+        amount1Use = (params_.swapData.zeroForOne)
             ? params_.addData.amount1Max + amount1Diff
             : params_.addData.amount1Max - amount1Diff;
 
@@ -521,18 +523,48 @@ contract ArrakisPublicVaultRouter is
             token0_,
             token1_
         );
+    }
 
-        if (token0_ == nativeToken && amount0Use > amount0) {
-            payable(msg.sender).sendValue(amount0Use - amount0);
-        } else if (token1_ == nativeToken && amount1Use > amount1) {
-            payable(msg.sender).sendValue(amount1Use - amount1);
+    function _swapAndAddLiquiditySendBackLeftOver(
+        SwapAndAddData memory params_,
+        address token0_,
+        address token1_
+    )
+        internal
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 sharesReceived,
+            uint256 amount0Diff,
+            uint256 amount1Diff
+        )
+    {
+        uint256 amount0Use;
+        uint256 amount1Use;
+        (
+            amount0Use,
+            amount1Use,
+            amount0,
+            amount1,
+            sharesReceived,
+            amount0Diff,
+            amount1Diff
+        ) = _swapAndAddLiquidity(params_, token0_, token1_);
+
+        if(amount0Use > amount0) {
+            if(token0_ == nativeToken) {
+                payable(msg.sender).sendValue(amount0Use - amount0);
+            } else {
+                IERC20(token0_).safeTransfer(msg.sender, amount0Use - amount0);
+            }
         }
 
-        if (amount0Use > amount0 && token0_ != nativeToken) {
-            IERC20(token0_).safeTransfer(msg.sender, amount0Use - amount0);
-        }
-        if (amount1Use > amount1 && token1_ != nativeToken) {
-            IERC20(token1_).safeTransfer(msg.sender, amount1Use - amount1);
+        if(amount1Use > amount1) {
+            if(token1_ == nativeToken) {
+                payable(msg.sender).sendValue(amount1Use - amount1);
+            } else {
+                IERC20(token1_).safeTransfer(msg.sender, amount1Use - amount1);
+            }
         }
     }
 
@@ -548,7 +580,7 @@ contract ArrakisPublicVaultRouter is
             revert ReceivedBelowMinimum();
     }
 
-    function _permit2Add(
+    function _permit2AddLengthOneOrTwo(
         AddLiquidityPermit2Data memory params_,
         address token0_,
         address token1_,
@@ -560,9 +592,20 @@ contract ArrakisPublicVaultRouter is
             revert LengthMismatch();
         }
 
-        SignatureTransferDetails[] memory transfers = new SignatureTransferDetails[](permittedLength);
+        _permit2Add(permittedLength, params_, token0_, token1_, amount0_, amount1_);
+    }
 
-        for(uint256 i; i < permittedLength; i++) {
+    function _permit2Add(
+        uint256 permittedLength_,
+        AddLiquidityPermit2Data memory params_,
+        address token0_,
+        address token1_,
+        uint256 amount0_,
+        uint256 amount1_
+    ) internal {
+        SignatureTransferDetails[] memory transfers = new SignatureTransferDetails[](permittedLength_);
+
+        for(uint256 i; i < permittedLength_; i++) {
             TokenPermissions memory tokenPermission = params_.permit.permitted[i];
 
             if(tokenPermission.token == token0_) {
@@ -587,7 +630,7 @@ contract ArrakisPublicVaultRouter is
         );
     }
 
-    function _permit2SwapAndAdd(
+    function _permit2SwapAndAddLengthOneOrTwo(
         SwapAndAddPermit2Data memory params_,
         address token0_,
         address token1_
@@ -597,9 +640,18 @@ contract ArrakisPublicVaultRouter is
             revert LengthMismatch();
         }
 
-        SignatureTransferDetails[] memory transfers = new SignatureTransferDetails[](permittedLength);
+        _permit2SwapAndAdd(permittedLength, params_, token0_, token1_);
+    }
 
-        for(uint256 i; i < permittedLength; i++) {
+    function _permit2SwapAndAdd(
+        uint256 permittedLength_,
+        SwapAndAddPermit2Data memory params_,
+        address token0_,
+        address token1_
+    ) internal {
+        SignatureTransferDetails[] memory transfers = new SignatureTransferDetails[](permittedLength_);
+
+        for(uint256 i; i < permittedLength_; i++) {
             TokenPermissions memory tokenPermission = params_.permit.permitted[i];
 
             if(tokenPermission.token == token0_) {

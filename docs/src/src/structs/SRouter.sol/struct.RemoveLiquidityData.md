@@ -9,7 +9,6 @@ struct RemoveLiquidityData {
     uint256 amount1Min;
     address vault;
     address payable receiver;
-    bool receiveETH;
 }
 ```
 

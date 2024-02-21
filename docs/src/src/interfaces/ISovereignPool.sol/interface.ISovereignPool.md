@@ -40,3 +40,10 @@ function getPoolManagerFees() external view returns (uint256 poolManagerFee0, ui
 function poolManagerFeeBips() external view returns (uint256);
 ```
 
+### getReserves
+
+
+```solidity
+function getReserves() external view returns (uint256, uint256);
+```
+

@@ -32,7 +32,7 @@ uint8 public immutable decimals1;
 
 
 ```solidity
-constructor(address oracle_);
+constructor(address oracle_, uint8 decimals0_, uint8 decimals1_);
 ```
 
 ### getPrice0

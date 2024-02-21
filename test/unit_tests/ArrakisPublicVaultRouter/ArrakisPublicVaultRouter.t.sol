@@ -14,10 +14,8 @@ import {AddLiquidityData, SwapAndAddData, SwapData, RemoveLiquidityData, AddLiqu
 import {PermitBatchTransferFrom, PermitTransferFrom, TokenPermissions} from "../../../src/structs/SPermit2.sol";
 
 // #region openzeppelin.
-
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 // #endregion openzeppelin.
 
 // #region solady.
@@ -25,11 +23,9 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 // #endregion solady.
 
 // #region mocks.
-
 import {ArrakisMetaVaultFactoryMock} from "./mocks/ArrakisMetaVaultFactoryMock.sol";
 import {ArrakisPrivateVaultMock} from "./mocks/ArrakisPrivateVaultMock.sol";
 import {ArrakisPublicVaultMock} from "./mocks/ArrakisPublicVaultMock.sol";
-
 // #endregion mocks.
 
 contract ArrakisPublicVaultRouterTest is TestWrapper {
@@ -1279,6 +1275,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         });
 
         // #endregion create RemoveLiquidityData struct.
+
         vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
 
         router.removeLiquidity(params);
@@ -1441,7 +1438,6 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         });
 
         vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
-
 
         router.addLiquidityPermit2(params);
     }
@@ -2493,5 +2489,5 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         magicValue = 0x1626ba7e;
     }
 
-    // #region ERC1271 mocks.
+    // #endregion ERC1271 mocks.
 }

@@ -33,3 +33,22 @@ function getPrice1() external view returns (uint256 price1);
 |`price1`|`uint256`|price of token1/token0.|
 
 
+## Errors
+### AddressZero
+
+```solidity
+error AddressZero();
+```
+
+### DecimalsToken0Zero
+
+```solidity
+error DecimalsToken0Zero();
+```
+
+### DecimalsToken1Zero
+
+```solidity
+error DecimalsToken1Zero();
+```
+

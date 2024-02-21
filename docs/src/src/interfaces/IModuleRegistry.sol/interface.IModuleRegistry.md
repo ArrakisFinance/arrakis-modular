@@ -177,12 +177,6 @@ error NotAlreadyWhitelistedBeacon(address beacon);
 error NotWhitelistedBeacon();
 ```
 
-### ImplementationIsAddressZero
-
-```solidity
-error ImplementationIsAddressZero();
-```
-
 ### NotBeacon
 
 ```solidity

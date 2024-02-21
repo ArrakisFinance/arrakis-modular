@@ -51,3 +51,9 @@ event LogSetPauser(address oldPauser, address newPauser);
 error AddressZero();
 ```
 
+### SamePauser
+
+```solidity
+error SamePauser();
+```
+
