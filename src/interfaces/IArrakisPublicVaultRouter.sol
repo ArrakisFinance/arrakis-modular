@@ -133,10 +133,22 @@ interface IArrakisPublicVaultRouter {
         RemoveLiquidityPermit2Data memory params_
     ) external returns (uint256 amount0, uint256 amount1);
 
+    /// @notice wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of iPnterest (mints L tokens)
+    /// @param params_ AddLiquidityData struct containing data for adding liquidity
+    /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
+    /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
+    /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     function wrapAndAddLiquidity(
         AddLiquidityData memory params_
     ) external payable returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);
 
+    /// @notice wrapAndSwapAndAddLiquidity wrap eth and transfer tokens to and calls RouterSwapExecutor
+    /// @param params_ SwapAndAddData struct containing data for swap
+    /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
+    /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
+    /// @return sharesReceived amount of public vault tokens transferred to `receiver`
+    /// @return amount0Diff token0 balance difference post swap
+    /// @return amount1Diff token1 balance difference post swap
     function wrapAndSwapAndAddLiquidity(
         SwapAndAddData memory params_
     )
@@ -150,6 +162,11 @@ interface IArrakisPublicVaultRouter {
             uint256 amount1Diff
         );
 
+    /// @notice wrapAndAddLiquidityPermit2 wrap eth and adds liquidity to public vault of interest (mints LP tokens)
+    /// @param params_ AddLiquidityPermit2Data struct containing data for adding liquidity
+    /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
+    /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
+    /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     function wrapAndAddLiquidityPermit2(
         AddLiquidityPermit2Data memory params_
     )
@@ -157,6 +174,13 @@ interface IArrakisPublicVaultRouter {
         payable
         returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);
 
+    /// @notice wrapAndSwapAndAddLiquidityPermit2 wrap eth and transfer tokens to and calls RouterSwapExecutor
+    /// @param params_ SwapAndAddPermit2Data struct containing data for swap
+    /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
+    /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
+    /// @return sharesReceived amount of public vault tokens transferred to `receiver`
+    /// @return amount0Diff token0 balance difference post swap
+    /// @return amount1Diff token1 balance difference post swap
     function wrapAndSwapAndAddLiquidityPermit2(
         SwapAndAddPermit2Data memory params_
     )
