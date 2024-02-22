@@ -1,5 +1,5 @@
 # ArrakisMetaVaultPublic
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/ArrakisMetaVaultPublic.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/ArrakisMetaVaultPublic.sol)
 
 **Inherits:**
 [IArrakisMetaVaultPublic](/src/interfaces/IArrakisMetaVaultPublic.sol/interface.IArrakisMetaVaultPublic.md), [ArrakisMetaVault](/src/abstracts/ArrakisMetaVault.sol/abstract.ArrakisMetaVault.md), Ownable, ERC20

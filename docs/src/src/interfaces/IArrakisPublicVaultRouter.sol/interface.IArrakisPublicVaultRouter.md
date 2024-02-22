@@ -1,5 +1,5 @@
 # IArrakisPublicVaultRouter
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/IArrakisPublicVaultRouter.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/IArrakisPublicVaultRouter.sol)
 
 
 ## Functions
@@ -179,6 +179,114 @@ function removeLiquidityPermit2(RemoveLiquidityPermit2Data memory params_)
 |`amount1`|`uint256`|actual amount of token1 transferred to receiver for burning `burnAmount`|
 
 
+### wrapAndAddLiquidity
+
+wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of iPnterest (mints L tokens)
+
+
+```solidity
+function wrapAndAddLiquidity(AddLiquidityData memory params_)
+    external
+    payable
+    returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`params_`|`AddLiquidityData`|AddLiquidityData struct containing data for adding liquidity|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`amount0`|`uint256`|amount of token0 transferred from msg.sender to mint `mintAmount`|
+|`amount1`|`uint256`|amount of token1 transferred from msg.sender to mint `mintAmount`|
+|`sharesReceived`|`uint256`|amount of public vault tokens transferred to `receiver`|
+
+
+### wrapAndSwapAndAddLiquidity
+
+wrapAndSwapAndAddLiquidity wrap eth and transfer tokens to and calls RouterSwapExecutor
+
+
+```solidity
+function wrapAndSwapAndAddLiquidity(SwapAndAddData memory params_)
+    external
+    payable
+    returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`params_`|`SwapAndAddData`|SwapAndAddData struct containing data for swap|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`amount0`|`uint256`|amount of token0 transferred from msg.sender to mint `mintAmount`|
+|`amount1`|`uint256`|amount of token1 transferred from msg.sender to mint `mintAmount`|
+|`sharesReceived`|`uint256`|amount of public vault tokens transferred to `receiver`|
+|`amount0Diff`|`uint256`|token0 balance difference post swap|
+|`amount1Diff`|`uint256`|token1 balance difference post swap|
+
+
+### wrapAndAddLiquidityPermit2
+
+wrapAndAddLiquidityPermit2 wrap eth and adds liquidity to public vault of interest (mints LP tokens)
+
+
+```solidity
+function wrapAndAddLiquidityPermit2(AddLiquidityPermit2Data memory params_)
+    external
+    payable
+    returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`params_`|`AddLiquidityPermit2Data`|AddLiquidityPermit2Data struct containing data for adding liquidity|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`amount0`|`uint256`|amount of token0 transferred from msg.sender to mint `mintAmount`|
+|`amount1`|`uint256`|amount of token1 transferred from msg.sender to mint `mintAmount`|
+|`sharesReceived`|`uint256`|amount of public vault tokens transferred to `receiver`|
+
+
+### wrapAndSwapAndAddLiquidityPermit2
+
+wrapAndSwapAndAddLiquidityPermit2 wrap eth and transfer tokens to and calls RouterSwapExecutor
+
+
+```solidity
+function wrapAndSwapAndAddLiquidityPermit2(SwapAndAddPermit2Data memory params_)
+    external
+    payable
+    returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`params_`|`SwapAndAddPermit2Data`|SwapAndAddPermit2Data struct containing data for swap|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`amount0`|`uint256`|amount of token0 transferred from msg.sender to mint `mintAmount`|
+|`amount1`|`uint256`|amount of token1 transferred from msg.sender to mint `mintAmount`|
+|`sharesReceived`|`uint256`|amount of public vault tokens transferred to `receiver`|
+|`amount0Diff`|`uint256`|token0 balance difference post swap|
+|`amount1Diff`|`uint256`|token1 balance difference post swap|
+
+
 ### getMintAmounts
 
 getMintAmounts used to get the shares we can mint from some max amounts.
@@ -308,5 +416,35 @@ error Deposit0();
 
 ```solidity
 error Deposit1();
+```
+
+### MsgValueZero
+
+```solidity
+error MsgValueZero();
+```
+
+### NativeTokenNotSupported
+
+```solidity
+error NativeTokenNotSupported();
+```
+
+### MsgValueDTMaxAmount
+
+```solidity
+error MsgValueDTMaxAmount();
+```
+
+### NoWethToken
+
+```solidity
+error NoWethToken();
+```
+
+### Permit2WethNotAuthorized
+
+```solidity
+error Permit2WethNotAuthorized();
 ```
 

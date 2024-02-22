@@ -1,5 +1,5 @@
 # ModulePublicRegistry
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/ModulePublicRegistry.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/ModulePublicRegistry.sol)
 
 **Inherits:**
 [ModuleRegistry](/src/abstracts/ModuleRegistry.sol/abstract.ModuleRegistry.md), [IModulePublicRegistry](/src/interfaces/IModulePublicRegistry.sol/interface.IModulePublicRegistry.md)

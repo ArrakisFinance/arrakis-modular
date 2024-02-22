@@ -1,7 +1,5 @@
 # ValantisModule
-
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/abstracts/ValantisSOTModule.sol)
-
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/abstracts/ValantisSOTModule.sol)
 
 **Inherits:**
 [IArrakisLPModule](/src/interfaces/IArrakisLPModule.sol/interface.IArrakisLPModule.md), [IValantisSOTModule](/src/interfaces/IValantisSOTModule.sol/interface.IValantisSOTModule.md), PausableUpgradeable, ReentrancyGuardUpgradeable

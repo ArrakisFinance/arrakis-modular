@@ -1,5 +1,5 @@
 # IArrakisStandardManager
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/IArrakisStandardManager.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/IArrakisStandardManager.sol)
 
 
 ## Functions
@@ -384,6 +384,12 @@ event LogWithdrawManagerBalance(address indexed receiver0, address indexed recei
 
 ```solidity
 event LogChangeManagerFee(address vault, uint256 newFeePIPS);
+```
+
+### LogIncreaseManagerFeeSubmission
+
+```solidity
+event LogIncreaseManagerFeeSubmission(address vault, uint256 newFeePIPS);
 ```
 
 ### LogRebalance
