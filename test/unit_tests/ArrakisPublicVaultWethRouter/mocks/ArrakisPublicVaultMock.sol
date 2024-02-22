@@ -95,7 +95,7 @@ contract ArrakisPublicVaultMock is ERC20{
             payable(receiver_).transfer(amount0);
         } else {
             token0.transfer(receiver_, amount0);
-            amount0 = amount0 / 2; // buggy here on puporse to trigger a ReceivedBelowMinimum revert on router
+            amount0 = amount0;
         }
         if (address(token1) == NATIVE_COIN && amount1 > 0) {
             payable(receiver_).transfer(amount1);

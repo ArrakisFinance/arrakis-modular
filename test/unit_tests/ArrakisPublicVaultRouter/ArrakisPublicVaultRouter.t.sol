@@ -8,16 +8,14 @@ import {TestWrapper} from "../../utils/TestWrapper.sol";
 
 import {IArrakisPublicVaultRouter} from "../../../src/interfaces/IArrakisPublicVaultRouter.sol";
 import {IPermit2, SignatureTransferDetails} from "../../../src/interfaces/IPermit2.sol";
-import {NATIVE_COIN, PRIVATE_TYPE} from "../../../src/constants/CArrakis.sol";
+import {NATIVE_COIN} from "../../../src/constants/CArrakis.sol";
 import {ArrakisPublicVaultRouter} from "../../../src/ArrakisPublicVaultRouter.sol";
 import {AddLiquidityData, SwapAndAddData, SwapData, RemoveLiquidityData, AddLiquidityPermit2Data, SwapAndAddPermit2Data, RemoveLiquidityPermit2Data} from "../../../src/structs/SRouter.sol";
 import {PermitBatchTransferFrom, PermitTransferFrom, TokenPermissions} from "../../../src/structs/SPermit2.sol";
 
 // #region openzeppelin.
-
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 // #endregion openzeppelin.
 
 // #region solady.
@@ -25,10 +23,9 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 // #endregion solady.
 
 // #region mocks.
-
+import {ArrakisMetaVaultFactoryMock} from "./mocks/ArrakisMetaVaultFactoryMock.sol";
 import {ArrakisPrivateVaultMock} from "./mocks/ArrakisPrivateVaultMock.sol";
 import {ArrakisPublicVaultMock} from "./mocks/ArrakisPublicVaultMock.sol";
-
 // #endregion mocks.
 
 contract ArrakisPublicVaultRouterTest is TestWrapper {
@@ -47,14 +44,28 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
 
     // #endregion public properties.
 
+    // #region mocks.
+
+    ArrakisMetaVaultFactoryMock public factory;
+
+    // #endregion mocks.
+
     function setUp() public {
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
+
+        // #region factory mock.
+
+        factory = new ArrakisMetaVaultFactoryMock();
+
+        // #endregion factory mock.
 
         router = new ArrakisPublicVaultRouter(
             NATIVE_COIN,
             address(PERMIT2),
             address(this),
-            owner
+            owner,
+            address(factory),
+            WETH
         );
     }
 
@@ -67,7 +78,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             address(0),
             address(PERMIT2),
             address(this),
-            owner
+            owner,
+            address(factory),
+            WETH
         );
     }
 
@@ -78,7 +91,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             NATIVE_COIN,
             address(0),
             address(this),
-            owner
+            owner,
+            address(factory),
+            WETH
         );
     }
 
@@ -89,7 +104,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             NATIVE_COIN,
             address(PERMIT2),
             address(0),
-            owner
+            owner,
+            address(factory),
+            WETH
         );
     }
 
@@ -100,7 +117,22 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             NATIVE_COIN,
             address(PERMIT2),
             address(this),
-            address(0)
+            address(0),
+            address(factory),
+            WETH
+        );
+    }
+
+    function testConstructorFactoryAddressZero() public {
+        vm.expectRevert(IArrakisPublicVaultRouter.AddressZero.selector);
+
+        router = new ArrakisPublicVaultRouter(
+            NATIVE_COIN,
+            address(PERMIT2),
+            address(this),
+            owner,
+            address(0),
+            WETH
         );
     }
 
@@ -109,6 +141,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         assertEq(address(router.permit2()), address(PERMIT2));
         assertEq(address(router.swapper()), address(this));
         assertEq(router.owner(), owner);
+        assertEq(address(router.factory()), address(factory));
     }
 
     // #endregion test constructor.
@@ -196,7 +229,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        vm.expectRevert(abi.encodeWithSelector(IArrakisPublicVaultRouter.OnlyERC20TypeVault.selector, PRIVATE_TYPE));
+        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
 
         router.addLiquidity(params);
     }
@@ -207,6 +240,11 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
 
         // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory params = AddLiquidityData({
             amount0Max: 0,
@@ -224,13 +262,18 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityNothingToMint() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
         vault.setInits(2000e6, 0);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory params = AddLiquidityData({
             amount0Max: 0,
@@ -248,13 +291,18 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityNothingToMint2() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory params = AddLiquidityData({
             amount0Max: 2000e6,
@@ -272,14 +320,19 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityNothingToMint3() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
         deal(WETH, address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory params = AddLiquidityData({
             amount0Max: 2000e6,
@@ -297,7 +350,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityBelowMinAmounts() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -305,7 +358,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory params = AddLiquidityData({
             amount0Max: 0,
@@ -323,7 +381,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityBelowMinAmounts2() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -331,7 +389,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory params = AddLiquidityData({
             amount0Max: 0,
@@ -349,7 +412,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidity() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -359,7 +422,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory params = AddLiquidityData({
             amount0Max: 0,
@@ -381,7 +449,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityDeposit1() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -391,7 +459,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory params = AddLiquidityData({
             amount0Max: 0,
@@ -411,7 +484,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityDeposit0() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -421,7 +494,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(USDC, address(vault), 2000e6);
         vault.setInits(2000e6, 0);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory params = AddLiquidityData({
             amount0Max: 2000e6,
@@ -441,7 +519,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityEthAsToken1() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, NATIVE_COIN);
@@ -451,7 +529,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory params = AddLiquidityData({
             amount0Max: 0,
@@ -474,7 +557,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityEthAsToken0() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(NATIVE_COIN, USDC);
@@ -484,7 +567,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(address(vault), 1e18);
         vault.setInits(1e18, 0);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory params = AddLiquidityData({
             amount0Max: 1e18,
@@ -541,13 +629,13 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             addData: addData
         });
 
-        vm.expectRevert(abi.encodeWithSelector(IArrakisPublicVaultRouter.OnlyERC20TypeVault.selector, PRIVATE_TYPE));
+        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
 
         router.swapAndAddLiquidity(params);
     }
 
     function testSwapAndAddLiquidityEmptyMaxAmounts() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -557,7 +645,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -588,7 +681,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testSwapAndAddLiquidityNotEnoughNativeTokenSent() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, NATIVE_COIN);
@@ -598,7 +691,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -630,7 +728,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testSwapAndAddLiquidityNotEnoughNativeTokenSent2() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(NATIVE_COIN, USDC);
@@ -640,7 +738,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(address(vault), 1e18);
         vault.setInits(1e18, 0);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 1e18,
@@ -684,6 +787,11 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         vault.setInits(2000e6, 1e18);
 
         // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -721,7 +829,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testSwapAndAddLiquidityNothingToMint() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -732,7 +840,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(USDC, address(vault), 2000e6);
         vault.setInits(2000e6, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -766,7 +879,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testSwapAndAddLiquidityBelowMinAmounts() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -776,7 +889,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -810,7 +928,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testSwapAndAddLiquidityOneForZeroGoodDealOnSwap() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -821,7 +939,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(USDC, address(vault), 2000e6);
         vault.setInits(2000e6, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -861,7 +984,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testSwapAndAddLiquidityZeroForOneGoodDealOnSwap() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -872,7 +995,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(USDC, address(vault), 2000e6);
         vault.setInits(2000e6, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 4000e6,
@@ -911,7 +1039,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testSwapAndAddLiquidityEthOneForZeroGoodDealOnSwap() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(NATIVE_COIN, USDC);
@@ -922,7 +1050,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(USDC, address(vault), 2000e6);
         vault.setInits(1e18, 2000e6);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -963,7 +1096,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testSwapAndAddLiquidityEthZeroForOneGoodDealOnSwap() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, NATIVE_COIN);
@@ -974,7 +1107,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(address(vault), 1e18);
         vault.setInits(2000e6, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 4000e6,
@@ -1015,7 +1153,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testSwapAndAddLiquidityEthOneForZero() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, NATIVE_COIN);
@@ -1026,7 +1164,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(address(vault), 1e18);
         vault.setInits(2000e6, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -1063,7 +1206,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testSwapAndAddLiquidityEthZeroForOne() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(NATIVE_COIN, USDC);
@@ -1074,7 +1217,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(USDC, address(vault), 2000e6);
         vault.setInits(1e18, 2000e6);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 2e18,
@@ -1134,14 +1282,14 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
 
         // #endregion create RemoveLiquidityData struct.
 
-        vm.expectRevert(abi.encodeWithSelector(IArrakisPublicVaultRouter.OnlyERC20TypeVault.selector, PRIVATE_TYPE));
+        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
 
         router.removeLiquidity(params);
     }
 
     function testRemoveLiquidityNothingToBurn() public {
         address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -1152,7 +1300,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(vault), 1e18);
         vault.setInits(2000e6, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         // #region create RemoveLiquidityData struct.
 
@@ -1173,7 +1326,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
 
     function testRemoveLiquidityReceivedBelowMinimum() public {
         address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -1184,7 +1337,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(vault), 1e18);
         vault.setInits(2000e6, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         // #region create RemoveLiquidityData struct.
 
@@ -1208,7 +1366,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
 
     function testRemoveLiquidity() public {
         address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(NATIVE_COIN, USDC);
@@ -1219,7 +1377,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(USDC, address(vault), 2000e6);
         vault.setInits(1e18, 2000e6);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         // #region create RemoveLiquidityData struct.
 
@@ -1280,7 +1443,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             signature: ""
         });
 
-        vm.expectRevert(abi.encodeWithSelector(IArrakisPublicVaultRouter.OnlyERC20TypeVault.selector, PRIVATE_TYPE));
+        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
 
         router.addLiquidityPermit2(params);
     }
@@ -1291,6 +1454,11 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
 
         // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -1322,13 +1490,18 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityPermit2NothingToMint() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
         vault.setInits(2000e6, 0);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -1360,13 +1533,18 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityPermit2NothingToMint2() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 2000e6,
@@ -1398,14 +1576,19 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityPermit2NothingToMint3() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
         deal(WETH, address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 2000e6,
@@ -1437,7 +1620,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityPermit2BelowMinAmounts() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -1445,7 +1628,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -1478,7 +1666,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityPermit2BelowMinAmounts2() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -1486,7 +1674,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -1518,7 +1711,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityPermit2LengthMismatch() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -1528,7 +1721,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -1566,7 +1764,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityPermit2() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -1576,7 +1774,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(vault), 1e18);
         vault.setInits(0, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -1613,7 +1816,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityPermit2Bis() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -1623,7 +1826,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(USDC, address(vault), 2000e6);
         vault.setInits(2000e6, 0);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 2000e6,
@@ -1660,7 +1868,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testAddLiquidityPermit2Bis2() public {
-        // #region create private vault.
+        // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
         vault.setTokens(USDC, WETH);
@@ -1671,7 +1879,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(vault), 1e18);
         vault.setInits(2000e6, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 2000e6,
@@ -1760,7 +1973,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             signature: ""
         });
 
-        vm.expectRevert(abi.encodeWithSelector(IArrakisPublicVaultRouter.OnlyERC20TypeVault.selector, PRIVATE_TYPE));
+        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
 
         router.swapAndAddLiquidityPermit2(params);
     }
@@ -1770,7 +1983,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -1826,7 +2044,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(USDC, address(vault), 2000e6);
         vault.setInits(2000e6, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -1889,7 +2112,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(USDC, address(vault), 2000e6);
         vault.setInits(2000e6, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 0,
@@ -1952,7 +2180,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(USDC, address(vault), 2000e6);
         vault.setInits(2000e6, 1e18);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: 4000e6,
@@ -2044,7 +2277,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
 
         // #endregion create RemoveLiquidityData struct.
 
-        vm.expectRevert(abi.encodeWithSelector(IArrakisPublicVaultRouter.OnlyERC20TypeVault.selector, PRIVATE_TYPE));
+        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
 
         router.removeLiquidityPermit2(params);
     }
@@ -2056,6 +2289,11 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
 
         // #endregion create public vault
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         // #region create RemoveLiquidityData struct.
 
@@ -2105,6 +2343,11 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         vault.setInits(1e18, 2000e6);
 
         // #endregion create public vault
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
 
         // #region create RemoveLiquidityData struct.
 
@@ -2163,7 +2406,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(USDC, address(vault), 2000e6);
         vault.setInits(1e18, 2000e6);
 
-        // #endregion create public vault
+        // #endregion create public vault.
 
         (
             uint256 shareToMint,
@@ -2252,5 +2495,5 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         magicValue = 0x1626ba7e;
     }
 
-    // #region ERC1271 mocks.
+    // #endregion ERC1271 mocks.
 }

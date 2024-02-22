@@ -5,10 +5,15 @@ import {console} from "forge-std/console.sol";
 
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 
+// #region mocks.
+
 import {GuardianMock} from "./mocks/GuardianMock.sol";
 import {ArrakisPublicVaultMock} from "./mocks/ArrakisPublicVaultMock.sol";
 import {ArrakisPrivateVaultMock} from "./mocks/ArrakisPrivateVaultMock.sol";
 import {BeaconImplementation} from "./mocks/BeaconImplementation.sol";
+import {ArrakisMetaVaultFactoryMock} from "./mocks/ArrakisMetaVaultFactoryMock.sol";
+
+// #endregion mocks.
 
 import {ModulePrivateRegistry} from "../../../src/ModulePrivateRegistry.sol";
 import {IModulePrivateRegistry} from "../../../src/interfaces/IModulePrivateRegistry.sol";
@@ -21,6 +26,7 @@ contract ModulePrivateRegistryTest is TestWrapper {
     address public admin;
 
     ModulePrivateRegistry public modulePrivateRegistry;
+    ArrakisMetaVaultFactoryMock public factory;
 
     // #region mocks.
 
@@ -33,10 +39,12 @@ contract ModulePrivateRegistryTest is TestWrapper {
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
         admin = vm.addr(uint256(keccak256(abi.encode("Admin"))));
         guardian = new GuardianMock();
+        factory = new ArrakisMetaVaultFactoryMock();
 
         guardian.setPauser(pauser);
 
         modulePrivateRegistry = new ModulePrivateRegistry(
+            address(factory),
             owner,
             address(guardian),
             admin
@@ -133,6 +141,11 @@ contract ModulePrivateRegistryTest is TestWrapper {
         modulePrivateRegistry.whitelistBeacons(beacons);
 
         // #endregion whitelist beacon.
+        // #region add vault into the factory.
+
+        factory.addPrivateVault(address(privateVault));
+
+        // #endregion add vault into the factory.
 
         modulePrivateRegistry.createModule(
             address(privateVault),

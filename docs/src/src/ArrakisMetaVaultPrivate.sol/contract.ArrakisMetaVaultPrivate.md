@@ -25,8 +25,7 @@ EnumerableSet.AddressSet internal _depositors;
 
 
 ```solidity
-constructor(address token0_, address token1_, address moduleRegistry_, address manager_, address nft_)
-    ArrakisMetaVault(token0_, token1_, moduleRegistry_, manager_);
+constructor(address moduleRegistry_, address manager_, address nft_) ArrakisMetaVault(moduleRegistry_, manager_);
 ```
 
 ### deposit
@@ -127,19 +126,17 @@ function depositors() external view returns (address[] memory);
 |`<none>`|`address[]`|depositors list of address granted to depositor role.|
 
 
-### vaultType
-
-function used to get the type of vault.
+function used to get the list of depositors.
 
 
 ```solidity
-function vaultType() external pure returns (bytes32);
+function depositors() external view returns (address[] memory);
 ```
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`bytes32`|vaultType as bytes32.|
+|`<none>`|`address[]`|depositors list of address granted to depositor role.|
 
 
 ### _deposit

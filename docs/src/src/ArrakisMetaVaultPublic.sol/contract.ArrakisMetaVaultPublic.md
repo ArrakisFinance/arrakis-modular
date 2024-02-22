@@ -25,15 +25,8 @@ string internal _symbol;
 
 
 ```solidity
-constructor(
-    address token0_,
-    address token1_,
-    address owner_,
-    string memory name_,
-    string memory symbol_,
-    address moduleRegistry_,
-    address manager_
-) ArrakisMetaVault(token0_, token1_, moduleRegistry_, manager_);
+constructor(address owner_, string memory name_, string memory symbol_, address moduleRegistry_, address manager_)
+    ArrakisMetaVault(moduleRegistry_, manager_);
 ```
 
 ### mint
@@ -137,21 +130,6 @@ function symbol() public view override returns (string memory);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`string`|symbol string value containing the symbol.|
-
-
-### vaultType
-
-function used to get the type of vault.
-
-
-```solidity
-function vaultType() external pure returns (bytes32);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bytes32`|vaultType as bytes32.|
 
 
 ### _deposit

@@ -38,7 +38,7 @@ contract ValantisModulePublic is ValantisModule, IArrakisLPModulePublic {
         // #region effects.
 
         {
-            (uint256 _amt0, uint256 _amt1) = alm.getReservesAtPrice(0);
+            (uint256 _amt0, uint256 _amt1) = pool.getReserves();
 
             if (_amt0 == 0 && _amt1 == 0) {
                 _amt0 = _init0;

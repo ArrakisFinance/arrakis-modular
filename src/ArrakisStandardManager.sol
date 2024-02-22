@@ -33,7 +33,7 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 // #region uniswap.
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 // #endregion uniswap.
-// NOTE admin and owner can be the same address on transparent proxy.
+// NOTE admin and owner can't be the same address on transparent proxy.
 contract ArrakisStandardManager is
     IArrakisStandardManager,
     IManager,
@@ -191,7 +191,7 @@ contract ArrakisStandardManager is
     ) external onlyOwner onlyWhitelistedVault(vault_) {
         uint256 oldFeePIPS = vaultInfo[vault_].managerFeePIPS;
         if (oldFeePIPS <= newFeePIPS_) revert NotFeeDecrease();
-        /// NOTE why do we need to store it again on manager side?
+
         vaultInfo[vault_].managerFeePIPS = newFeePIPS_;
 
         IArrakisLPModule(IArrakisMetaVault(vault_).module()).setManagerFeePIPS(
@@ -211,7 +211,6 @@ contract ArrakisStandardManager is
         if (block.timestamp <= pending.submitTimestamp + WEEK)
             revert TimeNotPassed();
 
-        /// NOTE is it cheaper? pending is already in memory.
         uint24 newFeePIPS = pending.newFeePIPS;
         delete pendingFeeIncrease[vault_];
 
@@ -523,9 +522,6 @@ contract ArrakisStandardManager is
     function _initManagement(SetupParams memory params_) internal {
         // #region checks.
 
-        // NOTE maybe we should check that vault is really deployed from arrakis factory ?
-        // TODO add check that the vault was created through arrakis factory.
-
         // check vault address is not address zero.
         if (address(params_.vault) == address(0)) revert AddressZero();
 
@@ -573,6 +569,7 @@ contract ArrakisStandardManager is
         if (address(params_.oracle) == address(0)) revert AddressZero();
 
         // check slippage is lower than 10%
+        // TODO: let maybe remove that check?
         if (params_.maxSlippagePIPS > TEN_PERCENT) revert SlippageTooHigh();
 
         // check we have a cooldown period.

@@ -28,13 +28,13 @@ contract ArrakisMetaVaultFactory is
 
     // #region immutable properties.
 
-    /// NOTE make it settable.
-    address public immutable manager;
     address public immutable moduleRegistryPublic;
     address public immutable moduleRegistryPrivate;
     PALMVaultNFT public immutable nft;
 
     // #endregion immutable properties.
+
+    address public manager;
 
     // #region internal properties.
 
@@ -65,7 +65,7 @@ contract ArrakisMetaVaultFactory is
         nft = new PALMVaultNFT();
     }
 
-    // #region owner functions.
+    // #region pausable functions.
 
     /// @notice function used to pause the factory.
     /// @dev only callable by owner.
@@ -79,7 +79,25 @@ contract ArrakisMetaVaultFactory is
         _unpause();
     }
 
-    // #endregion owner functions.
+    // #endregion pausable functions.
+
+    // #region set manager.
+
+    /// @notice function used to set a new manager.
+    /// @param newManager_ address that will managed newly created vault.
+    /// @dev only callable by owner.
+    function setManager(address newManager_) external onlyOwner {
+        address oldManager = manager;
+
+        if(newManager_ == address(0)) revert AddressZero();
+        if(newManager_ == oldManager) revert SameManager();
+
+        manager = newManager_;
+
+        emit LogSetManager(oldManager, newManager_);
+    }
+
+    // #endregion set manager.
 
     /// @notice function used to deploy ERC20 token wrapped Arrakis
     /// Meta Vault.
@@ -141,17 +159,14 @@ contract ArrakisMetaVaultFactory is
         }
 
         // #endregion create timeLock.
+
         {
-            // TODO maybe we need to modify that if we deploy through an helper contract.
             bytes32 salt = keccak256(abi.encode(msg.sender, salt_));
 
             // #region get the creation code for TokenMetaVault.
-
             bytes memory creationCode = abi.encodePacked(
                 type(ArrakisMetaVaultPublic).creationCode,
                 abi.encode(
-                    token0_,
-                    token1_,
                     timeLock,
                     name,
                     symbol,
@@ -182,7 +197,7 @@ contract ArrakisMetaVaultFactory is
 
         // #endregion create a module.
 
-        IArrakisMetaVault(vault).initialize(module);
+        IArrakisMetaVault(vault).initialize(token0_, token1_, module);
 
         _publicVaults.add(vault);
 
@@ -230,8 +245,6 @@ contract ArrakisMetaVaultFactory is
         bytes memory creationCode = abi.encodePacked(
             type(ArrakisMetaVaultPrivate).creationCode,
             abi.encode(
-                token0_,
-                token1_,
                 moduleRegistryPrivate,
                 manager,
                 address(nft)
@@ -260,7 +273,7 @@ contract ArrakisMetaVaultFactory is
             );
         }
 
-        IArrakisMetaVault(vault).initialize(module);
+        IArrakisMetaVault(vault).initialize(token0_, token1_, module);
 
         // #endregion create a module.
 
@@ -375,6 +388,13 @@ contract ArrakisMetaVaultFactory is
         return _publicVaults.length();
     }
 
+    /// @notice isPublicVault check if the inputed vault is a public vault.
+    /// @param vault_ address of the address to check.
+    /// @return isPublicVault true if the inputed vault is public or otherwise false.
+    function isPublicVault(address vault_) external view returns (bool) {
+        return _publicVaults.contains(vault_);
+    }
+
     /// @notice get a list of private vaults created by this factory
     /// @param startIndex_ start index
     /// @param endIndex_ end index
@@ -404,6 +424,13 @@ contract ArrakisMetaVaultFactory is
         return _privateVaults.length();
     }
 
+    /// @notice isPrivateVault check if the inputed vault is a private vault.
+    /// @param vault_ address of the address to check.
+    /// @return isPublicVault true if the inputed vault is private or otherwise false.
+    function isPrivateVault(address vault_) external view returns (bool) {
+        return _privateVaults.contains(vault_);
+    }
+
     /// @notice function used to get a list of address that can deploy public vault.
     function deployers() external view returns (address[] memory) {
         return _deployers.values();
@@ -414,10 +441,13 @@ contract ArrakisMetaVaultFactory is
     // #region internal functions.
 
     function _initManagement(address vault_, bytes memory data_) internal {
-        // NOTE check the first 4 bytes instead of encodewithselector.
-
+        /// @dev to anticipate futur changes in the manager's initManagement function
+        /// manager should implement getInitManagementSelector function, so factory can get the
+        /// the right selector of the function.
         bytes4 selector = IManager(manager).getInitManagementSelector();
 
+        /// @dev for initializing management we need to know the vault address,
+        /// so manager should follow this pattern where vault address is the first parameter of the function.
         bytes memory data = data_.length == 0
             ? abi.encodeWithSelector(
                 selector,

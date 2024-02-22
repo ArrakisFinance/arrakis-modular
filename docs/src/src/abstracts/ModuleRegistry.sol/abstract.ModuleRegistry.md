@@ -6,12 +6,26 @@
 
 
 ## State Variables
+### factory
+
+```solidity
+IArrakisMetaVaultFactory public immutable factory;
+```
+
+
 ### admin
 *should be a timelock contract.*
 
 
 ```solidity
 address public admin;
+```
+
+
+### _guardian
+
+```solidity
+address internal immutable _guardian;
 ```
 
 
@@ -22,19 +36,12 @@ EnumerableSet.AddressSet internal _beacons;
 ```
 
 
-### _guardian
-
-```solidity
-address internal _guardian;
-```
-
-
 ## Functions
 ### constructor
 
 
 ```solidity
-constructor(address owner_, address guardian_, address admin_);
+constructor(address factory_, address owner_, address guardian_, address admin_);
 ```
 
 ### beacons

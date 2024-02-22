@@ -200,8 +200,6 @@ function decreaseManagerFeePIPS(address vault_, uint24 newFeePIPS_) external onl
 
 ### finalizeIncreaseManagerFeePIPS
 
-NOTE why do we need to store it again on manager side?
-
 function used to finalize a time lock fees increase on a vault.
 
 
@@ -216,8 +214,6 @@ function finalizeIncreaseManagerFeePIPS(address vault_) external onlyOwner;
 
 
 ### submitIncreaseManagerFeePIPS
-
-NOTE is it cheaper? pending is already in memory.
 
 function used to submit a fees increase in a managed vault.
 

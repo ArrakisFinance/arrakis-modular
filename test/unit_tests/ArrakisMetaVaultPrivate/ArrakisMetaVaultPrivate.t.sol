@@ -8,7 +8,7 @@ import {TestWrapper} from "../../utils/TestWrapper.sol";
 import {ArrakisMetaVaultPrivate} from "../../../src/ArrakisMetaVaultPrivate.sol";
 import {IArrakisMetaVaultPrivate} from "../../../src/interfaces/IArrakisMetaVaultPrivate.sol";
 import {IArrakisMetaVault} from "../../../src/interfaces/IArrakisMetaVault.sol";
-import {PIPS, PRIVATE_TYPE} from "../../../src/constants/CArrakis.sol";
+import {PIPS} from "../../../src/constants/CArrakis.sol";
 import {PALMVaultNFT} from "../../../src/PALMVaultNFT.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -54,8 +54,6 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         nft = new PALMVaultNFT();
 
         vault = new ArrakisMetaVaultPrivate(
-            USDC,
-            WETH,
             moduleRegistry,
             manager,
             address(nft)
@@ -69,7 +67,7 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
 
         // #region initialize vault.
 
-        vault.initialize(address(module));
+        vault.initialize(USDC, WETH, address(module));
 
         // #endregion initiliaze vault.
     }
@@ -85,20 +83,24 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         );
 
         vault = new ArrakisMetaVaultPrivate(
-            USDC,
-            WETH,
             moduleRegistry,
             manager,
             address(0)
         );
     }
 
-    function testConstructorStorage() public {
+    function testConstructorAndInitializeStorage() public {
+        address actualModule = address(vault.module());
+        address[] memory whitelistedModules = vault.whitelistedModules();
+
         assertEq(vault.token0(), USDC);
         assertEq(vault.token1(), WETH);
         assertEq(vault.nft(), address(nft));
         assertEq(vault.moduleRegistry(), moduleRegistry);
         assertEq(vault.manager(), manager);
+        assert(whitelistedModules.length == 1);
+        assertEq(whitelistedModules[0], address(module));
+        assertEq(actualModule, address(module));
     }
 
     // #endregion test constructor.
@@ -390,14 +392,6 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     }
 
     // #endregion test blacklist depositors.
-
-    // #region test vault type.
-
-    function testVaultType() public {
-        assertEq(vault.vaultType(), PRIVATE_TYPE);
-    }
-
-    // #endregion test vault type.
 
     // #region test owner.
 

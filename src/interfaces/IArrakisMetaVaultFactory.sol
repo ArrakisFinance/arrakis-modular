@@ -33,6 +33,10 @@ interface IArrakisMetaVaultFactory {
     /// not under management by manager.
     error VaultNotManaged();
 
+    /// @dev triggered when owner is setting a new manager, and the new manager
+    /// address match with the old manager address.
+    error SameManager();
+
     // #endregion errors.
 
     // #region events.
@@ -89,6 +93,11 @@ interface IArrakisMetaVaultFactory {
         address[] deployers
     );
 
+    /// @notice event emitted when owner set a new manager.
+    /// @param oldManager address of the previous manager.
+    /// @param newManager address of the new manager.
+    event LogSetManager(address oldManager, address newManager);
+
     // #endregion events.
 
     // #region state changing functions.
@@ -100,6 +109,11 @@ interface IArrakisMetaVaultFactory {
     /// @notice function used to unpause the factory.
     /// @dev only callable by owner.
     function unpause() external;
+
+    /// @notice function used to set a new manager.
+    /// @param newManager_ address that will managed newly created vault.
+    /// @dev only callable by owner.
+    function setManager(address newManager_) external;
 
     /// @notice function used to deploy ERC20 token wrapped Arrakis
     /// Meta Vault.
@@ -188,6 +202,11 @@ interface IArrakisMetaVaultFactory {
     /// @return result total number of vaults deployed
     function numOfPublicVaults() external view returns (uint256 result);
 
+    /// @notice isPublicVault check if the inputed vault is a public vault.
+    /// @param vault_ address of the address to check.
+    /// @return isPublicVault true if the inputed vault is public or otherwise false.
+    function isPublicVault(address vault_) external view returns (bool);
+
     /// @notice get a list of private vaults created by this factory
     /// @param startIndex_ start index
     /// @param endIndex_ end index
@@ -200,6 +219,11 @@ interface IArrakisMetaVaultFactory {
     /// @notice numOfPrivateVaults counts the total number of private vaults in existence
     /// @return result total number of vaults deployed
     function numOfPrivateVaults() external view returns (uint256 result);
+
+    /// @notice isPrivateVault check if the inputed vault is a private vault.
+    /// @param vault_ address of the address to check.
+    /// @return isPublicVault true if the inputed vault is private or otherwise false.
+    function isPrivateVault(address vault_) external view returns (bool);
 
     /// @notice function used to get the manager of newly deployed vault.
     /// @return manager address that will manager vault that will be

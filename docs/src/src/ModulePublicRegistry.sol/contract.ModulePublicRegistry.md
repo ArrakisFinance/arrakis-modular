@@ -10,7 +10,8 @@
 
 
 ```solidity
-constructor(address owner_, address guardian_, address admin_) ModuleRegistry(owner_, guardian_, admin_);
+constructor(address factory_, address owner_, address guardian_, address admin_)
+    ModuleRegistry(factory_, owner_, guardian_, admin_);
 ```
 
 ### createModule

@@ -105,6 +105,24 @@ event LogDeposit(uint256 amount0, uint256 amount1);
 |`amount0`|`uint256`|amount of token0 needed to increase the portfolio of "proportion" percent.|
 |`amount1`|`uint256`|amount of token1 needed to increase the portfolio of "proportion" percent.|
 
+
+### LogWithdraw
+Event describing a withdrawal of participation by an user inside this vault.
+
+
+```solidity
+event LogWithdraw(uint256 proportion, uint256 amount0, uint256 amount1);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`proportion`|`uint256`|percentage of the current position that user want to withdraw.|
+|`amount0`|`uint256`|amount of token0 withdrawn due to withdraw action.|
+|`amount1`|`uint256`|amount of token1 withdrawn due to withdraw action.|
+
+
 ### LogWhitelistDepositors
 Event describing the whitelist of fund depositor.
 

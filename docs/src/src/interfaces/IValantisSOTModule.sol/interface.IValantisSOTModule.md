@@ -116,10 +116,10 @@ error NoNativeToken();
 error OnlyPool(address caller, address pool);
 ```
 
-### TotalSupplyZero
+### AmountsZeros
 
 ```solidity
-error TotalSupplyZero();
+error AmountsZeros();
 ```
 
 ### Actual0DifferentExpected

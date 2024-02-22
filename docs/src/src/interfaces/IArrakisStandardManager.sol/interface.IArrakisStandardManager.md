@@ -423,12 +423,6 @@ error NotWhitelistedNftRebalancer(address nftRebalancer);
 error AlreadyWhitelistedNftRebalancer(address nftRebalancer);
 ```
 
-### VaultTypeNotSupported
-
-```solidity
-error VaultTypeNotSupported(bytes32 vaultType);
-```
-
 ### OnlyNftRebalancers
 
 ```solidity

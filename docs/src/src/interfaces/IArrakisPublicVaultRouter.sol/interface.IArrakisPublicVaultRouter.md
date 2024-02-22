@@ -244,10 +244,10 @@ error NotEnoughNativeTokenSent();
 error NoNativeTokenAndValueNotZero();
 ```
 
-### OnlyERC20TypeVault
+### OnlyPublicVault
 
 ```solidity
-error OnlyERC20TypeVault(bytes32 vaultType);
+error OnlyPublicVault();
 ```
 
 ### EmptyMaxAmounts

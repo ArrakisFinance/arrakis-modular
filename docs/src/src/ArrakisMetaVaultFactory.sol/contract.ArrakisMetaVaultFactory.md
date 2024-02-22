@@ -8,15 +8,6 @@
 
 
 ## State Variables
-### manager
-NOTE make it settable.
-
-
-```solidity
-address public immutable manager;
-```
-
-
 ### moduleRegistryPublic
 
 ```solidity
@@ -35,6 +26,13 @@ address public immutable moduleRegistryPrivate;
 
 ```solidity
 PALMVaultNFT public immutable nft;
+```
+
+
+### manager
+
+```solidity
+address public manager;
 ```
 
 
@@ -88,6 +86,23 @@ function used to unpause the factory.
 ```solidity
 function unpause() external whenPaused onlyOwner;
 ```
+
+### setManager
+
+function used to set a new manager.
+
+*only callable by owner.*
+
+
+```solidity
+function setManager(address newManager_) external onlyOwner;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`newManager_`|`address`|address that will managed newly created vault.|
+
 
 ### deployPublicVault
 
@@ -272,6 +287,27 @@ function numOfPublicVaults() public view returns (uint256 result);
 |`result`|`uint256`|total number of vaults deployed|
 
 
+### isPublicVault
+
+isPublicVault check if the inputed vault is a public vault.
+
+
+```solidity
+function isPublicVault(address vault_) external view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault_`|`address`|address of the address to check.|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|isPublicVault true if the inputed vault is public or otherwise false.|
+
+
 ### privateVaults
 
 get a list of private vaults created by this factory
@@ -309,6 +345,27 @@ function numOfPrivateVaults() public view returns (uint256 result);
 |`result`|`uint256`|total number of vaults deployed|
 
 
+### isPrivateVault
+
+isPrivateVault check if the inputed vault is a private vault.
+
+
+```solidity
+function isPrivateVault(address vault_) external view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault_`|`address`|address of the address to check.|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|isPublicVault true if the inputed vault is private or otherwise false.|
+
+
 ### deployers
 
 function used to get a list of address that can deploy public vault.
@@ -326,6 +383,13 @@ function _initManagement(address vault_, bytes memory data_) internal;
 ```
 
 ### _append
+
+*to anticipate futur changes in the manager's initManagement function
+manager should implement getInitManagementSelector function, so factory can get the
+the right selector of the function.*
+
+*for initializing management we need to know the vault address,
+so manager should follow this pattern where vault address is the first parameter of the function.*
 
 
 ```solidity
