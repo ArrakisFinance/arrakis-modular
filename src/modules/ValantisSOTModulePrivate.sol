@@ -27,6 +27,9 @@ contract ValantisModulePrivate is ValantisModule, IArrakisLPModulePrivate {
         if (depositor_ == address(0)) revert AddressZero();
         if (amount0_ == 0 && amount1_ == 0) revert DepositZero();
 
+        uint256 balance0 = token0.balanceOf(address(this));
+        uint256 balance1 = token1.balanceOf(address(this));
+
         // #region interactions.
 
         // #region get the tokens from the depositor.
@@ -46,6 +49,15 @@ contract ValantisModulePrivate is ValantisModule, IArrakisLPModulePrivate {
         alm.depositLiquidity(amount0_, amount1_, 0, 0);
 
         // #endregion interactions.
+
+        // #region assertions.
+
+        if(token0.balanceOf(address(this)) - balance0 > 0)
+            revert Deposit0();
+        if(token1.balanceOf(address(this)) - balance1 > 0)
+            revert Deposit1();
+
+        // #endregion assertions.
 
         emit LogFund(depositor_, amount0_, amount1_);
     }

@@ -26,6 +26,9 @@ import {PIPS, TEN_PERCENT} from "../../../src/constants/CArrakis.sol";
 import {ArrakisMetaVaultMock} from "./mocks/ArrakisMetaVaultMock.sol";
 import {SovereignPoolMock} from "./mocks/SovereignPoolMock.sol";
 import {SovereignALMMock} from "./mocks/SovereignALMMock.sol";
+import {SovereignALMBuggy1Mock} from "./mocks/SovereignALMBuggy1Mock.sol";
+import {SovereignALMBuggy2Mock} from "./mocks/SovereignALMBuggy2Mock.sol";
+import {SovereignALMMock} from "./mocks/SovereignALMMock.sol";
 import {OracleMock} from "./mocks/OracleMock.sol";
 import {GuardianMock} from "./mocks/GuardianMock.sol";
 
@@ -222,6 +225,82 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
             IERC20(WETH).balanceOf(address(sovereignALM)),
             expectedAmount1
         );
+    }
+
+    function testFundDeposit0() public {
+        SovereignALMBuggy1Mock buggySovereignALM = new SovereignALMBuggy1Mock();
+        buggySovereignALM.setToken0AndToken1(USDC, WETH);
+        // #region create valantis module.
+
+        module = new ValantisModulePrivate();
+        module.initialize(
+            address(metaVault),
+            address(sovereignPool),
+            address(buggySovereignALM),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(oracle),
+            address(guardian)
+        );
+
+        // #endregion create valantis module.
+
+        address depositor = vm.addr(10);
+
+        uint256 expectedAmount0 = 2000e6 / 2;
+        uint256 expectedAmount1 = 1e18 / 2;
+
+        deal(USDC, depositor, expectedAmount0);
+        deal(WETH, depositor, expectedAmount1);
+
+        vm.prank(depositor);
+        IERC20(USDC).approve(address(module), expectedAmount0);
+        vm.prank(depositor);
+        IERC20(WETH).approve(address(module), expectedAmount1);
+
+        vm.prank(address(metaVault));
+        vm.expectRevert(IValantisSOTModule.Deposit0.selector);
+
+        module.fund(depositor, expectedAmount0, expectedAmount1);
+    }
+
+    function testFundDeposit1() public {
+        SovereignALMBuggy2Mock buggySovereignALM = new SovereignALMBuggy2Mock();
+        buggySovereignALM.setToken0AndToken1(USDC, WETH);
+        // #region create valantis module.
+
+        module = new ValantisModulePrivate();
+        module.initialize(
+            address(metaVault),
+            address(sovereignPool),
+            address(buggySovereignALM),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(oracle),
+            address(guardian)
+        );
+
+        // #endregion create valantis module.
+
+        address depositor = vm.addr(10);
+
+        uint256 expectedAmount0 = 2000e6 / 2;
+        uint256 expectedAmount1 = 1e18 / 2;
+
+        deal(USDC, depositor, expectedAmount0);
+        deal(WETH, depositor, expectedAmount1);
+
+        vm.prank(depositor);
+        IERC20(USDC).approve(address(module), expectedAmount0);
+        vm.prank(depositor);
+        IERC20(WETH).approve(address(module), expectedAmount1);
+
+        vm.prank(address(metaVault));
+        vm.expectRevert(IValantisSOTModule.Deposit1.selector);
+
+        module.fund(depositor, expectedAmount0, expectedAmount1);
     }
 
     // #endregion test deposit.

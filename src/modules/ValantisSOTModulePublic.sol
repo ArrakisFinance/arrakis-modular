@@ -51,6 +51,9 @@ contract ValantisModulePublic is ValantisModule, IArrakisLPModulePublic {
 
         // #endregion effects.
 
+        uint256 balance0 = token0.balanceOf(address(this));
+        uint256 balance1 = token1.balanceOf(address(this));
+
         // #region interactions.
 
         // #region get the tokens from the depositor.
@@ -70,6 +73,15 @@ contract ValantisModulePublic is ValantisModule, IArrakisLPModulePublic {
         alm.depositLiquidity(amount0, amount1, 0, 0);
 
         // #endregion interactions.
+
+        // #region assertions.
+
+        if(token0.balanceOf(address(this)) - balance0 > 0)
+            revert Deposit0();
+        if(token1.balanceOf(address(this)) - balance1 > 0)
+            revert Deposit1();
+
+        // #endregion assertions.
 
         emit LogDeposit(depositor_, proportion_, amount0, amount1);
     }

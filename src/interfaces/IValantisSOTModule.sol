@@ -24,6 +24,8 @@ interface IValantisSOTModule {
     error NotDepositedAllToken0();
     error NotDepositedAllToken1();
     error OverMaxDeviation();
+    error Deposit0();
+    error Deposit1();
 
     // #endregion errors.
 

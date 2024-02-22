@@ -193,7 +193,10 @@ abstract contract ValantisModule is
     {
         address manager = metaVault.manager();
 
-        (amount0, amount1) = pool.claimPoolManagerFees(0, 0);
+        pool.claimPoolManagerFees(0, 0);
+
+        amount0 = token0.balanceOf(address(this));
+        amount1 = token1.balanceOf(address(this));
 
         // #region transfer tokens to manager.
 
@@ -446,6 +449,16 @@ abstract contract ValantisModule is
 
     // #region view functions.
 
+    /// @notice function used to get the address that can pause the module.
+    /// @return guardian address of the pauser.
+    function guardian() external view returns (address) {
+        return IGuardian(_guardian).pauser();
+    }
+
+    // #endregion view functions.
+
+    // #region internal functions.
+
     function _checkMinReturn(
         bool zeroForOne_,
         uint256 expectedMinReturn_,
@@ -474,11 +487,5 @@ abstract contract ValantisModule is
         }
     }
 
-    /// @notice function used to get the address that can pause the module.
-    /// @return guardian address of the pauser.
-    function guardian() external view returns (address) {
-        return IGuardian(_guardian).pauser();
-    }
-
-    // #endregion view functions.
+    // #endregion internal functions.
 }
