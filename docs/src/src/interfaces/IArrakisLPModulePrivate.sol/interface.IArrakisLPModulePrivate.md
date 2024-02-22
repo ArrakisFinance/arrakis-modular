@@ -43,3 +43,10 @@ event LogFund(address depositor, uint256 amount0, uint256 amount1);
 |`amount0`|`uint256`|amount of token0 sent by depositor.|
 |`amount1`|`uint256`|amount of token1 sent by depositor.|
 
+## Errors
+### DepositZero
+
+```solidity
+error DepositZero();
+```
+

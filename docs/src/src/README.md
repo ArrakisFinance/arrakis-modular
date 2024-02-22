@@ -11,6 +11,7 @@
 - [ArrakisMetaVaultPrivate](ArrakisMetaVaultPrivate.sol/contract.ArrakisMetaVaultPrivate.md)
 - [ArrakisMetaVaultPublic](ArrakisMetaVaultPublic.sol/contract.ArrakisMetaVaultPublic.md)
 - [ArrakisPublicVaultRouter](ArrakisPublicVaultRouter.sol/contract.ArrakisPublicVaultRouter.md)
+- [ArrakisPublicVaultWethRouter](ArrakisPublicVaultWethRouter.sol/contract.ArrakisPublicVaultWethRouter.md)
 - [ArrakisStandardManager](ArrakisStandardManager.sol/contract.ArrakisStandardManager.md)
 - [Guardian](Guardian.sol/contract.Guardian.md)
 - [ModulePrivateRegistry](ModulePrivateRegistry.sol/contract.ModulePrivateRegistry.md)

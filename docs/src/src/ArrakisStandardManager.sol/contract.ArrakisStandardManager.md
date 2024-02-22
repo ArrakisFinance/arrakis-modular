@@ -2,7 +2,7 @@
 [Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/ArrakisStandardManager.sol)
 
 **Inherits:**
-[IArrakisStandardManager](/src/interfaces/IArrakisStandardManager.sol/interface.IArrakisStandardManager.md), Ownable, ReentrancyGuardUpgradeable, PausableUpgradeable
+[IArrakisStandardManager](/src/interfaces/IArrakisStandardManager.sol/interface.IArrakisStandardManager.md), [IManager](/src/interfaces/IManager.sol/interface.IManager.md), Ownable, ReentrancyGuardUpgradeable, PausableUpgradeable
 
 
 ## State Variables
@@ -107,6 +107,8 @@ constructor(uint256 defaultFeePIPS_, address nativeToken_, uint8 nativeTokenDeci
 
 ### initialize
 
+function used to initialize standard manager proxy.
+
 *we are not checking if the default fee pips is not zero, to have
 the option to set 0 as default fee pips.*
 
@@ -114,6 +116,14 @@ the option to set 0 as default fee pips.*
 ```solidity
 function initialize(address owner_, address defaultReceiver_, address factory_) external initializer;
 ```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`owner_`|`address`|address of the owner of standard manager.|
+|`defaultReceiver_`|`address`|address of the receiver of tokens (by default).|
+|`factory_`|`address`|ArrakisMetaVaultFactory contract address.|
+
 
 ### pause
 
@@ -190,8 +200,6 @@ function decreaseManagerFeePIPS(address vault_, uint24 newFeePIPS_) external onl
 
 ### finalizeIncreaseManagerFeePIPS
 
-NOTE why do we need to store it again on manager side?
-
 function used to finalize a time lock fees increase on a vault.
 
 
@@ -206,8 +214,6 @@ function finalizeIncreaseManagerFeePIPS(address vault_) external onlyOwner;
 
 
 ### submitIncreaseManagerFeePIPS
-
-NOTE is it cheaper? pending is already in memory.
 
 function used to submit a fees increase in a managed vault.
 
@@ -296,21 +302,6 @@ function setModule(address vault_, address module_, bytes[] calldata payloads_)
 |`payloads_`|`bytes[]`|call data to initialize position on the new module.|
 
 
-### setFactory
-
-function used to set factory.
-
-
-```solidity
-function setFactory(address factory_) external onlyOwner;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`factory_`|`address`|address of the meta vault factory.|
-
-
 ### initManagement
 
 function used to init management of a meta vault.
@@ -378,7 +369,7 @@ function used to get the number of vault under management.
 
 
 ```solidity
-function numInitializedVaults() external view returns (uint256);
+function numInitializedVaults() external view returns (uint256 numberOfVaults);
 ```
 
 ### guardian
@@ -416,6 +407,15 @@ function isManaged(address vault_) external view returns (bool);
 |----|----|-----------|
 |`<none>`|`bool`|isManaged boolean which is true if the vault is under management, false otherwise.|
 
+
+### getInitManagementSelector
+
+function used to know the selector of initManagement functions.
+
+
+```solidity
+function getInitManagementSelector() external pure returns (bytes4 selector);
+```
 
 ### _initManagement
 

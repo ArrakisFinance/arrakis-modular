@@ -27,19 +27,26 @@ IRouterSwapExecutor public immutable swapper;
 ```
 
 
+### factory
+
+```solidity
+IArrakisMetaVaultFactory public immutable factory;
+```
+
+
 ## Functions
-### onlyERC20Type
+### onlyPublicVault
 
 
 ```solidity
-modifier onlyERC20Type(address vault_);
+modifier onlyPublicVault(address vault_);
 ```
 
 ### constructor
 
 
 ```solidity
-constructor(address nativeToken_, address permit2_, address swapper_, address owner_);
+constructor(address nativeToken_, address permit2_, address swapper_, address owner_, address factory_);
 ```
 
 ### pause
@@ -75,7 +82,7 @@ function addLiquidity(AddLiquidityData memory params_)
     payable
     nonReentrant
     whenNotPaused
-    onlyERC20Type(params_.vault)
+    onlyPublicVault(params_.vault)
     returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);
 ```
 **Parameters**
@@ -104,7 +111,7 @@ function swapAndAddLiquidity(SwapAndAddData memory params_)
     payable
     nonReentrant
     whenNotPaused
-    onlyERC20Type(params_.addData.vault)
+    onlyPublicVault(params_.addData.vault)
     returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
 ```
 **Parameters**
@@ -134,7 +141,7 @@ function removeLiquidity(RemoveLiquidityData memory params_)
     external
     nonReentrant
     whenNotPaused
-    onlyERC20Type(params_.vault)
+    onlyPublicVault(params_.vault)
     returns (uint256 amount0, uint256 amount1);
 ```
 **Parameters**
@@ -162,7 +169,7 @@ function addLiquidityPermit2(AddLiquidityPermit2Data memory params_)
     payable
     nonReentrant
     whenNotPaused
-    onlyERC20Type(params_.addData.vault)
+    onlyPublicVault(params_.addData.vault)
     returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);
 ```
 **Parameters**
@@ -191,7 +198,7 @@ function swapAndAddLiquidityPermit2(SwapAndAddPermit2Data memory params_)
     payable
     nonReentrant
     whenNotPaused
-    onlyERC20Type(params_.swapAndAddData.addData.vault)
+    onlyPublicVault(params_.swapAndAddData.addData.vault)
     returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
 ```
 **Parameters**
@@ -221,7 +228,7 @@ function removeLiquidityPermit2(RemoveLiquidityPermit2Data memory params_)
     external
     nonReentrant
     whenNotPaused
-    onlyERC20Type(params_.removeData.vault)
+    onlyPublicVault(params_.removeData.vault)
     returns (uint256 amount0, uint256 amount1);
 ```
 **Parameters**
@@ -245,6 +252,34 @@ function removeLiquidityPermit2(RemoveLiquidityPermit2Data memory params_)
 receive() external payable;
 ```
 
+### getMintAmounts
+
+getMintAmounts used to get the shares we can mint from some max amounts.
+
+
+```solidity
+function getMintAmounts(address vault_, uint256 maxAmount0_, uint256 maxAmount1_)
+    external
+    view
+    returns (uint256 shareToMint, uint256 amount0ToDeposit, uint256 amount1ToDeposit);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault_`|`address`|meta vault address.|
+|`maxAmount0_`|`uint256`|maximum amount of token0 user want to contribute.|
+|`maxAmount1_`|`uint256`|maximum amount of token1 user want to contribute.|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`shareToMint`|`uint256`|maximum amount of share user can get for 'maxAmount0_' and 'maxAmount1_'.|
+|`amount0ToDeposit`|`uint256`|amount of token0 user should deposit into the vault for minting 'shareToMint'.|
+|`amount1ToDeposit`|`uint256`|amount of token1 user should deposit into the vault for minting 'shareToMint'.|
+
+
 ### _addLiquidity
 
 
@@ -266,6 +301,23 @@ function _addLiquidity(
 ```solidity
 function _swapAndAddLiquidity(SwapAndAddData memory params_, address token0_, address token1_)
     internal
+    returns (
+        uint256 amount0Use,
+        uint256 amount1Use,
+        uint256 amount0,
+        uint256 amount1,
+        uint256 sharesReceived,
+        uint256 amount0Diff,
+        uint256 amount1Diff
+    );
+```
+
+### _swapAndAddLiquiditySendBackLeftOver
+
+
+```solidity
+function _swapAndAddLiquiditySendBackLeftOver(SwapAndAddData memory params_, address token0_, address token1_)
+    internal
     returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
 ```
 
@@ -276,18 +328,51 @@ function _swapAndAddLiquidity(SwapAndAddData memory params_, address token0_, ad
 function _removeLiquidity(RemoveLiquidityData memory params_) internal returns (uint256 amount0, uint256 amount1);
 ```
 
+### _permit2AddLengthOneOrTwo
+
+
+```solidity
+function _permit2AddLengthOneOrTwo(
+    AddLiquidityPermit2Data memory params_,
+    address token0_,
+    address token1_,
+    uint256 amount0_,
+    uint256 amount1_
+) internal;
+```
+
 ### _permit2Add
 
 
 ```solidity
-function _permit2Add(AddLiquidityPermit2Data memory params_, uint256 amount0_, uint256 amount1_) internal;
+function _permit2Add(
+    uint256 permittedLength_,
+    AddLiquidityPermit2Data memory params_,
+    address token0_,
+    address token1_,
+    uint256 amount0_,
+    uint256 amount1_
+) internal;
+```
+
+### _permit2SwapAndAddLengthOneOrTwo
+
+
+```solidity
+function _permit2SwapAndAddLengthOneOrTwo(SwapAndAddPermit2Data memory params_, address token0_, address token1_)
+    internal;
 ```
 
 ### _permit2SwapAndAdd
 
 
 ```solidity
-function _permit2SwapAndAdd(SwapAndAddPermit2Data memory params_) internal;
+function _permit2SwapAndAdd(
+    uint256 permittedLength_,
+    SwapAndAddPermit2Data memory params_,
+    address token0_,
+    address token1_
+) internal;
 ```
 
 ### _getMintAmounts

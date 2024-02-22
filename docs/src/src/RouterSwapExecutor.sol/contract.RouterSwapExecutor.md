@@ -51,7 +51,7 @@ function swap(SwapAndAddData memory params_)
 
 |Name|Type|Description|
 |----|----|-----------|
-|`params_`|`SwapAndAddData`||
+|`params_`|`SwapAndAddData`|struct containing all the informations for swapping.|
 
 **Returns**
 
