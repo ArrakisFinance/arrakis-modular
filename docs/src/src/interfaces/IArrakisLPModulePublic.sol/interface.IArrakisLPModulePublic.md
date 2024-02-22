@@ -1,5 +1,5 @@
 # IArrakisLPModulePublic
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/interfaces/IArrakisLPModulePublic.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/IArrakisLPModulePublic.sol)
 
 expose a deposit function for that can
 deposit a specific share of token0 and token1.

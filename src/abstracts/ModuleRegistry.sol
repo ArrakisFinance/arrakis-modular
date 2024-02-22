@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {IModuleRegistry} from "../interfaces/IModuleRegistry.sol";
+import {IArrakisMetaVaultFactory} from "../interfaces/IArrakisMetaVaultFactory.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
 import {BeaconProxyExtended} from "../proxy/BeaconProxyExtended.sol";
@@ -14,6 +15,12 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 abstract contract ModuleRegistry is IModuleRegistry, Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    // #region public immutable.
+
+    IArrakisMetaVaultFactory public immutable factory;
+
+    // #endregion public immutable.
+
     // #region public properties.
 
     /// @dev should be a timelock contract.
@@ -21,20 +28,27 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
 
     // #endregion public properties.
 
+    // #region internal immutables.
+
+    address internal immutable _guardian;
+
+    // #endregion internal immutables.
+
     // #region internal properties.
 
     EnumerableSet.AddressSet internal _beacons;
-    address internal _guardian;
 
     // #endregion internal properties.
 
-    constructor(address owner_, address guardian_, address admin_) {
+    constructor(address factory_, address owner_, address guardian_, address admin_) {
         if (
+            factory_ == address(0) ||
             owner_ == address(0) ||
             guardian_ == address(0) ||
             admin_ == address(0)
         ) revert AddressZero();
 
+        factory = IArrakisMetaVaultFactory(factory_);
         _initializeOwner(owner_);
         _guardian = guardian_;
         admin = admin_;
@@ -80,14 +94,9 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
 
             // #region checks.
 
-            try IBeacon(beacon).implementation() returns (address impl) {
-                if (impl == address(0)) revert ImplementationIsAddressZero();
-            } catch {
-                revert NotBeacon();
-            }
+            if(beacon.code.length == 0) revert NotBeacon();
 
-            if(Ownable(beacon).owner() != admin)
-                revert NotSameAdmin();
+            if (Ownable(beacon).owner() != admin && Ownable(beacon).owner() != address(0)) revert NotSameAdmin();
 
             if (_beacons.contains(beacon))
                 revert AlreadyWhitelistedBeacon(beacon);
@@ -149,7 +158,6 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
     ) internal returns (address module) {
         // #region checks.
 
-        if (vault_ == address(0)) revert AddressZero();
         if (!_beacons.contains(beacon_)) revert NotWhitelistedBeacon();
 
         // #endregion checks.
@@ -176,6 +184,10 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
         ) revert NotSameGuardian();
 
         // #endregion assertions.
+    }
+
+    function _checkVaultNotAddressZero(address vault_) internal {
+        if (vault_ == address(0)) revert AddressZero();
     }
 
     // #endregion internal state modifying functions.

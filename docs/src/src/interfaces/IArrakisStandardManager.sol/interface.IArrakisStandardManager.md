@@ -1,5 +1,5 @@
 # IArrakisStandardManager
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/interfaces/IArrakisStandardManager.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/IArrakisStandardManager.sol)
 
 
 ## Functions
@@ -160,21 +160,6 @@ function setModule(address vault_, address module_, bytes[] calldata payloads_) 
 |`payloads_`|`bytes[]`|call data to initialize position on the new module.|
 
 
-### setFactory
-
-function used to set factory.
-
-
-```solidity
-function setFactory(address factory_) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`factory_`|`address`|address of the meta vault factory.|
-
-
 ### initManagement
 
 function used to init management of a meta vault.
@@ -260,25 +245,64 @@ function factory() external view returns (address);
 |`<none>`|`address`|factory address that can deploy meta vault.|
 
 
-### isManaged
+### defaultFeePIPS
 
-function used to know if a vault is under management by this manager.
+function used to get the default fee applied on manager vault.
 
 
 ```solidity
-function isManaged(address vault_) external view returns (bool isManaged);
+function defaultFeePIPS() external view returns (uint256);
 ```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`vault_`|`address`|address of the meta vault the caller want to check.|
-
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`isManaged`|`bool`|boolean which is true if the vault is under management, false otherwise.|
+|`<none>`|`uint256`|defaultFeePIPS amount of default fees.|
+
+
+### nativeToken
+
+function used to get the native token/coin of the chain.
+
+
+```solidity
+function nativeToken() external view returns (address);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`address`|nativeToken address of the native token/coin of the chain.|
+
+
+### nativeTokenDecimals
+
+function used to get the native token/coin decimals precision.
+
+
+```solidity
+function nativeTokenDecimals() external view returns (uint8);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint8`|nativeTokenDecimals decimals precision of the native coin.|
+
+
+### defaultReceiver
+
+function used to get the default receiver of tokens earned in managed vault.
+
+
+```solidity
+function defaultReceiver() external view returns (address);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`address`|defaultReceiver address of the default receiver.|
 
 
 ## Events
@@ -397,12 +421,6 @@ error NotWhitelistedNftRebalancer(address nftRebalancer);
 
 ```solidity
 error AlreadyWhitelistedNftRebalancer(address nftRebalancer);
-```
-
-### VaultTypeNotSupported
-
-```solidity
-error VaultTypeNotSupported(bytes32 vaultType);
 ```
 
 ### OnlyNftRebalancers

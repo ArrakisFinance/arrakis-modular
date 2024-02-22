@@ -6,6 +6,12 @@ pragma solidity ^0.8.20;
 /// @dev this deposit feature will be used by
 /// private actor.
 interface IArrakisLPModulePrivate {
+    // #region errors.
+
+    error DepositZero();
+
+    // #endregion errors.
+
     // #region events.
 
     /// @notice event emitted when owner of private fund the private vault.

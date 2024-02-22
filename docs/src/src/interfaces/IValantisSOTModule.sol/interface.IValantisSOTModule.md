@@ -1,5 +1,5 @@
 # IValantisSOTModule
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/interfaces/IValantisSOTModule.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/IValantisSOTModule.sol)
 
 
 ## Functions
@@ -10,8 +10,15 @@ inventory.
 
 
 ```solidity
-function swap(bool zeroForOne_, uint256 expectedMinReturn_, uint256 amountIn_, address router_, bytes calldata payload_)
-    external;
+function swap(
+    bool zeroForOne_,
+    uint256 expectedMinReturn_,
+    uint256 amountIn_,
+    address router_,
+    uint160 expectedSqrtSpotPriceUpperX96_,
+    uint160 expectedSqrtSpotPriceLowerX96_,
+    bytes calldata payload_
+) external;
 ```
 **Parameters**
 
@@ -21,21 +28,10 @@ function swap(bool zeroForOne_, uint256 expectedMinReturn_, uint256 amountIn_, a
 |`expectedMinReturn_`|`uint256`|minimum amount of tokenOut expected.|
 |`amountIn_`|`uint256`|amount of tokenIn used during swap.|
 |`router_`|`address`|address of routerSwapExecutor.|
+|`expectedSqrtSpotPriceUpperX96_`|`uint160`|upper bound of current price.|
+|`expectedSqrtSpotPriceLowerX96_`|`uint160`|lower bound of current price.|
 |`payload_`|`bytes`|data payload used for swapping.|
 
-
-### setManager
-
-function used to set new manager
-
-*setting a manager different than the module,
-will make the module unusable.
-let's make it not implemented for now*
-
-
-```solidity
-function setManager(address newManager_) external;
-```
 
 ### setPriceBounds
 
@@ -120,10 +116,10 @@ error NoNativeToken();
 error OnlyPool(address caller, address pool);
 ```
 
-### TotalSupplyZero
+### AmountsZeros
 
 ```solidity
-error TotalSupplyZero();
+error AmountsZeros();
 ```
 
 ### Actual0DifferentExpected
@@ -180,12 +176,6 @@ error SwapCallFailed();
 error SlippageTooHigh();
 ```
 
-### RouterTakeTooMuchTokenIn
-
-```solidity
-error RouterTakeTooMuchTokenIn();
-```
-
 ### NotDepositedAllToken0
 
 ```solidity
@@ -196,5 +186,11 @@ error NotDepositedAllToken0();
 
 ```solidity
 error NotDepositedAllToken1();
+```
+
+### OverMaxDeviation
+
+```solidity
+error OverMaxDeviation();
 ```
 

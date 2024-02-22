@@ -1,17 +1,31 @@
 # ModuleRegistry
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/abstracts/ModuleRegistry.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/abstracts/ModuleRegistry.sol)
 
 **Inherits:**
 [IModuleRegistry](/src/interfaces/IModuleRegistry.sol/interface.IModuleRegistry.md), Ownable
 
 
 ## State Variables
+### factory
+
+```solidity
+IArrakisMetaVaultFactory public immutable factory;
+```
+
+
 ### admin
 *should be a timelock contract.*
 
 
 ```solidity
 address public admin;
+```
+
+
+### _guardian
+
+```solidity
+address internal immutable _guardian;
 ```
 
 
@@ -22,19 +36,12 @@ EnumerableSet.AddressSet internal _beacons;
 ```
 
 
-### _guardian
-
-```solidity
-address internal _guardian;
-```
-
-
 ## Functions
 ### constructor
 
 
 ```solidity
-constructor(address owner_, address guardian_, address admin_);
+constructor(address factory_, address owner_, address guardian_, address admin_);
 ```
 
 ### beacons
@@ -121,5 +128,12 @@ function blacklistBeacons(address[] calldata beacons_) external onlyOwner;
 
 ```solidity
 function _createModule(address vault_, address beacon_, bytes calldata payload_) internal returns (address module);
+```
+
+### _checkVaultNotAddressZero
+
+
+```solidity
+function _checkVaultNotAddressZero(address vault_) internal;
 ```
 

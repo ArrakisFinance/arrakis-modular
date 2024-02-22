@@ -1,5 +1,5 @@
 # IOracleWrapper
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/interfaces/IOracleWrapper.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/IOracleWrapper.sol)
 
 
 ## Functions
@@ -32,4 +32,23 @@ function getPrice1() external view returns (uint256 price1);
 |----|----|-----------|
 |`price1`|`uint256`|price of token1/token0.|
 
+
+## Errors
+### AddressZero
+
+```solidity
+error AddressZero();
+```
+
+### DecimalsToken0Zero
+
+```solidity
+error DecimalsToken0Zero();
+```
+
+### DecimalsToken1Zero
+
+```solidity
+error DecimalsToken1Zero();
+```
 

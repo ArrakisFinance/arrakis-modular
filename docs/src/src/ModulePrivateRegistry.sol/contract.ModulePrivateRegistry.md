@@ -1,5 +1,5 @@
 # ModulePrivateRegistry
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/ModulePrivateRegistry.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/ModulePrivateRegistry.sol)
 
 **Inherits:**
 [ModuleRegistry](/src/abstracts/ModuleRegistry.sol/abstract.ModuleRegistry.md), [IModulePrivateRegistry](/src/interfaces/IModulePrivateRegistry.sol/interface.IModulePrivateRegistry.md)
@@ -10,7 +10,8 @@
 
 
 ```solidity
-constructor(address owner_, address guardian_, address admin_) ModuleRegistry(owner_, guardian_, admin_);
+constructor(address factory_, address owner_, address guardian_, address admin_)
+    ModuleRegistry(factory_, owner_, guardian_, admin_);
 ```
 
 ### createModule

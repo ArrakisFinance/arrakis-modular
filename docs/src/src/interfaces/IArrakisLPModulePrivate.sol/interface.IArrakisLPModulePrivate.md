@@ -1,5 +1,5 @@
 # IArrakisLPModulePrivate
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/interfaces/IArrakisLPModulePrivate.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/IArrakisLPModulePrivate.sol)
 
 expose a deposit function for that can
 deposit any share of token0 and token1.
@@ -42,4 +42,11 @@ event LogFund(address depositor, uint256 amount0, uint256 amount1);
 |`depositor`|`address`|address that are sending the tokens, the owner.|
 |`amount0`|`uint256`|amount of token0 sent by depositor.|
 |`amount1`|`uint256`|amount of token1 sent by depositor.|
+
+## Errors
+### DepositZero
+
+```solidity
+error DepositZero();
+```
 

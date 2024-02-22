@@ -4,14 +4,14 @@ pragma solidity ^0.8.20;
 import {ModuleRegistry} from "./abstracts/ModuleRegistry.sol";
 import {IModulePublicRegistry} from "./interfaces/IModulePublicRegistry.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
-import {PUBLIC_TYPE} from "./constants/CArrakis.sol";
 
 contract ModulePublicRegistry is ModuleRegistry, IModulePublicRegistry {
     constructor(
+        address factory_,
         address owner_,
         address guardian_,
         address admin_
-    ) ModuleRegistry(owner_, guardian_, admin_) {}
+    ) ModuleRegistry(factory_, owner_, guardian_, admin_) {}
 
     // #region public state modifying functions.
 
@@ -25,10 +25,11 @@ contract ModulePublicRegistry is ModuleRegistry, IModulePublicRegistry {
         address beacon_,
         bytes calldata payload_
     ) external returns (address module) {
-        if (IArrakisMetaVault(vault_).vaultType() != PUBLIC_TYPE)
+        _checkVaultNotAddressZero(vault_);
+        if (!factory.isPublicVault(vault_))
             revert NotPublicVault();
 
-        _createModule(vault_, beacon_, payload_);
+        module = _createModule(vault_, beacon_, payload_);
 
         emit LogCreatePublicModule(
             beacon_,

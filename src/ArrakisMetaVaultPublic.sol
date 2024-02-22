@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import {IArrakisMetaVaultPublic} from "./interfaces/IArrakisMetaVaultPublic.sol";
 import {IArrakisLPModulePublic} from "./interfaces/IArrakisLPModulePublic.sol";
 import {ArrakisMetaVault, PIPS} from "./abstracts/ArrakisMetaVault.sol";
-import {PUBLIC_TYPE} from "./constants/CArrakis.sol";
 
 import {ERC20} from "@solady/contracts/tokens/ERC20.sol";
 
@@ -26,14 +25,12 @@ contract ArrakisMetaVaultPublic is
     string internal _symbol;
 
     constructor(
-        address token0_,
-        address token1_,
         address owner_,
         string memory name_,
         string memory symbol_,
         address moduleRegistry_,
         address manager_
-    ) ArrakisMetaVault(token0_, token1_, moduleRegistry_, manager_) {
+    ) ArrakisMetaVault(moduleRegistry_, manager_) {
         if (owner_ == address(0)) revert AddressZero("Owner");
         _initializeOwner(owner_);
         _name = name_;
@@ -52,7 +49,6 @@ contract ArrakisMetaVaultPublic is
         if (shares_ == 0) revert MintZero();
         uint256 supply = totalSupply();
 
-        // should we do a mulDivRoundup
         uint256 proportion = FullMath.mulDiv(
             shares_,
             PIPS,
@@ -126,12 +122,6 @@ contract ArrakisMetaVaultPublic is
         return _symbol;
     }
 
-    /// @notice function used to get the type of vault.
-    /// @return vaultType as bytes32.
-    function vaultType() external pure returns (bytes32) {
-        return PUBLIC_TYPE;
-    }
-
     // #region internal functions.
 
     function _deposit(
@@ -151,7 +141,6 @@ contract ArrakisMetaVaultPublic is
         );
 
         (amount0, amount1) = abi.decode(result, (uint256, uint256));
-        emit LogDeposit(proportion_, amount0, amount1);
     }
 
     function _onlyOwnerCheck() internal view override {

@@ -2,15 +2,21 @@
 pragma solidity ^0.8.20;
 
 import {IArrakisMetaVaultPrivate} from "./interfaces/IArrakisMetaVaultPrivate.sol";
+import {IOwnable} from "./interfaces/IOwnable.sol";
 import {ArrakisMetaVault} from "./abstracts/ArrakisMetaVault.sol";
 import {IArrakisLPModulePrivate} from "./interfaces/IArrakisLPModulePrivate.sol";
-import {PRIVATE_TYPE} from "./constants/CArrakis.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
+contract ArrakisMetaVaultPrivate is
+    ArrakisMetaVault,
+    IArrakisMetaVaultPrivate,
+    IOwnable
+{
     using Address for address payable;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     // #region immutable properties.
 
@@ -18,13 +24,18 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
 
     // #endregion immutable properties.
 
+    // #region internal properties.
+
+    EnumerableSet.AddressSet internal _depositors;
+
+    // #endregion internal properties.
+
     constructor(
-        address token0_,
-        address token1_,
         address moduleRegistry_,
         address manager_,
         address nft_
-    ) ArrakisMetaVault(token0_, token1_, moduleRegistry_, manager_) {
+    ) ArrakisMetaVault(moduleRegistry_, manager_) {
+        if (nft_ == address(0)) revert AddressZero("NFT");
         nft = nft_;
     }
 
@@ -35,8 +46,12 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
     function deposit(
         uint256 amount0_,
         uint256 amount1_
-    ) external payable onlyOwnerCustom {
+    ) external payable {
+        // NOTE: should we also allow owner to be a depositor by default?
+        if(!_depositors.contains(msg.sender)) revert OnlyDepositor();
         _deposit(amount0_, amount1_);
+
+        emit LogDeposit(amount0_, amount1_);
     }
 
     /// @notice function used to withdraw tokens or position contraction of the
@@ -50,13 +65,55 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
         address receiver_
     ) external onlyOwnerCustom returns (uint256 amount0, uint256 amount1) {
         (amount0, amount1) = _withdraw(receiver_, proportion_);
+
+        emit LogWithdraw(proportion_, amount0, amount1);
     }
 
-    /// @notice function used to get the type of vault.
-    /// @return vaultType as bytes32.
-    function vaultType() external pure returns (bytes32) {
-        return PRIVATE_TYPE;
+    /// @notice function used to whitelist depositors.
+    /// @param depositors_  list of address that will be granted to depositor role.
+    function whitelistDepositors(address[] calldata depositors_) external onlyOwnerCustom {
+        uint256 length = depositors_.length;
+        for(uint256 i; i < length; i++) {
+            address depositor = depositors_[i];
+
+            if(depositor == address(0)) revert AddressZero("Depositor");
+            if(_depositors.contains(depositor)) revert DepositorAlreadyWhitelisted();
+
+            _depositors.add(depositor);
+        }
+
+        emit LogWhitelistDepositors(depositors_);
     }
+
+    /// @notice function used to blacklist depositors.
+    /// @param depositors_ list of address who depositor role will be revoked.
+    function blacklistDepositors(address[] calldata depositors_) external onlyOwnerCustom() {
+        uint256 length = depositors_.length;
+        for(uint256 i; i < length; i++) {
+            address depositor = depositors_[i];
+
+            if(!_depositors.contains(depositor)) revert NotAlreadyWhitelistedDepositor();
+
+            _depositors.remove(depositor);
+        }
+
+        emit LogBlacklistDepositors(depositors_);
+    }
+
+    // #region external view/pure functions.
+
+    /// @notice function used to get the owner of this contract.
+    function owner() external view returns (address) {
+        return IERC721(nft).ownerOf(uint256(uint160(address(this))));
+    }
+
+    /// @notice function used to get the list of depositors.
+    /// @return depositors list of address granted to depositor role.
+    function depositors() external view returns(address[] memory) {
+        return _depositors.values();
+    }
+
+    // #endregion  external view/pure functions.
 
     // #region internal functions.
 
@@ -74,8 +131,6 @@ contract ArrakisMetaVaultPrivate is ArrakisMetaVault, IArrakisMetaVaultPrivate {
         );
 
         payable(address(module)).functionCallWithValue(data, msg.value);
-
-        emit LogDeposit(amount0_, amount1_);
     }
 
     function _onlyOwnerCheck() internal view override {

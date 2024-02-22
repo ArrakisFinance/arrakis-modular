@@ -15,8 +15,17 @@ contract SOTOracleWrapper is IOracleWrapper {
 
     // #endregion immutable public variable.
 
-    constructor(address oracle_) {
+    constructor(address oracle_, uint8 decimals0_, uint8 decimals1_) {
+        if(oracle_ == address(0))
+            revert AddressZero();
+        if(decimals0_ == 0)
+            revert DecimalsToken0Zero();
+        if(decimals1_ == 0)
+            revert DecimalsToken1Zero();
+
         oracle = ISOTOracle(oracle_);
+        decimals0 = decimals0_;
+        decimals1 = decimals1_;
     }
 
     function getPrice0() public view returns (uint256 price0) {

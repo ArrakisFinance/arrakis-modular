@@ -1,5 +1,5 @@
 # ISOT
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/interfaces/ISOT.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/ISOT.sol)
 
 
 ## Functions
@@ -45,5 +45,15 @@ function setPriceBounds(
 
 ```solidity
 function getReservesAtPrice(uint160 sqrtPriceX96_) external view returns (uint128 reserves0, uint128 reserves1);
+```
+
+### getAmmState
+
+
+```solidity
+function getAmmState()
+    external
+    view
+    returns (uint160 sqrtSpotPriceX96, uint160 sqrtPriceLowX96, uint160 sqrtPriceHighX96);
 ```
 

@@ -9,7 +9,6 @@ interface IArrakisStandardManager {
     error EmptyNftRebalancersArray();
     error NotWhitelistedNftRebalancer(address nftRebalancer);
     error AlreadyWhitelistedNftRebalancer(address nftRebalancer);
-    error VaultTypeNotSupported(bytes32 vaultType);
     error OnlyNftRebalancers(address caller);
     error EmptyString();
     error StratAlreadyWhitelisted();
@@ -162,10 +161,6 @@ interface IArrakisStandardManager {
         bytes[] calldata payloads_
     ) external;
 
-    /// @notice function used to set factory.
-    /// @param factory_ address of the meta vault factory.
-    function setFactory(address factory_) external;
-
     /// @notice function used to init management of a meta vault.
     /// @param params_ struct containing all the data for initialize the vault.
     function initManagement(SetupParams calldata params_) external;
@@ -201,10 +196,21 @@ interface IArrakisStandardManager {
     /// @return factory address that can deploy meta vault.
     function factory() external view returns (address);
 
-    /// @notice function used to know if a vault is under management by this manager.
-    /// @param vault_ address of the meta vault the caller want to check.
-    /// @return isManaged boolean which is true if the vault is under management, false otherwise.
-    function isManaged(address vault_) external view returns (bool isManaged);
+    /// @notice function used to get the default fee applied on manager vault.
+    /// @return defaultFeePIPS amount of default fees.
+    function defaultFeePIPS() external view returns (uint256);
+
+    /// @notice function used to get the native token/coin of the chain.
+    /// @return nativeToken address of the native token/coin of the chain.
+    function nativeToken() external view returns (address);
+
+    /// @notice function used to get the native token/coin decimals precision.
+    /// @return nativeTokenDecimals decimals precision of the native coin.
+    function nativeTokenDecimals() external view returns (uint8);
+
+    /// @notice function used to get the default receiver of tokens earned in managed vault.
+    /// @return defaultReceiver address of the default receiver.
+    function defaultReceiver() external view returns(address);
 
     // #endregion  view functions.
 }

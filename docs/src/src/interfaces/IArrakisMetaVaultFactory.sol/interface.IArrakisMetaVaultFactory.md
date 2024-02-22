@@ -1,5 +1,5 @@
 # IArrakisMetaVaultFactory
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/interfaces/IArrakisMetaVaultFactory.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/IArrakisMetaVaultFactory.sol)
 
 
 ## Functions
@@ -24,6 +24,23 @@ function used to unpause the factory.
 ```solidity
 function unpause() external;
 ```
+
+### setManager
+
+function used to set a new manager.
+
+*only callable by owner.*
+
+
+```solidity
+function setManager(address newManager_) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`newManager_`|`address`|address that will managed newly created vault.|
+
 
 ### deployPublicVault
 
@@ -208,6 +225,27 @@ function numOfPublicVaults() external view returns (uint256 result);
 |`result`|`uint256`|total number of vaults deployed|
 
 
+### isPublicVault
+
+isPublicVault check if the inputed vault is a public vault.
+
+
+```solidity
+function isPublicVault(address vault_) external view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault_`|`address`|address of the address to check.|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|isPublicVault true if the inputed vault is public or otherwise false.|
+
+
 ### privateVaults
 
 get a list of private vaults created by this factory
@@ -243,6 +281,27 @@ function numOfPrivateVaults() external view returns (uint256 result);
 |Name|Type|Description|
 |----|----|-----------|
 |`result`|`uint256`|total number of vaults deployed|
+
+
+### isPrivateVault
+
+isPrivateVault check if the inputed vault is a private vault.
+
+
+```solidity
+function isPrivateVault(address vault_) external view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault_`|`address`|address of the address to check.|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|isPublicVault true if the inputed vault is private or otherwise false.|
 
 
 ### manager
@@ -376,6 +435,21 @@ event LogBlacklistDeployers(address[] deployers);
 |----|----|-----------|
 |`deployers`|`address[]`|list of deployers removed from the whitelist.|
 
+### LogSetManager
+event emitted when owner set a new manager.
+
+
+```solidity
+event LogSetManager(address oldManager, address newManager);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`oldManager`|`address`|address of the previous manager.|
+|`newManager`|`address`|address of the new manager.|
+
 ## Errors
 ### AddressZero
 
@@ -443,5 +517,14 @@ not under management by manager.*
 
 ```solidity
 error VaultNotManaged();
+```
+
+### SameManager
+*triggered when owner is setting a new manager, and the new manager
+address match with the old manager address.*
+
+
+```solidity
+error SameManager();
 ```
 

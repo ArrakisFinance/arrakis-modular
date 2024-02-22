@@ -7,6 +7,9 @@ interface IArrakisMetaVaultPrivate {
     error MintZero();
     error BurnZero();
     error BurnOverflow();
+    error DepositorAlreadyWhitelisted();
+    error NotAlreadyWhitelistedDepositor();
+    error OnlyDepositor();
 
     // #endregion errors.
 
@@ -16,6 +19,20 @@ interface IArrakisMetaVaultPrivate {
     /// @param amount0 amount of token0 needed to increase the portfolio of "proportion" percent.
     /// @param amount1 amount of token1 needed to increase the portfolio of "proportion" percent.
     event LogDeposit(uint256 amount0, uint256 amount1);
+
+    /// @notice Event describing a withdrawal of participation by an user inside this vault.
+    /// @param proportion percentage of the current position that user want to withdraw.
+    /// @param amount0 amount of token0 withdrawn due to withdraw action.
+    /// @param amount1 amount of token1 withdrawn due to withdraw action.
+    event LogWithdraw(uint256 proportion, uint256 amount0, uint256 amount1);
+
+    /// @notice Event describing the whitelist of fund depositor.
+    /// @param depositors list of address that are granted to depositor role.
+    event LogWhitelistDepositors(address[] depositors);
+
+    /// @notice Event describing the blacklist of fund depositor.
+    /// @param depositors list of address who depositor role is revoked.
+    event LogBlacklistDepositors(address[] depositors);
 
     // #endregion events.
 
@@ -35,4 +52,16 @@ interface IArrakisMetaVaultPrivate {
         uint256 proportion_,
         address receiver_
     ) external returns (uint256 amount0, uint256 amount1);
+
+    /// @notice function used to whitelist depositors.
+    /// @param depositors_ list of address that will be granted to depositor role.
+    function whitelistDepositors(address[] calldata depositors_) external;
+
+    /// @notice function used to blacklist depositors.
+    /// @param depositors_ list of address who depositor role will be revoked.
+    function blacklistDepositors(address[] calldata depositors_) external;
+
+    /// @notice function used to get the list of depositors.
+    /// @return depositors list of address granted to depositor role.
+    function depositors() external view returns(address[] memory);
 }

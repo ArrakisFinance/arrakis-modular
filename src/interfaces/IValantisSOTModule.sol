@@ -11,7 +11,7 @@ interface IValantisSOTModule {
     /// @notice 
     error NoNativeToken();
     error OnlyPool(address caller, address pool);
-    error TotalSupplyZero();
+    error AmountsZeros();
     error Actual0DifferentExpected(uint256 actual0, uint256 expected0);
     error Actual1DifferentExpected(uint256 actual1, uint256 expected1);
     error NotImplemented();
@@ -21,9 +21,9 @@ interface IValantisSOTModule {
     error NotEnoughToken1();
     error SwapCallFailed();
     error SlippageTooHigh();
-    error RouterTakeTooMuchTokenIn();
     error NotDepositedAllToken0();
     error NotDepositedAllToken1();
+    error OverMaxDeviation();
 
     // #endregion errors.
 
@@ -46,20 +46,18 @@ interface IValantisSOTModule {
     /// @param expectedMinReturn_ minimum amount of tokenOut expected.
     /// @param amountIn_ amount of tokenIn used during swap.
     /// @param router_ address of routerSwapExecutor.
+    /// @param expectedSqrtSpotPriceUpperX96_ upper bound of current price.
+    /// @param expectedSqrtSpotPriceLowerX96_ lower bound of current price.
     /// @param payload_ data payload used for swapping.
      function swap(
         bool zeroForOne_,
         uint256 expectedMinReturn_,
         uint256 amountIn_,
         address router_,
+        uint160 expectedSqrtSpotPriceUpperX96_,
+        uint160 expectedSqrtSpotPriceLowerX96_,
         bytes calldata payload_
     ) external;
-
-    /// @notice function used to set new manager
-    /// @dev setting a manager different than the module,
-    /// will make the module unusable.
-    /// let's make it not implemented for now
-    function setManager(address newManager_) external;
 
     /// @notice fucntion used to set range on valantis AMM
     /// @param _sqrtPriceLowX96 lower bound of the range in sqrt price.

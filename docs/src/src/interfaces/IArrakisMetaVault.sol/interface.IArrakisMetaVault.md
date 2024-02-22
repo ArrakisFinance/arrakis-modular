@@ -1,5 +1,5 @@
 # IArrakisMetaVault
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/interfaces/IArrakisMetaVault.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/interfaces/IArrakisMetaVault.sol)
 
 IArrakisMetaVault is a vault that is able to invest dynamically deposited
 tokens into protocols through his module.
@@ -12,12 +12,14 @@ function used to initialize default module.
 
 
 ```solidity
-function initialize(address module_) external;
+function initialize(address token0_, address token1_, address module_) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
+|`token0_`|`address`|address of the first token of the token pair.|
+|`token1_`|`address`|address of the second token of the token pair.|
 |`module_`|`address`|address of the default module.|
 
 
@@ -139,21 +141,6 @@ function getInits() external view returns (uint256 init0, uint256 init1);
 |`init1`|`uint256`|the amount of token1 needed to open a position.|
 
 
-### vaultType
-
-function used to get the type of vault.
-
-
-```solidity
-function vaultType() external pure returns (bytes32);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bytes32`|vaultType as bytes32.|
-
-
 ### token0
 
 function used to get the address of token0.
@@ -207,22 +194,6 @@ function moduleRegistry() external view returns (address registry);
 
 
 ## Events
-### LogWithdraw
-Event describing a withdrawal of participation by an user inside this vault.
-
-
-```solidity
-event LogWithdraw(uint256 proportion, uint256 amount0, uint256 amount1);
-```
-
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`proportion`|`uint256`|percentage of the current position that user want to withdraw.|
-|`amount0`|`uint256`|amount of token0 withdrawn due to withdraw action.|
-|`amount1`|`uint256`|amount of token1 withdrawn due to withdraw action.|
-
 ### LogWithdrawManagerBalance
 Event describing a manager fee withdrawal.
 

@@ -1,9 +1,27 @@
 ## arrakis-modular
 
+### install deps
+
 ```bash
 forge install
 ```
 
+### compile contracts
+
 ```bash
-forge test --fork-url https://eth-mainnet.alchemyapi.io/v2/YOUR-API-KEY-HERE --fork-block-number 18158285 -vv
+forge compile
+```
+
+### fill in env vars
+
+```bash
+cp .envExample .env
+```
+
+NOTE: you must add your own alchemy api key to `ETH_RPC_URL`
+
+### test
+
+```bash
+forge test -vv
 ```
