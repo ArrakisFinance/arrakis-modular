@@ -566,8 +566,8 @@ BRH:73
 end_of_record
 TN:
 SF:src/ArrakisPublicVaultWethRouter.sol
-FN:50,ArrakisPublicVaultWethRouter.wethAndAddLiquidity
-FNDA:18,ArrakisPublicVaultWethRouter.wethAndAddLiquidity
+FN:50,ArrakisPublicVaultWethRouter.wrapAndAddLiquidity
+FNDA:18,ArrakisPublicVaultWethRouter.wrapAndAddLiquidity
 DA:60,17
 BRDA:60,0,0,1
 BRDA:60,0,1,16
@@ -616,8 +616,8 @@ BRDA:120,9,0,-
 BRDA:120,9,1,1
 DA:121,1
 DA:122,1
-FN:135,ArrakisPublicVaultWethRouter.wethAndSwapAndAddLiquidity
-FNDA:15,ArrakisPublicVaultWethRouter.wethAndSwapAndAddLiquidity
+FN:135,ArrakisPublicVaultWethRouter.wrapAndSwapAndAddLiquidity
+FNDA:15,ArrakisPublicVaultWethRouter.wrapAndSwapAndAddLiquidity
 DA:151,14
 BRDA:151,10,0,1
 BRDA:151,10,1,13
@@ -717,8 +717,8 @@ BRDA:278,30,1,1
 DA:279,1
 DA:280,1
 DA:282,2
-FN:292,ArrakisPublicVaultWethRouter.wethAddLiquidityPermit2
-FNDA:14,ArrakisPublicVaultWethRouter.wethAddLiquidityPermit2
+FN:292,ArrakisPublicVaultWethRouter.wrapAndAddLiquidityPermit2
+FNDA:14,ArrakisPublicVaultWethRouter.wrapAndAddLiquidityPermit2
 DA:302,13
 BRDA:302,31,0,1
 BRDA:302,31,1,12
@@ -760,8 +760,8 @@ BRDA:353,38,0,-
 BRDA:353,38,1,1
 DA:354,1
 DA:355,1
-FN:366,ArrakisPublicVaultWethRouter.wethSwapAndAddLiquidityPermit2
-FNDA:15,ArrakisPublicVaultWethRouter.wethSwapAndAddLiquidityPermit2
+FN:366,ArrakisPublicVaultWethRouter.wrapAndSwapAndAddLiquidityPermit2
+FNDA:15,ArrakisPublicVaultWethRouter.wrapAndSwapAndAddLiquidityPermit2
 DA:382,14
 BRDA:382,39,0,1
 BRDA:382,39,1,13

@@ -3,11 +3,11 @@
 
 
 ## Functions
-### wethAndAddLiquidity
+### wrapAndAddLiquidity
 
 
 ```solidity
-function wethAndAddLiquidity(AddLiquidityData memory params_)
+function wrapAndAddLiquidity(AddLiquidityData memory params_)
     external
     payable
     returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);

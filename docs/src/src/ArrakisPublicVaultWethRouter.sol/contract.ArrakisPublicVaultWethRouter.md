@@ -22,13 +22,13 @@ constructor(address nativeToken_, address permit2_, address swapper_, address ow
     ArrakisPublicVaultRouter(nativeToken_, permit2_, swapper_, owner_, factory_);
 ```
 
-### wethAndAddLiquidity
+### wrapAndAddLiquidity
 
-wethAndAddLiquidity wrap eth and adds liquidity to meta vault of iPnterest (mints L tokens)
+wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of iPnterest (mints L tokens)
 
 
 ```solidity
-function wethAndAddLiquidity(AddLiquidityData memory params_)
+function wrapAndAddLiquidity(AddLiquidityData memory params_)
     external
     payable
     nonReentrant
@@ -51,13 +51,13 @@ function wethAndAddLiquidity(AddLiquidityData memory params_)
 |`sharesReceived`|`uint256`|amount of public vault tokens transferred to `receiver`|
 
 
-### wethAndSwapAndAddLiquidity
+### wrapAndSwapAndAddLiquidity
 
-wethAndSwapAndAddLiquidity wrap eth and transfer tokens to and calls RouterSwapExecutor
+wrapAndSwapAndAddLiquidity wrap eth and transfer tokens to and calls RouterSwapExecutor
 
 
 ```solidity
-function wethAndSwapAndAddLiquidity(SwapAndAddData memory params_)
+function wrapAndSwapAndAddLiquidity(SwapAndAddData memory params_)
     external
     payable
     nonReentrant
@@ -112,13 +112,13 @@ function removeLiquidityAndUnwrap(RemoveLiquidityData memory params_)
 |`amount1`|`uint256`|actual amount of token1 transferred to receiver for burning `burnAmount`|
 
 
-### wethAddLiquidityPermit2
+### wrapAndAddLiquidityPermit2
 
-wethAddLiquidityPermit2 wrap eth and adds liquidity to public vault of interest (mints LP tokens)
+wrapAndAddLiquidityPermit2 wrap eth and adds liquidity to public vault of interest (mints LP tokens)
 
 
 ```solidity
-function wethAddLiquidityPermit2(AddLiquidityPermit2Data memory params_)
+function wrapAndAddLiquidityPermit2(AddLiquidityPermit2Data memory params_)
     external
     payable
     nonReentrant
@@ -141,13 +141,13 @@ function wethAddLiquidityPermit2(AddLiquidityPermit2Data memory params_)
 |`sharesReceived`|`uint256`|amount of public vault tokens transferred to `receiver`|
 
 
-### wethSwapAndAddLiquidityPermit2
+### wrapAndSwapAndAddLiquidityPermit2
 
-wethSwapAndAddLiquidityPermit2 wrap eth and transfer tokens to and calls RouterSwapExecutor
+wrapAndSwapAndAddLiquidityPermit2 wrap eth and transfer tokens to and calls RouterSwapExecutor
 
 
 ```solidity
-function wethSwapAndAddLiquidityPermit2(SwapAndAddPermit2Data memory params_)
+function wrapAndSwapAndAddLiquidityPermit2(SwapAndAddPermit2Data memory params_)
     external
     payable
     nonReentrant
