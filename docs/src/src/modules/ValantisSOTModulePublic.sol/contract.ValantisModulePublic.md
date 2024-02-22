@@ -1,6 +1,5 @@
 # ValantisModulePublic
-
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/modules/ValantisSOTModulePublic.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/modules/ValantisSOTModulePublic.sol)
 
 **Inherits:**
 [ValantisModule](/src/abstracts/ValantisSOTModule.sol/abstract.ValantisModule.md), [IArrakisLPModulePublic](/src/interfaces/IArrakisLPModulePublic.sol/interface.IArrakisLPModulePublic.md)

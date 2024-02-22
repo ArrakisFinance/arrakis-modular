@@ -10,7 +10,6 @@
 - [IArrakisMetaVaultPrivate](IArrakisMetaVaultPrivate.sol/interface.IArrakisMetaVaultPrivate.md)
 - [IArrakisMetaVaultPublic](IArrakisMetaVaultPublic.sol/interface.IArrakisMetaVaultPublic.md)
 - [IArrakisPublicVaultRouter](IArrakisPublicVaultRouter.sol/interface.IArrakisPublicVaultRouter.md)
-- [IArrakisPublicVaultWethRouter](IArrakisPublicVaultWethRouter.sol/interface.IArrakisPublicVaultWethRouter.md)
 - [IArrakisStandardManager](IArrakisStandardManager.sol/interface.IArrakisStandardManager.md)
 - [IBeaconProxyExtended](IBeaconProxyExtended.sol/interface.IBeaconProxyExtended.md)
 - [IGuardian](IGuardian.sol/interface.IGuardian.md)
@@ -28,4 +27,4 @@
 - [ISovereignPool](ISovereignPool.sol/interface.ISovereignPool.md)
 - [ITimeLock](ITimeLock.sol/interface.ITimeLock.md)
 - [IValantisSOTModule](IValantisSOTModule.sol/interface.IValantisSOTModule.md)
-- [IWETH9](Iweth9.sol/interface.IWETH9.md)
+- [IWETH9](IWETH9.sol/interface.IWETH9.md)

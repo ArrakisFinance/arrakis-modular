@@ -1,5 +1,5 @@
 # ArrakisMetaVaultFactory
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/ArrakisMetaVaultFactory.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/ArrakisMetaVaultFactory.sol)
 
 **Inherits:**
 [IArrakisMetaVaultFactory](/src/interfaces/IArrakisMetaVaultFactory.sol/interface.IArrakisMetaVaultFactory.md), Pausable, Ownable
