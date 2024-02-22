@@ -1,4 +1,5 @@
 # ValantisModulePublic
+
 [Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/modules/ValantisSOTModulePublic.sol)
 
 **Inherits:**

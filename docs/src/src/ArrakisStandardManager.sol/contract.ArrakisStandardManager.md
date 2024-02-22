@@ -1,5 +1,5 @@
 # ArrakisStandardManager
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/ArrakisStandardManager.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/ArrakisStandardManager.sol)
 
 **Inherits:**
 [IArrakisStandardManager](/src/interfaces/IArrakisStandardManager.sol/interface.IArrakisStandardManager.md), [IManager](/src/interfaces/IManager.sol/interface.IManager.md), Ownable, ReentrancyGuardUpgradeable, PausableUpgradeable

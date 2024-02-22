@@ -1,5 +1,5 @@
 # ArrakisPublicVaultRouter
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/main/src/ArrakisPublicVaultRouter.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/9091a6ee814f061039fd7b968feddb93bbdf1110/src/ArrakisPublicVaultRouter.sol)
 
 **Inherits:**
 [IArrakisPublicVaultRouter](/src/interfaces/IArrakisPublicVaultRouter.sol/interface.IArrakisPublicVaultRouter.md), ReentrancyGuard, Ownable, Pausable
@@ -367,12 +367,15 @@ function _permit2SwapAndAddLengthOneOrTwo(SwapAndAddPermit2Data memory params_, 
 
 
 ```solidity
+
 function _permit2SwapAndAdd(
     uint256 permittedLength_,
     SwapAndAddPermit2Data memory params_,
     address token0_,
     address token1_
 ) internal;
+
+function _permit2SwapAndAdd(SwapAndAddPermit2Data memory params_, address token0_, address token1_) internal;
 ```
 
 ### _getMintAmounts
