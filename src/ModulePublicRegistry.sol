@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import {ModuleRegistry} from "./abstracts/ModuleRegistry.sol";
 import {IModulePublicRegistry} from "./interfaces/IModulePublicRegistry.sol";
-import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 
 contract ModulePublicRegistry is ModuleRegistry, IModulePublicRegistry {
     constructor(

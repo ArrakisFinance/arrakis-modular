@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
+import {IBeaconProxyExtended} from "../interfaces/IBeaconProxyExtended.sol";
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-contract BeaconProxyExtended is BeaconProxy {
+contract BeaconProxyExtended is BeaconProxy, IBeaconProxyExtended {
     constructor(
         address beacon_,
         bytes memory data_

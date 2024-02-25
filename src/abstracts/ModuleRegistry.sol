@@ -8,7 +8,6 @@ import {IGuardian} from "../interfaces/IGuardian.sol";
 import {BeaconProxyExtended} from "../proxy/BeaconProxyExtended.sol";
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 

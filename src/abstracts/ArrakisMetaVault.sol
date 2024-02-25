@@ -5,15 +5,11 @@ import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IModuleRegistry} from "../interfaces/IModuleRegistry.sol";
 import {PIPS} from "../constants/CArrakis.sol";
-import {IBeaconProxyExtended} from "../interfaces/IBeaconProxyExtended.sol";
-import {BeaconProxyExtended} from "../proxy/BeaconProxyExtended.sol";
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
 abstract contract ArrakisMetaVault is
     IArrakisMetaVault,
