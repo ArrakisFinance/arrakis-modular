@@ -59,10 +59,10 @@ contract GuardianTest is TestWrapper {
     // #region test setPauser.
 
     function testSetPauserOnlyOwner() public {
-        address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
-        address newPauser = vm.addr(
-            uint256(keccak256(abi.encode("NewPauser")))
-        );
+        address caller =
+            vm.addr(uint256(keccak256(abi.encode("Caller"))));
+        address newPauser =
+            vm.addr(uint256(keccak256(abi.encode("NewPauser"))));
 
         vm.prank(caller);
         vm.expectRevert(Ownable.Unauthorized.selector);
@@ -85,9 +85,8 @@ contract GuardianTest is TestWrapper {
     }
 
     function testSetPauser() public {
-        address newPauser = vm.addr(
-            uint256(keccak256(abi.encode("NewPauser")))
-        );
+        address newPauser =
+            vm.addr(uint256(keccak256(abi.encode("NewPauser"))));
 
         vm.prank(owner);
         vm.expectEmit();

@@ -8,7 +8,7 @@ import {IOracleWrapper} from "./IOracleWrapper.sol";
 interface IValantisSOTModule {
     // #region errors.
 
-    /// @notice 
+    /// @notice
     error NoNativeToken();
     error OnlyPool(address caller, address pool);
     error AmountsZeros();
@@ -24,6 +24,8 @@ interface IValantisSOTModule {
     error NotDepositedAllToken0();
     error NotDepositedAllToken1();
     error OverMaxDeviation();
+    error Deposit0();
+    error Deposit1();
 
     // #endregion errors.
 
@@ -49,7 +51,7 @@ interface IValantisSOTModule {
     /// @param expectedSqrtSpotPriceUpperX96_ upper bound of current price.
     /// @param expectedSqrtSpotPriceLowerX96_ lower bound of current price.
     /// @param payload_ data payload used for swapping.
-     function swap(
+    function swap(
         bool zeroForOne_,
         uint256 expectedMinReturn_,
         uint256 amountIn_,
@@ -88,7 +90,7 @@ interface IValantisSOTModule {
     function oracle() external view returns (IOracleWrapper);
 
     /// @notice function used to get the max slippage that
-    /// can occur during swap rebalance. 
+    /// can occur during swap rebalance.
     function maxSlippage() external view returns (uint24);
 
     // #endregion view functions.

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {PermitBatchTransferFrom, PermitTransferFrom} from "./SPermit2.sol";
+import {
+    PermitBatchTransferFrom,
+    PermitTransferFrom
+} from "./SPermit2.sol";
 
 struct AddLiquidityData {
     uint256 amount0Max;
@@ -51,4 +54,3 @@ struct SwapAndAddPermit2Data {
     PermitBatchTransferFrom permit;
     bytes signature;
 }
-

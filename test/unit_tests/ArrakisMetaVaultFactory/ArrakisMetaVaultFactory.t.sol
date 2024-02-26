@@ -6,14 +6,20 @@ import {Vm} from "forge-std/Vm.sol";
 
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 
-import {ArrakisMetaVaultFactory, IArrakisMetaVaultFactory} from "../../../src/ArrakisMetaVaultFactory.sol";
-import {IArrakisMetaVault} from "../../../src/interfaces/IArrakisMetaVault.sol";
+import {
+    ArrakisMetaVaultFactory,
+    IArrakisMetaVaultFactory
+} from "../../../src/ArrakisMetaVaultFactory.sol";
+import {IArrakisMetaVault} from
+    "../../../src/interfaces/IArrakisMetaVault.sol";
 import {PALMVaultNFT} from "../../../src/PALMVaultNFT.sol";
 import {TimeLock} from "../../../src/TimeLock.sol";
 
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {IERC20Metadata} from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {UpgradeableBeacon} from
+    "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
@@ -22,8 +28,10 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 import {BeaconImplementation} from "./mocks/BeaconImplementation.sol";
 import {ModuleRegistryMock} from "./mocks/ModuleRegistryMock.sol";
 import {ArrakisManagerMock} from "./mocks/ArrakisManagerMock.sol";
-import {ArrakisManagerBuggyMock} from "./mocks/ArrakisManagerBuggyMock.sol";
-import {ArrakisManagerBuggy2Mock} from "./mocks/ArrakisManagerBuggy2Mock.sol";
+import {ArrakisManagerBuggyMock} from
+    "./mocks/ArrakisManagerBuggyMock.sol";
+import {ArrakisManagerBuggy2Mock} from
+    "./mocks/ArrakisManagerBuggy2Mock.sol";
 import {BuggyTokenA} from "./mocks/BuggyTokenA.sol";
 
 // #endregion mocks.
@@ -31,8 +39,10 @@ import {BuggyTokenA} from "./mocks/BuggyTokenA.sol";
 contract ArrakisMetaVaultFactoryTest is TestWrapper {
     // #region constant properties.
 
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant WETH =
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant USDC =
+        0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     // #endregion constant properties.
 
@@ -53,7 +63,8 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
     function setUp() public {
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
-        beaconAdmin = vm.addr(uint256(keccak256(abi.encode("Beacon Admin"))));
+        beaconAdmin =
+            vm.addr(uint256(keccak256(abi.encode("Beacon Admin"))));
 
         // #region public registry.
 
@@ -61,13 +72,15 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         // #region create a upgradeable beacon.
 
-        address beaconAdmin = vm.addr(
-            uint256(keccak256(abi.encode("Beacon Address")))
-        );
-        BeaconImplementation implementation = new BeaconImplementation();
+        address beaconAdmin =
+            vm.addr(uint256(keccak256(abi.encode("Beacon Address"))));
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
         beacon = address(
-            new UpgradeableBeacon(address(implementation), beaconAdmin)
+            new UpgradeableBeacon(
+                address(implementation), beaconAdmin
+            )
         );
 
         // #endregion create a upgradeable beacon.
@@ -224,8 +237,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     // #region test setManager.
 
     function testSetManagerOnlyOwner() public {
-        address newManager = vm.addr(uint256(keccak256(abi.encode("New Manager"))));
-        address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+        address newManager =
+            vm.addr(uint256(keccak256(abi.encode("New Manager"))));
+        address caller =
+            vm.addr(uint256(keccak256(abi.encode("Caller"))));
 
         vm.expectRevert(Ownable.Unauthorized.selector);
         vm.prank(caller);
@@ -248,7 +263,8 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     }
 
     function testSetManager() public {
-        address newManager = vm.addr(uint256(keccak256(abi.encode("New Manager"))));
+        address newManager =
+            vm.addr(uint256(keccak256(abi.encode("New Manager"))));
 
         address currentManager = factory.manager();
         assertEq(currentManager, address(manager));
@@ -265,8 +281,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     // #region create private vault.
 
     function testDeployPrivateVault() public {
-        bytes32 privateSalt = keccak256(abi.encode("Test private vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 privateSalt =
+            keccak256(abi.encode("Test private vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -279,13 +297,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         IArrakisMetaVault vault = IArrakisMetaVault(
             factory.deployPrivateVault(
-                privateSalt,
-                USDC,
-                WETH,
-                owner,
-                beacon,
-                payload,
-                ""
+                privateSalt, USDC, WETH, owner, beacon, payload, ""
             )
         );
 
@@ -301,8 +313,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     // #region create public vault.
 
     function testDeployPublicVaultOnlyDeployer() public {
-        bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 publicSalt =
+            keccak256(abi.encode("Test public vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -313,24 +327,22 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         // #endregion create module payload.
 
-        vm.expectRevert(IArrakisMetaVaultFactory.NotADeployer.selector);
+        vm.expectRevert(
+            IArrakisMetaVaultFactory.NotADeployer.selector
+        );
 
         IArrakisMetaVault vault = IArrakisMetaVault(
             factory.deployPublicVault(
-                publicSalt,
-                USDC,
-                WETH,
-                owner,
-                beacon,
-                payload,
-                ""
+                publicSalt, USDC, WETH, owner, beacon, payload, ""
             )
         );
     }
 
     function testDeployPublicVault() public {
-        bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 publicSalt =
+            keccak256(abi.encode("Test public vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -342,9 +354,8 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #endregion create module payload.
 
         // #region whitelist deployer.
-        address deployer1 = vm.addr(
-            uint256(keccak256(abi.encode("Deployer 1")))
-        );
+        address deployer1 =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
         address[] memory deployers = new address[](1);
         deployers[0] = deployer1;
 
@@ -358,13 +369,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         IArrakisMetaVault vault = IArrakisMetaVault(
             factory.deployPublicVault(
-                publicSalt,
-                USDC,
-                WETH,
-                owner,
-                beacon,
-                payload,
-                ""
+                publicSalt, USDC, WETH, owner, beacon, payload, ""
             )
         );
 
@@ -375,36 +380,43 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         assert(address(vault) != address(0));
         assert(address(vault.module()) != address(0));
 
-        (, , , , , , address timeLock) = abi.decode(
+        (,,,,,, address timeLock) = abi.decode(
             entries[entries.length - 1].data,
-            (bytes32, address, address, address, address, address, address)
+            (
+                bytes32,
+                address,
+                address,
+                address,
+                address,
+                address,
+                address
+            )
         );
 
         assertEq(Ownable(address(vault)).owner(), timeLock);
         assertTrue(TimeLock(payable(timeLock)).hasRole(0x00, owner));
         assertTrue(
             TimeLock(payable(timeLock)).hasRole(
-                keccak256("PROPOSER_ROLE"),
-                owner
+                keccak256("PROPOSER_ROLE"), owner
             )
         );
         assertTrue(
             TimeLock(payable(timeLock)).hasRole(
-                keccak256("EXECUTOR_ROLE"),
-                owner
+                keccak256("EXECUTOR_ROLE"), owner
             )
         );
         assertTrue(
             TimeLock(payable(timeLock)).hasRole(
-                keccak256("CANCELLER_ROLE"),
-                owner
+                keccak256("CANCELLER_ROLE"), owner
             )
         );
     }
 
     function testDeployPublicVaultWithBuggyTokenA() public {
-        bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 publicSalt =
+            keccak256(abi.encode("Test public vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -416,9 +428,8 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #endregion create module payload.
 
         // #region whitelist deployer.
-        address deployer1 = vm.addr(
-            uint256(keccak256(abi.encode("Deployer 1")))
-        );
+        address deployer1 =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
         address[] memory deployers = new address[](1);
         deployers[0] = deployer1;
 
@@ -442,13 +453,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         IArrakisMetaVault vault = IArrakisMetaVault(
             factory.deployPublicVault(
-                publicSalt,
-                token0,
-                token1,
-                owner,
-                beacon,
-                payload,
-                ""
+                publicSalt, token0, token1, owner, beacon, payload, ""
             )
         );
 
@@ -459,29 +464,34 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         assert(address(vault) != address(0));
         assert(address(vault.module()) != address(0));
 
-        (, , , , , , address timeLock) = abi.decode(
+        (,,,,,, address timeLock) = abi.decode(
             entries[entries.length - 1].data,
-            (bytes32, address, address, address, address, address, address)
+            (
+                bytes32,
+                address,
+                address,
+                address,
+                address,
+                address,
+                address
+            )
         );
 
         assertEq(Ownable(address(vault)).owner(), timeLock);
         assertTrue(TimeLock(payable(timeLock)).hasRole(0x00, owner));
         assertTrue(
             TimeLock(payable(timeLock)).hasRole(
-                keccak256("PROPOSER_ROLE"),
-                owner
+                keccak256("PROPOSER_ROLE"), owner
             )
         );
         assertTrue(
             TimeLock(payable(timeLock)).hasRole(
-                keccak256("EXECUTOR_ROLE"),
-                owner
+                keccak256("EXECUTOR_ROLE"), owner
             )
         );
         assertTrue(
             TimeLock(payable(timeLock)).hasRole(
-                keccak256("CANCELLER_ROLE"),
-                owner
+                keccak256("CANCELLER_ROLE"), owner
             )
         );
     }
@@ -502,8 +512,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         // #endregion create factory.
 
-        bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 publicSalt =
+            keccak256(abi.encode("Test public vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -515,9 +527,8 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #endregion create module payload.
 
         // #region whitelist deployer.
-        address deployer1 = vm.addr(
-            uint256(keccak256(abi.encode("Deployer 1")))
-        );
+        address deployer1 =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
         address[] memory deployers = new address[](1);
         deployers[0] = deployer1;
 
@@ -541,13 +552,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         IArrakisMetaVault vault = IArrakisMetaVault(
             factory.deployPublicVault(
-                publicSalt,
-                token0,
-                token1,
-                owner,
-                beacon,
-                payload,
-                ""
+                publicSalt, token0, token1, owner, beacon, payload, ""
             )
         );
     }
@@ -568,8 +573,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         // #endregion create factory.
 
-        bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 publicSalt =
+            keccak256(abi.encode("Test public vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -581,9 +588,8 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #endregion create module payload.
 
         // #region whitelist deployer.
-        address deployer1 = vm.addr(
-            uint256(keccak256(abi.encode("Deployer 1")))
-        );
+        address deployer1 =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
         address[] memory deployers = new address[](1);
         deployers[0] = deployer1;
 
@@ -603,17 +609,13 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         vm.prank(deployer1);
 
-        vm.expectRevert(IArrakisMetaVaultFactory.VaultNotManaged.selector);
+        vm.expectRevert(
+            IArrakisMetaVaultFactory.VaultNotManaged.selector
+        );
 
         IArrakisMetaVault vault = IArrakisMetaVault(
             factory.deployPublicVault(
-                publicSalt,
-                token0,
-                token1,
-                owner,
-                beacon,
-                payload,
-                ""
+                publicSalt, token0, token1, owner, beacon, payload, ""
             )
         );
     }
@@ -626,14 +628,15 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #region deployers to whitelist.
 
         address[] memory deployers = new address[](2);
-        deployers[0] = vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
-        deployers[1] = vm.addr(uint256(keccak256(abi.encode("Deployer 2"))));
+        deployers[0] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
+        deployers[1] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 2"))));
 
         // #endregion deployers to whitelist.
 
-        address anotherOwner = vm.addr(
-            uint256(keccak256(abi.encode("Another Owner")))
-        );
+        address anotherOwner =
+            vm.addr(uint256(keccak256(abi.encode("Another Owner"))));
 
         vm.prank(anotherOwner);
         vm.expectRevert(Ownable.Unauthorized.selector);
@@ -645,13 +648,13 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #region deployers to whitelist.
 
         address[] memory deployers = new address[](2);
-        deployers[0] = vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
+        deployers[0] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
 
         // #endregion deployers to whitelist.
 
-        address anotherOwner = vm.addr(
-            uint256(keccak256(abi.encode("Another Owner")))
-        );
+        address anotherOwner =
+            vm.addr(uint256(keccak256(abi.encode("Another Owner"))));
 
         vm.expectRevert(IArrakisMetaVaultFactory.AddressZero.selector);
 
@@ -660,24 +663,28 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
     function testWhitelistDeployerAlreadyWhitelisted() public {
         address[] memory deployers = new address[](1);
-        deployers[0] = vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
+        deployers[0] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
         factory.whitelistDeployer(deployers);
 
         // #region deployers to whitelist.
 
         deployers = new address[](2);
-        deployers[0] = vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
-        deployers[1] = vm.addr(uint256(keccak256(abi.encode("Deployer 2"))));
+        deployers[0] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
+        deployers[1] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 2"))));
 
         // #endregion deployers to whitelist.
 
-        address anotherOwner = vm.addr(
-            uint256(keccak256(abi.encode("Another Owner")))
-        );
+        address anotherOwner =
+            vm.addr(uint256(keccak256(abi.encode("Another Owner"))));
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IArrakisMetaVaultFactory.AlreadyWhitelistedDeployer.selector,
+                IArrakisMetaVaultFactory
+                    .AlreadyWhitelistedDeployer
+                    .selector,
                 deployers[0]
             )
         );
@@ -689,8 +696,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #region deployers to whitelist.
 
         address[] memory deployers = new address[](2);
-        deployers[0] = vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
-        deployers[1] = vm.addr(uint256(keccak256(abi.encode("Deployer 2"))));
+        deployers[0] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
+        deployers[1] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 2"))));
 
         // #endregion deployers to whitelist.
 
@@ -714,16 +723,17 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #region whitelist deployers.
 
         address[] memory deployers = new address[](2);
-        deployers[0] = vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
-        deployers[1] = vm.addr(uint256(keccak256(abi.encode("Deployer 2"))));
+        deployers[0] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
+        deployers[1] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 2"))));
 
         factory.whitelistDeployer(deployers);
 
         // #endregion whitelist deployers.
 
-        address anotherOwner = vm.addr(
-            uint256(keccak256(abi.encode("Another Owner")))
-        );
+        address anotherOwner =
+            vm.addr(uint256(keccak256(abi.encode("Another Owner"))));
 
         vm.prank(anotherOwner);
         vm.expectRevert(Ownable.Unauthorized.selector);
@@ -735,15 +745,18 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #region whitelist deployers.
 
         address[] memory deployers = new address[](1);
-        deployers[0] = vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
+        deployers[0] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
 
         factory.whitelistDeployer(deployers);
 
         // #endregion whitelist deployers.
 
         deployers = new address[](2);
-        deployers[0] = vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
-        deployers[1] = vm.addr(uint256(keccak256(abi.encode("Deployer 2"))));
+        deployers[0] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
+        deployers[1] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 2"))));
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -759,8 +772,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #region whitelist deployers.
 
         address[] memory deployers = new address[](2);
-        deployers[0] = vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
-        deployers[1] = vm.addr(uint256(keccak256(abi.encode("Deployer 2"))));
+        deployers[0] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
+        deployers[1] =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 2"))));
 
         factory.whitelistDeployer(deployers);
 
@@ -841,8 +856,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     function testPublicVaultEndIndexGtNbOfVaults() public {
         // #region create public vault.
 
-        bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 publicSalt =
+            keccak256(abi.encode("Test public vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -854,9 +871,8 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #endregion create module payload.
 
         // #region whitelist deployer.
-        address deployer1 = vm.addr(
-            uint256(keccak256(abi.encode("Deployer 1")))
-        );
+        address deployer1 =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
         address[] memory deployers = new address[](1);
         deployers[0] = deployer1;
 
@@ -868,13 +884,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         IArrakisMetaVault vault = IArrakisMetaVault(
             factory.deployPublicVault(
-                publicSalt,
-                USDC,
-                WETH,
-                owner,
-                beacon,
-                payload,
-                ""
+                publicSalt, USDC, WETH, owner, beacon, payload, ""
             )
         );
 
@@ -897,8 +907,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     function testPublicVaults() public {
         // #region create a public vaults.
 
-        bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 publicSalt =
+            keccak256(abi.encode("Test public vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -910,9 +922,8 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #endregion create module payload.
 
         // #region whitelist deployer.
-        address deployer1 = vm.addr(
-            uint256(keccak256(abi.encode("Deployer 1")))
-        );
+        address deployer1 =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
         address[] memory deployers = new address[](1);
         deployers[0] = deployer1;
 
@@ -923,13 +934,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         vm.prank(deployer1);
 
         address vault0 = factory.deployPublicVault(
-            publicSalt,
-            USDC,
-            WETH,
-            owner,
-            beacon,
-            payload,
-            ""
+            publicSalt, USDC, WETH, owner, beacon, payload, ""
         );
 
         publicSalt = keccak256(abi.encode("Test public vault 2"));
@@ -937,13 +942,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         vm.prank(deployer1);
 
         address vault1 = factory.deployPublicVault(
-            publicSalt,
-            USDC,
-            WETH,
-            owner,
-            beacon,
-            payload,
-            ""
+            publicSalt, USDC, WETH, owner, beacon, payload, ""
         );
 
         // #endregion create a public vaults.
@@ -951,7 +950,8 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         uint256 startIndex = 0;
         uint256 endIndex = 2;
 
-        address[] memory vaults = factory.publicVaults(startIndex, endIndex);
+        address[] memory vaults =
+            factory.publicVaults(startIndex, endIndex);
 
         assertEq(vaults[0], vault0);
         assertEq(vaults[1], vault1);
@@ -966,8 +966,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         // #region create a public vaults.
 
-        bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 publicSalt =
+            keccak256(abi.encode("Test public vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -979,9 +981,8 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #endregion create module payload.
 
         // #region whitelist deployer.
-        address deployer1 = vm.addr(
-            uint256(keccak256(abi.encode("Deployer 1")))
-        );
+        address deployer1 =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
         address[] memory deployers = new address[](1);
         deployers[0] = deployer1;
 
@@ -992,13 +993,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         vm.prank(deployer1);
 
         factory.deployPublicVault(
-            publicSalt,
-            USDC,
-            WETH,
-            owner,
-            beacon,
-            payload,
-            ""
+            publicSalt, USDC, WETH, owner, beacon, payload, ""
         );
 
         publicSalt = keccak256(abi.encode("Test public vault 2"));
@@ -1006,13 +1001,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         vm.prank(deployer1);
 
         factory.deployPublicVault(
-            publicSalt,
-            USDC,
-            WETH,
-            owner,
-            beacon,
-            payload,
-            ""
+            publicSalt, USDC, WETH, owner, beacon, payload, ""
         );
 
         // #endregion create a public vaults.
@@ -1025,7 +1014,9 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     // #region test isPublicVault.
 
     function testIsPublicVaultFalse() public {
-        address notAPublicVault = vm.addr(uint256(keccak256(abi.encode("Not a public vault"))));
+        address notAPublicVault = vm.addr(
+            uint256(keccak256(abi.encode("Not a public vault")))
+        );
 
         bool isPublicVault = factory.isPublicVault(notAPublicVault);
 
@@ -1035,8 +1026,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     function testIsPublicVaultTrue() public {
         // #region create a public vaults.
 
-        bytes32 publicSalt = keccak256(abi.encode("Test public vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 publicSalt =
+            keccak256(abi.encode("Test public vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -1048,9 +1041,8 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #endregion create module payload.
 
         // #region whitelist deployer.
-        address deployer1 = vm.addr(
-            uint256(keccak256(abi.encode("Deployer 1")))
-        );
+        address deployer1 =
+            vm.addr(uint256(keccak256(abi.encode("Deployer 1"))));
         address[] memory deployers = new address[](1);
         deployers[0] = deployer1;
 
@@ -1061,13 +1053,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         vm.prank(deployer1);
 
         address vault = factory.deployPublicVault(
-            publicSalt,
-            USDC,
-            WETH,
-            owner,
-            beacon,
-            payload,
-            ""
+            publicSalt, USDC, WETH, owner, beacon, payload, ""
         );
 
         // #endregion create a public vaults.
@@ -1099,8 +1085,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     function testPrivateVaultEndIndexGtNbOfVaults() public {
         // #region create a private vault.
 
-        bytes32 privateSalt = keccak256(abi.encode("Test private vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 privateSalt =
+            keccak256(abi.encode("Test private vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -1112,13 +1100,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #endregion create module payload.
 
         factory.deployPrivateVault(
-            privateSalt,
-            USDC,
-            WETH,
-            owner,
-            beacon,
-            payload,
-            ""
+            privateSalt, USDC, WETH, owner, beacon, payload, ""
         );
 
         // #endregion create a private vault.
@@ -1140,8 +1122,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     function testPrivateVaults() public {
         // #region create a private vault.
 
-        bytes32 privateSalt = keccak256(abi.encode("Test private vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 privateSalt =
+            keccak256(abi.encode("Test private vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -1153,25 +1137,13 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #endregion create module payload.
 
         address vault0 = factory.deployPrivateVault(
-            privateSalt,
-            USDC,
-            WETH,
-            owner,
-            beacon,
-            payload,
-            ""
+            privateSalt, USDC, WETH, owner, beacon, payload, ""
         );
 
         privateSalt = keccak256(abi.encode("Test private vault 2"));
 
         address vault1 = factory.deployPrivateVault(
-            privateSalt,
-            USDC,
-            WETH,
-            owner,
-            beacon,
-            payload,
-            ""
+            privateSalt, USDC, WETH, owner, beacon, payload, ""
         );
 
         // #endregion create a private vault.
@@ -1179,7 +1151,8 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         uint256 startIndex = 0;
         uint256 endIndex = 2;
 
-        address[] memory vaults = factory.privateVaults(startIndex, endIndex);
+        address[] memory vaults =
+            factory.privateVaults(startIndex, endIndex);
 
         assertEq(vaults[0], vault0);
         assertEq(vaults[1], vault1);
@@ -1194,8 +1167,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         // #region create a private vault.
 
-        bytes32 privateSalt = keccak256(abi.encode("Test private vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 privateSalt =
+            keccak256(abi.encode("Test private vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -1207,25 +1182,13 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #endregion create module payload.
 
         address vault0 = factory.deployPrivateVault(
-            privateSalt,
-            USDC,
-            WETH,
-            owner,
-            beacon,
-            payload,
-            ""
+            privateSalt, USDC, WETH, owner, beacon, payload, ""
         );
 
         privateSalt = keccak256(abi.encode("Test private vault 2"));
 
         address vault1 = factory.deployPrivateVault(
-            privateSalt,
-            USDC,
-            WETH,
-            owner,
-            beacon,
-            payload,
-            ""
+            privateSalt, USDC, WETH, owner, beacon, payload, ""
         );
 
         // #endregion create a private vault.
@@ -1238,7 +1201,9 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     // #region test isPrivateVault.
 
     function testIsPrivateVaultFalse() public {
-        address notAPrivateVault = vm.addr(uint256(keccak256(abi.encode("Not a private vault"))));
+        address notAPrivateVault = vm.addr(
+            uint256(keccak256(abi.encode("Not a private vault")))
+        );
 
         bool isPrivateVault = factory.isPrivateVault(notAPrivateVault);
 
@@ -1248,8 +1213,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     function testIsPrivateVaultTrue() public {
         // #region create private vault.
 
-        bytes32 privateSalt = keccak256(abi.encode("Test private vault"));
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        bytes32 privateSalt =
+            keccak256(abi.encode("Test private vault"));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         // #region create module payload.
 
@@ -1260,15 +1227,8 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         // #endregion create module payload.
 
-        address vault = 
-            factory.deployPrivateVault(
-                privateSalt,
-                USDC,
-                WETH,
-                owner,
-                beacon,
-                payload,
-                ""
+        address vault = factory.deployPrivateVault(
+            privateSalt, USDC, WETH, owner, beacon, payload, ""
         );
 
         // #endregion create private vault.

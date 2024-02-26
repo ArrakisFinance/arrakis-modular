@@ -5,14 +5,29 @@ import {console} from "forge-std/console.sol";
 
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 
-import {ArrakisStandardManager, IArrakisStandardManager} from "../../../src/ArrakisStandardManager.sol";
-import {ArrakisMetaVaultFactory} from "../../../src/ArrakisMetaVaultFactory.sol";
-import {IArrakisMetaVault} from "../../../src/interfaces/IArrakisMetaVault.sol";
-import {PIPS, TEN_PERCENT, NATIVE_COIN, WEEK} from "../../../src/constants/CArrakis.sol";
-import {SetupParams, FeeIncrease, VaultInfo} from "../../../src/structs/SManager.sol";
+import {
+    ArrakisStandardManager,
+    IArrakisStandardManager
+} from "../../../src/ArrakisStandardManager.sol";
+import {ArrakisMetaVaultFactory} from
+    "../../../src/ArrakisMetaVaultFactory.sol";
+import {IArrakisMetaVault} from
+    "../../../src/interfaces/IArrakisMetaVault.sol";
+import {
+    PIPS,
+    TEN_PERCENT,
+    NATIVE_COIN,
+    WEEK
+} from "../../../src/constants/CArrakis.sol";
+import {
+    SetupParams,
+    FeeIncrease,
+    VaultInfo
+} from "../../../src/structs/SManager.sol";
 import {Guardian} from "../../../src/Guardian.sol";
 import {IGuardian} from "../../../src/interfaces/IGuardian.sol";
-import {IOracleWrapper} from "../../../src/interfaces/IOracleWrapper.sol";
+import {IOracleWrapper} from
+    "../../../src/interfaces/IOracleWrapper.sol";
 
 // #region solady.
 
@@ -23,16 +38,19 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 // #region openzeppelin.
 
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {UpgradeableBeacon} from
+    "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 // #endregion openzeppelin.
 
 // #region mock contracts.
 
 import {GuardianMock} from "./mocks/GuardianMock.sol";
-import {ArrakisMetaVaultFactoryMock} from "./mocks/ArrakisMetaVaultFactoryMock.sol";
+import {ArrakisMetaVaultFactoryMock} from
+    "./mocks/ArrakisMetaVaultFactoryMock.sol";
 import {ArrakisMetaVaultMock} from "./mocks/ArrakisMetaVaultMock.sol";
 import {LpModuleMock} from "./mocks/LpModuleMock.sol";
 import {OracleMock} from "./mocks/OracleMock.sol";
@@ -42,8 +60,10 @@ import {OracleMock} from "./mocks/OracleMock.sol";
 contract ArrakisStandardManagerTest is TestWrapper {
     // #region constant properties.
 
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant WETH =
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant USDC =
+        0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     /// @dev native token ether in our case.
     /// follow uniswap v4 standard
@@ -69,7 +89,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         GuardianMock guardianMock = new GuardianMock();
 
-        address pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        address pauser =
+            vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
         guardianMock.setPauser(pauser);
 
@@ -92,7 +113,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create mock factory.
 
-        ArrakisMetaVaultFactoryMock factoryMock = new ArrakisMetaVaultFactoryMock();
+        ArrakisMetaVaultFactoryMock factoryMock =
+            new ArrakisMetaVaultFactoryMock();
         factoryMock.setManager(address(manager));
 
         factory = address(factoryMock);
@@ -102,9 +124,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
         // #region initialize standard manager.
 
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
-        defaultReceiver = vm.addr(
-            uint256(keccak256(abi.encode("DefaultReceiver")))
-        );
+        defaultReceiver =
+            vm.addr(uint256(keccak256(abi.encode("DefaultReceiver"))));
 
         manager.initialize(owner, defaultReceiver, factory);
 
@@ -117,10 +138,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         vm.expectRevert(IArrakisStandardManager.AddressZero.selector);
 
         manager = new ArrakisStandardManager(
-            defaultFeePIPS,
-            address(0),
-            nativeTokenDecimals,
-            guardian
+            defaultFeePIPS, address(0), nativeTokenDecimals, guardian
         );
     }
 
@@ -130,10 +148,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         );
 
         manager = new ArrakisStandardManager(
-            defaultFeePIPS,
-            NATIVE_COIN,
-            0,
-            guardian
+            defaultFeePIPS, NATIVE_COIN, 0, guardian
         );
     }
 
@@ -150,17 +165,17 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
     function testConstructor() public {
         manager = new ArrakisStandardManager(
-            defaultFeePIPS,
-            NATIVE_COIN,
-            nativeTokenDecimals,
-            guardian
+            defaultFeePIPS, NATIVE_COIN, nativeTokenDecimals, guardian
         );
 
         assertEq(
             defaultFeePIPS,
             IArrakisStandardManager(manager).defaultFeePIPS()
         );
-        assertEq(NATIVE_COIN, IArrakisStandardManager(manager).nativeToken());
+        assertEq(
+            NATIVE_COIN,
+            IArrakisStandardManager(manager).nativeToken()
+        );
         assertEq(
             nativeTokenDecimals,
             IArrakisStandardManager(manager).nativeTokenDecimals()
@@ -179,10 +194,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         // #region create a new manager.
 
         manager = new ArrakisStandardManager(
-            defaultFeePIPS,
-            NATIVE_COIN,
-            nativeTokenDecimals,
-            guardian
+            defaultFeePIPS, NATIVE_COIN, nativeTokenDecimals, guardian
         );
 
         // #endregion create a new manager.
@@ -196,10 +208,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         // #region create a new manager.
 
         manager = new ArrakisStandardManager(
-            defaultFeePIPS,
-            NATIVE_COIN,
-            nativeTokenDecimals,
-            guardian
+            defaultFeePIPS, NATIVE_COIN, nativeTokenDecimals, guardian
         );
 
         // #endregion create a new manager.
@@ -213,10 +222,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         // #region create a new manager.
 
         manager = new ArrakisStandardManager(
-            defaultFeePIPS,
-            NATIVE_COIN,
-            nativeTokenDecimals,
-            guardian
+            defaultFeePIPS, NATIVE_COIN, nativeTokenDecimals, guardian
         );
 
         // #endregion create a new manager.
@@ -230,15 +236,13 @@ contract ArrakisStandardManagerTest is TestWrapper {
         // #region create a new manager.
 
         manager = new ArrakisStandardManager(
-            defaultFeePIPS,
-            NATIVE_COIN,
-            nativeTokenDecimals,
-            guardian
+            defaultFeePIPS, NATIVE_COIN, nativeTokenDecimals, guardian
         );
 
         // #endregion create a new manager.
 
-        address owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
+        address owner =
+            vm.addr(uint256(keccak256(abi.encode("Owner"))));
         address defaultReceiver = vm.addr(
             uint256(keccak256(abi.encode("Default Receiver")))
         );
@@ -357,20 +361,20 @@ contract ArrakisStandardManagerTest is TestWrapper {
     // #region test setReceiverByToken.
 
     function testSetReceiverByTokenOnlyOwner() public {
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
-        address vault = vm.addr(uint256(keccak256(abi.encode("Vault"))));
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
+        address vault =
+            vm.addr(uint256(keccak256(abi.encode("Vault"))));
         vm.expectRevert(Ownable.Unauthorized.selector);
 
         manager.setReceiverByToken(vault, true, usdcReceiver);
     }
 
     function testSetReceiverByTokenOnlyWhitelisted() public {
-        address vault = vm.addr(uint256(keccak256(abi.encode("Vault"))));
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address vault =
+            vm.addr(uint256(keccak256(abi.encode("Vault"))));
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
         vm.expectRevert(
             abi.encodeWithSelector(
                 IArrakisStandardManager.NotWhitelistedVault.selector,
@@ -388,7 +392,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -410,7 +415,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -448,7 +454,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -471,7 +478,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -498,9 +506,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         assertEq(manager.receiversByToken(USDC), address(0));
 
@@ -520,7 +527,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -543,7 +551,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -570,9 +579,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         assertEq(manager.receiversByToken(USDC), address(0));
 
@@ -585,8 +593,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         vm.expectRevert(Ownable.Unauthorized.selector);
 
         manager.decreaseManagerFeePIPS(
-            address(vault),
-            SafeCast.toUint24(defaultFeePIPS / 2)
+            address(vault), SafeCast.toUint24(defaultFeePIPS / 2)
         );
     }
 
@@ -603,8 +610,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         vm.prank(owner);
 
         manager.decreaseManagerFeePIPS(
-            vault,
-            SafeCast.toUint24(defaultFeePIPS / 2)
+            vault, SafeCast.toUint24(defaultFeePIPS / 2)
         );
     }
 
@@ -613,7 +619,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -636,7 +643,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -663,9 +671,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         assertEq(manager.receiversByToken(USDC), address(0));
 
@@ -675,12 +682,13 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         assertEq(manager.receiversByToken(USDC), usdcReceiver);
 
-        vm.expectRevert(IArrakisStandardManager.NotFeeDecrease.selector);
+        vm.expectRevert(
+            IArrakisStandardManager.NotFeeDecrease.selector
+        );
         vm.prank(owner);
 
         manager.decreaseManagerFeePIPS(
-            address(vault),
-            SafeCast.toUint24(defaultFeePIPS * 2)
+            address(vault), SafeCast.toUint24(defaultFeePIPS * 2)
         );
     }
 
@@ -689,7 +697,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -712,7 +721,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -739,9 +749,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         assertEq(manager.receiversByToken(USDC), address(0));
 
@@ -754,8 +763,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         vm.prank(owner);
 
         manager.decreaseManagerFeePIPS(
-            address(vault),
-            SafeCast.toUint24(defaultFeePIPS / 2)
+            address(vault), SafeCast.toUint24(defaultFeePIPS / 2)
         );
     }
 
@@ -768,7 +776,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -791,7 +800,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -818,9 +828,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         assertEq(manager.receiversByToken(USDC), address(0));
 
@@ -833,17 +842,18 @@ contract ArrakisStandardManagerTest is TestWrapper {
         vm.expectRevert(Ownable.Unauthorized.selector);
 
         manager.submitIncreaseManagerFeePIPS(
-            address(vault),
-            SafeCast.toUint24(defaultFeePIPS * 2)
+            address(vault), SafeCast.toUint24(defaultFeePIPS * 2)
         );
     }
 
-    function testSubmitIncreaseManagerFeePIPSNotWhitelisted() public {
-        address vault = vm.addr(uint256(keccak256(abi.encode("Meta Vault"))));
+    function testSubmitIncreaseManagerFeePIPSNotWhitelisted()
+        public
+    {
+        address vault =
+            vm.addr(uint256(keccak256(abi.encode("Meta Vault"))));
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -854,17 +864,19 @@ contract ArrakisStandardManagerTest is TestWrapper {
         vm.prank(owner);
 
         manager.submitIncreaseManagerFeePIPS(
-            vault,
-            SafeCast.toUint24(defaultFeePIPS / 2)
+            vault, SafeCast.toUint24(defaultFeePIPS / 2)
         );
     }
 
-    function testSubmitIncreaseManagerFeePIPSNotFeeDecrease() public {
+    function testSubmitIncreaseManagerFeePIPSNotFeeDecrease()
+        public
+    {
         // #region init management.
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -887,7 +899,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -914,9 +927,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
         assertEq(manager.receiversByToken(USDC), address(0));
 
         vm.prank(owner);
@@ -925,21 +937,25 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         assertEq(manager.receiversByToken(USDC), usdcReceiver);
 
-        vm.expectRevert(IArrakisStandardManager.NotFeeIncrease.selector);
+        vm.expectRevert(
+            IArrakisStandardManager.NotFeeIncrease.selector
+        );
         vm.prank(owner);
 
         manager.submitIncreaseManagerFeePIPS(
-            address(vault),
-            SafeCast.toUint24(defaultFeePIPS / 2)
+            address(vault), SafeCast.toUint24(defaultFeePIPS / 2)
         );
     }
 
-    function testSubmitIncreaseManagerFeePIPSAlreadyPending() public {
+    function testSubmitIncreaseManagerFeePIPSAlreadyPending()
+        public
+    {
         // #region init management.
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -962,7 +978,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -989,9 +1006,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         assertEq(manager.receiversByToken(USDC), address(0));
 
@@ -1004,8 +1020,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         vm.prank(owner);
 
         manager.submitIncreaseManagerFeePIPS(
-            address(vault),
-            SafeCast.toUint24(defaultFeePIPS * 2)
+            address(vault), SafeCast.toUint24(defaultFeePIPS * 2)
         );
 
         vm.prank(owner);
@@ -1014,8 +1029,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         );
 
         manager.submitIncreaseManagerFeePIPS(
-            address(vault),
-            SafeCast.toUint24(defaultFeePIPS * 2)
+            address(vault), SafeCast.toUint24(defaultFeePIPS * 2)
         );
     }
 
@@ -1024,7 +1038,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -1047,7 +1062,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -1074,9 +1090,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         assertEq(manager.receiversByToken(USDC), address(0));
 
@@ -1086,19 +1101,18 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         assertEq(manager.receiversByToken(USDC), usdcReceiver);
 
-        (uint256 submitTimestamp, ) = manager.pendingFeeIncrease(
-            address(vault)
-        );
+        (uint256 submitTimestamp,) =
+            manager.pendingFeeIncrease(address(vault));
         assertEq(submitTimestamp, 0);
 
         vm.prank(owner);
 
         manager.submitIncreaseManagerFeePIPS(
-            address(vault),
-            SafeCast.toUint24(defaultFeePIPS * 2)
+            address(vault), SafeCast.toUint24(defaultFeePIPS * 2)
         );
 
-        (submitTimestamp, ) = manager.pendingFeeIncrease(address(vault));
+        (submitTimestamp,) =
+            manager.pendingFeeIncrease(address(vault));
 
         assertEq(submitTimestamp, block.timestamp);
     }
@@ -1112,7 +1126,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -1135,7 +1150,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -1160,9 +1176,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion call through the factory initManagement.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         // #endregion init management.
 
@@ -1176,19 +1191,18 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         assertEq(manager.receiversByToken(USDC), usdcReceiver);
 
-        (uint256 submitTimestamp, ) = manager.pendingFeeIncrease(
-            address(vault)
-        );
+        (uint256 submitTimestamp,) =
+            manager.pendingFeeIncrease(address(vault));
         assertEq(submitTimestamp, 0);
 
         vm.prank(owner);
 
         manager.submitIncreaseManagerFeePIPS(
-            address(vault),
-            SafeCast.toUint24(defaultFeePIPS * 2)
+            address(vault), SafeCast.toUint24(defaultFeePIPS * 2)
         );
 
-        (submitTimestamp, ) = manager.pendingFeeIncrease(address(vault));
+        (submitTimestamp,) =
+            manager.pendingFeeIncrease(address(vault));
 
         assertEq(submitTimestamp, block.timestamp);
 
@@ -1199,12 +1213,15 @@ contract ArrakisStandardManagerTest is TestWrapper {
         manager.finalizeIncreaseManagerFeePIPS(address(vault));
     }
 
-    function testFinalizeIncreaseManagerFeePIPSNoPendingIncrease() public {
+    function testFinalizeIncreaseManagerFeePIPSNoPendingIncrease()
+        public
+    {
         // #region init management.
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -1227,7 +1244,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -1252,24 +1270,28 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion call through the factory initManagement.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         // #endregion init management.
 
-        vm.expectRevert(IArrakisStandardManager.NoPendingIncrease.selector);
+        vm.expectRevert(
+            IArrakisStandardManager.NoPendingIncrease.selector
+        );
         vm.prank(owner);
 
         manager.finalizeIncreaseManagerFeePIPS(address(vault));
     }
 
-    function testFinalizeIncreaseManagerFeePIPSTimeNotPassed() public {
+    function testFinalizeIncreaseManagerFeePIPSTimeNotPassed()
+        public
+    {
         // #region init management.
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -1292,7 +1314,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -1317,9 +1340,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion call through the factory initManagement.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         // #endregion init management.
 
@@ -1333,25 +1355,26 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         assertEq(manager.receiversByToken(USDC), usdcReceiver);
 
-        (uint256 submitTimestamp, ) = manager.pendingFeeIncrease(
-            address(vault)
-        );
+        (uint256 submitTimestamp,) =
+            manager.pendingFeeIncrease(address(vault));
         assertEq(submitTimestamp, 0);
 
         vm.prank(owner);
 
         manager.submitIncreaseManagerFeePIPS(
-            address(vault),
-            SafeCast.toUint24(defaultFeePIPS * 2)
+            address(vault), SafeCast.toUint24(defaultFeePIPS * 2)
         );
 
-        (submitTimestamp, ) = manager.pendingFeeIncrease(address(vault));
+        (submitTimestamp,) =
+            manager.pendingFeeIncrease(address(vault));
 
         assertEq(submitTimestamp, block.timestamp);
 
         // #endregion submit increase fees.
 
-        vm.expectRevert(IArrakisStandardManager.TimeNotPassed.selector);
+        vm.expectRevert(
+            IArrakisStandardManager.TimeNotPassed.selector
+        );
         vm.prank(owner);
 
         manager.finalizeIncreaseManagerFeePIPS(address(vault));
@@ -1362,7 +1385,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -1385,7 +1409,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -1410,9 +1435,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion call through the factory initManagement.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         // #endregion init management.
 
@@ -1426,19 +1450,18 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         assertEq(manager.receiversByToken(USDC), usdcReceiver);
 
-        (uint256 submitTimestamp, ) = manager.pendingFeeIncrease(
-            address(vault)
-        );
+        (uint256 submitTimestamp,) =
+            manager.pendingFeeIncrease(address(vault));
         assertEq(submitTimestamp, 0);
 
         vm.prank(owner);
 
         manager.submitIncreaseManagerFeePIPS(
-            address(vault),
-            SafeCast.toUint24(defaultFeePIPS * 2)
+            address(vault), SafeCast.toUint24(defaultFeePIPS * 2)
         );
 
-        (submitTimestamp, ) = manager.pendingFeeIncrease(address(vault));
+        (submitTimestamp,) =
+            manager.pendingFeeIncrease(address(vault));
 
         assertEq(submitTimestamp, block.timestamp);
 
@@ -1455,7 +1478,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
     // #region test withdrawManagerBalance.
 
     function testWithdrawManagerBalanceOnlyOwner() public {
-        address vault = vm.addr(uint256(keccak256(abi.encode("Meta Vault"))));
+        address vault =
+            vm.addr(uint256(keccak256(abi.encode("Meta Vault"))));
         vm.expectRevert(Ownable.Unauthorized.selector);
 
         manager.withdrawManagerBalance(vault);
@@ -1466,7 +1490,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -1489,7 +1514,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -1514,9 +1540,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion call through the factory initManagement.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         // #endregion init management.
 
@@ -1536,9 +1561,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         vm.prank(owner);
 
-        (uint256 usdcManagerFee, ) = manager.withdrawManagerBalance(
-            address(vault)
-        );
+        (uint256 usdcManagerFee,) =
+            manager.withdrawManagerBalance(address(vault));
 
         assertEq(IERC20(USDC).balanceOf(usdcReceiver), usdcManagerFee);
         assertEq(IERC20(USDC).balanceOf(usdcReceiver), 2000e6);
@@ -1549,7 +1573,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -1572,7 +1597,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -1597,9 +1623,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion call through the factory initManagement.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         // #endregion init management.
 
@@ -1617,11 +1642,12 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint256 g = gasleft();
 
-        (uint256 ethManagerFee, ) = manager.withdrawManagerBalance(
-            address(vault)
-        );
+        (uint256 ethManagerFee,) =
+            manager.withdrawManagerBalance(address(vault));
 
-        console.logString("Withdraw manager balances, only eth withdrawal (gas): ");
+        console.logString(
+            "Withdraw manager balances, only eth withdrawal (gas): "
+        );
         console.logUint(g - gasleft());
 
         assertEq(defaultReceiver.balance, ethManagerFee);
@@ -1633,7 +1659,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -1656,7 +1683,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -1681,9 +1709,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion call through the factory initManagement.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         // #endregion init management.
 
@@ -1701,11 +1728,12 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint256 g = gasleft();
 
-        (, uint256 ethManagerFee) = manager.withdrawManagerBalance(
-            address(vault)
-        );
+        (, uint256 ethManagerFee) =
+            manager.withdrawManagerBalance(address(vault));
 
-        console.logString("Withdraw manager balances, only eth withdrawal (gas): ");
+        console.logString(
+            "Withdraw manager balances, only eth withdrawal (gas): "
+        );
         console.logUint(g - gasleft());
 
         assertEq(defaultReceiver.balance, ethManagerFee);
@@ -1717,7 +1745,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -1740,7 +1769,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -1765,9 +1795,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion call through the factory initManagement.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         // #endregion init management.
 
@@ -1789,12 +1818,14 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         vm.prank(owner);
 
-        (uint256 usdcManagerFee, uint256 wethManagerFee) = manager
-            .withdrawManagerBalance(address(vault));
+        (uint256 usdcManagerFee, uint256 wethManagerFee) =
+            manager.withdrawManagerBalance(address(vault));
 
         assertEq(IERC20(USDC).balanceOf(usdcReceiver), usdcManagerFee);
         assertEq(IERC20(USDC).balanceOf(usdcReceiver), 2000e6);
-        assertEq(IERC20(WETH).balanceOf(defaultReceiver), wethManagerFee);
+        assertEq(
+            IERC20(WETH).balanceOf(defaultReceiver), wethManagerFee
+        );
         assertEq(IERC20(WETH).balanceOf(defaultReceiver), 1e18);
     }
 
@@ -1803,8 +1834,10 @@ contract ArrakisStandardManagerTest is TestWrapper {
     // #region test setModule.
 
     function testSetModuleOnlyExecutor() public {
-        address vault = vm.addr(uint256(keccak256(abi.encode("Meta Vault"))));
-        address module = vm.addr(uint256(keccak256(abi.encode("Module"))));
+        address vault =
+            vm.addr(uint256(keccak256(abi.encode("Meta Vault"))));
+        address module =
+            vm.addr(uint256(keccak256(abi.encode("Module"))));
         bytes[] memory payloads = new bytes[](0);
 
         vm.expectRevert(
@@ -1822,7 +1855,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -1845,7 +1879,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -1870,15 +1905,13 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion call through the factory initManagement.
 
-        address usdcReceiver = vm.addr(
-            uint256(keccak256(abi.encode("USDC Receiver")))
-        );
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
 
         // #endregion init management.
 
-        address anotherModule = vm.addr(
-            uint256(keccak256(abi.encode("Another Module")))
-        );
+        address anotherModule =
+            vm.addr(uint256(keccak256(abi.encode("Another Module"))));
         bytes[] memory payloads = new bytes[](0);
 
         vm.expectRevert(IArrakisStandardManager.NotExecutor.selector);
@@ -1891,7 +1924,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -1914,7 +1948,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -1941,9 +1976,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management.
 
-        address anotherModule = vm.addr(
-            uint256(keccak256(abi.encode("Another Module")))
-        );
+        address anotherModule =
+            vm.addr(uint256(keccak256(abi.encode("Another Module"))));
         bytes[] memory payloads = new bytes[](0);
         vm.prank(executor);
 
@@ -1958,14 +1992,17 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
     function testInitManagementOnlyVaultOwner() public {
         address caller = vm.addr(
-            uint256(keccak256(abi.encode("Not the owner of the vault")))
+            uint256(
+                keccak256(abi.encode("Not the owner of the vault"))
+            )
         );
 
         // #region init management.
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -1988,7 +2025,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -2028,7 +2066,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -2036,7 +2075,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -2070,7 +2110,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -2093,7 +2134,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -2120,7 +2162,9 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region second call for the same vault.
 
-        vm.expectRevert(IArrakisStandardManager.AlreadyInManagement.selector);
+        vm.expectRevert(
+            IArrakisStandardManager.AlreadyInManagement.selector
+        );
         manager.initManagement(params);
         vm.stopPrank();
 
@@ -2134,7 +2178,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -2142,13 +2187,15 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
         // #region set params.
 
-        address vault = vm.addr(uint256(keccak256(abi.encode("Meta Vault"))));
+        address vault =
+            vm.addr(uint256(keccak256(abi.encode("Meta Vault"))));
 
         SetupParams memory params = SetupParams({
             vault: vault,
@@ -2164,7 +2211,9 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region call through the factory initManagement.
 
-        vm.expectRevert(IArrakisStandardManager.VaultNotDeployed.selector);
+        vm.expectRevert(
+            IArrakisStandardManager.VaultNotDeployed.selector
+        );
         vm.prank(factory);
         manager.initManagement(params);
 
@@ -2178,7 +2227,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -2192,9 +2242,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create vault.
 
-        address anotherManager = vm.addr(
-            uint256(keccak256(abi.encode("Another Manager")))
-        );
+        address anotherManager =
+            vm.addr(uint256(keccak256(abi.encode("Another Manager"))));
 
         ArrakisMetaVaultMock vault = new ArrakisMetaVaultMock();
         vault.setManager(anotherManager);
@@ -2205,7 +2254,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -2245,7 +2295,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -2296,7 +2347,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -2319,7 +2371,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -2340,7 +2393,9 @@ contract ArrakisStandardManagerTest is TestWrapper {
         // #region call through the factory initManagement.
 
         vm.startPrank(factory);
-        vm.expectRevert(IArrakisStandardManager.SlippageTooHigh.selector);
+        vm.expectRevert(
+            IArrakisStandardManager.SlippageTooHigh.selector
+        );
         manager.initManagement(params);
 
         // #endregion call through the factory initManagement.
@@ -2353,7 +2408,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 0; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -2376,7 +2432,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -2412,7 +2469,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -2437,7 +2495,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -2499,7 +2558,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -2524,7 +2584,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -2547,7 +2608,9 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
             vm.expectRevert(
                 abi.encodeWithSelector(
-                    IArrakisStandardManager.NotWhitelistedVault.selector,
+                    IArrakisStandardManager
+                        .NotWhitelistedVault
+                        .selector,
                     address(vault)
                 )
             );
@@ -2564,14 +2627,14 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
         uint24 maxSlippagePIPS = TEN_PERCENT;
-        address vaultOwner = vm.addr(
-            uint256(keccak256(abi.encode("Vault Owner")))
-        );
+        address vaultOwner =
+            vm.addr(uint256(keccak256(abi.encode("Vault Owner"))));
         ArrakisMetaVaultMock vault;
 
         {
@@ -2593,7 +2656,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
         SetupParams memory params;
@@ -2656,14 +2720,14 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
         uint24 maxSlippagePIPS = TEN_PERCENT;
-        address vaultOwner = vm.addr(
-            uint256(keccak256(abi.encode("Vault Owner")))
-        );
+        address vaultOwner =
+            vm.addr(uint256(keccak256(abi.encode("Vault Owner"))));
         ArrakisMetaVaultMock vault;
 
         {
@@ -2685,7 +2749,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
         SetupParams memory params;
@@ -2712,16 +2777,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
             // #endregion call initManagement.
         }
 
-        (
-            ,
-            uint256 actualCooldownPeriod,
-            ,
-            ,
-            ,
-            ,
-            ,
-            
-        ) = manager.vaultInfo(address(vault));
+        (, uint256 actualCooldownPeriod,,,,,,) =
+            manager.vaultInfo(address(vault));
 
         assertEq(actualCooldownPeriod, cooldownPeriod);
 
@@ -2749,23 +2806,14 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region assertions.
 
-        (
-            ,
-            actualCooldownPeriod,
-            ,
-            ,
-            ,
-            ,
-            ,
-            
-        ) = manager.vaultInfo(address(vault));
+        (, actualCooldownPeriod,,,,,,) =
+            manager.vaultInfo(address(vault));
 
         assertEq(actualCooldownPeriod, cooldownPeriod);
 
         // #endregion assertions.
 
         // #endregion update management.
-    
     }
 
     // #endregion test updateVaultInfo.
@@ -2773,10 +2821,17 @@ contract ArrakisStandardManagerTest is TestWrapper {
     // #region test rebalance.
 
     function testRebalanceOnlyWhitelistedVault() public {
-        address vault = vm.addr(uint256(keccak256(abi.encode("Meta Vault"))));
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address vault =
+            vm.addr(uint256(keccak256(abi.encode("Meta Vault"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
 
-        vm.expectRevert(abi.encodeWithSelector(IArrakisStandardManager.NotWhitelistedVault.selector, vault));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisStandardManager.NotWhitelistedVault.selector,
+                vault
+            )
+        );
         vm.prank(executor);
 
         bytes[] memory rebalancePayloads = new bytes[](0);
@@ -2791,7 +2846,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -2816,7 +2872,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -2870,7 +2927,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management of vault.
 
-        address notExecutor = vm.addr(uint256(keccak256(abi.encode("Not Executor"))));
+        address notExecutor =
+            vm.addr(uint256(keccak256(abi.encode("Not Executor"))));
 
         vm.expectRevert(IArrakisStandardManager.NotExecutor.selector);
         vm.prank(notExecutor);
@@ -2887,7 +2945,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -2969,12 +3028,19 @@ contract ArrakisStandardManagerTest is TestWrapper {
         // #endregion assertions.
 
         // #endregion init management of vault.
-        
+
         bytes[] memory rebalancePayloads = new bytes[](1);
-        rebalancePayloads[0] = abi.encodeWithSelector(LpModuleMock.thirdRebalanceFunction.selector);
+        rebalancePayloads[0] = abi.encodeWithSelector(
+            LpModuleMock.thirdRebalanceFunction.selector
+        );
 
         vm.prank(executor);
-        vm.expectRevert(abi.encodeWithSelector(IArrakisStandardManager.CallFailed.selector, rebalancePayloads[0]));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisStandardManager.CallFailed.selector,
+                rebalancePayloads[0]
+            )
+        );
 
         manager.rebalance(address(vault), rebalancePayloads);
     }
@@ -2986,7 +3052,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -2996,7 +3063,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
         {
             // #region create module.
 
-            address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
             LpModuleMock module = new LpModuleMock();
             module.setToken0AndToken1(USDC, WETH);
@@ -3076,13 +3144,19 @@ contract ArrakisStandardManagerTest is TestWrapper {
         // #endregion assertions.
 
         // #endregion init management of vault.
-        
+
         bytes[] memory rebalancePayloads = new bytes[](2);
-        rebalancePayloads[0] = abi.encodeWithSelector(LpModuleMock.firstRebalanceFunction.selector,  0.0005 ether);
-        rebalancePayloads[1] = abi.encodeWithSelector(LpModuleMock.secondRebalanceFunction.selector);
+        rebalancePayloads[0] = abi.encodeWithSelector(
+            LpModuleMock.firstRebalanceFunction.selector, 0.0005 ether
+        );
+        rebalancePayloads[1] = abi.encodeWithSelector(
+            LpModuleMock.secondRebalanceFunction.selector
+        );
 
         vm.prank(executor);
-        vm.expectRevert(IArrakisStandardManager.OverMaxSlippage.selector);
+        vm.expectRevert(
+            IArrakisStandardManager.OverMaxSlippage.selector
+        );
 
         manager.rebalance(address(vault), rebalancePayloads);
     }
@@ -3094,7 +3168,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -3104,7 +3179,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
         {
             // #region create module.
 
-            address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
             LpModuleMock module = new LpModuleMock();
             module.setToken0AndToken1(USDC, WETH);
@@ -3184,9 +3260,11 @@ contract ArrakisStandardManagerTest is TestWrapper {
         // #endregion assertions.
 
         // #endregion init management of vault.
-        
+
         bytes[] memory rebalancePayloads = new bytes[](1);
-        rebalancePayloads[0] = abi.encodeWithSelector(LpModuleMock.firstRebalanceFunction.selector,  0.0005 ether);
+        rebalancePayloads[0] = abi.encodeWithSelector(
+            LpModuleMock.firstRebalanceFunction.selector, 0.0005 ether
+        );
 
         vm.prank(executor);
 
@@ -3200,7 +3278,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -3210,7 +3289,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
         {
             // #region create module.
 
-            address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
             LpModuleMock module = new LpModuleMock();
             module.setToken0AndToken1(USDC, WETH);
@@ -3290,15 +3370,19 @@ contract ArrakisStandardManagerTest is TestWrapper {
         // #endregion assertions.
 
         // #endregion init management of vault.
-        
+
         bytes[] memory rebalancePayloads = new bytes[](1);
-        rebalancePayloads[0] = abi.encodeWithSelector(LpModuleMock.firstRebalanceFunction.selector,  0.0005 ether);
+        rebalancePayloads[0] = abi.encodeWithSelector(
+            LpModuleMock.firstRebalanceFunction.selector, 0.0005 ether
+        );
 
         vm.startPrank(executor);
 
         manager.rebalance(address(vault), rebalancePayloads);
 
-        vm.expectRevert(IArrakisStandardManager.TimeNotPassed.selector);
+        vm.expectRevert(
+            IArrakisStandardManager.TimeNotPassed.selector
+        );
 
         manager.rebalance(address(vault), rebalancePayloads);
 
@@ -3315,7 +3399,9 @@ contract ArrakisStandardManagerTest is TestWrapper {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IArrakisStandardManager.StartIndexLtEndIndex.selector,
-                startIndex, endIndex)
+                startIndex,
+                endIndex
+            )
         );
 
         manager.initializedVaults(startIndex, endIndex);
@@ -3327,7 +3413,9 @@ contract ArrakisStandardManagerTest is TestWrapper {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IArrakisStandardManager.EndIndexGtNbOfVaults.selector,
-                endIndex, 0)
+                endIndex,
+                0
+            )
         );
 
         manager.initializedVaults(startIndex, endIndex);
@@ -3338,7 +3426,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -3363,7 +3452,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -3418,7 +3508,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
         uint256 startIndex = 0;
         uint256 endIndex = 1;
 
-        address[] memory vaults = manager.initializedVaults(startIndex, endIndex);
+        address[] memory vaults =
+            manager.initializedVaults(startIndex, endIndex);
 
         assertEq(vaults.length, 1);
         assertEq(vaults[0], address(vault));
@@ -3429,11 +3520,12 @@ contract ArrakisStandardManagerTest is TestWrapper {
     // #region test isManaged.
 
     function testIsManaged() public {
-                // #region init management.
+        // #region init management.
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -3458,7 +3550,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -3518,11 +3611,12 @@ contract ArrakisStandardManagerTest is TestWrapper {
     // #region test numInitializedVaults.
 
     function testNumInitializedVaults() public {
-                // #region init management.
+        // #region init management.
 
         uint24 maxDeviation = TEN_PERCENT; // 10%
         uint256 cooldownPeriod = 60; // 60 seconds.
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
         address stratAnnouncer = vm.addr(
             uint256(keccak256(abi.encode("Strategy Announcer")))
         );
@@ -3547,7 +3641,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create oracle.
 
-        address oracle = vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
 
         // #endregion create oracle.
 
@@ -3607,7 +3702,10 @@ contract ArrakisStandardManagerTest is TestWrapper {
     // #region test getInitManagementSelector.
 
     function testGetInitManagementSelector() public {
-        assertEq(manager.getInitManagementSelector(), IArrakisStandardManager.initManagement.selector);
+        assertEq(
+            manager.getInitManagementSelector(),
+            IArrakisStandardManager.initManagement.selector
+        );
     }
 
     // #endregion test getInitManagementSelector.

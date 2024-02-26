@@ -10,7 +10,10 @@ contract ArrakisMetaVaultMock {
         manager = manager_;
     }
 
-    function setToken0AndToken1(address token0_, address token1_) external {
+    function setToken0AndToken1(
+        address token0_,
+        address token1_
+    ) external {
         token0 = token0_;
         token1 = token1_;
     }

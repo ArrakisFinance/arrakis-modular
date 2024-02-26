@@ -6,5 +6,8 @@ interface IBeaconProxyExtended {
     /// to the beaconProxy.
     /// @return upgradeableBeacon address of the UpgradeableBeacon that contain the
     /// implementation.
-    function beacon() external view returns(address upgradeableBeacon);
+    function beacon()
+        external
+        view
+        returns (address upgradeableBeacon);
 }

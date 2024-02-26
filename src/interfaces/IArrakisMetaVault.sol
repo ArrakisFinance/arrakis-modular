@@ -112,12 +112,19 @@ interface IArrakisMetaVault {
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
     /// @param module_ address of the default module.
-    function initialize(address token0_, address token1_, address module_) external;
+    function initialize(
+        address token0_,
+        address token1_,
+        address module_
+    ) external;
 
     /// @notice function used to set module
     /// @param module_ address of the new module
     /// @param payloads_ datas to initialize/rebalance on the new module
-    function setModule(address module_, bytes[] calldata payloads_) external;
+    function setModule(
+        address module_,
+        bytes[] calldata payloads_
+    ) external;
 
     /// @notice function used to whitelist modules that can used by manager.
     /// @param beacons_ array of beacons addresses to use for modules creation.
@@ -154,14 +161,18 @@ interface IArrakisMetaVault {
     /// @param priceX96 price at which we want to simulate our tokens composition
     /// @return amount0 the amount of token0 sitting on the position for priceX96.
     /// @return amount1 the amount of token1 sitting on the position for priceX96.
-    function totalUnderlyingAtPrice(
-        uint160 priceX96
-    ) external view returns (uint256 amount0, uint256 amount1);
+    function totalUnderlyingAtPrice(uint160 priceX96)
+        external
+        view
+        returns (uint256 amount0, uint256 amount1);
 
     /// @notice function used to get the initial amounts needed to open a position.
     /// @return init0 the amount of token0 needed to open a position.
     /// @return init1 the amount of token1 needed to open a position.
-    function getInits() external view returns (uint256 init0, uint256 init1);
+    function getInits()
+        external
+        view
+        returns (uint256 init0, uint256 init1);
 
     /// @notice function used to get the address of token0.
     function token0() external view returns (address);
@@ -178,7 +189,10 @@ interface IArrakisMetaVault {
 
     /// @notice function used to get module registry.
     /// @return registry address of module registry.
-    function moduleRegistry() external view returns (address registry);
+    function moduleRegistry()
+        external
+        view
+        returns (address registry);
 
     // #endregion view functions.
 }

@@ -18,7 +18,9 @@ interface IArrakisLPModulePrivate {
     /// @param depositor address that are sending the tokens, the owner.
     /// @param amount0 amount of token0 sent by depositor.
     /// @param amount1 amount of token1 sent by depositor.
-    event LogFund(address depositor, uint256 amount0, uint256 amount1);
+    event LogFund(
+        address depositor, uint256 amount0, uint256 amount1
+    );
 
     // #endregion events.
 

@@ -14,7 +14,9 @@ contract RouterSwapExecutorTest is Test {
     //     - [ ] reverts if native token is zero address
     function test_constructor() public {}
     function testRevert_constructor_zeroAddress_router() public {}
-    function testRevert_constructor_zeroAddress_nativeToken() public {}
+    function testRevert_constructor_zeroAddress_nativeToken()
+        public
+    {}
 
     // - [ ] swap
     //     - [ ] if swaped token is native token, uses account balance

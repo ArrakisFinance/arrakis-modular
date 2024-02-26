@@ -1,16 +1,22 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisLPModulePublic} from "../interfaces/IArrakisLPModulePublic.sol";
+import {IArrakisLPModulePublic} from
+    "../interfaces/IArrakisLPModulePublic.sol";
 import {ValantisModule} from "../abstracts/ValantisSOTModule.sol";
 import {PIPS} from "../constants/CArrakis.sol";
 
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {SafeERC20} from
+    "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata} from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-contract ValantisModulePublic is ValantisModule, IArrakisLPModulePublic {
+contract ValantisModulePublic is
+    ValantisModule,
+    IArrakisLPModulePublic
+{
     using SafeERC20 for IERC20Metadata;
 
     /// @notice deposit function for public vault.
@@ -51,6 +57,9 @@ contract ValantisModulePublic is ValantisModule, IArrakisLPModulePublic {
 
         // #endregion effects.
 
+        uint256 balance0 = token0.balanceOf(address(this));
+        uint256 balance1 = token1.balanceOf(address(this));
+
         // #region interactions.
 
         // #region get the tokens from the depositor.
@@ -70,6 +79,17 @@ contract ValantisModulePublic is ValantisModule, IArrakisLPModulePublic {
         alm.depositLiquidity(amount0, amount1, 0, 0);
 
         // #endregion interactions.
+
+        // #region assertions.
+
+        if (token0.balanceOf(address(this)) - balance0 > 0) {
+            revert Deposit0();
+        }
+        if (token1.balanceOf(address(this)) - balance1 > 0) {
+            revert Deposit1();
+        }
+
+        // #endregion assertions.
 
         emit LogDeposit(depositor_, proportion_, amount0, amount1);
     }

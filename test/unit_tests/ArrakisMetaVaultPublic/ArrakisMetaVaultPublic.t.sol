@@ -5,13 +5,17 @@ import {console} from "forge-std/console.sol";
 
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 
-import {ArrakisMetaVaultPublic} from "../../../src/ArrakisMetaVaultPublic.sol";
-import {IArrakisMetaVaultPublic} from "../../../src/interfaces/IArrakisMetaVaultPublic.sol";
-import {IArrakisMetaVault} from "../../../src/interfaces/IArrakisMetaVault.sol";
+import {ArrakisMetaVaultPublic} from
+    "../../../src/ArrakisMetaVaultPublic.sol";
+import {IArrakisMetaVaultPublic} from
+    "../../../src/interfaces/IArrakisMetaVaultPublic.sol";
+import {IArrakisMetaVault} from
+    "../../../src/interfaces/IArrakisMetaVault.sol";
 import {PIPS} from "../../../src/constants/CArrakis.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
@@ -30,8 +34,10 @@ import {ModuleRegistryMock} from "./mocks/ModuleRegistryMock.sol";
 contract ArrakisMetaVaultPublicTest is TestWrapper {
     // #region constant properties.
 
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant WETH =
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant USDC =
+        0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     // #endregion constant properties.
 
@@ -104,8 +110,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testConstructorManagerAddressZero() public {
         vm.expectRevert(
             abi.encodeWithSelector(
-                IArrakisMetaVault.AddressZero.selector,
-                "Manager"
+                IArrakisMetaVault.AddressZero.selector, "Manager"
             )
         );
 
@@ -121,8 +126,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testConstructorOwnerIsAddressZero() public {
         vm.expectRevert(
             abi.encodeWithSelector(
-                IArrakisMetaVault.AddressZero.selector,
-                "Owner"
+                IArrakisMetaVault.AddressZero.selector, "Owner"
             )
         );
 
@@ -168,90 +172,67 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testInitializeToken0IsAddressZero() public {
         // #region create tModule mock.
 
-        address tModule = vm.addr(
-            uint256(keccak256(abi.encode("Test Module")))
-        );
+        address tModule =
+            vm.addr(uint256(keccak256(abi.encode("Test Module"))));
 
         // #endregion create tModule mock.
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IArrakisMetaVault.AddressZero.selector,
-                "Token 0"
+                IArrakisMetaVault.AddressZero.selector, "Token 0"
             )
         );
 
-        vault.initialize(
-            address(0),
-            WETH,
-            tModule
-        );
+        vault.initialize(address(0), WETH, tModule);
     }
 
     function testInitializeToken1IsAddressZero() public {
         // #region create tModule mock.
 
-        address tModule = vm.addr(
-            uint256(keccak256(abi.encode("Test Module")))
-        );
+        address tModule =
+            vm.addr(uint256(keccak256(abi.encode("Test Module"))));
 
         // #endregion create tModule mock.
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IArrakisMetaVault.AddressZero.selector,
-                "Token 1"
+                IArrakisMetaVault.AddressZero.selector, "Token 1"
             )
         );
 
-        vault.initialize(
-            USDC,
-            address(0),
-            tModule
-        );
+        vault.initialize(USDC, address(0), tModule);
     }
 
     function testInitializeToken0GtToken1() public {
         // #region create tModule mock.
 
-        address tModule = vm.addr(
-            uint256(keccak256(abi.encode("Test Module")))
-        );
+        address tModule =
+            vm.addr(uint256(keccak256(abi.encode("Test Module"))));
 
         // #endregion create tModule mock.
 
         vm.expectRevert(IArrakisMetaVault.Token0GtToken1.selector);
 
-        vault.initialize(
-            WETH,
-            USDC,
-            tModule
-        );
+        vault.initialize(WETH, USDC, tModule);
     }
 
     function testInitializeToken0EqToken1() public {
         // #region create tModule mock.
 
-        address tModule = vm.addr(
-            uint256(keccak256(abi.encode("Test Module")))
-        );
+        address tModule =
+            vm.addr(uint256(keccak256(abi.encode("Test Module"))));
 
         // #endregion create tModule mock.
 
         vm.expectRevert(IArrakisMetaVault.Token0EqToken1.selector);
 
-        vault.initialize(
-            USDC,
-            USDC,
-            tModule
-        );
+        vault.initialize(USDC, USDC, tModule);
     }
 
     function testInitializeModuleAddressZero() public {
         vm.expectRevert(
             abi.encodeWithSelector(
-                IArrakisMetaVault.AddressZero.selector,
-                "Module"
+                IArrakisMetaVault.AddressZero.selector, "Module"
             )
         );
 
@@ -259,9 +240,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     }
 
     function testInitialize() public {
-        address tModule = vm.addr(
-            uint256(keccak256(abi.encode("Test Module")))
-        );
+        address tModule =
+            vm.addr(uint256(keccak256(abi.encode("Test Module"))));
 
         vault.initialize(USDC, WETH, tModule);
 
@@ -269,7 +249,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address token1 = vault.token1();
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assertEq(token0, USDC);
         assertEq(token1, WETH);
@@ -285,15 +266,15 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testSetModuleOnlyManager() public {
         // #region initialize.
 
-        address tModule = vm.addr(
-            uint256(keccak256(abi.encode("Test Module")))
-        );
+        address tModule =
+            vm.addr(uint256(keccak256(abi.encode("Test Module"))));
 
         vault.initialize(USDC, WETH, tModule);
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], tModule);
@@ -304,7 +285,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address[] memory beacons = new address[](1);
         bytes[] memory datas = new bytes[](1);
 
-        address beacon = vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
 
         beacons[0] = beacon;
 
@@ -337,15 +319,15 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testSetModuleSameModule() public {
         // #region initialize.
 
-        address tModule = vm.addr(
-            uint256(keccak256(abi.encode("Test Module")))
-        );
+        address tModule =
+            vm.addr(uint256(keccak256(abi.encode("Test Module"))));
 
         vault.initialize(USDC, WETH, tModule);
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], tModule);
@@ -364,15 +346,15 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     function testSetModuleNotWhitelistedModule() public {
         // #region initialize.
 
-        address tModule = vm.addr(
-            uint256(keccak256(abi.encode("Test Module")))
-        );
+        address tModule =
+            vm.addr(uint256(keccak256(abi.encode("Test Module"))));
 
         vault.initialize(USDC, WETH, tModule);
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], tModule);
@@ -380,9 +362,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion initialize.
 
-        address newModule = vm.addr(
-            uint256(keccak256(abi.encode("New Module")))
-        );
+        address newModule =
+            vm.addr(uint256(keccak256(abi.encode("New Module"))));
 
         bytes[] memory payloads = new bytes[](0);
 
@@ -406,7 +387,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(buggyModule));
@@ -417,7 +399,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address[] memory beacons = new address[](1);
         bytes[] memory datas = new bytes[](1);
 
-        address beacon = vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
 
         beacons[0] = beacon;
 
@@ -461,7 +444,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -474,7 +458,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         datas[0] = abi.encode(1);
 
-        address beacon = vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
 
         beacons[0] = beacon;
 
@@ -489,7 +474,9 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         bytes[] memory payloads = new bytes[](1);
 
-        payloads[0] = abi.encodeWithSelector(LpModuleMock.smallCall.selector, 10);
+        payloads[0] = abi.encodeWithSelector(
+            LpModuleMock.smallCall.selector, 10
+        );
 
         vm.prank(address(manager));
         vm.expectRevert(IArrakisMetaVault.CallFailed.selector);
@@ -503,7 +490,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -514,7 +502,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address[] memory beacons = new address[](1);
         bytes[] memory datas = new bytes[](1);
 
-        address beacon = vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
 
         beacons[0] = beacon;
 
@@ -540,7 +529,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -551,7 +541,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address[] memory beacons = new address[](1);
         bytes[] memory datas = new bytes[](1);
 
-        address beacon = vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
 
         beacons[0] = beacon;
 
@@ -566,7 +557,9 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         bytes[] memory payloads = new bytes[](1);
 
-        payloads[0] = abi.encodeWithSelector(LpModuleMock.smallCall.selector, 10);
+        payloads[0] = abi.encodeWithSelector(
+            LpModuleMock.smallCall.selector, 10
+        );
 
         vm.prank(address(manager));
         vault.setModule(newModule, payloads);
@@ -579,9 +572,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     // #region test whitelist modules.
 
     function testWhitelistModulesOnlyOwner() public {
-        address newBeacon = vm.addr(
-            uint256(keccak256(abi.encode("New Beacon")))
-        );
+        address newBeacon =
+            vm.addr(uint256(keccak256(abi.encode("New Beacon"))));
 
         address[] memory beacons = new address[](1);
 
@@ -601,7 +593,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -612,7 +605,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address[] memory beacons = new address[](1);
         bytes[] memory datas = new bytes[](2);
 
-        address beacon = vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
 
         beacons[0] = beacon;
 
@@ -632,7 +626,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -643,7 +638,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address[] memory beacons = new address[](1);
         bytes[] memory datas = new bytes[](1);
 
-        address beacon = vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
 
         beacons[0] = beacon;
 
@@ -673,7 +669,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -684,7 +681,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address[] memory beacons = new address[](1);
         bytes[] memory datas = new bytes[](1);
 
-        address beacon = vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
 
         beacons[0] = beacon;
 
@@ -714,9 +712,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     }
 
     function testBlacklistModulesNotWhitelisted() public {
-        address newModule = vm.addr(
-            uint256(keccak256(abi.encode("New Module")))
-        );
+        address newModule =
+            vm.addr(uint256(keccak256(abi.encode("New Module"))));
 
         address[] memory modulesToRemove = new address[](1);
 
@@ -741,7 +738,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -767,7 +765,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -778,7 +777,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address[] memory beacons = new address[](1);
         bytes[] memory datas = new bytes[](1);
 
-        address beacon = vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
 
         beacons[0] = beacon;
 
@@ -818,7 +818,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -829,7 +830,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address[] memory beacons = new address[](1);
         bytes[] memory datas = new bytes[](1);
 
-        address beacon = vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
 
         beacons[0] = beacon;
 
@@ -859,7 +861,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -893,7 +896,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -904,7 +908,9 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         uint256 managerBalance1 = 1e18;
 
         module.setToken0AndToken1(USDC, WETH);
-        module.setManagerBalance0AndBalance1(managerBalance0, managerBalance1);
+        module.setManagerBalance0AndBalance1(
+            managerBalance0, managerBalance1
+        );
 
         deal(USDC, address(module), managerBalance0 * 101);
         deal(WETH, address(module), managerBalance1 * 101);
@@ -926,7 +932,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -937,14 +944,15 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         uint256 managerBalance1 = 1e18;
 
         module.setToken0AndToken1(USDC, WETH);
-        module.setManagerBalance0AndBalance1(managerBalance0, managerBalance1);
+        module.setManagerBalance0AndBalance1(
+            managerBalance0, managerBalance1
+        );
 
         deal(USDC, address(module), managerBalance0 * 101);
         deal(WETH, address(module), managerBalance1 * 101);
 
-        (uint256 amount0, uint256 amount1) = vault.totalUnderlyingAtPrice(
-            3000e6
-        );
+        (uint256 amount0, uint256 amount1) =
+            vault.totalUnderlyingAtPrice(3000e6);
 
         assertEq((managerBalance0 * 100) / 2, amount0);
         assertEq((managerBalance1 * 100) * 2, amount1);
@@ -962,7 +970,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -991,14 +1000,16 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
     function testMintProportionZero() public {
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
         vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -1022,8 +1033,10 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion get total underlying.
 
-        uint256 expectedAmount0 = FullMath.mulDiv(total0, shares, 1 ether);
-        uint256 expectedAmount1 = FullMath.mulDiv(total1, shares, 1 ether);
+        uint256 expectedAmount0 =
+            FullMath.mulDiv(total0, shares, 1 ether);
+        uint256 expectedAmount1 =
+            FullMath.mulDiv(total1, shares, 1 ether);
 
         deal(USDC, user, expectedAmount0);
         deal(WETH, user, expectedAmount1);
@@ -1051,7 +1064,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -1075,8 +1089,10 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion get total underlying.
 
-        uint256 expectedAmount0 = FullMath.mulDiv(total0, shares, 1 ether);
-        uint256 expectedAmount1 = FullMath.mulDiv(total1, shares, 1 ether);
+        uint256 expectedAmount0 =
+            FullMath.mulDiv(total0, shares, 1 ether);
+        uint256 expectedAmount1 =
+            FullMath.mulDiv(total1, shares, 1 ether);
 
         deal(USDC, user, expectedAmount0);
         deal(WETH, user, expectedAmount1);
@@ -1088,8 +1104,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IArrakisMetaVault.AddressZero.selector,
-                "Receiver"
+                IArrakisMetaVault.AddressZero.selector, "Receiver"
             )
         );
 
@@ -1100,14 +1115,16 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
     function testMint() public {
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
         vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -1138,8 +1155,10 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion get total underlying.
 
-        uint256 expectedAmount0 = FullMath.mulDiv(total0, shares, 1 ether);
-        uint256 expectedAmount1 = FullMath.mulDiv(total1, shares, 1 ether);
+        uint256 expectedAmount0 =
+            FullMath.mulDiv(total0, shares, 1 ether);
+        uint256 expectedAmount1 =
+            FullMath.mulDiv(total1, shares, 1 ether);
 
         deal(USDC, user, expectedAmount0);
         deal(WETH, user, expectedAmount1);
@@ -1162,14 +1181,16 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
         vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -1200,8 +1221,10 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion get total underlying.
 
-        uint256 expectedAmount0 = FullMath.mulDiv(total0, shares, 1 ether);
-        uint256 expectedAmount1 = FullMath.mulDiv(total1, shares, 1 ether);
+        uint256 expectedAmount0 =
+            FullMath.mulDiv(total0, shares, 1 ether);
+        uint256 expectedAmount1 =
+            FullMath.mulDiv(total1, shares, 1 ether);
 
         deal(USDC, user, expectedAmount0);
         deal(WETH, user, expectedAmount1);
@@ -1216,10 +1239,10 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         // #endregion mint.
         vm.stopPrank();
 
-        address withdrawer = vm.addr(
-            uint256(keccak256(abi.encode("Withdrawer")))
-        );
-        address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+        address withdrawer =
+            vm.addr(uint256(keccak256(abi.encode("Withdrawer"))));
+        address caller =
+            vm.addr(uint256(keccak256(abi.encode("Caller"))));
 
         vm.prank(caller);
         vm.expectRevert(ERC20.InsufficientBalance.selector);
@@ -1230,14 +1253,16 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
         vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -1268,8 +1293,10 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion get total underlying.
 
-        uint256 expectedAmount0 = FullMath.mulDiv(total0, shares, 1 ether);
-        uint256 expectedAmount1 = FullMath.mulDiv(total1, shares, 1 ether);
+        uint256 expectedAmount0 =
+            FullMath.mulDiv(total0, shares, 1 ether);
+        uint256 expectedAmount1 =
+            FullMath.mulDiv(total1, shares, 1 ether);
 
         deal(USDC, user, expectedAmount0);
         deal(WETH, user, expectedAmount1);
@@ -1285,9 +1312,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion mint.
 
-        address withdrawer = vm.addr(
-            uint256(keccak256(abi.encode("Withdrawer")))
-        );
+        address withdrawer =
+            vm.addr(uint256(keccak256(abi.encode("Withdrawer"))));
 
         vm.expectRevert(IArrakisMetaVaultPublic.BurnOverflow.selector);
         vm.prank(receiver);
@@ -1298,14 +1324,16 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
         vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -1336,8 +1364,10 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion get total underlying.
 
-        uint256 expectedAmount0 = FullMath.mulDiv(total0, shares, 1 ether);
-        uint256 expectedAmount1 = FullMath.mulDiv(total1, shares, 1 ether);
+        uint256 expectedAmount0 =
+            FullMath.mulDiv(total0, shares, 1 ether);
+        uint256 expectedAmount1 =
+            FullMath.mulDiv(total1, shares, 1 ether);
 
         deal(USDC, user, expectedAmount0);
         deal(WETH, user, expectedAmount1);
@@ -1353,9 +1383,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion mint.
 
-        address withdrawer = vm.addr(
-            uint256(keccak256(abi.encode("Withdrawer")))
-        );
+        address withdrawer =
+            vm.addr(uint256(keccak256(abi.encode("Withdrawer"))));
 
         vm.prank(receiver);
         vm.expectRevert(IArrakisMetaVaultPublic.BurnZero.selector);
@@ -1367,14 +1396,16 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
         vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -1405,8 +1436,10 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion get total underlying.
 
-        uint256 expectedAmount0 = FullMath.mulDiv(total0, shares, 1 ether);
-        uint256 expectedAmount1 = FullMath.mulDiv(total1, shares, 1 ether);
+        uint256 expectedAmount0 =
+            FullMath.mulDiv(total0, shares, 1 ether);
+        uint256 expectedAmount1 =
+            FullMath.mulDiv(total1, shares, 1 ether);
 
         deal(USDC, user, expectedAmount0);
         deal(WETH, user, expectedAmount1);
@@ -1422,9 +1455,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion mint.
 
-        address withdrawer = vm.addr(
-            uint256(keccak256(abi.encode("Withdrawer")))
-        );
+        address withdrawer =
+            vm.addr(uint256(keccak256(abi.encode("Withdrawer"))));
 
         vm.prank(receiver);
 
@@ -1441,14 +1473,16 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
         vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -1479,8 +1513,10 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion get total underlying.
 
-        uint256 expectedAmount0 = FullMath.mulDiv(total0, shares, 1 ether);
-        uint256 expectedAmount1 = FullMath.mulDiv(total1, shares, 1 ether);
+        uint256 expectedAmount0 =
+            FullMath.mulDiv(total0, shares, 1 ether);
+        uint256 expectedAmount1 =
+            FullMath.mulDiv(total1, shares, 1 ether);
 
         deal(USDC, user, expectedAmount0);
         deal(WETH, user, expectedAmount1);
@@ -1502,8 +1538,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IArrakisMetaVault.AddressZero.selector,
-                "Receiver"
+                IArrakisMetaVault.AddressZero.selector, "Receiver"
             )
         );
 
@@ -1514,14 +1549,16 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region initialize.
 
         vault.initialize(USDC, WETH, address(module));
 
         address actualModule = address(vault.module());
 
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assert(whitelistedModules.length == 1);
         assertEq(whitelistedModules[0], address(module));
@@ -1552,8 +1589,10 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion get total underlying.
 
-        uint256 expectedAmount0 = FullMath.mulDiv(total0, shares, 1 ether);
-        uint256 expectedAmount1 = FullMath.mulDiv(total1, shares, 1 ether);
+        uint256 expectedAmount0 =
+            FullMath.mulDiv(total0, shares, 1 ether);
+        uint256 expectedAmount1 =
+            FullMath.mulDiv(total1, shares, 1 ether);
 
         deal(USDC, user, expectedAmount0);
         deal(WETH, user, expectedAmount1);
@@ -1569,9 +1608,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion mint.
 
-        address withdrawer = vm.addr(
-            uint256(keccak256(abi.encode("Withdrawer")))
-        );
+        address withdrawer =
+            vm.addr(uint256(keccak256(abi.encode("Withdrawer"))));
 
         vm.prank(receiver);
 
@@ -1588,7 +1626,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     // #region test transferOwnership.
 
     function testTransferOwnership() public {
-        address newOwner = vm.addr(uint256(keccak256(abi.encode("New Owner"))));
+        address newOwner =
+            vm.addr(uint256(keccak256(abi.encode("New Owner"))));
         vm.expectRevert(IArrakisMetaVault.NotImplemented.selector);
 
         vault.transferOwnership(newOwner);
@@ -1609,7 +1648,8 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
     // #region test completeOwnershipHandover.
 
     function testCompleteOwnershipHandover() public {
-        address newOwner = vm.addr(uint256(keccak256(abi.encode("New Owner"))));
+        address newOwner =
+            vm.addr(uint256(keccak256(abi.encode("New Owner"))));
         vm.expectRevert(IArrakisMetaVault.NotImplemented.selector);
 
         vault.completeOwnershipHandover(newOwner);

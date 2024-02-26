@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Metadata} from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IArrakisMetaVault} from "./IArrakisMetaVault.sol";
 import {IOracleWrapper} from "./IOracleWrapper.sol";
 
@@ -69,9 +70,7 @@ interface IArrakisLPModule {
     /// @param amount0 amount of token0 that manager has earned and will be transfered.
     /// @param amount1 amount of token1 that manager has earned and will be transfered.
     event LogWithdrawManagerBalance(
-        address manager,
-        uint256 amount0,
-        uint256 amount1
+        address manager, uint256 amount0, uint256 amount1
     );
 
     /// @notice Event describing manager set his fees.
@@ -145,7 +144,10 @@ interface IArrakisLPModule {
     /// @notice function used to get the initial amounts needed to open a position.
     /// @return init0 the amount of token0 needed to open a position.
     /// @return init1 the amount of token1 needed to open a position.
-    function getInits() external view returns (uint256 init0, uint256 init1);
+    function getInits()
+        external
+        view
+        returns (uint256 init0, uint256 init1);
 
     /// @notice function used to get the amount of token0 and token1 sitting
     /// on the position.
@@ -161,9 +163,10 @@ interface IArrakisLPModule {
     /// @param priceX96_ price at which we want to simulate our tokens composition
     /// @return amount0 the amount of token0 sitting on the position for priceX96.
     /// @return amount1 the amount of token1 sitting on the position for priceX96.
-    function totalUnderlyingAtPrice(
-        uint160 priceX96_
-    ) external view returns (uint256 amount0, uint256 amount1);
+    function totalUnderlyingAtPrice(uint160 priceX96_)
+        external
+        view
+        returns (uint256 amount0, uint256 amount1);
 
     /// @notice function used to validate if module state is not manipulated
     /// before rebalance.
