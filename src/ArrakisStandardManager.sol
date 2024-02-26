@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisStandardManager} from "./interfaces/IArrakisStandardManager.sol";
+import {IArrakisStandardManager} from
+    "./interfaces/IArrakisStandardManager.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {SetupParams} from "./structs/SManager.sol";
 import {TEN_PERCENT, PIPS, WEEK} from "./constants/CArrakis.sol";
@@ -12,17 +13,23 @@ import {VaultInfo, FeeIncrease} from "./structs/SManager.sol";
 import {IGuardian} from "./interfaces/IGuardian.sol";
 
 // #region openzeppelin dependencies.
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {EnumerableSet} from
+    "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {SafeERC20} from
+    "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Metadata} from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 // #endregion openzeppelin dependencies.
 
 // #region openzeppelin upgradeable dependencies.
 
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {PausableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 // #endregion openzeppelin upgradeable dependencies.
 
@@ -81,13 +88,17 @@ contract ArrakisStandardManager is
     }
 
     modifier onlyWhitelistedVault(address vault_) {
-        if (!_vaults.contains(vault_)) revert NotWhitelistedVault(vault_);
+        if (!_vaults.contains(vault_)) {
+            revert NotWhitelistedVault(vault_);
+        }
         _;
     }
 
     modifier onlyGuardian() {
         address pauser = IGuardian(_guardian).pauser();
-        if (msg.sender != pauser) revert OnlyGuardian(msg.sender, pauser);
+        if (msg.sender != pauser) {
+            revert OnlyGuardian(msg.sender, pauser);
+        }
         _;
     }
 
@@ -100,7 +111,9 @@ contract ArrakisStandardManager is
         address guardian_
     ) {
         if (nativeToken_ == address(0)) revert AddressZero();
-        if (nativeTokenDecimals_ == 0) revert NativeTokenDecimalsZero();
+        if (nativeTokenDecimals_ == 0) {
+            revert NativeTokenDecimalsZero();
+        }
         if (guardian_ == address(0)) revert AddressZero();
         /// @dev we are not checking if the default fee pips is not zero, to have
         /// the option to set 0 as default fee pips.
@@ -121,9 +134,8 @@ contract ArrakisStandardManager is
         address factory_
     ) external initializer {
         if (
-            owner_ == address(0) ||
-            defaultReceiver_ == address(0) ||
-            factory_ == address(0)
+            owner_ == address(0) || defaultReceiver_ == address(0)
+                || factory_ == address(0)
         ) revert AddressZero();
 
         _initializeOwner(owner_);
@@ -152,13 +164,13 @@ contract ArrakisStandardManager is
 
     /// @notice function used to set the default receiver of tokens earned.
     /// @param newDefaultReceiver_ address of the new default receiver of tokens.
-    function setDefaultReceiver(
-        address newDefaultReceiver_
-    ) external onlyOwner {
+    function setDefaultReceiver(address newDefaultReceiver_)
+        external
+        onlyOwner
+    {
         if (newDefaultReceiver_ == address(0)) revert AddressZero();
         emit LogSetDefaultReceiver(
-            defaultReceiver,
-            defaultReceiver = newDefaultReceiver_
+            defaultReceiver, defaultReceiver = newDefaultReceiver_
         );
     }
 
@@ -195,9 +207,8 @@ contract ArrakisStandardManager is
 
         vaultInfo[vault_].managerFeePIPS = newFeePIPS_;
 
-        IArrakisLPModule(IArrakisMetaVault(vault_).module()).setManagerFeePIPS(
-            newFeePIPS_
-        );
+        IArrakisLPModule(IArrakisMetaVault(vault_).module())
+            .setManagerFeePIPS(newFeePIPS_);
 
         emit LogChangeManagerFee(vault_, newFeePIPS_);
     }
@@ -205,21 +216,24 @@ contract ArrakisStandardManager is
     /// @notice function used to finalize a time lock fees increase on a vault.
     /// @param vault_ address of the vault where the fees increase will be
     /// applied.
-    function finalizeIncreaseManagerFeePIPS(address vault_) external onlyOwner {
+    function finalizeIncreaseManagerFeePIPS(address vault_)
+        external
+        onlyOwner
+    {
         FeeIncrease memory pending = pendingFeeIncrease[vault_];
 
         if (pending.submitTimestamp == 0) revert NoPendingIncrease();
-        if (block.timestamp <= pending.submitTimestamp + WEEK)
+        if (block.timestamp <= pending.submitTimestamp + WEEK) {
             revert TimeNotPassed();
+        }
 
         uint24 newFeePIPS = pending.newFeePIPS;
         delete pendingFeeIncrease[vault_];
 
         vaultInfo[vault_].managerFeePIPS = newFeePIPS;
 
-        IArrakisLPModule(IArrakisMetaVault(vault_).module()).setManagerFeePIPS(
-            newFeePIPS
-        );
+        IArrakisLPModule(IArrakisMetaVault(vault_).module())
+            .setManagerFeePIPS(newFeePIPS);
 
         emit LogChangeManagerFee(vault_, newFeePIPS);
     }
@@ -231,10 +245,12 @@ contract ArrakisStandardManager is
         address vault_,
         uint24 newFeePIPS_
     ) external onlyOwner onlyWhitelistedVault(vault_) {
-        if (pendingFeeIncrease[vault_].submitTimestamp != 0)
+        if (pendingFeeIncrease[vault_].submitTimestamp != 0) {
             revert AlreadyPendingIncrease();
-        if (vaultInfo[vault_].managerFeePIPS >= newFeePIPS_)
+        }
+        if (vaultInfo[vault_].managerFeePIPS >= newFeePIPS_) {
             revert NotFeeIncrease();
+        }
         pendingFeeIncrease[vault_] = FeeIncrease({
             submitTimestamp: block.timestamp,
             newFeePIPS: newFeePIPS_
@@ -248,9 +264,7 @@ contract ArrakisStandardManager is
     /// @param vault_ from which fees will be collected.
     /// @return amount0 amount of token0 sent to receiver_
     /// @return amount1 amount of token1 sent to receiver_
-    function withdrawManagerBalance(
-        address vault_
-    )
+    function withdrawManagerBalance(address vault_)
         external
         onlyOwner
         nonReentrant
@@ -266,8 +280,10 @@ contract ArrakisStandardManager is
         address _receiver0 = receiversByToken[address(_token0)];
         address _receiver1 = receiversByToken[address(_token1)];
 
-        _receiver0 = _receiver0 == address(0) ? defaultReceiver : _receiver0;
-        _receiver1 = _receiver1 == address(0) ? defaultReceiver : _receiver1;
+        _receiver0 =
+            _receiver0 == address(0) ? defaultReceiver : _receiver0;
+        _receiver1 =
+            _receiver1 == address(0) ? defaultReceiver : _receiver1;
 
         IArrakisMetaVault(vault_).module().withdrawManagerBalance();
 
@@ -276,8 +292,11 @@ contract ArrakisStandardManager is
             if (amount0 > 0) payable(_receiver0).sendValue(amount0);
         } else {
             amount0 = IERC20Metadata(_token0).balanceOf(address(this));
-            if (amount0 > 0)
-                IERC20Metadata(_token0).safeTransfer(_receiver0, amount0);
+            if (amount0 > 0) {
+                IERC20Metadata(_token0).safeTransfer(
+                    _receiver0, amount0
+                );
+            }
         }
 
         if (_token1 == nativeToken) {
@@ -285,15 +304,15 @@ contract ArrakisStandardManager is
             if (amount1 > 0) payable(_receiver1).sendValue(amount1);
         } else {
             amount1 = IERC20Metadata(_token1).balanceOf(address(this));
-            if (amount1 > 0)
-                IERC20Metadata(_token1).safeTransfer(_receiver1, amount1);
+            if (amount1 > 0) {
+                IERC20Metadata(_token1).safeTransfer(
+                    _receiver1, amount1
+                );
+            }
         }
 
         emit LogWithdrawManagerBalance(
-            _receiver0,
-            _receiver1,
-            amount0,
-            amount1
+            _receiver0, _receiver1, amount0, amount1
         );
     }
 
@@ -303,19 +322,28 @@ contract ArrakisStandardManager is
     function rebalance(
         address vault_,
         bytes[] calldata payloads_
-    ) external nonReentrant whenNotPaused onlyWhitelistedVault(vault_) {
+    )
+        external
+        nonReentrant
+        whenNotPaused
+        onlyWhitelistedVault(vault_)
+    {
         VaultInfo memory info = vaultInfo[vault_];
 
         if (info.executor != msg.sender) revert NotExecutor();
-        if (info.cooldownPeriod + info.lastRebalance >= block.timestamp)
+        if (
+            info.cooldownPeriod + info.lastRebalance
+                >= block.timestamp
+        ) {
             revert TimeNotPassed();
+        }
 
         IArrakisLPModule module = IArrakisMetaVault(vault_).module();
 
         // #region get current value of the vault.
 
-        (uint256 amount0, uint256 amount1) = IArrakisMetaVault(vault_)
-            .totalUnderlying();
+        (uint256 amount0, uint256 amount1) =
+            IArrakisMetaVault(vault_).totalUnderlying();
         address token0 = IArrakisMetaVault(vault_).token0();
         uint8 token0Decimals = token0 == nativeToken
             ? nativeTokenDecimals
@@ -326,9 +354,7 @@ contract ArrakisStandardManager is
         uint256 price0 = info.oracle.getPrice0();
 
         uint256 vaultInToken1BeforeRebalance = FullMath.mulDiv(
-            amount0,
-            price0,
-            10 ** token0Decimals
+            amount0, price0, 10 ** token0Decimals
         ) + amount1;
 
         // #endregion get current value of the vault.
@@ -336,7 +362,7 @@ contract ArrakisStandardManager is
         uint256 _length = payloads_.length;
 
         for (uint256 i; i < _length; i++) {
-            (bool success, ) = address(module).call(payloads_[i]);
+            (bool success,) = address(module).call(payloads_[i]);
 
             if (!success) revert CallFailed(payloads_[i]);
         }
@@ -348,30 +374,32 @@ contract ArrakisStandardManager is
         // that can indicate a sandwich attack.
         module.validateRebalance(info.oracle, info.maxDeviation);
 
-        (amount0, amount1) = IArrakisMetaVault(vault_).totalUnderlying();
+        (amount0, amount1) =
+            IArrakisMetaVault(vault_).totalUnderlying();
 
         {
             uint256 vaultInToken1AfterRebalance = FullMath.mulDiv(
-                amount0,
-                price0,
-                10 ** token0Decimals
+                amount0, price0, 10 ** token0Decimals
             ) + amount1;
 
-            uint256 currentSlippage = vaultInToken1BeforeRebalance >
-                vaultInToken1AfterRebalance
+            uint256 currentSlippage = vaultInToken1BeforeRebalance
+                > vaultInToken1AfterRebalance
                 ? FullMath.mulDiv(
-                    vaultInToken1BeforeRebalance - vaultInToken1AfterRebalance,
+                    vaultInToken1BeforeRebalance
+                        - vaultInToken1AfterRebalance,
                     PIPS,
                     vaultInToken1BeforeRebalance
                 )
                 : FullMath.mulDiv(
-                    vaultInToken1AfterRebalance - vaultInToken1BeforeRebalance,
+                    vaultInToken1AfterRebalance
+                        - vaultInToken1BeforeRebalance,
                     PIPS,
                     vaultInToken1BeforeRebalance
                 );
 
-            if (currentSlippage > info.maxSlippagePIPS)
+            if (currentSlippage > info.maxSlippagePIPS) {
                 revert OverMaxSlippage();
+            }
         }
 
         vaultInfo[vault_].lastRebalance = block.timestamp;
@@ -392,7 +420,9 @@ contract ArrakisStandardManager is
         address module_,
         bytes[] calldata payloads_
     ) external whenNotPaused onlyWhitelistedVault(vault_) {
-        if (vaultInfo[vault_].executor != msg.sender) revert NotExecutor();
+        if (vaultInfo[vault_].executor != msg.sender) {
+            revert NotExecutor();
+        }
 
         IArrakisMetaVault(vault_).setModule(module_, payloads_);
 
@@ -403,12 +433,15 @@ contract ArrakisStandardManager is
 
     /// @notice function used to init management of a meta vault.
     /// @param params_ struct containing all the data for initialize the vault.
-    function initManagement(
-        SetupParams calldata params_
-    ) external whenNotPaused {
+    function initManagement(SetupParams calldata params_)
+        external
+        whenNotPaused
+    {
         address _factory = factory;
 
-        if (msg.sender != _factory) revert OnlyFactory(msg.sender, _factory);
+        if (msg.sender != _factory) {
+            revert OnlyFactory(msg.sender, _factory);
+        }
 
         _initManagement(params_);
 
@@ -425,9 +458,7 @@ contract ArrakisStandardManager is
 
     /// @notice function used to update meta vault management informations.
     /// @param params_ struct containing all the data for updating the vault.
-    function updateVaultInfo(
-        SetupParams calldata params_
-    )
+    function updateVaultInfo(SetupParams calldata params_)
         external
         whenNotPaused
         onlyWhitelistedVault(params_.vault)
@@ -469,12 +500,14 @@ contract ArrakisStandardManager is
         uint256 startIndex_,
         uint256 endIndex_
     ) external view whenNotPaused returns (address[] memory) {
-        if (startIndex_ >= endIndex_)
+        if (startIndex_ >= endIndex_) {
             revert StartIndexLtEndIndex(startIndex_, endIndex_);
+        }
 
         uint256 vaultsLength = _vaults.length();
-        if (endIndex_ > vaultsLength)
+        if (endIndex_ > vaultsLength) {
             revert EndIndexGtNbOfVaults(endIndex_, vaultsLength);
+        }
 
         address[] memory vs = new address[](endIndex_ - startIndex_);
         for (uint256 i = startIndex_; i < endIndex_; i++) {
@@ -526,10 +559,14 @@ contract ArrakisStandardManager is
         // #region checks.
 
         // check vault address is not address zero.
-        if (address(params_.vault) == address(0)) revert AddressZero();
+        if (address(params_.vault) == address(0)) {
+            revert AddressZero();
+        }
 
         // check is not already in management.
-        if (_vaults.contains(params_.vault)) revert AlreadyInManagement();
+        if (_vaults.contains(params_.vault)) {
+            revert AlreadyInManagement();
+        }
 
         // check if the vault is deployed.
         if (params_.vault.code.length == 0) revert VaultNotDeployed();
@@ -562,22 +599,31 @@ contract ArrakisStandardManager is
         // #endregion interactions.
     }
 
-    function _updateParamsChecks(SetupParams memory params_) internal view {
+    function _updateParamsChecks(SetupParams memory params_)
+        internal
+        view
+    {
         // check if standard manager is the vault manager.
         address manager = IArrakisMetaVault(params_.vault).manager();
-        if (address(this) != manager)
+        if (address(this) != manager) {
             revert NotTheManager(address(this), manager);
+        }
 
         // check oracle is not address zero.
-        if (address(params_.oracle) == address(0)) revert AddressZero();
+        if (address(params_.oracle) == address(0)) {
+            revert AddressZero();
+        }
 
         // check slippage is lower than 10%
         // TODO: let maybe remove that check?
-        if (params_.maxSlippagePIPS > TEN_PERCENT) revert SlippageTooHigh();
+        if (params_.maxSlippagePIPS > TEN_PERCENT) {
+            revert SlippageTooHigh();
+        }
 
         // check we have a cooldown period.
-        if (params_.cooldownPeriod == 0) revert CooldownPeriodSetToZero();
+        if (params_.cooldownPeriod == 0) {
+            revert CooldownPeriodSetToZero();
+        }
     }
-
     // #endregion internal functions.
 }

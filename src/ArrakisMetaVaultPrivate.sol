@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisMetaVaultPrivate} from "./interfaces/IArrakisMetaVaultPrivate.sol";
+import {IArrakisMetaVaultPrivate} from
+    "./interfaces/IArrakisMetaVaultPrivate.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {ArrakisMetaVault} from "./abstracts/ArrakisMetaVault.sol";
-import {IArrakisLPModulePrivate} from "./interfaces/IArrakisLPModulePrivate.sol";
+import {IArrakisLPModulePrivate} from
+    "./interfaces/IArrakisLPModulePrivate.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {IERC721} from
+    "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {EnumerableSet} from
+    "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract ArrakisMetaVaultPrivate is
     ArrakisMetaVault,
@@ -48,7 +52,7 @@ contract ArrakisMetaVaultPrivate is
         uint256 amount1_
     ) external payable {
         // NOTE: should we also allow owner to be a depositor by default?
-        if(!_depositors.contains(msg.sender)) revert OnlyDepositor();
+        if (!_depositors.contains(msg.sender)) revert OnlyDepositor();
         _deposit(amount0_, amount1_);
 
         emit LogDeposit(amount0_, amount1_);
@@ -63,7 +67,11 @@ contract ArrakisMetaVaultPrivate is
     function withdraw(
         uint256 proportion_,
         address receiver_
-    ) external onlyOwnerCustom returns (uint256 amount0, uint256 amount1) {
+    )
+        external
+        onlyOwnerCustom
+        returns (uint256 amount0, uint256 amount1)
+    {
         (amount0, amount1) = _withdraw(receiver_, proportion_);
 
         emit LogWithdraw(proportion_, amount0, amount1);
@@ -71,13 +79,20 @@ contract ArrakisMetaVaultPrivate is
 
     /// @notice function used to whitelist depositors.
     /// @param depositors_  list of address that will be granted to depositor role.
-    function whitelistDepositors(address[] calldata depositors_) external onlyOwnerCustom {
+    function whitelistDepositors(address[] calldata depositors_)
+        external
+        onlyOwnerCustom
+    {
         uint256 length = depositors_.length;
-        for(uint256 i; i < length; i++) {
+        for (uint256 i; i < length; i++) {
             address depositor = depositors_[i];
 
-            if(depositor == address(0)) revert AddressZero("Depositor");
-            if(_depositors.contains(depositor)) revert DepositorAlreadyWhitelisted();
+            if (depositor == address(0)) {
+                revert AddressZero("Depositor");
+            }
+            if (_depositors.contains(depositor)) {
+                revert DepositorAlreadyWhitelisted();
+            }
 
             _depositors.add(depositor);
         }
@@ -87,12 +102,17 @@ contract ArrakisMetaVaultPrivate is
 
     /// @notice function used to blacklist depositors.
     /// @param depositors_ list of address who depositor role will be revoked.
-    function blacklistDepositors(address[] calldata depositors_) external onlyOwnerCustom() {
+    function blacklistDepositors(address[] calldata depositors_)
+        external
+        onlyOwnerCustom
+    {
         uint256 length = depositors_.length;
-        for(uint256 i; i < length; i++) {
+        for (uint256 i; i < length; i++) {
             address depositor = depositors_[i];
 
-            if(!_depositors.contains(depositor)) revert NotAlreadyWhitelistedDepositor();
+            if (!_depositors.contains(depositor)) {
+                revert NotAlreadyWhitelistedDepositor();
+            }
 
             _depositors.remove(depositor);
         }
@@ -109,7 +129,7 @@ contract ArrakisMetaVaultPrivate is
 
     /// @notice function used to get the list of depositors.
     /// @return depositors list of address granted to depositor role.
-    function depositors() external view returns(address[] memory) {
+    function depositors() external view returns (address[] memory) {
         return _depositors.values();
     }
 
@@ -130,12 +150,18 @@ contract ArrakisMetaVaultPrivate is
             amount1_
         );
 
-        payable(address(module)).functionCallWithValue(data, msg.value);
+        payable(address(module)).functionCallWithValue(
+            data, msg.value
+        );
     }
 
     function _onlyOwnerCheck() internal view override {
-        if (msg.sender != IERC721(nft).ownerOf(uint256(uint160(address(this)))))
+        if (
+            msg.sender
+                != IERC721(nft).ownerOf(uint256(uint160(address(this))))
+        ) {
             revert OnlyOwner();
+        }
     }
 
     // #endregion internal functions.

@@ -44,7 +44,9 @@ interface IArrakisStandardManager {
     error EmptyVaultsArray();
     error CallFailed(bytes payload);
     error StartIndexLtEndIndex(uint256 startIndex, uint256 endIndex);
-    error EndIndexGtNbOfVaults(uint256 endIndex, uint256 numberOfVaults);
+    error EndIndexGtNbOfVaults(
+        uint256 endIndex, uint256 numberOfVaults
+    );
     error OnlyGuardian(address caller, address guardian);
     error FactoryAlreadySet();
     error OnlyFactory(address caller, address factory);
@@ -75,8 +77,12 @@ interface IArrakisStandardManager {
         address receiver,
         uint256 newBalance
     );
-    event LogSetDefaultReceiver(address oldReceiver, address newReceiver);
-    event LogSetReceiverByToken(address indexed token, address receiver);
+    event LogSetDefaultReceiver(
+        address oldReceiver, address newReceiver
+    );
+    event LogSetReceiverByToken(
+        address indexed token, address receiver
+    );
     event LogWithdrawManagerBalance(
         address indexed receiver0,
         address indexed receiver1,
@@ -84,9 +90,13 @@ interface IArrakisStandardManager {
         uint256 amount1
     );
     event LogChangeManagerFee(address vault, uint256 newFeePIPS);
-    event LogIncreaseManagerFeeSubmission(address vault, uint256 newFeePIPS);
+    event LogIncreaseManagerFeeSubmission(
+        address vault, uint256 newFeePIPS
+    );
     event LogRebalance(address indexed vault, bytes[] payloads);
-    event LogSetModule(address indexed vault, address module, bytes[] payloads);
+    event LogSetModule(
+        address indexed vault, address module, bytes[] payloads
+    );
     event LogSetFactory(address vaultFactory);
 
     // #endregion events.
@@ -103,7 +113,8 @@ interface IArrakisStandardManager {
 
     /// @notice function used to set the default receiver of tokens earned.
     /// @param newDefaultReceiver_ address of the new default receiver of tokens.
-    function setDefaultReceiver(address newDefaultReceiver_) external;
+    function setDefaultReceiver(address newDefaultReceiver_)
+        external;
 
     /// @notice function used to set receiver of a specific token.
     /// @param vault_ address of the meta vault that contain the specific token.
@@ -127,7 +138,8 @@ interface IArrakisStandardManager {
     /// @notice function used to finalize a time lock fees increase on a vault.
     /// @param vault_ address of the vault where the fees increase will be
     /// applied.
-    function finalizeIncreaseManagerFeePIPS(address vault_) external;
+    function finalizeIncreaseManagerFeePIPS(address vault_)
+        external;
 
     /// @notice function used to submit a fees increase in a managed vault.
     /// @param vault_ address of the vault where fees will be increase after timeLock.
@@ -142,14 +154,17 @@ interface IArrakisStandardManager {
     /// @param vault_ from which fees will be collected.
     /// @return amount0 amount of token0 sent to receiver_
     /// @return amount1 amount of token1 sent to receiver_
-    function withdrawManagerBalance(
-        address vault_
-    ) external returns (uint256 amount0, uint256 amount1);
+    function withdrawManagerBalance(address vault_)
+        external
+        returns (uint256 amount0, uint256 amount1);
 
     /// @notice function used to manage vault's strategy.
     /// @param vault_ address of the vault that need a rebalance.
     /// @param payloads_ call data to do specific action of vault side.
-    function rebalance(address vault_, bytes[] calldata payloads_) external;
+    function rebalance(
+        address vault_,
+        bytes[] calldata payloads_
+    ) external;
 
     /// @notice function used to set a new module (strategy) for the vault.
     /// @param vault_ address of the vault the manager want to change module.
@@ -210,7 +225,7 @@ interface IArrakisStandardManager {
 
     /// @notice function used to get the default receiver of tokens earned in managed vault.
     /// @return defaultReceiver address of the default receiver.
-    function defaultReceiver() external view returns(address);
+    function defaultReceiver() external view returns (address);
 
     // #endregion  view functions.
 }

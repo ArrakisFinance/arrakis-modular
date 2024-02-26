@@ -7,8 +7,8 @@ contract SOTOracleMock {
     function getSqrtOraclePriceX96()
         external
         view
-        returns (uint160 sqrtOraclePriceX96) {
-            
+        returns (uint160 sqrtOraclePriceX96)
+    {
         return TickMath.getSqrtRatioAtTick(10);
     }
 }

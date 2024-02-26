@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisStandardManager} from "../../../../src/interfaces/IArrakisStandardManager.sol";
+import {IArrakisStandardManager} from
+    "../../../../src/interfaces/IArrakisStandardManager.sol";
 import {SetupParams} from "../../../../src/structs/SManager.sol";
 
 contract ArrakisMetaVaultFactoryMock {

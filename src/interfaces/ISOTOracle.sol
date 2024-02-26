@@ -14,11 +14,20 @@ interface ISOTOracle {
 
     function token1Base() external view returns (uint256);
 
-    function maxOracleUpdateDuration() external view returns (uint32);
+    function maxOracleUpdateDuration()
+        external
+        view
+        returns (uint32);
 
-    function feedToken0() external view returns (AggregatorV3Interface);
+    function feedToken0()
+        external
+        view
+        returns (AggregatorV3Interface);
 
-    function feedToken1() external view returns (AggregatorV3Interface);
+    function feedToken1()
+        external
+        view
+        returns (AggregatorV3Interface);
 
     // #endregion view functions.
 

@@ -2,7 +2,8 @@
 pragma solidity ^0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract SovereignALMMock {
     address public token0;
@@ -10,20 +11,31 @@ contract SovereignALMMock {
 
     uint160 public sqrtSpotPriceX96;
 
-    function setSqrtSpotPriceX96(uint160 sqrtSpotPriceX96_) external {
+    function setSqrtSpotPriceX96(uint160 sqrtSpotPriceX96_)
+        external
+    {
         sqrtSpotPriceX96 = sqrtSpotPriceX96_;
     }
 
-    function setToken0AndToken1(address token0_, address token1_) external {
+    function setToken0AndToken1(
+        address token0_,
+        address token1_
+    ) external {
         token0 = token0_;
         token1 = token1_;
     }
 
-    function getReservesAtPrice(
-        uint160
-    ) external view returns (uint128 reserves0, uint128 reserves1) {
-        reserves0 = SafeCast.toUint128(IERC20(token0).balanceOf(address(this)));
-        reserves1 = SafeCast.toUint128(IERC20(token1).balanceOf(address(this)));
+    function getReservesAtPrice(uint160)
+        external
+        view
+        returns (uint128 reserves0, uint128 reserves1)
+    {
+        reserves0 = SafeCast.toUint128(
+            IERC20(token0).balanceOf(address(this))
+        );
+        reserves1 = SafeCast.toUint128(
+            IERC20(token1).balanceOf(address(this))
+        );
     }
 
     function depositLiquidity(
@@ -32,8 +44,12 @@ contract SovereignALMMock {
         uint160,
         uint160
     ) external {
-        IERC20(token0).transferFrom(msg.sender, address(this), amount0);
-        IERC20(token1).transferFrom(msg.sender, address(this), amount1);
+        IERC20(token0).transferFrom(
+            msg.sender, address(this), amount0
+        );
+        IERC20(token1).transferFrom(
+            msg.sender, address(this), amount1
+        );
     }
 
     function withdrawLiquidity(
@@ -52,18 +68,13 @@ contract SovereignALMMock {
         uint128 _sqrtPriceHighX96,
         uint160 _expectedSqrtSpotPriceUpperX96,
         uint160 _expectedSqrtSpotPriceLowerX96
-    ) external {
-        
-    }
+    ) external {}
 
     function getAmmState()
         external
         view
-    returns (
-        uint160,
-        uint160,
-        uint160
-    ) {
-        return (sqrtSpotPriceX96, 0, 0); 
+        returns (uint160, uint160, uint160)
+    {
+        return (sqrtSpotPriceX96, 0, 0);
     }
 }

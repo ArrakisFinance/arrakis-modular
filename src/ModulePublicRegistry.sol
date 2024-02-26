@@ -2,9 +2,13 @@
 pragma solidity ^0.8.20;
 
 import {ModuleRegistry} from "./abstracts/ModuleRegistry.sol";
-import {IModulePublicRegistry} from "./interfaces/IModulePublicRegistry.sol";
+import {IModulePublicRegistry} from
+    "./interfaces/IModulePublicRegistry.sol";
 
-contract ModulePublicRegistry is ModuleRegistry, IModulePublicRegistry {
+contract ModulePublicRegistry is
+    ModuleRegistry,
+    IModulePublicRegistry
+{
     constructor(
         address factory_,
         address owner_,
@@ -25,17 +29,14 @@ contract ModulePublicRegistry is ModuleRegistry, IModulePublicRegistry {
         bytes calldata payload_
     ) external returns (address module) {
         _checkVaultNotAddressZero(vault_);
-        if (!factory.isPublicVault(vault_))
+        if (!factory.isPublicVault(vault_)) {
             revert NotPublicVault();
+        }
 
         module = _createModule(vault_, beacon_, payload_);
 
         emit LogCreatePublicModule(
-            beacon_,
-            payload_,
-            vault_,
-            msg.sender,
-            module
+            beacon_, payload_, vault_, msg.sender, module
         );
     }
 

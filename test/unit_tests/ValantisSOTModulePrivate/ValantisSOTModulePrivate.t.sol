@@ -6,42 +6,53 @@ import {console} from "forge-std/console.sol";
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 // #endregion foundry.
 // #region Valantis Module.
-import {ValantisModulePrivate} from "../../../src/modules/ValantisSOTModulePrivate.sol";
-import {IValantisSOTModule} from "../../../src/interfaces/IValantisSOTModule.sol";
-import {IArrakisLPModule} from "../../../src/interfaces/IArrakisLPModule.sol";
-import {IArrakisLPModulePrivate} from "../../../src/interfaces/IArrakisLPModulePrivate.sol";
+import {ValantisModulePrivate} from
+    "../../../src/modules/ValantisSOTModulePrivate.sol";
+import {IValantisSOTModule} from
+    "../../../src/interfaces/IValantisSOTModule.sol";
+import {IArrakisLPModule} from
+    "../../../src/interfaces/IArrakisLPModule.sol";
+import {IArrakisLPModulePrivate} from
+    "../../../src/interfaces/IArrakisLPModulePrivate.sol";
 // #endregion Valantis Module.
 
 // #region openzeppelin.
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 // #endregion openzeppelin.
 
 // #region constants.
-import {PIPS, TEN_PERCENT} from "../../../src/constants/CArrakis.sol";
+import {
+    PIPS, TEN_PERCENT
+} from "../../../src/constants/CArrakis.sol";
 // #endregion constants.
 
 // #region mocks.
 import {ArrakisMetaVaultMock} from "./mocks/ArrakisMetaVaultMock.sol";
 import {SovereignPoolMock} from "./mocks/SovereignPoolMock.sol";
 import {SovereignALMMock} from "./mocks/SovereignALMMock.sol";
-import {SovereignALMBuggy1Mock} from "./mocks/SovereignALMBuggy1Mock.sol";
-import {SovereignALMBuggy2Mock} from "./mocks/SovereignALMBuggy2Mock.sol";
+import {SovereignALMBuggy1Mock} from
+    "./mocks/SovereignALMBuggy1Mock.sol";
+import {SovereignALMBuggy2Mock} from
+    "./mocks/SovereignALMBuggy2Mock.sol";
 import {SovereignALMMock} from "./mocks/SovereignALMMock.sol";
 import {OracleMock} from "./mocks/OracleMock.sol";
 import {GuardianMock} from "./mocks/GuardianMock.sol";
 
 // #endregion mocks.
 
-import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol"; 
-import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol"; 
+import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
+import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 contract ValantisSOTModulePrivateTest is TestWrapper {
     // #region constant properties.
 
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant WETH =
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant USDC =
+        0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     uint256 public constant INIT0 = 2000e6;
     uint256 public constant INIT1 = 1e18;
@@ -70,13 +81,17 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         // #region create oracle.
 
         oracle = new OracleMock();
-        
+
         uint256 price0 = oracle.getPrice0();
         uint256 uPrice0 = FullMath.mulDiv(price0, 10_100, 10_000);
-        uint256 lPrice0 = FullMath.mulDiv(price0, 9_900, 10_000);
+        uint256 lPrice0 = FullMath.mulDiv(price0, 9900, 10_000);
 
-        expectedSqrtSpotPriceUpperX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(uPrice0), 2**96, 1));
-        expectedSqrtSpotPriceLowerX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(lPrice0), 2**96, 1));
+        expectedSqrtSpotPriceUpperX96 = SafeCast.toUint160(
+            FullMath.mulDiv(Math.sqrt(uPrice0), 2 ** 96, 1)
+        );
+        expectedSqrtSpotPriceLowerX96 = SafeCast.toUint160(
+            FullMath.mulDiv(Math.sqrt(lPrice0), 2 ** 96, 1)
+        );
 
         // #endregion create oracle.
 
@@ -146,7 +161,9 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
             )
         );
 
-        module.fund{value: 1 ether}(depositor, expectedAmount0, expectedAmount1);
+        module.fund{value: 1 ether}(
+            depositor, expectedAmount0, expectedAmount1
+        );
     }
 
     function testFundMsgValueNotZero() public {
@@ -166,7 +183,9 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         vm.prank(address(metaVault));
         vm.expectRevert(IValantisSOTModule.NoNativeToken.selector);
 
-        module.fund{value: 1 ether}(depositor, expectedAmount0, expectedAmount1);
+        module.fund{value: 1 ether}(
+            depositor, expectedAmount0, expectedAmount1
+        );
     }
 
     function testFundDepositorAddressZero() public {
@@ -228,7 +247,8 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
     }
 
     function testFundDeposit0() public {
-        SovereignALMBuggy1Mock buggySovereignALM = new SovereignALMBuggy1Mock();
+        SovereignALMBuggy1Mock buggySovereignALM =
+            new SovereignALMBuggy1Mock();
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
@@ -266,7 +286,8 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
     }
 
     function testFundDeposit1() public {
-        SovereignALMBuggy2Mock buggySovereignALM = new SovereignALMBuggy2Mock();
+        SovereignALMBuggy2Mock buggySovereignALM =
+            new SovereignALMBuggy2Mock();
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 

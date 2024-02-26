@@ -12,7 +12,10 @@ contract TestWrapper is Test {
         );
     }
 
-    function _reset(string memory url_, uint256 blockNumber) internal {
+    function _reset(
+        string memory url_,
+        uint256 blockNumber
+    ) internal {
         vm.createSelectFork(url_, blockNumber);
     }
 }

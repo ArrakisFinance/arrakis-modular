@@ -6,44 +6,58 @@ import {console} from "forge-std/console.sol";
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 // #endregion foundry.
 // #region Valantis Module.
-import {ValantisModulePublic} from "../../../src/modules/ValantisSOTModulePublic.sol";
-import {IValantisSOTModule} from "../../../src/interfaces/IValantisSOTModule.sol";
-import {IArrakisLPModule} from "../../../src/interfaces/IArrakisLPModule.sol";
+import {ValantisModulePublic} from
+    "../../../src/modules/ValantisSOTModulePublic.sol";
+import {IValantisSOTModule} from
+    "../../../src/interfaces/IValantisSOTModule.sol";
+import {IArrakisLPModule} from
+    "../../../src/interfaces/IArrakisLPModule.sol";
 // #endregion Valantis Module.
 
 // #region openzeppelin.
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 // #endregion openzeppelin.
 
 // #region constants.
-import {PIPS, TEN_PERCENT} from "../../../src/constants/CArrakis.sol";
+import {
+    PIPS, TEN_PERCENT
+} from "../../../src/constants/CArrakis.sol";
 // #endregion constants.
 
 // #region mocks.
 import {ArrakisMetaVaultMock} from "./mocks/ArrakisMetaVaultMock.sol";
 import {SovereignPoolMock} from "./mocks/SovereignPoolMock.sol";
 import {SovereignALMMock} from "./mocks/SovereignALMMock.sol";
-import {SovereignALMBuggyMock} from "./mocks/SovereignALMBuggyMock.sol";
-import {SovereignALMBuggy2Mock} from "./mocks/SovereignALMBuggy2Mock.sol";
-import {SovereignALMBuggy3Mock} from "./mocks/SovereignALMBuggy3Mock.sol";
-import {SovereignALMBuggy4Mock} from "./mocks/SovereignALMBuggy4Mock.sol";
-import {SovereignALMBuggy5Mock} from "./mocks/SovereignALMBuggy5Mock.sol";
-import {SovereignALMBuggy6Mock} from "./mocks/SovereignALMBuggy6Mock.sol";
+import {SovereignALMBuggyMock} from
+    "./mocks/SovereignALMBuggyMock.sol";
+import {SovereignALMBuggy2Mock} from
+    "./mocks/SovereignALMBuggy2Mock.sol";
+import {SovereignALMBuggy3Mock} from
+    "./mocks/SovereignALMBuggy3Mock.sol";
+import {SovereignALMBuggy4Mock} from
+    "./mocks/SovereignALMBuggy4Mock.sol";
+import {SovereignALMBuggy5Mock} from
+    "./mocks/SovereignALMBuggy5Mock.sol";
+import {SovereignALMBuggy6Mock} from
+    "./mocks/SovereignALMBuggy6Mock.sol";
 import {OracleMock} from "./mocks/OracleMock.sol";
 import {GuardianMock} from "./mocks/GuardianMock.sol";
 
 // #endregion mocks.
 
-import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol"; 
-import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol"; 
+import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
+import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 contract ValantisSOTModuleTest is TestWrapper {
     // #region constant properties.
 
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant WETH =
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant USDC =
+        0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     uint256 public constant INIT0 = 2000e6;
     uint256 public constant INIT1 = 1e18;
@@ -72,13 +86,21 @@ contract ValantisSOTModuleTest is TestWrapper {
         // #region create oracle.
 
         oracle = new OracleMock();
-        
+
         uint256 price0 = oracle.getPrice0();
         uint256 uPrice0 = FullMath.mulDiv(price0, 10_100, 10_000);
-        uint256 lPrice0 = FullMath.mulDiv(price0, 9_900, 10_000);
+        uint256 lPrice0 = FullMath.mulDiv(price0, 9900, 10_000);
 
-        expectedSqrtSpotPriceUpperX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(uPrice0), 2**96, Math.sqrt(1e6)));
-        expectedSqrtSpotPriceLowerX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(lPrice0), 2**96, Math.sqrt(1e6)));
+        expectedSqrtSpotPriceUpperX96 = SafeCast.toUint160(
+            FullMath.mulDiv(
+                Math.sqrt(uPrice0), 2 ** 96, Math.sqrt(1e6)
+            )
+        );
+        expectedSqrtSpotPriceLowerX96 = SafeCast.toUint160(
+            FullMath.mulDiv(
+                Math.sqrt(lPrice0), 2 ** 96, Math.sqrt(1e6)
+            )
+        );
 
         // #endregion create oracle.
 
@@ -197,7 +219,9 @@ contract ValantisSOTModuleTest is TestWrapper {
     function testConstructorSlippageBiggerThanTenPercent() public {
         module = new ValantisModulePublic();
 
-        vm.expectRevert(IValantisSOTModule.MaxSlippageGtTenPercent.selector);
+        vm.expectRevert(
+            IValantisSOTModule.MaxSlippageGtTenPercent.selector
+        );
 
         module.initialize(
             address(metaVault),
@@ -438,7 +462,8 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testDepositFailedDeposit0() public {
-        SovereignALMBuggy5Mock buggySovereignALM = new SovereignALMBuggy5Mock();
+        SovereignALMBuggy5Mock buggySovereignALM =
+            new SovereignALMBuggy5Mock();
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
@@ -477,7 +502,8 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testDepositFailedDeposit1() public {
-        SovereignALMBuggy6Mock buggySovereignALM = new SovereignALMBuggy6Mock();
+        SovereignALMBuggy6Mock buggySovereignALM =
+            new SovereignALMBuggy6Mock();
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
@@ -695,7 +721,8 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testWithdrawActualAmt0DifferentThanExpected() public {
-        SovereignALMBuggyMock buggySovereignALM = new SovereignALMBuggyMock();
+        SovereignALMBuggyMock buggySovereignALM =
+            new SovereignALMBuggyMock();
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
@@ -738,13 +765,20 @@ contract ValantisSOTModuleTest is TestWrapper {
         address receiver = vm.addr(20);
         sovereignPool.setReserves(expectedAmount0, expectedAmount1);
         vm.prank(address(metaVault));
-        vm.expectRevert(abi.encodeWithSelector(IValantisSOTModule.Actual0DifferentExpected.selector, expectedAmount0 / 2, expectedAmount0));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IValantisSOTModule.Actual0DifferentExpected.selector,
+                expectedAmount0 / 2,
+                expectedAmount0
+            )
+        );
 
         module.withdraw(receiver, PIPS);
     }
 
     function testWithdrawActualAmt1DifferentThanExpected() public {
-        SovereignALMBuggy2Mock buggySovereignALM = new SovereignALMBuggy2Mock();
+        SovereignALMBuggy2Mock buggySovereignALM =
+            new SovereignALMBuggy2Mock();
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
@@ -787,7 +821,13 @@ contract ValantisSOTModuleTest is TestWrapper {
         address receiver = vm.addr(20);
         sovereignPool.setReserves(expectedAmount0, expectedAmount1);
         vm.prank(address(metaVault));
-        vm.expectRevert(abi.encodeWithSelector(IValantisSOTModule.Actual1DifferentExpected.selector, expectedAmount1 / 2, expectedAmount1));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IValantisSOTModule.Actual1DifferentExpected.selector,
+                expectedAmount1 / 2,
+                expectedAmount1
+            )
+        );
 
         module.withdraw(receiver, PIPS);
     }
@@ -801,11 +841,26 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 expectedMinReturn = 1230e6;
         uint256 amountIn = 0.5 ether;
         address router = address(this);
-        bytes memory payload = abi.encodeWithSelector(this.swap.selector);
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap.selector);
 
-        vm.expectRevert(abi.encodeWithSelector(IArrakisLPModule.OnlyManager.selector, address(this), manager));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisLPModule.OnlyManager.selector,
+                address(this),
+                manager
+            )
+        );
 
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
     }
 
     function testSwapExpectedMinReturnTooLow() public {
@@ -813,11 +868,22 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 expectedMinReturn = 1230e6;
         uint256 amountIn = 0.7 ether;
         address router = address(this);
-        bytes memory payload = abi.encodeWithSelector(this.swap.selector);
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap.selector);
 
-        vm.expectRevert(IValantisSOTModule.ExpectedMinReturnTooLow.selector);
+        vm.expectRevert(
+            IValantisSOTModule.ExpectedMinReturnTooLow.selector
+        );
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
     }
 
     function testSwapExpectedMinReturnTooLow2() public {
@@ -825,11 +891,22 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 expectedMinReturn = 0.1 ether;
         uint256 amountIn = 1230e6;
         address router = address(this);
-        bytes memory payload = abi.encodeWithSelector(this.swap.selector);
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap.selector);
 
-        vm.expectRevert(IValantisSOTModule.ExpectedMinReturnTooLow.selector);
+        vm.expectRevert(
+            IValantisSOTModule.ExpectedMinReturnTooLow.selector
+        );
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
     }
 
     function testSwapNotEnoughToken0() public {
@@ -837,13 +914,22 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 expectedMinReturn = 0.6 ether;
         uint256 amountIn = 1250e6;
         address router = address(this);
-        bytes memory payload = abi.encodeWithSelector(this.swap.selector);
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap.selector);
 
-        deal(USDC, address(sovereignALM), amountIn/2);
+        deal(USDC, address(sovereignALM), amountIn / 2);
 
         vm.expectRevert(IValantisSOTModule.NotEnoughToken0.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
     }
 
     function testSwapNotEnoughToken1() public {
@@ -851,17 +937,27 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 expectedMinReturn = 1250e6;
         uint256 amountIn = 0.6 ether;
         address router = address(this);
-        bytes memory payload = abi.encodeWithSelector(this.swap.selector);
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap.selector);
 
-        deal(WETH, address(sovereignALM), amountIn/2);
+        deal(WETH, address(sovereignALM), amountIn / 2);
 
         vm.expectRevert(IValantisSOTModule.NotEnoughToken1.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
     }
 
     function testSwapActual0DifferenThanExpected() public {
-        SovereignALMBuggyMock buggySovereignALM = new SovereignALMBuggyMock();
+        SovereignALMBuggyMock buggySovereignALM =
+            new SovereignALMBuggyMock();
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
@@ -883,18 +979,34 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 expectedMinReturn = 0.6 ether;
         uint256 amountIn = 1250e6;
         address router = address(this);
-        bytes memory payload = abi.encodeWithSelector(this.swap.selector);
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap.selector);
 
         sovereignPool.setReserves(amountIn, 0);
         deal(USDC, address(buggySovereignALM), amountIn);
 
-        vm.expectRevert(abi.encodeWithSelector(IValantisSOTModule.Actual0DifferentExpected.selector, amountIn/2, amountIn));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IValantisSOTModule.Actual0DifferentExpected.selector,
+                amountIn / 2,
+                amountIn
+            )
+        );
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
     }
 
     function testSwapActual1DifferenThanExpected() public {
-        SovereignALMBuggy2Mock buggySovereignALM = new SovereignALMBuggy2Mock();
+        SovereignALMBuggy2Mock buggySovereignALM =
+            new SovereignALMBuggy2Mock();
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
@@ -916,14 +1028,29 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 expectedMinReturn = 1250e6;
         uint256 amountIn = 0.6 ether;
         address router = address(this);
-        bytes memory payload = abi.encodeWithSelector(this.swap.selector);
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap.selector);
 
         sovereignPool.setReserves(0, amountIn);
         deal(WETH, address(buggySovereignALM), amountIn);
 
-        vm.expectRevert(abi.encodeWithSelector(IValantisSOTModule.Actual1DifferentExpected.selector, amountIn/2, amountIn));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IValantisSOTModule.Actual1DifferentExpected.selector,
+                amountIn / 2,
+                amountIn
+            )
+        );
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
     }
 
     function testSwapCallFailed() public {
@@ -931,14 +1058,23 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 expectedMinReturn = 1250e6;
         uint256 amountIn = 0.6 ether;
         address router = address(this);
-        bytes memory payload = abi.encodeWithSelector(this.failedSwap.selector);
+        bytes memory payload =
+            abi.encodeWithSelector(this.failedSwap.selector);
 
         sovereignPool.setReserves(0, amountIn);
         deal(WETH, address(sovereignALM), amountIn);
 
         vm.expectRevert(IValantisSOTModule.SwapCallFailed.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
     }
 
     function testSwapZeroForOneSlippageTooHigh() public {
@@ -946,14 +1082,23 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 expectedMinReturn = 0.6 ether;
         uint256 amountIn = 1250e6;
         address router = address(this);
-        bytes memory payload = abi.encodeWithSelector(this.swap.selector);
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap.selector);
 
         sovereignPool.setReserves(amountIn, 0);
         deal(USDC, address(sovereignALM), amountIn);
 
         vm.expectRevert(IValantisSOTModule.SlippageTooHigh.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
     }
 
     function testSwapOneForZeroSlippageTooHigh() public {
@@ -961,18 +1106,28 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 expectedMinReturn = 1250e6;
         uint256 amountIn = 0.6 ether;
         address router = address(this);
-        bytes memory payload = abi.encodeWithSelector(this.swap1.selector);
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap1.selector);
 
         sovereignPool.setReserves(0, amountIn);
         deal(WETH, address(sovereignALM), amountIn);
 
         vm.expectRevert(IValantisSOTModule.SlippageTooHigh.selector);
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
     }
 
     function testSwapNotDepositedAllToken0() public {
-        SovereignALMBuggy3Mock buggySovereignALM = new SovereignALMBuggy3Mock();
+        SovereignALMBuggy3Mock buggySovereignALM =
+            new SovereignALMBuggy3Mock();
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
@@ -994,18 +1149,30 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 expectedMinReturn = 1250e6;
         uint256 amountIn = 0.6 ether;
         address router = address(this);
-        bytes memory payload = abi.encodeWithSelector(this.swap2.selector);
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap2.selector);
 
         sovereignPool.setReserves(0, amountIn);
         deal(WETH, address(buggySovereignALM), amountIn);
 
-        vm.expectRevert(IValantisSOTModule.NotDepositedAllToken0.selector);
+        vm.expectRevert(
+            IValantisSOTModule.NotDepositedAllToken0.selector
+        );
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
     }
 
     function testSwapNotDepositedAllToken1() public {
-        SovereignALMBuggy4Mock buggySovereignALM = new SovereignALMBuggy4Mock();
+        SovereignALMBuggy4Mock buggySovereignALM =
+            new SovereignALMBuggy4Mock();
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
@@ -1027,14 +1194,25 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 expectedMinReturn = 0.6 ether;
         uint256 amountIn = 1250e6;
         address router = address(this);
-        bytes memory payload = abi.encodeWithSelector(this.swap3.selector);
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap3.selector);
 
         sovereignPool.setReserves(amountIn, 0);
         deal(USDC, address(buggySovereignALM), amountIn);
 
-        vm.expectRevert(IValantisSOTModule.NotDepositedAllToken1.selector);
+        vm.expectRevert(
+            IValantisSOTModule.NotDepositedAllToken1.selector
+        );
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
     }
 
     function testSwap() public {
@@ -1042,13 +1220,22 @@ contract ValantisSOTModuleTest is TestWrapper {
         uint256 expectedMinReturn = 0.6 ether;
         uint256 amountIn = 1250e6;
         address router = address(this);
-        bytes memory payload = abi.encodeWithSelector(this.swap3.selector);
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap3.selector);
 
         sovereignPool.setReserves(amountIn, 0);
         deal(USDC, address(sovereignALM), amountIn);
 
         vm.prank(manager);
-        module.swap(zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
     }
 
     // #endregion test swap.
@@ -1056,27 +1243,51 @@ contract ValantisSOTModuleTest is TestWrapper {
     // #region test setPriceBounds.
 
     function testSetPriceBoundsOnlyManager() public {
-        uint128 sqrtPriceLowX96 = SafeCast.toUint128(TickMath.getSqrtRatioAtTick(10));
-        uint128 sqrtPriceHighX96 = SafeCast.toUint128(TickMath.getSqrtRatioAtTick(10));
+        uint128 sqrtPriceLowX96 =
+            SafeCast.toUint128(TickMath.getSqrtRatioAtTick(10));
+        uint128 sqrtPriceHighX96 =
+            SafeCast.toUint128(TickMath.getSqrtRatioAtTick(10));
 
-        uint160 expectedSqrtSpotPriceUpperX96 = TickMath.getSqrtRatioAtTick(31);
-        uint160 expectedSqrtSpotPriceLowerX96 = TickMath.getSqrtRatioAtTick(30);
+        uint160 expectedSqrtSpotPriceUpperX96 =
+            TickMath.getSqrtRatioAtTick(31);
+        uint160 expectedSqrtSpotPriceLowerX96 =
+            TickMath.getSqrtRatioAtTick(30);
 
-        vm.expectRevert(abi.encodeWithSelector(IArrakisLPModule.OnlyManager.selector, address(this), manager));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisLPModule.OnlyManager.selector,
+                address(this),
+                manager
+            )
+        );
 
-        module.setPriceBounds(sqrtPriceLowX96, sqrtPriceHighX96, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96);
+        module.setPriceBounds(
+            sqrtPriceLowX96,
+            sqrtPriceHighX96,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96
+        );
     }
 
     function testSetPriceBounds() public {
-        uint128 sqrtPriceLowX96 = SafeCast.toUint128(TickMath.getSqrtRatioAtTick(10));
-        uint128 sqrtPriceHighX96 = SafeCast.toUint128(TickMath.getSqrtRatioAtTick(10));
+        uint128 sqrtPriceLowX96 =
+            SafeCast.toUint128(TickMath.getSqrtRatioAtTick(10));
+        uint128 sqrtPriceHighX96 =
+            SafeCast.toUint128(TickMath.getSqrtRatioAtTick(10));
 
-        uint160 expectedSqrtSpotPriceUpperX96 = TickMath.getSqrtRatioAtTick(31);
-        uint160 expectedSqrtSpotPriceLowerX96 = TickMath.getSqrtRatioAtTick(30);
+        uint160 expectedSqrtSpotPriceUpperX96 =
+            TickMath.getSqrtRatioAtTick(31);
+        uint160 expectedSqrtSpotPriceLowerX96 =
+            TickMath.getSqrtRatioAtTick(30);
 
         vm.prank(manager);
 
-        module.setPriceBounds(sqrtPriceLowX96, sqrtPriceHighX96, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96);
+        module.setPriceBounds(
+            sqrtPriceLowX96,
+            sqrtPriceHighX96,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96
+        );
     }
 
     // #endregion test setPriceBounds.
@@ -1088,10 +1299,16 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         price0 = FullMath.mulDiv(price0, 88, 100);
 
-        uint160 sqrtSpotPriceX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(price0), 2**96, Math.sqrt(1e6)));
+        uint160 sqrtSpotPriceX96 = SafeCast.toUint160(
+            FullMath.mulDiv(
+                Math.sqrt(price0), 2 ** 96, Math.sqrt(1e6)
+            )
+        );
         // #region set amm sqrtSpotPriceX96.
 
-        sovereignALM.setSqrtSpotPriceX96(SafeCast.toUint160(sqrtSpotPriceX96));
+        sovereignALM.setSqrtSpotPriceX96(
+            SafeCast.toUint160(sqrtSpotPriceX96)
+        );
 
         // #endregion set amm sqrtSpotPriceX96.
 
@@ -1115,10 +1332,16 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         price0 = FullMath.mulDiv(price0, 95, 100);
 
-        uint160 sqrtSpotPriceX96 = SafeCast.toUint160(FullMath.mulDiv(Math.sqrt(price0), 2**96, Math.sqrt(1e6)));
+        uint160 sqrtSpotPriceX96 = SafeCast.toUint160(
+            FullMath.mulDiv(
+                Math.sqrt(price0), 2 ** 96, Math.sqrt(1e6)
+            )
+        );
         // #region set amm sqrtSpotPriceX96.
 
-        sovereignALM.setSqrtSpotPriceX96(SafeCast.toUint160(sqrtSpotPriceX96));
+        sovereignALM.setSqrtSpotPriceX96(
+            SafeCast.toUint160(sqrtSpotPriceX96)
+        );
 
         // #endregion set amm sqrtSpotPriceX96.
 
@@ -1135,7 +1358,9 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         sovereignPool.setManagesFees(2000e6, 1e18);
 
-        assertEq(IERC20(USDC).balanceOf(address(sovereignPool)), 2000e6);
+        assertEq(
+            IERC20(USDC).balanceOf(address(sovereignPool)), 2000e6
+        );
         assertEq(IERC20(WETH).balanceOf(address(sovereignPool)), 1e18);
 
         assertEq(IERC20(USDC).balanceOf(manager), 0);
@@ -1174,8 +1399,12 @@ contract ValantisSOTModuleTest is TestWrapper {
         assertEq(sovereignPool.poolManagerFeeBips(), 0);
 
         vm.prank(manager);
-        vm.expectRevert(abi.encodeWithSelector(IArrakisLPModule.NewFeesGtPIPS.selector, PIPS+1));
-        module.setManagerFeePIPS(PIPS+1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisLPModule.NewFeesGtPIPS.selector, PIPS + 1
+            )
+        );
+        module.setManagerFeePIPS(PIPS + 1);
     }
 
     function testSetManagerFeePIPS() public {
@@ -1253,7 +1482,8 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         uint160 priceX96 = 1e18;
 
-        (uint256 amount0, uint256 amount1) = module.totalUnderlyingAtPrice(priceX96);
+        (uint256 amount0, uint256 amount1) =
+            module.totalUnderlyingAtPrice(priceX96);
 
         assertEq(amount0, 2000e6);
         assertEq(amount1, 1e18);
@@ -1269,12 +1499,16 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function swap1() external {
-        IERC20(WETH).transferFrom(msg.sender, address(this), 0.6 ether);
+        IERC20(WETH).transferFrom(
+            msg.sender, address(this), 0.6 ether
+        );
         deal(USDC, msg.sender, 1000e6);
     }
 
     function swap2() external {
-        IERC20(WETH).transferFrom(msg.sender, address(this), 0.6 ether);
+        IERC20(WETH).transferFrom(
+            msg.sender, address(this), 0.6 ether
+        );
         deal(USDC, msg.sender, 1250e6);
     }
 

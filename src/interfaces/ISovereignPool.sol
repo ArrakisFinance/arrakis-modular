@@ -2,7 +2,8 @@
 pragma solidity ^0.8.20;
 
 interface ISovereignPool {
-    function setPoolManagerFeeBips(uint256 poolManagerFeeBips_) external;
+    function setPoolManagerFeeBips(uint256 poolManagerFeeBips_)
+        external;
 
     function setPoolManager(address manager_) external;
 
@@ -18,7 +19,10 @@ interface ISovereignPool {
 
     // #region view functions.
 
-    function getPoolManagerFees() external view returns (uint256 poolManagerFee0, uint256 poolManagerFee1);
+    function getPoolManagerFees()
+        external
+        view
+        returns (uint256 poolManagerFee0, uint256 poolManagerFee1);
 
     function poolManagerFeeBips() external view returns (uint256);
 

@@ -1,19 +1,37 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisPublicVaultRouter, AddLiquidityData, SwapAndAddData, RemoveLiquidityData, AddLiquidityPermit2Data, SwapAndAddPermit2Data, RemoveLiquidityPermit2Data} from "./interfaces/IArrakisPublicVaultRouter.sol";
+import {
+    IArrakisPublicVaultRouter,
+    AddLiquidityData,
+    SwapAndAddData,
+    RemoveLiquidityData,
+    AddLiquidityPermit2Data,
+    SwapAndAddPermit2Data,
+    RemoveLiquidityPermit2Data
+} from "./interfaces/IArrakisPublicVaultRouter.sol";
 import {TokenPermissions} from "./structs/SPermit2.sol";
-import {IArrakisMetaVaultFactory} from "./interfaces/IArrakisMetaVaultFactory.sol";
+import {IArrakisMetaVaultFactory} from
+    "./interfaces/IArrakisMetaVaultFactory.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
-import {IArrakisMetaVaultPublic} from "./interfaces/IArrakisMetaVaultPublic.sol";
-import {IRouterSwapExecutor} from "./interfaces/IRouterSwapExecutor.sol";
-import {IPermit2, SignatureTransferDetails} from "./interfaces/IPermit2.sol";
+import {IArrakisMetaVaultPublic} from
+    "./interfaces/IArrakisMetaVaultPublic.sol";
+import {IRouterSwapExecutor} from
+    "./interfaces/IRouterSwapExecutor.sol";
+import {
+    IPermit2,
+    SignatureTransferDetails
+} from "./interfaces/IPermit2.sol";
 import {IWETH9} from "./interfaces/IWETH9.sol";
 import {PIPS} from "./constants/CArrakis.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {
+    SafeERC20,
+    IERC20
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from
+    "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
@@ -59,12 +77,9 @@ contract ArrakisPublicVaultRouter is
         address weth_
     ) {
         if (
-            nativeToken_ == address(0) ||
-            permit2_ == address(0) ||
-            swapper_ == address(0) ||
-            owner_ == address(0) ||
-            factory_ == address(0) ||
-            weth_ == address(0)
+            nativeToken_ == address(0) || permit2_ == address(0)
+                || swapper_ == address(0) || owner_ == address(0)
+                || factory_ == address(0) || weth_ == address(0)
         ) revert AddressZero();
 
         nativeToken = nativeToken_;
@@ -96,33 +111,36 @@ contract ArrakisPublicVaultRouter is
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
-    function addLiquidity(
-        AddLiquidityData memory params_
-    )
+    function addLiquidity(AddLiquidityData memory params_)
         external
         payable
         nonReentrant
         whenNotPaused
         onlyPublicVault(params_.vault)
-        returns (uint256 amount0, uint256 amount1, uint256 sharesReceived)
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 sharesReceived
+        )
     {
         // #region checks.
-        if (params_.amount0Max == 0 && params_.amount1Max == 0)
+        if (params_.amount0Max == 0 && params_.amount1Max == 0) {
             revert EmptyMaxAmounts();
+        }
 
         (sharesReceived, amount0, amount1) = _getMintAmounts(
-            params_.vault,
-            params_.amount0Max,
-            params_.amount1Max
+            params_.vault, params_.amount0Max, params_.amount1Max
         );
 
         if (sharesReceived == 0) revert NothingToMint();
 
         if (
-            amount0 < params_.amount0Min ||
-            amount1 < params_.amount1Min ||
-            sharesReceived < params_.amountSharesMin
-        ) revert BelowMinAmounts();
+            amount0 < params_.amount0Min
+                || amount1 < params_.amount1Min
+                || sharesReceived < params_.amountSharesMin
+        ) {
+            revert BelowMinAmounts();
+        }
 
         address token0 = IArrakisMetaVault(params_.vault).token0();
         address token1 = IArrakisMetaVault(params_.vault).token1();
@@ -132,11 +150,15 @@ contract ArrakisPublicVaultRouter is
         // #region interactions.
 
         if (token0 != nativeToken && amount0 > 0) {
-            IERC20(token0).safeTransferFrom(msg.sender, address(this), amount0);
+            IERC20(token0).safeTransferFrom(
+                msg.sender, address(this), amount0
+            );
         }
 
         if (token1 != nativeToken && amount1 > 0) {
-            IERC20(token1).safeTransferFrom(msg.sender, address(this), amount1);
+            IERC20(token1).safeTransferFrom(
+                msg.sender, address(this), amount1
+            );
         }
 
         _addLiquidity(
@@ -167,9 +189,7 @@ contract ArrakisPublicVaultRouter is
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
-    function swapAndAddLiquidity(
-        SwapAndAddData memory params_
-    )
+    function swapAndAddLiquidity(SwapAndAddData memory params_)
         external
         payable
         nonReentrant
@@ -185,26 +205,30 @@ contract ArrakisPublicVaultRouter is
     {
         // #region checks.
 
-        if (params_.addData.amount0Max == 0 && params_.addData.amount1Max == 0)
+        if (
+            params_.addData.amount0Max == 0
+                && params_.addData.amount1Max == 0
+        ) {
             revert EmptyMaxAmounts();
+        }
 
-        address token0 = IArrakisMetaVault(params_.addData.vault).token0();
-        address token1 = IArrakisMetaVault(params_.addData.vault).token1();
+        address token0 =
+            IArrakisMetaVault(params_.addData.vault).token0();
+        address token1 =
+            IArrakisMetaVault(params_.addData.vault).token1();
 
         // #endregion checks.
 
         if (
-            token0 == nativeToken &&
-            params_.addData.amount0Max > 0 &&
-            msg.value != params_.addData.amount0Max
+            token0 == nativeToken && params_.addData.amount0Max > 0
+                && msg.value != params_.addData.amount0Max
         ) {
             revert NotEnoughNativeTokenSent();
         }
 
         if (
-            token1 == nativeToken &&
-            params_.addData.amount1Max > 0 &&
-            msg.value != params_.addData.amount1Max
+            token1 == nativeToken && params_.addData.amount1Max > 0
+                && msg.value != params_.addData.amount1Max
         ) {
             revert NotEnoughNativeTokenSent();
         }
@@ -213,37 +237,26 @@ contract ArrakisPublicVaultRouter is
 
         if (params_.addData.amount0Max > 0 && token0 != nativeToken) {
             IERC20(token0).safeTransferFrom(
-                msg.sender,
-                address(this),
-                params_.addData.amount0Max
+                msg.sender, address(this), params_.addData.amount0Max
             );
         }
         if (params_.addData.amount1Max > 0 && token1 != nativeToken) {
             IERC20(token1).safeTransferFrom(
-                msg.sender,
-                address(this),
-                params_.addData.amount1Max
+                msg.sender, address(this), params_.addData.amount1Max
             );
         }
 
         // #endregion interactions.
 
-        (
-            amount0,
-            amount1,
-            sharesReceived,
-            amount0Diff,
-            amount1Diff
-        ) = _swapAndAddLiquiditySendBackLeftOver(params_, token0, token1);
+        (amount0, amount1, sharesReceived, amount0Diff, amount1Diff) =
+        _swapAndAddLiquiditySendBackLeftOver(params_, token0, token1);
     }
 
     /// @notice removeLiquidity removes liquidity from vault and burns LP tokens
     /// @param params_ RemoveLiquidityData struct containing data for withdrawals
     /// @return amount0 actual amount of token0 transferred to receiver for burning `burnAmount`
     /// @return amount1 actual amount of token1 transferred to receiver for burning `burnAmount`
-    function removeLiquidity(
-        RemoveLiquidityData memory params_
-    )
+    function removeLiquidity(RemoveLiquidityData memory params_)
         external
         nonReentrant
         whenNotPaused
@@ -253,9 +266,7 @@ contract ArrakisPublicVaultRouter is
         if (params_.burnAmount == 0) revert NothingToBurn();
 
         IERC20(params_.vault).safeTransferFrom(
-            msg.sender,
-            address(this),
-            params_.burnAmount
+            msg.sender, address(this), params_.burnAmount
         );
 
         (amount0, amount1) = _removeLiquidity(params_);
@@ -274,11 +285,19 @@ contract ArrakisPublicVaultRouter is
         nonReentrant
         whenNotPaused
         onlyPublicVault(params_.addData.vault)
-        returns (uint256 amount0, uint256 amount1, uint256 sharesReceived)
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 sharesReceived
+        )
     {
         // #region checks.
-        if (params_.addData.amount0Max == 0 && params_.addData.amount1Max == 0)
+        if (
+            params_.addData.amount0Max == 0
+                && params_.addData.amount1Max == 0
+        ) {
             revert EmptyMaxAmounts();
+        }
 
         (sharesReceived, amount0, amount1) = _getMintAmounts(
             params_.addData.vault,
@@ -289,17 +308,21 @@ contract ArrakisPublicVaultRouter is
         if (sharesReceived == 0) revert NothingToMint();
 
         if (
-            amount0 < params_.addData.amount0Min ||
-            amount1 < params_.addData.amount1Min ||
-            sharesReceived < params_.addData.amountSharesMin
+            amount0 < params_.addData.amount0Min
+                || amount1 < params_.addData.amount1Min
+                || sharesReceived < params_.addData.amountSharesMin
         ) revert BelowMinAmounts();
 
-        address token0 = IArrakisMetaVault(params_.addData.vault).token0();
-        address token1 = IArrakisMetaVault(params_.addData.vault).token1();
+        address token0 =
+            IArrakisMetaVault(params_.addData.vault).token0();
+        address token1 =
+            IArrakisMetaVault(params_.addData.vault).token1();
 
         // #endregion checks.
 
-        _permit2AddLengthOneOrTwo(params_, token0, token1, amount0, amount1);
+        _permit2AddLengthOneOrTwo(
+            params_, token0, token1, amount0, amount1
+        );
 
         _addLiquidity(
             params_.addData.vault,
@@ -336,24 +359,25 @@ contract ArrakisPublicVaultRouter is
         )
     {
         if (
-            params_.swapAndAddData.addData.amount0Max == 0 &&
-            params_.swapAndAddData.addData.amount1Max == 0
-        ) revert EmptyMaxAmounts();
+            params_.swapAndAddData.addData.amount0Max == 0
+                && params_.swapAndAddData.addData.amount1Max == 0
+        ) {
+            revert EmptyMaxAmounts();
+        }
 
-        address token0 = IArrakisMetaVault(params_.swapAndAddData.addData.vault)
-            .token0();
-        address token1 = IArrakisMetaVault(params_.swapAndAddData.addData.vault)
-            .token1();
+        address token0 = IArrakisMetaVault(
+            params_.swapAndAddData.addData.vault
+        ).token0();
+        address token1 = IArrakisMetaVault(
+            params_.swapAndAddData.addData.vault
+        ).token1();
 
         _permit2SwapAndAddLengthOneOrTwo(params_, token0, token1);
 
-        (
-            amount0,
-            amount1,
-            sharesReceived,
-            amount0Diff,
-            amount1Diff
-        ) = _swapAndAddLiquiditySendBackLeftOver(params_.swapAndAddData, token0, token1);
+        (amount0, amount1, sharesReceived, amount0Diff, amount1Diff) =
+        _swapAndAddLiquiditySendBackLeftOver(
+            params_.swapAndAddData, token0, token1
+        );
     }
 
     /// @notice removeLiquidityPermit2 removes liquidity from vault and burns LP tokens
@@ -369,13 +393,15 @@ contract ArrakisPublicVaultRouter is
         onlyPublicVault(params_.removeData.vault)
         returns (uint256 amount0, uint256 amount1)
     {
-        if (params_.removeData.burnAmount == 0) revert NothingToBurn();
+        if (params_.removeData.burnAmount == 0) {
+            revert NothingToBurn();
+        }
 
-        SignatureTransferDetails
-            memory transferDetails = SignatureTransferDetails({
-                to: address(this),
-                requestedAmount: params_.removeData.burnAmount
-            });
+        SignatureTransferDetails memory transferDetails =
+        SignatureTransferDetails({
+            to: address(this),
+            requestedAmount: params_.removeData.burnAmount
+        });
         permit2.permitTransferFrom(
             params_.permit,
             transferDetails,
@@ -391,18 +417,21 @@ contract ArrakisPublicVaultRouter is
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
-    function wrapAndAddLiquidity(
-        AddLiquidityData memory params_
-    )
+    function wrapAndAddLiquidity(AddLiquidityData memory params_)
         external
         payable
         nonReentrant
         whenNotPaused
         onlyPublicVault(params_.vault)
-        returns (uint256 amount0, uint256 amount1, uint256 sharesReceived)
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 sharesReceived
+        )
     {
-        if(msg.value == 0)
+        if (msg.value == 0) {
             revert MsgValueZero();
+        }
 
         // #region wrap eth.
 
@@ -411,41 +440,48 @@ contract ArrakisPublicVaultRouter is
         // #endregion wrap eth.
 
         // #region checks.
-        if (params_.amount0Max == 0 && params_.amount1Max == 0)
+        if (params_.amount0Max == 0 && params_.amount1Max == 0) {
             revert EmptyMaxAmounts();
+        }
 
         (sharesReceived, amount0, amount1) = _getMintAmounts(
-            params_.vault,
-            params_.amount0Max,
-            params_.amount1Max
+            params_.vault, params_.amount0Max, params_.amount1Max
         );
 
         if (sharesReceived == 0) revert NothingToMint();
 
         if (
-            amount0 < params_.amount0Min ||
-            amount1 < params_.amount1Min ||
-            sharesReceived < params_.amountSharesMin
-        ) revert BelowMinAmounts();
+            amount0 < params_.amount0Min
+                || amount1 < params_.amount1Min
+                || sharesReceived < params_.amountSharesMin
+        ) {
+            revert BelowMinAmounts();
+        }
 
         address token0 = IArrakisMetaVault(params_.vault).token0();
         address token1 = IArrakisMetaVault(params_.vault).token1();
 
-        if(token0 == nativeToken || token1 == nativeToken)
+        if (token0 == nativeToken || token1 == nativeToken) {
             revert NativeTokenNotSupported();
-        if(token0 != address(weth) && token1 != address(weth))
+        }
+        if (token0 != address(weth) && token1 != address(weth)) {
             revert NoWethToken();
+        }
 
         // #endregion checks.
 
         // #region interactions.
 
         if (token0 != address(weth) && amount0 > 0) {
-            IERC20(token0).safeTransferFrom(msg.sender, address(this), amount0);
+            IERC20(token0).safeTransferFrom(
+                msg.sender, address(this), amount0
+            );
         }
 
         if (token1 != address(weth) && amount1 > 0) {
-            IERC20(token1).safeTransferFrom(msg.sender, address(this), amount1);
+            IERC20(token1).safeTransferFrom(
+                msg.sender, address(this), amount1
+            );
         }
 
         _addLiquidity(
@@ -476,9 +512,7 @@ contract ArrakisPublicVaultRouter is
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
-    function wrapAndSwapAndAddLiquidity(
-        SwapAndAddData memory params_
-    )
+    function wrapAndSwapAndAddLiquidity(SwapAndAddData memory params_)
         external
         payable
         nonReentrant
@@ -492,8 +526,9 @@ contract ArrakisPublicVaultRouter is
             uint256 amount1Diff
         )
     {
-        if(msg.value == 0)
+        if (msg.value == 0) {
             revert MsgValueZero();
+        }
 
         // #region wrap eth.
 
@@ -502,39 +537,51 @@ contract ArrakisPublicVaultRouter is
         // #endregion wrap eth.
         // #region checks.
 
-        if (params_.addData.amount0Max == 0 && params_.addData.amount1Max == 0)
+        if (
+            params_.addData.amount0Max == 0
+                && params_.addData.amount1Max == 0
+        ) {
             revert EmptyMaxAmounts();
+        }
 
-        address token0 = IArrakisMetaVault(params_.addData.vault).token0();
-        address token1 = IArrakisMetaVault(params_.addData.vault).token1();
+        address token0 =
+            IArrakisMetaVault(params_.addData.vault).token0();
+        address token1 =
+            IArrakisMetaVault(params_.addData.vault).token1();
 
         // #endregion checks.
 
-        if(token0 == nativeToken || token1 == nativeToken)
+        if (token0 == nativeToken || token1 == nativeToken) {
             revert NativeTokenNotSupported();
-        if(token0 != address(weth) && token1 != address(weth))
+        }
+        if (token0 != address(weth) && token1 != address(weth)) {
             revert NoWethToken();
+        }
 
         // #region interactions.
 
-        if(token0 != address(weth)) {
-            if (params_.addData.amount0Max > 0)
-                    IERC20(token0).safeTransferFrom(
+        if (token0 != address(weth)) {
+            if (params_.addData.amount0Max > 0) {
+                IERC20(token0).safeTransferFrom(
                     msg.sender,
                     address(this),
                     params_.addData.amount0Max
                 );
-        } else if(params_.addData.amount0Max != msg.value)
+            }
+        } else if (params_.addData.amount0Max != msg.value) {
             revert MsgValueDTMaxAmount();
-        if(token1 != address(weth)) {
-            if(params_.addData.amount1Max > 0)
+        }
+        if (token1 != address(weth)) {
+            if (params_.addData.amount1Max > 0) {
                 IERC20(token1).safeTransferFrom(
                     msg.sender,
                     address(this),
                     params_.addData.amount1Max
                 );
-        } else if(params_.addData.amount1Max != msg.value)
+            }
+        } else if (params_.addData.amount1Max != msg.value) {
             revert MsgValueDTMaxAmount();
+        }
 
         // #endregion interactions.
         (
@@ -555,21 +602,25 @@ contract ArrakisPublicVaultRouter is
             ? params_.addData.amount1Max + amount1Diff
             : params_.addData.amount1Max - amount1Diff;
 
-        if(amount0Use > amount0) {
-            if(token0 == address(weth)) {
+        if (amount0Use > amount0) {
+            if (token0 == address(weth)) {
                 weth.withdraw(amount0Use - amount0);
                 payable(msg.sender).sendValue(amount0Use - amount0);
             } else {
-                IERC20(token0).safeTransfer(msg.sender, amount0Use - amount0);
+                IERC20(token0).safeTransfer(
+                    msg.sender, amount0Use - amount0
+                );
             }
         }
 
-        if(amount1Use > amount1) {
-            if(token1 == address(weth)) {
+        if (amount1Use > amount1) {
+            if (token1 == address(weth)) {
                 weth.withdraw(amount1Use - amount1);
                 payable(msg.sender).sendValue(amount1Use - amount1);
             } else {
-                IERC20(token1).safeTransfer(msg.sender, amount1Use - amount1);
+                IERC20(token1).safeTransfer(
+                    msg.sender, amount1Use - amount1
+                );
             }
         }
     }
@@ -587,10 +638,15 @@ contract ArrakisPublicVaultRouter is
         nonReentrant
         whenNotPaused
         onlyPublicVault(params_.addData.vault)
-        returns (uint256 amount0, uint256 amount1, uint256 sharesReceived)
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 sharesReceived
+        )
     {
-        if(msg.value == 0)
+        if (msg.value == 0) {
             revert MsgValueZero();
+        }
 
         // #region wrap eth.
 
@@ -598,8 +654,12 @@ contract ArrakisPublicVaultRouter is
 
         // #endregion wrap eth.
         // #region checks.
-        if (params_.addData.amount0Max == 0 && params_.addData.amount1Max == 0)
+        if (
+            params_.addData.amount0Max == 0
+                && params_.addData.amount1Max == 0
+        ) {
             revert EmptyMaxAmounts();
+        }
 
         (sharesReceived, amount0, amount1) = _getMintAmounts(
             params_.addData.vault,
@@ -610,22 +670,28 @@ contract ArrakisPublicVaultRouter is
         if (sharesReceived == 0) revert NothingToMint();
 
         if (
-            amount0 < params_.addData.amount0Min ||
-            amount1 < params_.addData.amount1Min ||
-            sharesReceived < params_.addData.amountSharesMin
+            amount0 < params_.addData.amount0Min
+                || amount1 < params_.addData.amount1Min
+                || sharesReceived < params_.addData.amountSharesMin
         ) revert BelowMinAmounts();
 
-        address token0 = IArrakisMetaVault(params_.addData.vault).token0();
-        address token1 = IArrakisMetaVault(params_.addData.vault).token1();
+        address token0 =
+            IArrakisMetaVault(params_.addData.vault).token0();
+        address token1 =
+            IArrakisMetaVault(params_.addData.vault).token1();
 
-        if(token0 == nativeToken || token1 == nativeToken)
+        if (token0 == nativeToken || token1 == nativeToken) {
             revert NativeTokenNotSupported();
-        if(token0 != address(weth) && token1 != address(weth))
+        }
+        if (token0 != address(weth) && token1 != address(weth)) {
             revert NoWethToken();
+        }
 
         // #endregion checks.
 
-        _permit2AddLengthOne(params_, token0, token1, amount0, amount1);
+        _permit2AddLengthOne(
+            params_, token0, token1, amount0, amount1
+        );
 
         _addLiquidity(
             params_.addData.vault,
@@ -645,7 +711,7 @@ contract ArrakisPublicVaultRouter is
             payable(msg.sender).sendValue(msg.value - amount1);
         }
     }
-    
+
     /// @notice wrapAndSwapAndAddLiquidityPermit2 wrap eth and transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddPermit2Data struct containing data for swap
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
@@ -669,8 +735,9 @@ contract ArrakisPublicVaultRouter is
             uint256 amount1Diff
         )
     {
-        if(msg.value == 0)
+        if (msg.value == 0) {
             revert MsgValueZero();
+        }
 
         // #region wrap eth.
 
@@ -678,24 +745,38 @@ contract ArrakisPublicVaultRouter is
 
         // #endregion wrap eth.
         if (
-            params_.swapAndAddData.addData.amount0Max == 0 &&
-            params_.swapAndAddData.addData.amount1Max == 0
-        ) revert EmptyMaxAmounts();
+            params_.swapAndAddData.addData.amount0Max == 0
+                && params_.swapAndAddData.addData.amount1Max == 0
+        ) {
+            revert EmptyMaxAmounts();
+        }
 
-        address token0 = IArrakisMetaVault(params_.swapAndAddData.addData.vault)
-            .token0();
-        address token1 = IArrakisMetaVault(params_.swapAndAddData.addData.vault)
-            .token1();
-        
-        if(token0 == nativeToken || token1 == nativeToken)
+        address token0 = IArrakisMetaVault(
+            params_.swapAndAddData.addData.vault
+        ).token0();
+        address token1 = IArrakisMetaVault(
+            params_.swapAndAddData.addData.vault
+        ).token1();
+
+        if (token0 == nativeToken || token1 == nativeToken) {
             revert NativeTokenNotSupported();
-        if(token0 != address(weth) && token1 != address(weth))
+        }
+        if (token0 != address(weth) && token1 != address(weth)) {
             revert NoWethToken();
+        }
 
-        if(token0 == address(weth) && params_.swapAndAddData.addData.amount0Max != msg.value)
+        if (
+            token0 == address(weth)
+                && params_.swapAndAddData.addData.amount0Max != msg.value
+        ) {
             revert MsgValueDTMaxAmount();
-        if(token1 == address(weth) && params_.swapAndAddData.addData.amount1Max != msg.value)
+        }
+        if (
+            token1 == address(weth)
+                && params_.swapAndAddData.addData.amount1Max != msg.value
+        ) {
             revert MsgValueDTMaxAmount();
+        }
 
         _permit2SwapAndAddLengthOne(params_, token0, token1);
 
@@ -707,31 +788,41 @@ contract ArrakisPublicVaultRouter is
             sharesReceived,
             amount0Diff,
             amount1Diff
-        ) = _swapAndAddLiquidity(params_.swapAndAddData, token0, token1);
+        ) = _swapAndAddLiquidity(
+            params_.swapAndAddData, token0, token1
+        );
 
         /// @dev hack to get rid of stack too depth
-        uint256 amount0Use = (params_.swapAndAddData.swapData.zeroForOne)
+        uint256 amount0Use = (
+            params_.swapAndAddData.swapData.zeroForOne
+        )
             ? params_.swapAndAddData.addData.amount0Max - amount0Diff
             : params_.swapAndAddData.addData.amount0Max + amount0Diff;
-        uint256 amount1Use = (params_.swapAndAddData.swapData.zeroForOne)
+        uint256 amount1Use = (
+            params_.swapAndAddData.swapData.zeroForOne
+        )
             ? params_.swapAndAddData.addData.amount1Max + amount1Diff
             : params_.swapAndAddData.addData.amount1Max - amount1Diff;
 
-        if(amount0Use > amount0) {
-            if(token0 == address(weth)) {
+        if (amount0Use > amount0) {
+            if (token0 == address(weth)) {
                 weth.withdraw(amount0Use - amount0);
                 payable(msg.sender).sendValue(amount0Use - amount0);
             } else {
-                IERC20(token0).safeTransfer(msg.sender, amount0Use - amount0);
+                IERC20(token0).safeTransfer(
+                    msg.sender, amount0Use - amount0
+                );
             }
         }
 
-        if(amount1Use > amount1) {
-            if(token1 == address(weth)) {
+        if (amount1Use > amount1) {
+            if (token1 == address(weth)) {
                 weth.withdraw(amount1Use - amount1);
                 payable(msg.sender).sendValue(amount1Use - amount1);
             } else {
-                IERC20(token1).safeTransfer(msg.sender, amount1Use - amount1);
+                IERC20(token1).safeTransfer(
+                    msg.sender, amount1Use - amount1
+                );
             }
         }
     }
@@ -751,13 +842,17 @@ contract ArrakisPublicVaultRouter is
         address vault_,
         uint256 maxAmount0_,
         uint256 maxAmount1_
-    ) external view returns (
+    )
+        external
+        view
+        returns (
             uint256 shareToMint,
             uint256 amount0ToDeposit,
             uint256 amount1ToDeposit
-        ) {
-            return _getMintAmounts(vault_, maxAmount0_, maxAmount1_);
-        }
+        )
+    {
+        return _getMintAmounts(vault_, maxAmount0_, maxAmount1_);
+    }
 
     // #endregion external view functions.
 
@@ -793,16 +888,37 @@ contract ArrakisPublicVaultRouter is
         }
 
         IArrakisMetaVaultPublic(vault_).mint{value: valueToSend}(
-            shares_,
-            receiver_
+            shares_, receiver_
         );
 
         // #region assertion check to verify if vault exactly what expected.
         // NOTE: check rebase edge case?
-        if((token0_ == nativeToken && balance0 - amount0_ != address(this).balance) || (token0_ != nativeToken && balance0 - amount0_ != IERC20(token0_).balanceOf(address(this))))
+        if (
+            (
+                token0_ == nativeToken
+                    && balance0 - amount0_ != address(this).balance
+            )
+                || (
+                    token0_ != nativeToken
+                        && balance0 - amount0_
+                            != IERC20(token0_).balanceOf(address(this))
+                )
+        ) {
             revert Deposit0();
-        if ((token1_ == nativeToken && balance1 - amount1_ != address(this).balance) || (token1_ != nativeToken && balance1 - amount1_ != IERC20(token1_).balanceOf(address(this))))
+        }
+        if (
+            (
+                token1_ == nativeToken
+                    && balance1 - amount1_ != address(this).balance
+            )
+                || (
+                    token1_ != nativeToken
+                        && balance1 - amount1_
+                            != IERC20(token1_).balanceOf(address(this))
+                )
+        ) {
             revert Deposit1();
+        }
         // #endregion  assertion check to verify if vault exactly what expected.
     }
 
@@ -824,22 +940,25 @@ contract ArrakisPublicVaultRouter is
     {
         uint256 valueToSend;
         if (params_.swapData.zeroForOne) {
-            if (token0_ != nativeToken)
+            if (token0_ != nativeToken) {
                 IERC20(token0_).safeTransfer(
-                    address(swapper),
-                    params_.swapData.amountInSwap
+                    address(swapper), params_.swapData.amountInSwap
                 );
-            else valueToSend = params_.swapData.amountInSwap;
+            } else {
+                valueToSend = params_.swapData.amountInSwap;
+            }
         } else {
-            if (token1_ != nativeToken)
+            if (token1_ != nativeToken) {
                 IERC20(token1_).safeTransfer(
-                    address(swapper),
-                    params_.swapData.amountInSwap
+                    address(swapper), params_.swapData.amountInSwap
                 );
-            else valueToSend = params_.swapData.amountInSwap;
+            } else {
+                valueToSend = params_.swapData.amountInSwap;
+            }
         }
 
-        (amount0Diff, amount1Diff) = swapper.swap{value: valueToSend}(params_);
+        (amount0Diff, amount1Diff) =
+            swapper.swap{value: valueToSend}(params_);
 
         emit Swapped(
             params_.swapData.zeroForOne,
@@ -856,17 +975,15 @@ contract ArrakisPublicVaultRouter is
             : params_.addData.amount1Max - amount1Diff;
 
         (sharesReceived, amount0, amount1) = _getMintAmounts(
-            params_.addData.vault,
-            amount0Use,
-            amount1Use
+            params_.addData.vault, amount0Use, amount1Use
         );
 
         if (sharesReceived == 0) revert NothingToMint();
 
         if (
-            amount0 < params_.addData.amount0Min ||
-            amount1 < params_.addData.amount1Min ||
-            sharesReceived < params_.addData.amountSharesMin
+            amount0 < params_.addData.amount0Min
+                || amount1 < params_.addData.amount1Min
+                || sharesReceived < params_.addData.amountSharesMin
         ) revert BelowMinAmounts();
 
         _addLiquidity(
@@ -906,33 +1023,40 @@ contract ArrakisPublicVaultRouter is
             amount1Diff
         ) = _swapAndAddLiquidity(params_, token0_, token1_);
 
-        if(amount0Use > amount0) {
-            if(token0_ == nativeToken) {
+        if (amount0Use > amount0) {
+            if (token0_ == nativeToken) {
                 payable(msg.sender).sendValue(amount0Use - amount0);
             } else {
-                IERC20(token0_).safeTransfer(msg.sender, amount0Use - amount0);
+                IERC20(token0_).safeTransfer(
+                    msg.sender, amount0Use - amount0
+                );
             }
         }
 
-        if(amount1Use > amount1) {
-            if(token1_ == nativeToken) {
+        if (amount1Use > amount1) {
+            if (token1_ == nativeToken) {
                 payable(msg.sender).sendValue(amount1Use - amount1);
             } else {
-                IERC20(token1_).safeTransfer(msg.sender, amount1Use - amount1);
+                IERC20(token1_).safeTransfer(
+                    msg.sender, amount1Use - amount1
+                );
             }
         }
     }
 
-    function _removeLiquidity(
-        RemoveLiquidityData memory params_
-    ) internal returns (uint256 amount0, uint256 amount1) {
-        (amount0, amount1) = IArrakisMetaVaultPublic(params_.vault).burn(
-            params_.burnAmount,
-            params_.receiver
-        );
+    function _removeLiquidity(RemoveLiquidityData memory params_)
+        internal
+        returns (uint256 amount0, uint256 amount1)
+    {
+        (amount0, amount1) = IArrakisMetaVaultPublic(params_.vault)
+            .burn(params_.burnAmount, params_.receiver);
 
-        if (amount0 < params_.amount0Min || amount1 < params_.amount1Min)
+        if (
+            amount0 < params_.amount0Min
+                || amount1 < params_.amount1Min
+        ) {
             revert ReceivedBelowMinimum();
+        }
     }
 
     function _permit2AddLengthOne(
@@ -947,10 +1071,18 @@ contract ArrakisPublicVaultRouter is
             revert LengthMismatch();
         }
 
-        if(params_.permit.permitted[0].token == address(weth))
+        if (params_.permit.permitted[0].token == address(weth)) {
             revert Permit2WethNotAuthorized();
+        }
 
-        _permit2Add(permittedLength, params_, token0_, token1_, amount0_, amount1_);
+        _permit2Add(
+            permittedLength,
+            params_,
+            token0_,
+            token1_,
+            amount0_,
+            amount1_
+        );
     }
 
     function _permit2AddLengthOneOrTwo(
@@ -965,7 +1097,14 @@ contract ArrakisPublicVaultRouter is
             revert LengthMismatch();
         }
 
-        _permit2Add(permittedLength, params_, token0_, token1_, amount0_, amount1_);
+        _permit2Add(
+            permittedLength,
+            params_,
+            token0_,
+            token1_,
+            amount0_,
+            amount1_
+        );
     }
 
     function _permit2Add(
@@ -976,18 +1115,20 @@ contract ArrakisPublicVaultRouter is
         uint256 amount0_,
         uint256 amount1_
     ) internal {
-        SignatureTransferDetails[] memory transfers = new SignatureTransferDetails[](permittedLength_);
+        SignatureTransferDetails[] memory transfers =
+            new SignatureTransferDetails[](permittedLength_);
 
-        for(uint256 i; i < permittedLength_; i++) {
-            TokenPermissions memory tokenPermission = params_.permit.permitted[i];
+        for (uint256 i; i < permittedLength_; i++) {
+            TokenPermissions memory tokenPermission =
+                params_.permit.permitted[i];
 
-            if(tokenPermission.token == token0_) {
+            if (tokenPermission.token == token0_) {
                 transfers[i] = SignatureTransferDetails({
                     to: address(this),
                     requestedAmount: amount0_
                 });
             }
-            if(tokenPermission.token == token1_) {
+            if (tokenPermission.token == token1_) {
                 transfers[i] = SignatureTransferDetails({
                     to: address(this),
                     requestedAmount: amount1_
@@ -996,10 +1137,7 @@ contract ArrakisPublicVaultRouter is
         }
 
         permit2.permitTransferFrom(
-            params_.permit,
-            transfers,
-            msg.sender,
-            params_.signature
+            params_.permit, transfers, msg.sender, params_.signature
         );
     }
 
@@ -1013,8 +1151,9 @@ contract ArrakisPublicVaultRouter is
             revert LengthMismatch();
         }
 
-        if(params_.permit.permitted[0].token == address(weth))
+        if (params_.permit.permitted[0].token == address(weth)) {
             revert Permit2WethNotAuthorized();
+        }
 
         _permit2SwapAndAdd(permittedLength, params_, token0_, token1_);
     }
@@ -1038,30 +1177,35 @@ contract ArrakisPublicVaultRouter is
         address token0_,
         address token1_
     ) internal {
-        SignatureTransferDetails[] memory transfers = new SignatureTransferDetails[](permittedLength_);
+        SignatureTransferDetails[] memory transfers =
+            new SignatureTransferDetails[](permittedLength_);
 
-        for(uint256 i; i < permittedLength_; i++) {
-            TokenPermissions memory tokenPermission = params_.permit.permitted[i];
+        for (uint256 i; i < permittedLength_; i++) {
+            TokenPermissions memory tokenPermission =
+                params_.permit.permitted[i];
 
-            if(tokenPermission.token == token0_) {
+            if (tokenPermission.token == token0_) {
                 transfers[i] = SignatureTransferDetails({
                     to: address(this),
-                    requestedAmount: params_.swapAndAddData.addData.amount0Max
+                    requestedAmount: params_
+                        .swapAndAddData
+                        .addData
+                        .amount0Max
                 });
             }
-            if(tokenPermission.token == token1_) {
+            if (tokenPermission.token == token1_) {
                 transfers[i] = SignatureTransferDetails({
                     to: address(this),
-                    requestedAmount: params_.swapAndAddData.addData.amount1Max
+                    requestedAmount: params_
+                        .swapAndAddData
+                        .addData
+                        .amount1Max
                 });
             }
         }
 
         permit2.permitTransferFrom(
-            params_.permit,
-            transfers,
-            msg.sender,
-            params_.signature
+            params_.permit, transfers, msg.sender, params_.signature
         );
     }
 
@@ -1083,8 +1227,8 @@ contract ArrakisPublicVaultRouter is
         )
     {
         // TODO check rounding !!!!
-        (uint256 amount0, uint256 amount1) = IArrakisMetaVault(vault_)
-            .totalUnderlying();
+        (uint256 amount0, uint256 amount1) =
+            IArrakisMetaVault(vault_).totalUnderlying();
 
         uint256 supply = IERC20(vault_).totalSupply();
 
@@ -1093,12 +1237,15 @@ contract ArrakisPublicVaultRouter is
             supply = 1 ether;
         }
 
-        uint256 proportion0 = amount0 == 0 ? type(uint256).max : FullMath.mulDiv(maxAmount0_, PIPS, amount0);
-        uint256 proportion1 = amount1 == 0 ? type(uint256).max :  FullMath.mulDiv(maxAmount1_, PIPS, amount1);
+        uint256 proportion0 = amount0 == 0
+            ? type(uint256).max
+            : FullMath.mulDiv(maxAmount0_, PIPS, amount0);
+        uint256 proportion1 = amount1 == 0
+            ? type(uint256).max
+            : FullMath.mulDiv(maxAmount1_, PIPS, amount1);
 
-        uint256 proportion = proportion0 < proportion1
-            ? proportion0
-            : proportion1;
+        uint256 proportion =
+            proportion0 < proportion1 ? proportion0 : proportion1;
 
         amount0ToDeposit = FullMath.mulDiv(amount0, proportion, PIPS);
         amount1ToDeposit = FullMath.mulDiv(amount1, proportion, PIPS);

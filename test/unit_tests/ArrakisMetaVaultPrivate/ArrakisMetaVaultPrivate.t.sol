@@ -5,14 +5,18 @@ import {console} from "forge-std/console.sol";
 
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 
-import {ArrakisMetaVaultPrivate} from "../../../src/ArrakisMetaVaultPrivate.sol";
-import {IArrakisMetaVaultPrivate} from "../../../src/interfaces/IArrakisMetaVaultPrivate.sol";
-import {IArrakisMetaVault} from "../../../src/interfaces/IArrakisMetaVault.sol";
+import {ArrakisMetaVaultPrivate} from
+    "../../../src/ArrakisMetaVaultPrivate.sol";
+import {IArrakisMetaVaultPrivate} from
+    "../../../src/interfaces/IArrakisMetaVaultPrivate.sol";
+import {IArrakisMetaVault} from
+    "../../../src/interfaces/IArrakisMetaVault.sol";
 import {PIPS} from "../../../src/constants/CArrakis.sol";
 import {PALMVaultNFT} from "../../../src/PALMVaultNFT.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
@@ -25,8 +29,10 @@ import {LpModuleMock} from "./mocks/LpModuleMock.sol";
 contract ArrakisMetaVaultPrivateTest is TestWrapper {
     // #region constant properties.
 
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant WETH =
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant USDC =
+        0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     // #endregion constant properties.
 
@@ -39,9 +45,8 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
 
     function setUp() public {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
-        moduleRegistry = vm.addr(
-            uint256(keccak256(abi.encode("Module Registry")))
-        );
+        moduleRegistry =
+            vm.addr(uint256(keccak256(abi.encode("Module Registry"))));
         receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
         // #region create module.
@@ -54,9 +59,7 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         nft = new PALMVaultNFT();
 
         vault = new ArrakisMetaVaultPrivate(
-            moduleRegistry,
-            manager,
-            address(nft)
+            moduleRegistry, manager, address(nft)
         );
 
         // #region mint nft.
@@ -77,21 +80,19 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     function testConstructorNftAddressZero() public {
         vm.expectRevert(
             abi.encodeWithSelector(
-                IArrakisMetaVault.AddressZero.selector,
-                "NFT"
+                IArrakisMetaVault.AddressZero.selector, "NFT"
             )
         );
 
         vault = new ArrakisMetaVaultPrivate(
-            moduleRegistry,
-            manager,
-            address(0)
+            moduleRegistry, manager, address(0)
         );
     }
 
     function testConstructorAndInitializeStorage() public {
         address actualModule = address(vault.module());
-        address[] memory whitelistedModules = vault.whitelistedModules();
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
 
         assertEq(vault.token0(), USDC);
         assertEq(vault.token1(), WETH);
@@ -108,7 +109,8 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     // #region test deposit.
 
     function testDepositNotDepositor() public {
-        address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+        address caller =
+            vm.addr(uint256(keccak256(abi.encode("Caller"))));
 
         uint256 amount0 = 2000e6;
         uint256 amount1 = 1e18;
@@ -125,7 +127,9 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
 
         // #endregion approve module.
 
-        vm.expectRevert(IArrakisMetaVaultPrivate.OnlyDepositor.selector);
+        vm.expectRevert(
+            IArrakisMetaVaultPrivate.OnlyDepositor.selector
+        );
 
         vault.deposit(amount0, amount1);
 
@@ -135,7 +139,8 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     function testDeposit() public {
         // #region whitelist depositor.
 
-        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
         address[] memory depositors = new address[](1);
         depositors[0] = depositor;
 
@@ -166,7 +171,7 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         IERC20(WETH).approve(address(module), amount1);
 
         // #endregion approve module.
-        
+
         vault.deposit(amount0, amount1);
 
         vm.stopPrank();
@@ -177,12 +182,14 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     // #region test withdraw.
 
     function testWithdrawNotOwner() public {
-        address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+        address caller =
+            vm.addr(uint256(keccak256(abi.encode("Caller"))));
         // #region deposit.
 
         // #region whitelist depositor.
 
-        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
         address[] memory depositors = new address[](1);
         depositors[0] = depositor;
 
@@ -213,7 +220,7 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         IERC20(WETH).approve(address(module), amount1);
 
         // #endregion approve module.
-        
+
         vault.deposit(amount0, amount1);
 
         vm.stopPrank();
@@ -229,12 +236,14 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     }
 
     function testWithdraw() public {
-        address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+        address caller =
+            vm.addr(uint256(keccak256(abi.encode("Caller"))));
         // #region deposit.
 
         // #region whitelist depositor.
 
-        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
         address[] memory depositors = new address[](1);
         depositors[0] = depositor;
 
@@ -265,7 +274,7 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         IERC20(WETH).approve(address(module), amount1);
 
         // #endregion approve module.
-        
+
         vault.deposit(amount0, amount1);
 
         vm.stopPrank();
@@ -286,7 +295,8 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     // #region test whitelist depositors.
 
     function testWhitelistDepositorOnlyOwner() public {
-        address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+        address caller =
+            vm.addr(uint256(keccak256(abi.encode("Caller"))));
 
         address[] memory depositors = new address[](0);
         vm.prank(caller);
@@ -298,13 +308,18 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     function testWhitelistDepositorAddressZero() public {
         address[] memory depositors = new address[](1);
 
-        vm.expectRevert(abi.encodeWithSelector(IArrakisMetaVault.AddressZero.selector, "Depositor"));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisMetaVault.AddressZero.selector, "Depositor"
+            )
+        );
 
         vault.whitelistDepositors(depositors);
     }
 
     function testWhitelistDepositor() public {
-        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
         address[] memory depositors = new address[](1);
         depositors[0] = depositor;
 
@@ -321,7 +336,8 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     }
 
     function testWhitelistDepositorAlreadyADepositor() public {
-        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
         address[] memory depositors = new address[](1);
         depositors[0] = depositor;
 
@@ -336,7 +352,11 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         assertEq(currentDepositors.length, 1);
         assertEq(currentDepositors[0], depositor);
 
-        vm.expectRevert(IArrakisMetaVaultPrivate.DepositorAlreadyWhitelisted.selector);
+        vm.expectRevert(
+            IArrakisMetaVaultPrivate
+                .DepositorAlreadyWhitelisted
+                .selector
+        );
 
         vault.whitelistDepositors(depositors);
     }
@@ -346,7 +366,8 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     // #region test blacklist depositors.
 
     function testBlacklistDepositorsOnlyOwner() public {
-        address caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+        address caller =
+            vm.addr(uint256(keccak256(abi.encode("Caller"))));
 
         address[] memory depositors = new address[](0);
         vm.prank(caller);
@@ -355,11 +376,18 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         vault.blacklistDepositors(depositors);
     }
 
-    function testBlacklistDepositorsNotAlreadyWhitelistedDepositor() public {
-        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+    function testBlacklistDepositorsNotAlreadyWhitelistedDepositor()
+        public
+    {
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
         address[] memory depositors = new address[](1);
         depositors[0] = depositor;
-        vm.expectRevert(IArrakisMetaVaultPrivate.NotAlreadyWhitelistedDepositor.selector);
+        vm.expectRevert(
+            IArrakisMetaVaultPrivate
+                .NotAlreadyWhitelistedDepositor
+                .selector
+        );
 
         vault.blacklistDepositors(depositors);
     }
@@ -367,7 +395,8 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     function testBlacklistDepositors() public {
         // #region whitelist depositor.
 
-        address depositor = vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
         address[] memory depositors = new address[](1);
         depositors[0] = depositor;
 
@@ -396,7 +425,10 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     // #region test owner.
 
     function testOwner() public {
-        assertEq(vault.owner(), nft.ownerOf(uint256(uint160(address(vault)))));
+        assertEq(
+            vault.owner(),
+            nft.ownerOf(uint256(uint160(address(vault))))
+        );
     }
 
     // #endregion test owner.

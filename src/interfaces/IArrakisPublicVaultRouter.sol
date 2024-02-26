@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {AddLiquidityData, AddLiquidityPermit2Data, RemoveLiquidityData, RemoveLiquidityPermit2Data, SwapAndAddData, SwapAndAddPermit2Data} from "../structs/SRouter.sol";
+import {
+    AddLiquidityData,
+    AddLiquidityPermit2Data,
+    RemoveLiquidityData,
+    RemoveLiquidityPermit2Data,
+    SwapAndAddData,
+    SwapAndAddPermit2Data
+} from "../structs/SRouter.sol";
 
 interface IArrakisPublicVaultRouter {
     // #region errors.
@@ -58,12 +65,14 @@ interface IArrakisPublicVaultRouter {
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
-    function addLiquidity(
-        AddLiquidityData memory params_
-    )
+    function addLiquidity(AddLiquidityData memory params_)
         external
         payable
-        returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 sharesReceived
+        );
 
     /// @notice swapAndAddLiquidity transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddData struct containing data for swap
@@ -72,9 +81,7 @@ interface IArrakisPublicVaultRouter {
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
-    function swapAndAddLiquidity(
-        SwapAndAddData memory params_
-    )
+    function swapAndAddLiquidity(SwapAndAddData memory params_)
         external
         payable
         returns (
@@ -89,9 +96,9 @@ interface IArrakisPublicVaultRouter {
     /// @param params_ RemoveLiquidityData struct containing data for withdrawals
     /// @return amount0 actual amount of token0 transferred to receiver for burning `burnAmount`
     /// @return amount1 actual amount of token1 transferred to receiver for burning `burnAmount`
-    function removeLiquidity(
-        RemoveLiquidityData memory params_
-    ) external returns (uint256 amount0, uint256 amount1);
+    function removeLiquidity(RemoveLiquidityData memory params_)
+        external
+        returns (uint256 amount0, uint256 amount1);
 
     /// @notice addLiquidityPermit2 adds liquidity to public vault of interest (mints LP tokens)
     /// @param params_ AddLiquidityPermit2Data struct containing data for adding liquidity
@@ -103,7 +110,11 @@ interface IArrakisPublicVaultRouter {
     )
         external
         payable
-        returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 sharesReceived
+        );
 
     /// @notice swapAndAddLiquidityPermit2 transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddPermit2Data struct containing data for swap
@@ -138,9 +149,14 @@ interface IArrakisPublicVaultRouter {
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
-    function wrapAndAddLiquidity(
-        AddLiquidityData memory params_
-    ) external payable returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);
+    function wrapAndAddLiquidity(AddLiquidityData memory params_)
+        external
+        payable
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 sharesReceived
+        );
 
     /// @notice wrapAndSwapAndAddLiquidity wrap eth and transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddData struct containing data for swap
@@ -149,9 +165,7 @@ interface IArrakisPublicVaultRouter {
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
-    function wrapAndSwapAndAddLiquidity(
-        SwapAndAddData memory params_
-    )
+    function wrapAndSwapAndAddLiquidity(SwapAndAddData memory params_)
         external
         payable
         returns (
@@ -172,7 +186,11 @@ interface IArrakisPublicVaultRouter {
     )
         external
         payable
-        returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 sharesReceived
+        );
 
     /// @notice wrapAndSwapAndAddLiquidityPermit2 wrap eth and transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddPermit2Data struct containing data for swap
@@ -209,7 +227,10 @@ interface IArrakisPublicVaultRouter {
         address vault_,
         uint256 maxAmount0_,
         uint256 maxAmount1_
-    ) external view returns (
+    )
+        external
+        view
+        returns (
             uint256 shareToMint,
             uint256 amount0ToDeposit,
             uint256 amount1ToDeposit

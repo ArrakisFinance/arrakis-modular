@@ -12,7 +12,9 @@ contract Guardian is Ownable, IGuardian {
     // #endregion public properties.
 
     constructor(address owner_, address pauser_) {
-        if (owner_ == address(0) || pauser_ == address(0)) revert AddressZero();
+        if (owner_ == address(0) || pauser_ == address(0)) {
+            revert AddressZero();
+        }
         _initializeOwner(owner_);
         pauser = pauser_;
 
