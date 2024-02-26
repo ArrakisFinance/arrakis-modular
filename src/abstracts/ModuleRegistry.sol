@@ -2,13 +2,14 @@
 pragma solidity ^0.8.20;
 
 import {IModuleRegistry} from "../interfaces/IModuleRegistry.sol";
-import {IArrakisMetaVaultFactory} from "../interfaces/IArrakisMetaVaultFactory.sol";
+import {IArrakisMetaVaultFactory} from
+    "../interfaces/IArrakisMetaVaultFactory.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
 import {BeaconProxyExtended} from "../proxy/BeaconProxyExtended.sol";
 
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
+import {EnumerableSet} from
+    "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
@@ -40,13 +41,18 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
 
     // #endregion internal properties.
 
-    constructor(address factory_, address owner_, address guardian_, address admin_) {
+    constructor(
+        address factory_,
+        address owner_,
+        address guardian_,
+        address admin_
+    ) {
         if (
-            factory_ == address(0) ||
-            owner_ == address(0) ||
-            guardian_ == address(0) ||
-            admin_ == address(0)
-        ) revert AddressZero();
+            factory_ == address(0) || owner_ == address(0)
+                || guardian_ == address(0) || admin_ == address(0)
+        ) {
+            revert AddressZero();
+        }
 
         factory = IArrakisMetaVaultFactory(factory_);
         _initializeOwner(owner_);
@@ -67,9 +73,11 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
     /// beacon_
     /// @param beacon_ beacon address to check
     /// @param isContained is true if beacon_ is whitelisted.
-    function beaconsContains(
-        address beacon_
-    ) external view returns (bool isContained) {
+    function beaconsContains(address beacon_)
+        external
+        view
+        returns (bool isContained)
+    {
         return _beacons.contains(beacon_);
     }
 
@@ -86,7 +94,10 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
     /// @notice function used to whitelist IBeacon  that contain
     /// implementation of valid module.
     /// @param beacons_ list of beacon to whitelist.
-    function whitelistBeacons(address[] calldata beacons_) external onlyOwner {
+    function whitelistBeacons(address[] calldata beacons_)
+        external
+        onlyOwner
+    {
         uint256 length = beacons_.length;
 
         for (uint256 i; i < length; i++) {
@@ -94,12 +105,16 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
 
             // #region checks.
 
-            if(beacon.code.length == 0) revert NotBeacon();
+            if (beacon.code.length == 0) revert NotBeacon();
 
-            if (Ownable(beacon).owner() != admin && Ownable(beacon).owner() != address(0)) revert NotSameAdmin();
+            if (
+                Ownable(beacon).owner() != admin
+                    && Ownable(beacon).owner() != address(0)
+            ) revert NotSameAdmin();
 
-            if (_beacons.contains(beacon))
+            if (_beacons.contains(beacon)) {
                 revert AlreadyWhitelistedBeacon(beacon);
+            }
 
             // #endregion checks.
 
@@ -120,7 +135,10 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
     /// @notice function used to blacklist IBeacon that contain
     /// implementation of unvalid (from now) module.
     /// @param beacons_ list of beacon to blacklist.
-    function blacklistBeacons(address[] calldata beacons_) external onlyOwner {
+    function blacklistBeacons(address[] calldata beacons_)
+        external
+        onlyOwner
+    {
         uint256 length = beacons_.length;
 
         for (uint256 i; i < length; i++) {
@@ -128,8 +146,9 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
 
             // #region checks.
 
-            if (!_beacons.contains(beacon))
+            if (!_beacons.contains(beacon)) {
                 revert NotAlreadyWhitelistedBeacon(beacon);
+            }
 
             // #endregion checks.
 
@@ -158,7 +177,9 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
     ) internal returns (address module) {
         // #region checks.
 
-        if (!_beacons.contains(beacon_)) revert NotWhitelistedBeacon();
+        if (!_beacons.contains(beacon_)) {
+            revert NotWhitelistedBeacon();
+        }
 
         // #endregion checks.
 
@@ -176,11 +197,13 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
 
         // #region assertions.
 
-        if (vault_ != address(IArrakisLPModule(module).metaVault()))
+        if (vault_ != address(IArrakisLPModule(module).metaVault())) {
             revert ModuleNotLinkedToMetaVault();
+        }
 
         if (
-            IGuardian(_guardian).pauser() != IArrakisLPModule(module).guardian()
+            IGuardian(_guardian).pauser()
+                != IArrakisLPModule(module).guardian()
         ) revert NotSameGuardian();
 
         // #endregion assertions.

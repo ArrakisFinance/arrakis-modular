@@ -66,7 +66,9 @@ contract ArrakisStandardManagerTest is Test {
     //     - [ ] reverts if receiver is zero address
     //     - [ ] reverts if `msg.sender` is not the owner
     function test_setDefaultReceiver() public {}
-    function testRevert_setDefaultReceiver_zeroAddress_owner() public {}
+    function testRevert_setDefaultReceiver_zeroAddress_owner()
+        public
+    {}
     function testRevert_setDefaultReceiver_onlyOwner() public {}
 
     // - [ ] setReceiverByToken
@@ -77,9 +79,13 @@ contract ArrakisStandardManagerTest is Test {
     //     - [ ] reverts if `msg.sender` is not the owner
     function test_setReceiverByToken_token0() public {}
     function test_setReceiverByToken_token1() public {}
-    function testRevert_setReceiverByToken_zeroAddress_owner() public {}
+    function testRevert_setReceiverByToken_zeroAddress_owner()
+        public
+    {}
     function testRevert_setReceiverByToken_onlyOwner() public {}
-    function testRevert_setReceiverByToken_onlyWhitelistedVault() public {}
+    function testRevert_setReceiverByToken_onlyWhitelistedVault()
+        public
+    {}
 
     // - [ ] decreaseManagerFeePIPs
     //     - [ ] storage is properly set
@@ -89,8 +95,12 @@ contract ArrakisStandardManagerTest is Test {
     //     - [ ] reverts if new fee is not less than the current fee
     function test_decreaseManagerFeePIPs() public {}
     function testRevert_decreaseManagerFeePIPs_notOwner() public {}
-    function testRevert_decreaseManagerFeePIPs_notWhitelistedVault() public {}
-    function testRevert_decreaseManagerFeePIPs_gteCurrentFee() public {}
+    function testRevert_decreaseManagerFeePIPs_notWhitelistedVault()
+        public
+    {}
+    function testRevert_decreaseManagerFeePIPs_gteCurrentFee()
+        public
+    {}
 
     // - [ ] submitIncreaseManagerFeePIPs
     //     - [ ] storage is properly set
@@ -100,10 +110,17 @@ contract ArrakisStandardManagerTest is Test {
     //     - [ ] reverts if new fee is not greater than the current fee
     //     - [ ] reverts if there is a pending increase
     function test_submitIncreaseManagerFeePIPs() public {}
-    function testRevert_submitIncreaseManagerFeePIPs_notOwner() public {}
-    function testRevert_submitIncreaseManagerFeePIPs_notWhitelistedVault() public {}
-    function testRevert_submitIncreaseManagerFeePIPs_lteCurrentFee() public {}
-    function testRevert_submitIncreaseManagerFeePIPs_pendingIncrease() public {}
+    function testRevert_submitIncreaseManagerFeePIPs_notOwner()
+        public
+    {}
+    function testRevert_submitIncreaseManagerFeePIPs_notWhitelistedVault(
+    ) public {}
+    function testRevert_submitIncreaseManagerFeePIPs_lteCurrentFee()
+        public
+    {}
+    function testRevert_submitIncreaseManagerFeePIPs_pendingIncrease()
+        public
+    {}
 
     // - [ ] finalizeIncreaseManagerFeePIPs
     //     - [ ] storage is properly set
@@ -112,9 +129,14 @@ contract ArrakisStandardManagerTest is Test {
     //     - [ ] reverts if there is no pending increase
     //     - [ ] reverts if not enough time has passed
     function test_finalizeIncreaseManagerFeePIPs() public {}
-    function testRevert_finalizeIncreaseManagerFeePIPs_notOwner() public {}
-    function testRevert_finalizeIncreaseManagerFeePIPs_noPendingIncrease() public {}
-    function testRevert_finalizeIncreaseManagerFeePIPs_notEnoughTime() public {}
+    function testRevert_finalizeIncreaseManagerFeePIPs_notOwner()
+        public
+    {}
+    function testRevert_finalizeIncreaseManagerFeePIPs_noPendingIncrease(
+    ) public {}
+    function testRevert_finalizeIncreaseManagerFeePIPs_notEnoughTime()
+        public
+    {}
 
     // - [ ] setModule
     //     - [ ] storage is properly set
@@ -149,12 +171,18 @@ contract ArrakisStandardManagerTest is Test {
     //     - [ ] reverts if cooldownPeriod is zero
     function test_updateVaultInfo() public {}
     function testRevert_updateVaultInfo_notVaultOwner() public {}
-    function testRevert_updateVaultInfo_notWhitelistedVault() public {}
+    function testRevert_updateVaultInfo_notWhitelistedVault()
+        public
+    {}
     function testRevert_updateVaultInfo_pausedVault() public {}
     function testRevert_updateVaultInfo_notManagedVault() public {}
     function testRevert_updateVaultInfo_params_noOracle() public {}
-    function testRevert_updateVaultInfo_params_maxSlippagePIPS() public {}
-    function testRevert_updateVaultInfo_params_zeroCooldownPeriod() public {}
+    function testRevert_updateVaultInfo_params_maxSlippagePIPS()
+        public
+    {}
+    function testRevert_updateVaultInfo_params_zeroCooldownPeriod()
+        public
+    {}
 
     // -- OPERATIONAL FUNCTIONS -----------------------------------------------
 

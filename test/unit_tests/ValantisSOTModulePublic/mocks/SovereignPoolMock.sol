@@ -15,12 +15,18 @@ contract SovereignPoolMock {
     uint256 public reserves0;
     uint256 public reserves1;
 
-    function setReserves(uint256 reserves0_, uint256 reserves1_) external {
+    function setReserves(
+        uint256 reserves0_,
+        uint256 reserves1_
+    ) external {
         reserves0 = reserves0_;
         reserves1 = reserves1_;
     }
 
-    function setToken0AndToken1(address token0_, address token1_) external {
+    function setToken0AndToken1(
+        address token0_,
+        address token1_
+    ) external {
         token0 = token0_;
         token1 = token1_;
     }
@@ -33,7 +39,9 @@ contract SovereignPoolMock {
         managerBalance1 = managerBalance1_;
     }
 
-    function setPoolManagerFeeBips(uint256 poolManagerFeeBips_) external {
+    function setPoolManagerFeeBips(uint256 poolManagerFeeBips_)
+        external
+    {
         managerFeeBIPS = poolManagerFeeBips_;
     }
 
@@ -49,11 +57,13 @@ contract SovereignPoolMock {
     {
         feePoolManager0Received = managerBalance0;
         feePoolManager1Received = managerBalance1;
-        if (managerBalance0 > 0)
+        if (managerBalance0 > 0) {
             IERC20(token0).transfer(msg.sender, managerBalance0);
+        }
 
-        if (managerBalance1 > 1)
+        if (managerBalance1 > 1) {
             IERC20(token1).transfer(msg.sender, managerBalance1);
+        }
     }
 
     // #region view functions.

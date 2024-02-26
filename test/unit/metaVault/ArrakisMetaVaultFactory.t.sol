@@ -17,8 +17,12 @@ contract ArrakisMetaVaultFactoryTest is Test {
     function test_constructor() public {}
     function testRevert_constructor_zeroAddress_owner() public {}
     function testRevert_constructor_zeroAddress_manager() public {}
-    function testRevert_constructor_zeroAddress_publicRegistry() public {}
-    function testRevert_constructor_zeroAddress_privateRegistry() public {}
+    function testRevert_constructor_zeroAddress_publicRegistry()
+        public
+    {}
+    function testRevert_constructor_zeroAddress_privateRegistry()
+        public
+    {}
 
     // - [ ] pause
     //     - [ ] contract is paused
@@ -51,7 +55,9 @@ contract ArrakisMetaVaultFactoryTest is Test {
     function test_deployPublicVault() public {}
     function testRevert_deployPublicVault_paused() public {}
     function testRevert_deployPublicVault_notDeployer() public {}
-    function testRevert_deployPublicVault_initManagementFails() public {}
+    function testRevert_deployPublicVault_initManagementFails()
+        public
+    {}
 
     // - [ ] deployPrivateVault
     //     - [ ] deploys a new vault where the PALM NFT is the owner
@@ -66,7 +72,9 @@ contract ArrakisMetaVaultFactoryTest is Test {
     function test_deployPrivateVault() public {}
     function testRevert_deployPrivateVault_paused() public {}
     function testRevert_deployPrivateVault_notDeployer() public {}
-    function testRevert_deployPrivateVault_initManagementFails() public {}
+    function testRevert_deployPrivateVault_initManagementFails()
+        public
+    {}
 
     // -- GETTER FUNCTIONS ----------------------------------------------------
 

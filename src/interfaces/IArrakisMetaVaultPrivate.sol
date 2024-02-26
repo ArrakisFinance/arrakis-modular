@@ -24,7 +24,9 @@ interface IArrakisMetaVaultPrivate {
     /// @param proportion percentage of the current position that user want to withdraw.
     /// @param amount0 amount of token0 withdrawn due to withdraw action.
     /// @param amount1 amount of token1 withdrawn due to withdraw action.
-    event LogWithdraw(uint256 proportion, uint256 amount0, uint256 amount1);
+    event LogWithdraw(
+        uint256 proportion, uint256 amount0, uint256 amount1
+    );
 
     /// @notice Event describing the whitelist of fund depositor.
     /// @param depositors list of address that are granted to depositor role.
@@ -40,7 +42,10 @@ interface IArrakisMetaVaultPrivate {
     /// inherent strategy.
     /// @param amount0_ amount of token0 need to increase the position by proportion_;
     /// @param amount1_ amount of token1 need to increase the position by proportion_;
-    function deposit(uint256 amount0_, uint256 amount1_) external payable;
+    function deposit(
+        uint256 amount0_,
+        uint256 amount1_
+    ) external payable;
 
     /// @notice function used to withdraw tokens or position contraction of the
     /// underpin strategy.
@@ -55,13 +60,15 @@ interface IArrakisMetaVaultPrivate {
 
     /// @notice function used to whitelist depositors.
     /// @param depositors_ list of address that will be granted to depositor role.
-    function whitelistDepositors(address[] calldata depositors_) external;
+    function whitelistDepositors(address[] calldata depositors_)
+        external;
 
     /// @notice function used to blacklist depositors.
     /// @param depositors_ list of address who depositor role will be revoked.
-    function blacklistDepositors(address[] calldata depositors_) external;
+    function blacklistDepositors(address[] calldata depositors_)
+        external;
 
     /// @notice function used to get the list of depositors.
     /// @return depositors list of address granted to depositor role.
-    function depositors() external view returns(address[] memory);
+    function depositors() external view returns (address[] memory);
 }

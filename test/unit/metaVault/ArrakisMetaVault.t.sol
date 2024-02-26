@@ -21,7 +21,9 @@ contract ArrakisMetaVaultTest is Test {
     function testRevert_constructor_zeroAddress_token0() public {}
     function testRevert_constructor_zeroAddress_token1() public {}
     function testRevert_constructor_zeroAddress_manager() public {}
-    function testRevert_constructor_zeroAddress_moduleRegistry() public {}
+    function testRevert_constructor_zeroAddress_moduleRegistry()
+        public
+    {}
     function testRevert_constructor_wrongTokenOrder() public {}
     function testRevert_constructor_sameTokens() public {}
 
@@ -58,7 +60,7 @@ contract ArrakisMetaVaultTest is Test {
     // - [ ] whitelistModules
     //     - [ ] modules are properly deployed and whitelisted
     //     - [ ] emits `LogWhiteListedModules` event
-    //     - [ ] reverts if onlyOwnerCheck check fails 
+    //     - [ ] reverts if onlyOwnerCheck check fails
     //     - [ ] reverts if beacons and data have different lengths
     function test_whitelistModules() public {}
     function testRevert_whitelistModules_onlyOwnerCheck() public {}
@@ -67,7 +69,7 @@ contract ArrakisMetaVaultTest is Test {
     // - [ ] blacklistModules
     //     - [ ] modules are properly removed from the whitelist
     //     - [ ] emits `LogBlackListedModules` event
-    //     - [ ] reverts if onlyOwnerCheck check fails 
+    //     - [ ] reverts if onlyOwnerCheck check fails
     //     - [ ] reverts if a module is not whitelisted
     //     - [ ] reverts if a module is active
     function test_blacklistModules() public {}

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {EnumerableSet} from
+    "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract ArrakisMetaVaultFactoryMock {
-
     using EnumerableSet for EnumerableSet.AddressSet;
 
     EnumerableSet.AddressSet internal privateVaults;
@@ -13,8 +13,7 @@ contract ArrakisMetaVaultFactoryMock {
         privateVaults.add(privateVault_);
     }
 
-    function isPrivateVault(address vault_) external returns(bool) {
+    function isPrivateVault(address vault_) external returns (bool) {
         return privateVaults.contains(vault_);
     }
-
 }

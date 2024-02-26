@@ -6,6 +6,4 @@ import {console} from "forge-std/console.sol";
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 // #endregion foundry.
 
-contract RouterSwapExecutorTest is TestWrapper {
-    
-}
+contract RouterSwapExecutorTest is TestWrapper {}

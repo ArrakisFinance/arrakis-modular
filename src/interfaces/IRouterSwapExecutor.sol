@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import {SwapAndAddData} from "../structs/SRouter.sol";
 
 interface IRouterSwapExecutor {
-
     // #region errors.
 
     error OnlyRouter(address caller, address router);
@@ -13,7 +12,6 @@ interface IRouterSwapExecutor {
     error ReceivedBelowMinimum();
 
     // #endregion errors.
-
 
     /// @notice function used to swap tokens.
     /// @param _swapData struct containing all the informations for swapping.

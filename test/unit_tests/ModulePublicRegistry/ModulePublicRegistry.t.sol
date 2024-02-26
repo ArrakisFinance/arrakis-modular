@@ -8,24 +8,31 @@ import {TestWrapper} from "../../utils/TestWrapper.sol";
 // #region mocks.
 
 import {BeaconImplementation} from "./mocks/BeaconImplementation.sol";
-import {ArrakisPrivateVaultMock} from "./mocks/ArrakisPrivateVaultMock.sol";
-import {ArrakisPublicVaultMock} from "./mocks/ArrakisPublicVaultMock.sol";
+import {ArrakisPrivateVaultMock} from
+    "./mocks/ArrakisPrivateVaultMock.sol";
+import {ArrakisPublicVaultMock} from
+    "./mocks/ArrakisPublicVaultMock.sol";
 import {GuardianMock} from "./mocks/GuardianMock.sol";
-import {ArrakisMetaVaultFactoryMock} from "./mocks/ArrakisMetaVaultFactoryMock.sol";
+import {ArrakisMetaVaultFactoryMock} from
+    "./mocks/ArrakisMetaVaultFactoryMock.sol";
 
 // #endregion mocks.
 
-import {ModulePublicRegistry} from "../../../src/ModulePublicRegistry.sol";
-import {IModuleRegistry} from "../../../src/interfaces/IModuleRegistry.sol";
-import {IModulePublicRegistry} from "../../../src/interfaces/IModulePublicRegistry.sol";
-import {BeaconProxyExtended} from "../../../src/proxy/BeaconProxyExtended.sol";
+import {ModulePublicRegistry} from
+    "../../../src/ModulePublicRegistry.sol";
+import {IModuleRegistry} from
+    "../../../src/interfaces/IModuleRegistry.sol";
+import {IModulePublicRegistry} from
+    "../../../src/interfaces/IModulePublicRegistry.sol";
+import {BeaconProxyExtended} from
+    "../../../src/proxy/BeaconProxyExtended.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
-import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {UpgradeableBeacon} from
+    "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 contract ModulePublicRegistryTest is TestWrapper {
-
     address public owner;
     address public pauser;
     address public admin;
@@ -51,10 +58,7 @@ contract ModulePublicRegistryTest is TestWrapper {
         // #region create public module registry.
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory),
-            owner,
-            address(guardian),
-            admin
+            address(factory), owner, address(guardian), admin
         );
 
         // #endregion create public module registry.
@@ -66,10 +70,7 @@ contract ModulePublicRegistryTest is TestWrapper {
         vm.expectRevert(IModuleRegistry.AddressZero.selector);
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(0),
-            owner,
-            address(guardian),
-            admin
+            address(0), owner, address(guardian), admin
         );
     }
 
@@ -77,10 +78,7 @@ contract ModulePublicRegistryTest is TestWrapper {
         vm.expectRevert(IModuleRegistry.AddressZero.selector);
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory),
-            address(0),
-            address(guardian),
-            admin
+            address(factory), address(0), address(guardian), admin
         );
     }
 
@@ -88,10 +86,7 @@ contract ModulePublicRegistryTest is TestWrapper {
         vm.expectRevert(IModuleRegistry.AddressZero.selector);
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory),
-            owner,
-            address(0),
-            admin
+            address(factory), owner, address(0), admin
         );
     }
 
@@ -99,22 +94,18 @@ contract ModulePublicRegistryTest is TestWrapper {
         vm.expectRevert(IModuleRegistry.AddressZero.selector);
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory),
-            owner,
-            address(guardian),
-            address(0)
+            address(factory), owner, address(guardian), address(0)
         );
     }
 
     function testConstructor() public {
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory),
-            owner,
-            address(guardian),
-            admin
+            address(factory), owner, address(guardian), admin
         );
 
-        assertEq(address(factory), address(modulePublicRegistry.factory()));
+        assertEq(
+            address(factory), address(modulePublicRegistry.factory())
+        );
         assertEq(owner, modulePublicRegistry.owner());
         assertEq(pauser, modulePublicRegistry.guardian());
         assertEq(admin, modulePublicRegistry.admin());
@@ -128,10 +119,7 @@ contract ModulePublicRegistryTest is TestWrapper {
         address[] memory beacons = new address[](0);
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory),
-            owner,
-            address(guardian),
-            admin
+            address(factory), owner, address(guardian), admin
         );
 
         vm.expectRevert(Ownable.Unauthorized.selector);
@@ -140,15 +128,13 @@ contract ModulePublicRegistryTest is TestWrapper {
     }
 
     function testWhitelistBeaconNotBeacon() public {
-        address beacon = vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
         address[] memory beacons = new address[](1);
         beacons[0] = beacon;
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory),
-            owner,
-            address(guardian),
-            admin
+            address(factory), owner, address(guardian), admin
         );
 
         vm.expectRevert(IModuleRegistry.NotBeacon.selector);
@@ -160,14 +146,13 @@ contract ModulePublicRegistryTest is TestWrapper {
     function testWhitelistBeaconNotSameAdmin() public {
         // #region create a upgradeable beacon.
 
-        address beaconAdmin = vm.addr(
-            uint256(keccak256(abi.encode("Beacon Address")))
-        );
-        BeaconImplementation implementation = new BeaconImplementation();
+        address beaconAdmin =
+            vm.addr(uint256(keccak256(abi.encode("Beacon Address"))));
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
         UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation),
-            beaconAdmin
+            address(implementation), beaconAdmin
         );
 
         // #endregion create a upgradeable beacon.
@@ -176,10 +161,7 @@ contract ModulePublicRegistryTest is TestWrapper {
         beacons[0] = address(beacon);
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory),
-            owner,
-            address(guardian),
-            admin
+            address(factory), owner, address(guardian), admin
         );
 
         vm.expectRevert(IModuleRegistry.NotSameAdmin.selector);
@@ -191,12 +173,11 @@ contract ModulePublicRegistryTest is TestWrapper {
     function testWhitelistBeaconAlreadyWhitelisted() public {
         // #region create a upgradeable beacon.
 
-        BeaconImplementation implementation = new BeaconImplementation();
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation),
-            admin
-        );
+        UpgradeableBeacon beacon =
+            new UpgradeableBeacon(address(implementation), admin);
 
         // #endregion create a upgradeable beacon.
 
@@ -225,12 +206,11 @@ contract ModulePublicRegistryTest is TestWrapper {
     function testWhitelistBeacon() public {
         // #region create a upgradeable beacon.
 
-        BeaconImplementation implementation = new BeaconImplementation();
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation),
-            admin
-        );
+        UpgradeableBeacon beacon =
+            new UpgradeableBeacon(address(implementation), admin);
 
         // #endregion create a upgradeable beacon.
 
@@ -249,12 +229,11 @@ contract ModulePublicRegistryTest is TestWrapper {
     function testWhitelistBeaconAdminBurned() public {
         // #region create a upgradeable beacon.
 
-        BeaconImplementation implementation = new BeaconImplementation();
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation),
-            admin
-        );
+        UpgradeableBeacon beacon =
+            new UpgradeableBeacon(address(implementation), admin);
 
         // #endregion create a upgradeable beacon.
         // #region burning the ownership of upgradeable beacon.
@@ -281,7 +260,8 @@ contract ModulePublicRegistryTest is TestWrapper {
     // #region test blacklist beacon.
 
     function testBlacklistBeaconsOnlyOwner() public {
-        address notOwner = vm.addr(uint256(keccak256(abi.encode("Not Owner"))));
+        address notOwner =
+            vm.addr(uint256(keccak256(abi.encode("Not Owner"))));
 
         address[] memory beacons = new address[](0);
 
@@ -291,18 +271,18 @@ contract ModulePublicRegistryTest is TestWrapper {
         modulePublicRegistry.blacklistBeacons(beacons);
     }
 
-    function testBlacklistBeaconsNotAlreadyWhitelistedBeacon() public {
+    function testBlacklistBeaconsNotAlreadyWhitelistedBeacon()
+        public
+    {
         // #region create a upgradeable beacon.
 
-        address beaconAdmin = vm.addr(
-            uint256(keccak256(abi.encode("Beacon Address")))
-        );
-        BeaconImplementation implementation = new BeaconImplementation();
+        address beaconAdmin =
+            vm.addr(uint256(keccak256(abi.encode("Beacon Address"))));
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation),
-            admin
-        );
+        UpgradeableBeacon beacon =
+            new UpgradeableBeacon(address(implementation), admin);
 
         // #endregion create a upgradeable beacon.
 
@@ -323,15 +303,13 @@ contract ModulePublicRegistryTest is TestWrapper {
     function testBlacklistBeacons() public {
         // #region create a upgradeable beacon.
 
-        address beaconAdmin = vm.addr(
-            uint256(keccak256(abi.encode("Beacon Address")))
-        );
-        BeaconImplementation implementation = new BeaconImplementation();
+        address beaconAdmin =
+            vm.addr(uint256(keccak256(abi.encode("Beacon Address"))));
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation),
-            admin
-        );
+        UpgradeableBeacon beacon =
+            new UpgradeableBeacon(address(implementation), admin);
 
         // #endregion create a upgradeable beacon.
 
@@ -366,7 +344,8 @@ contract ModulePublicRegistryTest is TestWrapper {
     function testCreateModuleOnlyPublicVault() public {
         // #region create a private mock vault.
 
-        ArrakisPrivateVaultMock privateVault = new ArrakisPrivateVaultMock();
+        ArrakisPrivateVaultMock privateVault =
+            new ArrakisPrivateVaultMock();
 
         // #endregion create a private mock vault.
         // #region create module payload.
@@ -380,15 +359,13 @@ contract ModulePublicRegistryTest is TestWrapper {
         // #endregion create module payload.
         // #region create a upgradeable beacon.
 
-        address beaconAdmin = vm.addr(
-            uint256(keccak256(abi.encode("Beacon Address")))
-        );
-        BeaconImplementation implementation = new BeaconImplementation();
+        address beaconAdmin =
+            vm.addr(uint256(keccak256(abi.encode("Beacon Address"))));
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation),
-            admin
-        );
+        UpgradeableBeacon beacon =
+            new UpgradeableBeacon(address(implementation), admin);
 
         // #endregion create a upgradeable beacon.
         // #region whitelist beacon.
@@ -405,9 +382,7 @@ contract ModulePublicRegistryTest is TestWrapper {
         vm.expectRevert(IModulePublicRegistry.NotPublicVault.selector);
 
         modulePublicRegistry.createModule(
-            address(privateVault),
-            address(beacon),
-            payload
+            address(privateVault), address(beacon), payload
         );
     }
 
@@ -423,27 +398,28 @@ contract ModulePublicRegistryTest is TestWrapper {
         // #endregion create module payload.
         // #region create a upgradeable beacon.
 
-        address beaconAdmin = vm.addr(
-            uint256(keccak256(abi.encode("Beacon Address")))
-        );
-        BeaconImplementation implementation = new BeaconImplementation();
+        address beaconAdmin =
+            vm.addr(uint256(keccak256(abi.encode("Beacon Address"))));
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation),
-            admin
-        );
+        UpgradeableBeacon beacon =
+            new UpgradeableBeacon(address(implementation), admin);
 
         // #endregion create a upgradeable beacon.
 
         vm.expectRevert(IModuleRegistry.AddressZero.selector);
 
-        modulePublicRegistry.createModule(address(0), address(beacon), payload);
+        modulePublicRegistry.createModule(
+            address(0), address(beacon), payload
+        );
     }
 
     function testCreateModuleNotAlreadyWhitelistedBeacon() public {
         // #region create a public mock vault.
 
-        ArrakisPublicVaultMock publicVault = new ArrakisPublicVaultMock();
+        ArrakisPublicVaultMock publicVault =
+            new ArrakisPublicVaultMock();
 
         // #endregion create a public mock vault.
         // #region create module payload.
@@ -457,15 +433,13 @@ contract ModulePublicRegistryTest is TestWrapper {
         // #endregion create module payload.
         // #region create a upgradeable beacon.
 
-        address beaconAdmin = vm.addr(
-            uint256(keccak256(abi.encode("Beacon Address")))
-        );
-        BeaconImplementation implementation = new BeaconImplementation();
+        address beaconAdmin =
+            vm.addr(uint256(keccak256(abi.encode("Beacon Address"))));
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation),
-            admin
-        );
+        UpgradeableBeacon beacon =
+            new UpgradeableBeacon(address(implementation), admin);
 
         // #endregion create a upgradeable beacon.
 
@@ -478,16 +452,15 @@ contract ModulePublicRegistryTest is TestWrapper {
         vm.expectRevert(IModuleRegistry.NotWhitelistedBeacon.selector);
 
         modulePublicRegistry.createModule(
-            address(publicVault),
-            address(beacon),
-            payload
+            address(publicVault), address(beacon), payload
         );
     }
 
     function testCreateModuleMetaVaultNotInputedVault() public {
         // #region create a public mock vault.
 
-        ArrakisPublicVaultMock publicVault = new ArrakisPublicVaultMock();
+        ArrakisPublicVaultMock publicVault =
+            new ArrakisPublicVaultMock();
 
         // #endregion create a public mock vault.
         // #region create module payload.
@@ -501,15 +474,13 @@ contract ModulePublicRegistryTest is TestWrapper {
         // #endregion create module payload.
         // #region create a upgradeable beacon.
 
-        address beaconAdmin = vm.addr(
-            uint256(keccak256(abi.encode("Beacon Address")))
-        );
-        BeaconImplementation implementation = new BeaconImplementation();
+        address beaconAdmin =
+            vm.addr(uint256(keccak256(abi.encode("Beacon Address"))));
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation),
-            admin
-        );
+        UpgradeableBeacon beacon =
+            new UpgradeableBeacon(address(implementation), admin);
 
         // #endregion create a upgradeable beacon.
         // #region whitelist beacon.
@@ -528,26 +499,26 @@ contract ModulePublicRegistryTest is TestWrapper {
 
         // #endregion add vault into the factory.
 
-        vm.expectRevert(IModuleRegistry.ModuleNotLinkedToMetaVault.selector);
+        vm.expectRevert(
+            IModuleRegistry.ModuleNotLinkedToMetaVault.selector
+        );
 
         modulePublicRegistry.createModule(
-            address(publicVault),
-            address(beacon),
-            payload
+            address(publicVault), address(beacon), payload
         );
     }
 
     function testCreateModuleNotSameGuardian() public {
         // #region create a public mock vault.
 
-        ArrakisPublicVaultMock publicVault = new ArrakisPublicVaultMock();
+        ArrakisPublicVaultMock publicVault =
+            new ArrakisPublicVaultMock();
 
         // #endregion create a public mock vault.
         // #region create module payload.
 
-        address anotherPauser = vm.addr(
-            uint256(keccak256(abi.encode("Another Pauser")))
-        );
+        address anotherPauser =
+            vm.addr(uint256(keccak256(abi.encode("Another Pauser"))));
 
         bytes memory payload = abi.encodeWithSelector(
             BeaconImplementation.setGuardianAndMetaVault.selector,
@@ -558,15 +529,13 @@ contract ModulePublicRegistryTest is TestWrapper {
         // #endregion create module payload.
         // #region create a upgradeable beacon.
 
-        address beaconAdmin = vm.addr(
-            uint256(keccak256(abi.encode("Beacon Address")))
-        );
-        BeaconImplementation implementation = new BeaconImplementation();
+        address beaconAdmin =
+            vm.addr(uint256(keccak256(abi.encode("Beacon Address"))));
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation),
-            admin
-        );
+        UpgradeableBeacon beacon =
+            new UpgradeableBeacon(address(implementation), admin);
 
         // #endregion create a upgradeable beacon.
         // #region whitelist beacon.
@@ -588,16 +557,15 @@ contract ModulePublicRegistryTest is TestWrapper {
         vm.expectRevert(IModuleRegistry.NotSameGuardian.selector);
 
         modulePublicRegistry.createModule(
-            address(publicVault),
-            address(beacon),
-            payload
+            address(publicVault), address(beacon), payload
         );
     }
 
     function testCreateModule() public {
         // #region create a public mock vault.
 
-        ArrakisPublicVaultMock publicVault = new ArrakisPublicVaultMock();
+        ArrakisPublicVaultMock publicVault =
+            new ArrakisPublicVaultMock();
 
         // #endregion create a public mock vault.
         // #region create module payload.
@@ -611,15 +579,13 @@ contract ModulePublicRegistryTest is TestWrapper {
         // #endregion create module payload.
         // #region create a upgradeable beacon.
 
-        address beaconAdmin = vm.addr(
-            uint256(keccak256(abi.encode("Beacon Address")))
-        );
-        BeaconImplementation implementation = new BeaconImplementation();
+        address beaconAdmin =
+            vm.addr(uint256(keccak256(abi.encode("Beacon Address"))));
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation),
-            admin
-        );
+        UpgradeableBeacon beacon =
+            new UpgradeableBeacon(address(implementation), admin);
 
         // #endregion create a upgradeable beacon.
         // #region whitelist beacon.
@@ -639,9 +605,7 @@ contract ModulePublicRegistryTest is TestWrapper {
         // #endregion add vault into the factory.
 
         address module = modulePublicRegistry.createModule(
-            address(publicVault),
-            address(beacon),
-            payload
+            address(publicVault), address(beacon), payload
         );
 
         assertEq(
@@ -659,15 +623,13 @@ contract ModulePublicRegistryTest is TestWrapper {
 
         // #region create a upgradeable beacon.
 
-        address beaconAdmin = vm.addr(
-            uint256(keccak256(abi.encode("Beacon Address")))
-        );
-        BeaconImplementation implementation = new BeaconImplementation();
+        address beaconAdmin =
+            vm.addr(uint256(keccak256(abi.encode("Beacon Address"))));
+        BeaconImplementation implementation =
+            new BeaconImplementation();
 
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation),
-            admin
-        );
+        UpgradeableBeacon beacon =
+            new UpgradeableBeacon(address(implementation), admin);
 
         // #endregion create a upgradeable beacon.
 

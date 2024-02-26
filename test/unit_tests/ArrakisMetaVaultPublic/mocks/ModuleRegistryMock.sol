@@ -9,9 +9,10 @@ contract ModuleRegistryMock {
         address,
         address,
         bytes calldata data_
-    ) external returns(address) {
-        if(data_.length == 0)
+    ) external returns (address) {
+        if (data_.length == 0) {
             return address(new LpModuleMock());
+        }
         return (address(new NewLpModuleBuggyMock()));
     }
 }

@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisLPModulePrivate} from "../interfaces/IArrakisLPModulePrivate.sol";
+import {IArrakisLPModulePrivate} from
+    "../interfaces/IArrakisLPModulePrivate.sol";
 import {ValantisModule} from "../abstracts/ValantisSOTModule.sol";
 
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {SafeERC20} from
+    "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata} from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-contract ValantisModulePrivate is ValantisModule, IArrakisLPModulePrivate {
+contract ValantisModulePrivate is
+    ValantisModule,
+    IArrakisLPModulePrivate
+{
     using SafeERC20 for IERC20Metadata;
 
     /// @notice deposit function for private vault.
@@ -18,11 +24,7 @@ contract ValantisModulePrivate is ValantisModule, IArrakisLPModulePrivate {
         address depositor_,
         uint256 amount0_,
         uint256 amount1_
-    ) external payable
-        onlyMetaVault
-        whenNotPaused
-        nonReentrant
-    {
+    ) external payable onlyMetaVault whenNotPaused nonReentrant {
         if (msg.value > 0) revert NoNativeToken();
         if (depositor_ == address(0)) revert AddressZero();
         if (amount0_ == 0 && amount1_ == 0) revert DepositZero();
@@ -52,10 +54,12 @@ contract ValantisModulePrivate is ValantisModule, IArrakisLPModulePrivate {
 
         // #region assertions.
 
-        if(token0.balanceOf(address(this)) - balance0 > 0)
+        if (token0.balanceOf(address(this)) - balance0 > 0) {
             revert Deposit0();
-        if(token1.balanceOf(address(this)) - balance1 > 0)
+        }
+        if (token1.balanceOf(address(this)) - balance1 > 0) {
             revert Deposit1();
+        }
 
         // #endregion assertions.
 

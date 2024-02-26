@@ -10,7 +10,11 @@ contract ArrakisManagerBuggy2Mock is IManager {
         return false;
     }
 
-    function getInitManagementSelector() external pure returns (bytes4) {
+    function getInitManagementSelector()
+        external
+        pure
+        returns (bytes4)
+    {
         return this.initManagement.selector;
     }
 }
