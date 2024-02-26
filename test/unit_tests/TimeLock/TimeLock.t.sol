@@ -14,9 +14,12 @@ contract TimeLockTest is TestWrapper {
 
     function setUp() public {
         uint256 minDelay = 2 days;
-        address proposer = vm.addr(uint256(keccak256(abi.encode("Proposer"))));
-        address executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
-        address admin = vm.addr(uint256(keccak256(abi.encode("Admin"))));
+        address proposer =
+            vm.addr(uint256(keccak256(abi.encode("Proposer"))));
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address admin =
+            vm.addr(uint256(keccak256(abi.encode("Admin"))));
 
         address[] memory proposers = new address[](1);
         address[] memory executors = new address[](1);

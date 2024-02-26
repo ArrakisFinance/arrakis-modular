@@ -27,9 +27,14 @@ contract ModuleRegistryTest is Test {
     //     - [ ] reverts if a beacon is already whitelisted
     function test_whitelistBeacons() public {}
     function testRevert_whitelistBeacons_notOwner() public {}
-    function testRevert_whitelistBeacons_beaconImplementation_addressZero() public {}
-    function testRevert_whitelistBeacons_beaconOwner_notAdmin() public {}
-    function testRevert_whitelistBeacons_alreadyWhiteListed() public {}
+    function testRevert_whitelistBeacons_beaconImplementation_addressZero(
+    ) public {}
+    function testRevert_whitelistBeacons_beaconOwner_notAdmin()
+        public
+    {}
+    function testRevert_whitelistBeacons_alreadyWhiteListed()
+        public
+    {}
 
     // - [ ] blacklistBeacons
     //     - [ ] storage is properly updated

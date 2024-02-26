@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IModuleRegistry} from "../../../../src/interfaces/IModuleRegistry.sol";
-import {BeaconProxyExtended} from "../../../../src/proxy/BeaconProxyExtended.sol";
+import {IModuleRegistry} from
+    "../../../../src/interfaces/IModuleRegistry.sol";
+import {BeaconProxyExtended} from
+    "../../../../src/proxy/BeaconProxyExtended.sol";
 
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {EnumerableSet} from
+    "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract ModuleRegistryMock is IModuleRegistry {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -36,9 +39,11 @@ contract ModuleRegistryMock is IModuleRegistry {
         return _beacons.values();
     }
 
-    function beaconsContains(
-        address beacon_
-    ) external view returns (bool isContained) {
+    function beaconsContains(address beacon_)
+        external
+        view
+        returns (bool isContained)
+    {
         return _beacons.contains(beacon_);
     }
 
@@ -69,7 +74,6 @@ contract ModuleRegistryMock is IModuleRegistry {
         address beacon_,
         bytes calldata payload_
     ) external returns (address module) {
-
         bytes32 salt = keccak256(
             abi.encodePacked(tx.origin, block.number, payload_)
         );

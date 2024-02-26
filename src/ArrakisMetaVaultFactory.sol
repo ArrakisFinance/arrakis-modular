@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {EnumerableSet} from
+    "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {IERC20Metadata} from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-import {IArrakisMetaVaultFactory} from "./interfaces/IArrakisMetaVaultFactory.sol";
+import {IArrakisMetaVaultFactory} from
+    "./interfaces/IArrakisMetaVaultFactory.sol";
 import {ArrakisMetaVaultPublic} from "./ArrakisMetaVaultPublic.sol";
 import {ArrakisMetaVaultPrivate} from "./ArrakisMetaVaultPrivate.sol";
 import {IManager} from "./interfaces/IManager.sol";
@@ -52,10 +55,9 @@ contract ArrakisMetaVaultFactory is
         address moduleRegistryPrivate_
     ) {
         if (
-            owner_ == address(0) ||
-            manager_ == address(0) ||
-            moduleRegistryPublic_ == address(0) ||
-            moduleRegistryPrivate_ == address(0)
+            owner_ == address(0) || manager_ == address(0)
+                || moduleRegistryPublic_ == address(0)
+                || moduleRegistryPrivate_ == address(0)
         ) revert AddressZero();
 
         _initializeOwner(owner_);
@@ -89,8 +91,8 @@ contract ArrakisMetaVaultFactory is
     function setManager(address newManager_) external onlyOwner {
         address oldManager = manager;
 
-        if(newManager_ == address(0)) revert AddressZero();
-        if(newManager_ == oldManager) revert SameManager();
+        if (newManager_ == address(0)) revert AddressZero();
+        if (newManager_ == oldManager) revert SameManager();
 
         manager = newManager_;
 
@@ -127,7 +129,9 @@ contract ArrakisMetaVaultFactory is
         string memory name = "Arrakis Modular Vault";
         string memory symbol = "AMV";
 
-        try this.getTokenName(token0_, token1_) returns (string memory result) {
+        try this.getTokenName(token0_, token1_) returns (
+            string memory result
+        ) {
             name = result;
         } catch {} // solhint-disable-line no-empty-blocks
 
@@ -188,11 +192,8 @@ contract ArrakisMetaVaultFactory is
                 bytes32(uint256(uint160(vault)))
             );
 
-            module = IModuleRegistry(moduleRegistryPublic).createModule(
-                vault,
-                beacon_,
-                moduleCreationPayload
-            );
+            module = IModuleRegistry(moduleRegistryPublic)
+                .createModule(vault, beacon_, moduleCreationPayload);
         }
 
         // #endregion create a module.
@@ -244,11 +245,7 @@ contract ArrakisMetaVaultFactory is
 
         bytes memory creationCode = abi.encodePacked(
             type(ArrakisMetaVaultPrivate).creationCode,
-            abi.encode(
-                moduleRegistryPrivate,
-                manager,
-                address(nft)
-            )
+            abi.encode(moduleRegistryPrivate, manager, address(nft))
         );
 
         // #endregion get the creation code for TokenMetaVault.
@@ -266,11 +263,8 @@ contract ArrakisMetaVaultFactory is
                 bytes32(uint256(uint160(vault)))
             );
 
-            module = IModuleRegistry(moduleRegistryPrivate).createModule(
-                vault,
-                beacon_,
-                moduleCreationPayload
-            );
+            module = IModuleRegistry(moduleRegistryPrivate)
+                .createModule(vault, beacon_, moduleCreationPayload);
         }
 
         IArrakisMetaVault(vault).initialize(token0_, token1_, module);
@@ -282,29 +276,25 @@ contract ArrakisMetaVaultFactory is
         _initManagement(vault, initManagementPayload_);
 
         emit LogPrivateVaultCreation(
-            msg.sender,
-            salt_,
-            token0_,
-            token1_,
-            owner_,
-            module,
-            vault
+            msg.sender, salt_, token0_, token1_, owner_, module, vault
         );
     }
 
     /// @notice function used to grant the role to deploy to a list of addresses.
     /// @param deployers_ list of addresses that owner want to grant permission to deploy.
-    function whitelistDeployer(
-        address[] calldata deployers_
-    ) external onlyOwner {
+    function whitelistDeployer(address[] calldata deployers_)
+        external
+        onlyOwner
+    {
         uint256 length = deployers_.length;
 
         for (uint256 i; i < length; i++) {
             address deployer = deployers_[i];
 
             if (deployer == address(0)) revert AddressZero();
-            if (_deployers.contains(deployer))
+            if (_deployers.contains(deployer)) {
                 revert AlreadyWhitelistedDeployer(deployer);
+            }
 
             _deployers.add(deployer);
         }
@@ -314,16 +304,18 @@ contract ArrakisMetaVaultFactory is
 
     /// @notice function used to grant the role to deploy to a list of addresses.
     /// @param deployers_ list of addresses that owner want to grant permission to deploy.
-    function blacklistDeployer(
-        address[] calldata deployers_
-    ) external onlyOwner {
+    function blacklistDeployer(address[] calldata deployers_)
+        external
+        onlyOwner
+    {
         uint256 length = deployers_.length;
 
         for (uint256 i; i < length; i++) {
             address deployer = deployers_[i];
 
-            if (!_deployers.contains(deployer))
+            if (!_deployers.contains(deployer)) {
                 revert NotAlreadyADeployer(deployer);
+            }
 
             _deployers.remove(deployer);
         }
@@ -367,12 +359,14 @@ contract ArrakisMetaVaultFactory is
         uint256 startIndex_,
         uint256 endIndex_
     ) external view returns (address[] memory) {
-        if (startIndex_ >= endIndex_)
+        if (startIndex_ >= endIndex_) {
             revert StartIndexLtEndIndex(startIndex_, endIndex_);
+        }
 
         uint256 vaultsLength = numOfPublicVaults();
-        if (endIndex_ > vaultsLength)
+        if (endIndex_ > vaultsLength) {
             revert EndIndexGtNbOfVaults(endIndex_, vaultsLength);
+        }
 
         address[] memory vs = new address[](endIndex_ - startIndex_);
         for (uint256 i = startIndex_; i < endIndex_; i++) {
@@ -384,14 +378,22 @@ contract ArrakisMetaVaultFactory is
 
     /// @notice numOfPublicVaults counts the total number of public vaults in existence
     /// @return result total number of vaults deployed
-    function numOfPublicVaults() public view returns (uint256 result) {
+    function numOfPublicVaults()
+        public
+        view
+        returns (uint256 result)
+    {
         return _publicVaults.length();
     }
 
     /// @notice isPublicVault check if the inputed vault is a public vault.
     /// @param vault_ address of the address to check.
     /// @return isPublicVault true if the inputed vault is public or otherwise false.
-    function isPublicVault(address vault_) external view returns (bool) {
+    function isPublicVault(address vault_)
+        external
+        view
+        returns (bool)
+    {
         return _publicVaults.contains(vault_);
     }
 
@@ -403,12 +405,14 @@ contract ArrakisMetaVaultFactory is
         uint256 startIndex_,
         uint256 endIndex_
     ) external view returns (address[] memory) {
-        if (startIndex_ >= endIndex_)
+        if (startIndex_ >= endIndex_) {
             revert StartIndexLtEndIndex(startIndex_, endIndex_);
+        }
 
         uint256 vaultsLength = numOfPrivateVaults();
-        if (endIndex_ > vaultsLength)
+        if (endIndex_ > vaultsLength) {
             revert EndIndexGtNbOfVaults(endIndex_, vaultsLength);
+        }
 
         address[] memory vs = new address[](endIndex_ - startIndex_);
         for (uint256 i = startIndex_; i < endIndex_; i++) {
@@ -420,14 +424,22 @@ contract ArrakisMetaVaultFactory is
 
     /// @notice numOfPrivateVaults counts the total number of private vaults in existence
     /// @return result total number of vaults deployed
-    function numOfPrivateVaults() public view returns (uint256 result) {
+    function numOfPrivateVaults()
+        public
+        view
+        returns (uint256 result)
+    {
         return _privateVaults.length();
     }
 
     /// @notice isPrivateVault check if the inputed vault is a private vault.
     /// @param vault_ address of the address to check.
     /// @return isPublicVault true if the inputed vault is private or otherwise false.
-    function isPrivateVault(address vault_) external view returns (bool) {
+    function isPrivateVault(address vault_)
+        external
+        view
+        returns (bool)
+    {
         return _privateVaults.contains(vault_);
     }
 
@@ -440,31 +452,29 @@ contract ArrakisMetaVaultFactory is
 
     // #region internal functions.
 
-    function _initManagement(address vault_, bytes memory data_) internal {
+    function _initManagement(
+        address vault_,
+        bytes memory data_
+    ) internal {
         /// @dev to anticipate futur changes in the manager's initManagement function
         /// manager should implement getInitManagementSelector function, so factory can get the
         /// the right selector of the function.
-        bytes4 selector = IManager(manager).getInitManagementSelector();
+        bytes4 selector =
+            IManager(manager).getInitManagementSelector();
 
         /// @dev for initializing management we need to know the vault address,
         /// so manager should follow this pattern where vault address is the first parameter of the function.
         bytes memory data = data_.length == 0
-            ? abi.encodeWithSelector(
-                selector,
-                vault_
-            )
-            : abi.encodeWithSelector(
-                selector,
-                vault_,
-                data_
-            );
+            ? abi.encodeWithSelector(selector, vault_)
+            : abi.encodeWithSelector(selector, vault_, data_);
 
-        (bool success, ) = manager.call(data);
+        (bool success,) = manager.call(data);
 
         if (!success) revert CallFailed();
 
-        if (!IManager(manager).isManaged(vault_))
+        if (!IManager(manager).isManaged(vault_)) {
             revert VaultNotManaged();
+        }
     }
 
     function _append(

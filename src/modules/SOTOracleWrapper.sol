@@ -16,12 +16,15 @@ contract SOTOracleWrapper is IOracleWrapper {
     // #endregion immutable public variable.
 
     constructor(address oracle_, uint8 decimals0_, uint8 decimals1_) {
-        if(oracle_ == address(0))
+        if (oracle_ == address(0)) {
             revert AddressZero();
-        if(decimals0_ == 0)
+        }
+        if (decimals0_ == 0) {
             revert DecimalsToken0Zero();
-        if(decimals1_ == 0)
+        }
+        if (decimals1_ == 0) {
             revert DecimalsToken1Zero();
+        }
 
         oracle = ISOTOracle(oracle_);
         decimals0 = decimals0_;
@@ -33,9 +36,7 @@ contract SOTOracleWrapper is IOracleWrapper {
 
         if (priceX96 <= type(uint128).max) {
             price0 = FullMath.mulDiv(
-                priceX96 * priceX96,
-                10 ** decimals0,
-                2 ** 192
+                priceX96 * priceX96, 10 ** decimals0, 2 ** 192
             );
         } else {
             price0 = FullMath.mulDiv(
@@ -51,9 +52,7 @@ contract SOTOracleWrapper is IOracleWrapper {
 
         if (priceX96 <= type(uint128).max) {
             price1 = FullMath.mulDiv(
-                2 ** 192,
-                10 ** decimals1,
-                priceX96 * priceX96
+                2 ** 192, 10 ** decimals1, priceX96 * priceX96
             );
         } else {
             price1 = FullMath.mulDiv(

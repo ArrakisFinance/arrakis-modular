@@ -30,10 +30,12 @@ contract LpModuleMock {
         uint256 amount0_,
         uint256 amount1_
     ) external {
-        if (amount0_ > 0)
+        if (amount0_ > 0) {
             token0.transferFrom(depositor_, address(this), amount0_);
-        if (amount1_ > 0)
+        }
+        if (amount1_ > 0) {
             token1.transferFrom(depositor_, address(this), amount1_);
+        }
     }
 
     function deposit(
@@ -43,10 +45,12 @@ contract LpModuleMock {
         amount0 = FullMath.mulDiv(init0, proportion_, PIPS);
         amount1 = FullMath.mulDiv(init1, proportion_, PIPS);
 
-        if (amount0 > 0)
+        if (amount0 > 0) {
             token0.transferFrom(depositor_, address(this), amount0);
-        if (amount1 > 1)
+        }
+        if (amount1 > 1) {
             token1.transferFrom(depositor_, address(this), amount1);
+        }
     }
 
     function withdraw(
@@ -67,7 +71,10 @@ contract LpModuleMock {
         return (init0, init1);
     }
 
-    function setToken0AndToken1(address token0_, address token1_) external {
+    function setToken0AndToken1(
+        address token0_,
+        address token1_
+    ) external {
         token0 = IERC20(token0_);
         token1 = IERC20(token1_);
     }
@@ -116,10 +123,14 @@ contract LpModuleMock {
         amount1 = token1.balanceOf(address(this)) - managerBalance1;
     }
 
-    function totalUnderlyingAtPrice(
-        uint160 priceX96_
-    ) external view returns (uint256 amount0, uint256 amount1) {
-        amount0 = (token0.balanceOf(address(this)) - managerBalance0) / 2;
-        amount1 = (token1.balanceOf(address(this)) - managerBalance1) * 2;
+    function totalUnderlyingAtPrice(uint160 priceX96_)
+        external
+        view
+        returns (uint256 amount0, uint256 amount1)
+    {
+        amount0 =
+            (token0.balanceOf(address(this)) - managerBalance0) / 2;
+        amount1 =
+            (token1.balanceOf(address(this)) - managerBalance1) * 2;
     }
 }

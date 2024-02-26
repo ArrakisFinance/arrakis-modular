@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {IArrakisMetaVaultPublic} from "./interfaces/IArrakisMetaVaultPublic.sol";
-import {IArrakisLPModulePublic} from "./interfaces/IArrakisLPModulePublic.sol";
-import {ArrakisMetaVault, PIPS} from "./abstracts/ArrakisMetaVault.sol";
+import {IArrakisMetaVaultPublic} from
+    "./interfaces/IArrakisMetaVaultPublic.sol";
+import {IArrakisLPModulePublic} from
+    "./interfaces/IArrakisLPModulePublic.sol";
+import {
+    ArrakisMetaVault, PIPS
+} from "./abstracts/ArrakisMetaVault.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
@@ -49,9 +53,7 @@ contract ArrakisMetaVaultPublic is
         uint256 supply = totalSupply();
 
         uint256 proportion = FullMath.mulDiv(
-            shares_,
-            PIPS,
-            supply > 0 ? supply : 1 ether
+            shares_, PIPS, supply > 0 ? supply : 1 ether
         );
 
         if (proportion == 0) revert CannotMintProportionZero();
@@ -103,7 +105,11 @@ contract ArrakisMetaVaultPublic is
     }
 
     /// @dev override transfer of ownership, to make it not possible.
-    function completeOwnershipHandover(address) public payable override {
+    function completeOwnershipHandover(address)
+        public
+        payable
+        override
+    {
         revert NotImplemented();
     }
 
@@ -123,9 +129,11 @@ contract ArrakisMetaVaultPublic is
 
     // #region internal functions.
 
-    function _deposit(
-        uint256 proportion_
-    ) internal nonReentrant returns (uint256 amount0, uint256 amount1) {
+    function _deposit(uint256 proportion_)
+        internal
+        nonReentrant
+        returns (uint256 amount0, uint256 amount1)
+    {
         /// @dev msg.sender should be the tokens provider
 
         bytes memory data = abi.encodeWithSelector(
@@ -134,10 +142,8 @@ contract ArrakisMetaVaultPublic is
             proportion_
         );
 
-        bytes memory result = payable(address(module)).functionCallWithValue(
-            data,
-            msg.value
-        );
+        bytes memory result = payable(address(module))
+            .functionCallWithValue(data, msg.value);
 
         (amount0, amount1) = abi.decode(result, (uint256, uint256));
     }

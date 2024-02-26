@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {PermitBatchTransferFrom, SignatureTransferDetails, PermitTransferFrom} from "../structs/SPermit2.sol";
+import {
+    PermitBatchTransferFrom,
+    SignatureTransferDetails,
+    PermitTransferFrom
+} from "../structs/SPermit2.sol";
 
 interface IPermit2 {
     function permitTransferFrom(

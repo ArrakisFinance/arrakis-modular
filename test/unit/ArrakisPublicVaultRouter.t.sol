@@ -15,7 +15,9 @@ contract ArrakisPublicVaultRouterTest is Test {
     //     - [ ] reverts if swapper is zero address
     //     - [ ] reverts if owner is zero address
     function test_constructor() public {}
-    function testRevert_constructor_zeroAddress_nativeToken() public {}
+    function testRevert_constructor_zeroAddress_nativeToken()
+        public
+    {}
     function testRevert_constructor_zeroAddress_permit2() public {}
     function testRevert_constructor_zeroAddress_swapper() public {}
     function testRevert_constructor_zeroAddress_owner() public {}
@@ -74,19 +76,35 @@ contract ArrakisPublicVaultRouterTest is Test {
     //     - [ ] if deposit native token and transfer is excessive, refunds `msg.sender`
     //     - [ ] reverts if minted shares are zero
     // - [ ] _addLiquidity (internal function)
-    function test_swapAndAddLiquidity_nativeToken_token0_zeroForOne() public {}
-    function test_swapAndAddLiquidity_nativeToken_token0_oneForZero() public {}
-    function test_swapAndAddLiquidity_nativeToken_token1_zeroForOne() public {}
-    function test_swapAndAddLiquidity_nativeToken_token1_oneForZero() public {}
-    function test_swapAndAddLiquidity_nativeToken_none_zeroForOne() public {}
-    function test_swapAndAddLiquidity_nativeToken_none_oneForZero() public {}
+    function test_swapAndAddLiquidity_nativeToken_token0_zeroForOne()
+        public
+    {}
+    function test_swapAndAddLiquidity_nativeToken_token0_oneForZero()
+        public
+    {}
+    function test_swapAndAddLiquidity_nativeToken_token1_zeroForOne()
+        public
+    {}
+    function test_swapAndAddLiquidity_nativeToken_token1_oneForZero()
+        public
+    {}
+    function test_swapAndAddLiquidity_nativeToken_none_zeroForOne()
+        public
+    {}
+    function test_swapAndAddLiquidity_nativeToken_none_oneForZero()
+        public
+    {}
     function test_swapAndAddLiquidity_nativeToken_refund() public {}
     function testRevert_swapAndAddLiquidity_paused() public {}
     function testRevert_swapAndAddLiquidity_notPublicType() public {}
     function testRevert_swapAndAddLiquidity_reentered() public {}
     function testRevert_swapAndAddLiquidity_noMaxAmounts() public {}
-    function testRevert_swapAndAddLiquidity_notEnoughNativeToken() public {}
-    function testRevert_swapAndAddLiquidity_zeroMintedShares() public {}
+    function testRevert_swapAndAddLiquidity_notEnoughNativeToken()
+        public
+    {}
+    function testRevert_swapAndAddLiquidity_zeroMintedShares()
+        public
+    {}
 
     // - [ ] removeLiquidity
     //     - [ ] reverts if contract is paused
@@ -120,10 +138,16 @@ contract ArrakisPublicVaultRouterTest is Test {
     function testRevert_addLiquidityPermit2_notPublicType() public {}
     function testRevert_addLiquidityPermit2_reentered() public {}
     function testRevert_addLiquidityPermit2_noMaxAmounts() public {}
-    function testRevert_addLiquidityPermit2_zeroMintedShares() public {}
-    function testRevert_addLiquidityPermit2_belowMinAmounts() public {}
+    function testRevert_addLiquidityPermit2_zeroMintedShares()
+        public
+    {}
+    function testRevert_addLiquidityPermit2_belowMinAmounts()
+        public
+    {}
     function testRevert_addLiquidityPermit2_nativeToken() public {}
-    function testRevert_addLiquidityPermit2_missingSignature() public {}
+    function testRevert_addLiquidityPermit2_missingSignature()
+        public
+    {}
 
     // - [ ] swapAndAddLiquidityPermit2
     //     - [ ] reverts if contract is paused
@@ -137,11 +161,21 @@ contract ArrakisPublicVaultRouterTest is Test {
     // - [ ] _swapAndAddLiquidity (internal function)
     function test_swapAndAddLiquidityPermit2() public {}
     function testRevert_swapAndAddLiquidityPermit2_paused() public {}
-    function testRevert_swapAndAddLiquidityPermit2_notPublicType() public {}
-    function testRevert_swapAndAddLiquidityPermit2_reentered() public {}
-    function testRevert_swapAndAddLiquidityPermit2_noMaxAmounts() public {}
-    function testRevert_swapAndAddLiquidityPermit2_nativeToken() public {}
-    function testRevert_swapAndAddLiquidityPermit2_missingSignature() public {}
+    function testRevert_swapAndAddLiquidityPermit2_notPublicType()
+        public
+    {}
+    function testRevert_swapAndAddLiquidityPermit2_reentered()
+        public
+    {}
+    function testRevert_swapAndAddLiquidityPermit2_noMaxAmounts()
+        public
+    {}
+    function testRevert_swapAndAddLiquidityPermit2_nativeToken()
+        public
+    {}
+    function testRevert_swapAndAddLiquidityPermit2_missingSignature()
+        public
+    {}
 
     // - [ ] removeLiquidityPermit2
     //     - [ ] reverts if contract is paused
@@ -151,7 +185,11 @@ contract ArrakisPublicVaultRouterTest is Test {
     // - [ ] _removeLiquidity (internal function)
     function test_removeLiquidityPermit2() public {}
     function testRevert_removeLiquidityPermit2_paused() public {}
-    function testRevert_removeLiquidityPermit2_notPublicType() public {}
+    function testRevert_removeLiquidityPermit2_notPublicType()
+        public
+    {}
     function testRevert_removeLiquidityPermit2_reentered() public {}
-    function testRevert_removeLiquidityPermit2_zeroBurnAmount() public {}
+    function testRevert_removeLiquidityPermit2_zeroBurnAmount()
+        public
+    {}
 }

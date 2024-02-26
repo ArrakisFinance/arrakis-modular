@@ -3,7 +3,8 @@ pragma solidity ^0.8.20;
 
 import {ITimeLock} from "./interfaces/ITimeLock.sol";
 
-import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {TimelockController} from
+    "@openzeppelin/contracts/governance/TimelockController.sol";
 
 contract TimeLock is TimelockController, ITimeLock {
     constructor(

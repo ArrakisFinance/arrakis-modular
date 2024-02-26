@@ -6,12 +6,29 @@ import {console} from "forge-std/console.sol";
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 // #endregion foundry.
 
-import {IArrakisPublicVaultRouter} from "../../../src/interfaces/IArrakisPublicVaultRouter.sol";
-import {IPermit2, SignatureTransferDetails} from "../../../src/interfaces/IPermit2.sol";
+import {IArrakisPublicVaultRouter} from
+    "../../../src/interfaces/IArrakisPublicVaultRouter.sol";
+import {
+    IPermit2,
+    SignatureTransferDetails
+} from "../../../src/interfaces/IPermit2.sol";
 import {NATIVE_COIN} from "../../../src/constants/CArrakis.sol";
-import {ArrakisPublicVaultRouter} from "../../../src/ArrakisPublicVaultRouter.sol";
-import {AddLiquidityData, SwapAndAddData, SwapData, RemoveLiquidityData, AddLiquidityPermit2Data, SwapAndAddPermit2Data, RemoveLiquidityPermit2Data} from "../../../src/structs/SRouter.sol";
-import {PermitBatchTransferFrom, PermitTransferFrom, TokenPermissions} from "../../../src/structs/SPermit2.sol";
+import {ArrakisPublicVaultRouter} from
+    "../../../src/ArrakisPublicVaultRouter.sol";
+import {
+    AddLiquidityData,
+    SwapAndAddData,
+    SwapData,
+    RemoveLiquidityData,
+    AddLiquidityPermit2Data,
+    SwapAndAddPermit2Data,
+    RemoveLiquidityPermit2Data
+} from "../../../src/structs/SRouter.sol";
+import {
+    PermitBatchTransferFrom,
+    PermitTransferFrom,
+    TokenPermissions
+} from "../../../src/structs/SPermit2.sol";
 
 // #region openzeppelin.
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -23,17 +40,23 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 // #endregion solady.
 
 // #region mocks.
-import {ArrakisMetaVaultFactoryMock} from "./mocks/ArrakisMetaVaultFactoryMock.sol";
-import {ArrakisPrivateVaultMock} from "./mocks/ArrakisPrivateVaultMock.sol";
-import {ArrakisPublicVaultMock} from "./mocks/ArrakisPublicVaultMock.sol";
+import {ArrakisMetaVaultFactoryMock} from
+    "./mocks/ArrakisMetaVaultFactoryMock.sol";
+import {ArrakisPrivateVaultMock} from
+    "./mocks/ArrakisPrivateVaultMock.sol";
+import {ArrakisPublicVaultMock} from
+    "./mocks/ArrakisPublicVaultMock.sol";
 // #endregion mocks.
 
 contract ArrakisPublicVaultRouterTest is TestWrapper {
     // #region constant properties.
 
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    IPermit2 public constant PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
+    address public constant WETH =
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant USDC =
+        0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    IPermit2 public constant PERMIT2 =
+        IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
     // #endregion constant properties.
 
@@ -72,7 +95,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     // #region test constructor.
 
     function testConstructorNativeCoinAddressZero() public {
-        vm.expectRevert(IArrakisPublicVaultRouter.AddressZero.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.AddressZero.selector
+        );
 
         router = new ArrakisPublicVaultRouter(
             address(0),
@@ -85,7 +110,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testConstructorPermit2AddressZero() public {
-        vm.expectRevert(IArrakisPublicVaultRouter.AddressZero.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.AddressZero.selector
+        );
 
         router = new ArrakisPublicVaultRouter(
             NATIVE_COIN,
@@ -98,7 +125,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testConstructorSwapperAddressZero() public {
-        vm.expectRevert(IArrakisPublicVaultRouter.AddressZero.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.AddressZero.selector
+        );
 
         router = new ArrakisPublicVaultRouter(
             NATIVE_COIN,
@@ -111,7 +140,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testConstructorOwnerAddressZero() public {
-        vm.expectRevert(IArrakisPublicVaultRouter.AddressZero.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.AddressZero.selector
+        );
 
         router = new ArrakisPublicVaultRouter(
             NATIVE_COIN,
@@ -124,7 +155,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     }
 
     function testConstructorFactoryAddressZero() public {
-        vm.expectRevert(IArrakisPublicVaultRouter.AddressZero.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.AddressZero.selector
+        );
 
         router = new ArrakisPublicVaultRouter(
             NATIVE_COIN,
@@ -229,7 +262,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.OnlyPublicVault.selector
+        );
 
         router.addLiquidity(params);
     }
@@ -256,7 +291,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.EmptyMaxAmounts.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.EmptyMaxAmounts.selector
+        );
 
         router.addLiquidity(params);
     }
@@ -285,7 +322,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.NothingToMint.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.NothingToMint.selector
+        );
 
         router.addLiquidity(params);
     }
@@ -314,7 +353,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.NothingToMint.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.NothingToMint.selector
+        );
 
         router.addLiquidity(params);
     }
@@ -344,7 +385,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.NothingToMint.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.NothingToMint.selector
+        );
 
         router.addLiquidity(params);
     }
@@ -375,7 +418,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.BelowMinAmounts.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.BelowMinAmounts.selector
+        );
 
         router.addLiquidity(params);
     }
@@ -406,7 +451,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.BelowMinAmounts.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.BelowMinAmounts.selector
+        );
 
         router.addLiquidity(params);
     }
@@ -546,11 +593,11 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        deal(address(this), 1e18*2);
-        assertEq(address(this).balance, 1e18*2);
+        deal(address(this), 1e18 * 2);
+        assertEq(address(this).balance, 1e18 * 2);
         assertEq(address(vault).balance, 1e18);
 
-        router.addLiquidity{value: 1e18*2}(params);
+        router.addLiquidity{value: 1e18 * 2}(params);
 
         assertEq(address(vault).balance, 2e18);
         assertEq(address(this).balance, 1e18);
@@ -584,12 +631,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        deal(address(this), 1e18*2);
+        deal(address(this), 1e18 * 2);
 
-        assertEq(address(this).balance, 1e18*2);
+        assertEq(address(this).balance, 1e18 * 2);
         assertEq(address(vault).balance, 1e18);
 
-        router.addLiquidity{value: 1e18*2}(params);
+        router.addLiquidity{value: 1e18 * 2}(params);
 
         assertEq(address(vault).balance, 2e18);
         assertEq(address(this).balance, 1e18);
@@ -624,12 +671,12 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory params = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory params =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
-        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.OnlyPublicVault.selector
+        );
 
         router.swapAndAddLiquidity(params);
     }
@@ -670,17 +717,19 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory params = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory params =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
-        vm.expectRevert(IArrakisPublicVaultRouter.EmptyMaxAmounts.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.EmptyMaxAmounts.selector
+        );
 
         router.swapAndAddLiquidity(params);
     }
 
-    function testSwapAndAddLiquidityNotEnoughNativeTokenSent() public {
+    function testSwapAndAddLiquidityNotEnoughNativeTokenSent()
+        public
+    {
         // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
@@ -716,18 +765,22 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory params = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory params =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
         deal(address(this), 1e18);
-        vm.expectRevert(IArrakisPublicVaultRouter.NotEnoughNativeTokenSent.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter
+                .NotEnoughNativeTokenSent
+                .selector
+        );
 
         router.swapAndAddLiquidity{value: 1e18 - 1}(params);
     }
 
-    function testSwapAndAddLiquidityNotEnoughNativeTokenSent2() public {
+    function testSwapAndAddLiquidityNotEnoughNativeTokenSent2()
+        public
+    {
         // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
@@ -763,13 +816,15 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory params = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory params =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
         deal(address(this), 1e18);
-        vm.expectRevert(IArrakisPublicVaultRouter.NotEnoughNativeTokenSent.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter
+                .NotEnoughNativeTokenSent
+                .selector
+        );
 
         router.swapAndAddLiquidity{value: 1e18 - 1}(params);
     }
@@ -811,10 +866,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory params = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory params =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
         deal(WETH, address(this), 2e18);
         IERC20(WETH).approve(address(router), 2e18);
@@ -865,15 +918,15 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory params = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory params =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
         deal(WETH, address(this), 2e18);
         IERC20(WETH).approve(address(router), 2e18);
 
-        vm.expectRevert(IArrakisPublicVaultRouter.NothingToMint.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.NothingToMint.selector
+        );
 
         router.swapAndAddLiquidity(params);
     }
@@ -914,20 +967,22 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory params = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory params =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
         deal(WETH, address(this), 2e18);
         IERC20(WETH).approve(address(router), 2e18);
 
-        vm.expectRevert(IArrakisPublicVaultRouter.BelowMinAmounts.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.BelowMinAmounts.selector
+        );
 
         router.swapAndAddLiquidity(params);
     }
 
-    function testSwapAndAddLiquidityOneForZeroGoodDealOnSwap() public {
+    function testSwapAndAddLiquidityOneForZeroGoodDealOnSwap()
+        public
+    {
         // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
@@ -964,10 +1019,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory params = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory params =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
         deal(WETH, address(this), 2e18);
         IERC20(WETH).approve(address(router), 2e18);
@@ -983,7 +1036,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
     }
 
-    function testSwapAndAddLiquidityZeroForOneGoodDealOnSwap() public {
+    function testSwapAndAddLiquidityZeroForOneGoodDealOnSwap()
+        public
+    {
         // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
@@ -1020,10 +1075,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: true
         });
 
-        SwapAndAddData memory params = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory params =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
         deal(USDC, address(this), 4000e6);
         IERC20(USDC).approve(address(router), 4000e6);
@@ -1038,7 +1091,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
     }
 
-    function testSwapAndAddLiquidityEthOneForZeroGoodDealOnSwap() public {
+    function testSwapAndAddLiquidityEthOneForZeroGoodDealOnSwap()
+        public
+    {
         // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
@@ -1075,10 +1130,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory params = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory params =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
         deal(USDC, address(this), 4000e6);
         IERC20(USDC).approve(address(router), 4000e6);
@@ -1095,7 +1148,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         assertEq(address(vault).balance, 2e18);
     }
 
-    function testSwapAndAddLiquidityEthZeroForOneGoodDealOnSwap() public {
+    function testSwapAndAddLiquidityEthZeroForOneGoodDealOnSwap()
+        public
+    {
         // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
@@ -1132,10 +1187,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: true
         });
 
-        SwapAndAddData memory params = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory params =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
         deal(USDC, address(this), 4000e6);
         IERC20(USDC).approve(address(router), 4000e6);
@@ -1189,10 +1242,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory params = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory params =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
         deal(address(this), 2e18);
 
@@ -1242,10 +1293,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: true
         });
 
-        SwapAndAddData memory params = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory params =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
         deal(address(this), 2e18);
 
@@ -1263,7 +1312,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     // #region test remove liquidity.
 
     function testRemoveLiquidityOnlyPublicVault() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region create private vault.
 
         ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
@@ -1282,13 +1332,16 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
 
         // #endregion create RemoveLiquidityData struct.
 
-        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.OnlyPublicVault.selector
+        );
 
         router.removeLiquidity(params);
     }
 
     function testRemoveLiquidityNothingToBurn() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
@@ -1319,13 +1372,16 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
 
         // #endregion create RemoveLiquidityData struct.
 
-        vm.expectRevert(IArrakisPublicVaultRouter.NothingToBurn.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.NothingToBurn.selector
+        );
 
         router.removeLiquidity(params);
     }
 
     function testRemoveLiquidityReceivedBelowMinimum() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
@@ -1359,13 +1415,16 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         vault.setAmountToGive(2000e6, 1e18);
         IERC20(address(vault)).approve(address(router), 1 ether);
 
-        vm.expectRevert(IArrakisPublicVaultRouter.ReceivedBelowMinimum.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.ReceivedBelowMinimum.selector
+        );
 
         router.removeLiquidity(params);
     }
 
     function testRemoveLiquidity() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
@@ -1429,21 +1488,26 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](0);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
         });
 
-        AddLiquidityPermit2Data memory params = AddLiquidityPermit2Data({
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
             addData: addData,
             permit: permit,
             signature: ""
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.OnlyPublicVault.selector
+        );
 
         router.addLiquidityPermit2(params);
     }
@@ -1470,21 +1534,26 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](0);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
         });
 
-        AddLiquidityPermit2Data memory params = AddLiquidityPermit2Data({
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
             addData: addData,
             permit: permit,
             signature: ""
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.EmptyMaxAmounts.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.EmptyMaxAmounts.selector
+        );
 
         router.addLiquidityPermit2(params);
     }
@@ -1513,21 +1582,26 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](0);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
         });
 
-        AddLiquidityPermit2Data memory params = AddLiquidityPermit2Data({
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
             addData: addData,
             permit: permit,
             signature: ""
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.NothingToMint.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.NothingToMint.selector
+        );
 
         router.addLiquidityPermit2(params);
     }
@@ -1556,21 +1630,26 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](0);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
         });
 
-        AddLiquidityPermit2Data memory params = AddLiquidityPermit2Data({
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
             addData: addData,
             permit: permit,
             signature: ""
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.NothingToMint.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.NothingToMint.selector
+        );
 
         router.addLiquidityPermit2(params);
     }
@@ -1600,21 +1679,26 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](0);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
         });
 
-        AddLiquidityPermit2Data memory params = AddLiquidityPermit2Data({
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
             addData: addData,
             permit: permit,
             signature: ""
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.NothingToMint.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.NothingToMint.selector
+        );
 
         router.addLiquidityPermit2(params);
     }
@@ -1645,22 +1729,26 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](0);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
         });
 
-        AddLiquidityPermit2Data memory params = AddLiquidityPermit2Data({
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
             addData: addData,
             permit: permit,
             signature: ""
         });
 
-
-        vm.expectRevert(IArrakisPublicVaultRouter.BelowMinAmounts.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.BelowMinAmounts.selector
+        );
 
         router.addLiquidityPermit2(params);
     }
@@ -1691,21 +1779,26 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](0);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
         });
 
-        AddLiquidityPermit2Data memory params = AddLiquidityPermit2Data({
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
             addData: addData,
             permit: permit,
             signature: ""
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.BelowMinAmounts.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.BelowMinAmounts.selector
+        );
 
         router.addLiquidityPermit2(params);
     }
@@ -1738,18 +1831,21 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](3);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](3);
         permitted[0] = TokenPermissions({token: WETH, amount: 1e18});
         permitted[1] = TokenPermissions({token: WETH, amount: 1e18});
         permitted[2] = TokenPermissions({token: WETH, amount: 1e18});
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
         });
 
-        AddLiquidityPermit2Data memory params = AddLiquidityPermit2Data({
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
             addData: addData,
             permit: permit,
             signature: ""
@@ -1757,10 +1853,11 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
 
         deal(WETH, address(this), 1e18);
         IERC20(WETH).approve(address(PERMIT2), 1e18);
-        vm.expectRevert(IArrakisPublicVaultRouter.LengthMismatch.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.LengthMismatch.selector
+        );
 
         router.addLiquidityPermit2(params);
-
     }
 
     function testAddLiquidityPermit2() public {
@@ -1791,16 +1888,19 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](1);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
         permitted[0] = TokenPermissions({token: WETH, amount: 1e18});
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
         });
 
-        AddLiquidityPermit2Data memory params = AddLiquidityPermit2Data({
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
             addData: addData,
             permit: permit,
             signature: ""
@@ -1843,16 +1943,19 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](1);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
         permitted[0] = TokenPermissions({token: USDC, amount: 2000e6});
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
         });
 
-        AddLiquidityPermit2Data memory params = AddLiquidityPermit2Data({
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
             addData: addData,
             permit: permit,
             signature: ""
@@ -1896,17 +1999,20 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: address(0)
         });
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](2);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](2);
         permitted[0] = TokenPermissions({token: USDC, amount: 2000e6});
         permitted[1] = TokenPermissions({token: WETH, amount: 1e18});
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
         });
 
-        AddLiquidityPermit2Data memory params = AddLiquidityPermit2Data({
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
             addData: addData,
             permit: permit,
             signature: ""
@@ -1954,14 +2060,14 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory swapAndAddData = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](0);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
@@ -1973,7 +2079,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             signature: ""
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.OnlyPublicVault.selector
+        );
 
         router.swapAndAddLiquidityPermit2(params);
     }
@@ -2008,14 +2116,14 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory swapAndAddData = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](0);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
@@ -2027,7 +2135,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             signature: ""
         });
 
-        vm.expectRevert(IArrakisPublicVaultRouter.EmptyMaxAmounts.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.EmptyMaxAmounts.selector
+        );
 
         router.swapAndAddLiquidityPermit2(params);
     }
@@ -2069,17 +2179,17 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory swapAndAddData = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](3);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](3);
         permitted[0] = TokenPermissions({token: WETH, amount: 2e18});
         permitted[1] = TokenPermissions({token: WETH, amount: 2e18});
         permitted[2] = TokenPermissions({token: WETH, amount: 2e18});
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
@@ -2095,7 +2205,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         IERC20(WETH).approve(address(PERMIT2), 2e18);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
-        vm.expectRevert(IArrakisPublicVaultRouter.LengthMismatch.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.LengthMismatch.selector
+        );
 
         router.swapAndAddLiquidityPermit2(params);
     }
@@ -2137,15 +2249,15 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: false
         });
 
-        SwapAndAddData memory swapAndAddData = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](1);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
         permitted[0] = TokenPermissions({token: WETH, amount: 2e18});
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
@@ -2205,15 +2317,15 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             zeroForOne: true
         });
 
-        SwapAndAddData memory swapAndAddData = SwapAndAddData({
-            swapData: swapData,
-            addData: addData
-        });
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
 
-        TokenPermissions[] memory permitted = new TokenPermissions[](1);
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
         permitted[0] = TokenPermissions({token: USDC, amount: 4000e6});
 
-        PermitBatchTransferFrom memory permit = PermitBatchTransferFrom({
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
             permitted: permitted,
             nonce: 1,
             deadline: type(uint256).max
@@ -2241,7 +2353,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     // #region test removeLiquidityPermit2.
 
     function testRemoveLiquidityPermit2OnlyPublicVault() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region create private vault.
 
         ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
@@ -2258,10 +2371,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: payable(receiver)
         });
 
-        TokenPermissions memory permitted = TokenPermissions({
-            token: address(vault),
-            amount: 0
-        });
+        TokenPermissions memory permitted =
+            TokenPermissions({token: address(vault), amount: 0});
 
         PermitTransferFrom memory permit = PermitTransferFrom({
             permitted: permitted,
@@ -2269,7 +2380,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             deadline: type(uint256).max
         });
 
-        RemoveLiquidityPermit2Data memory params = RemoveLiquidityPermit2Data({
+        RemoveLiquidityPermit2Data memory params =
+        RemoveLiquidityPermit2Data({
             removeData: removeData,
             permit: permit,
             signature: ""
@@ -2277,13 +2389,16 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
 
         // #endregion create RemoveLiquidityData struct.
 
-        vm.expectRevert(IArrakisPublicVaultRouter.OnlyPublicVault.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.OnlyPublicVault.selector
+        );
 
         router.removeLiquidityPermit2(params);
     }
 
     function testRemoveLiquidityPermit2NothingToBurn() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
@@ -2305,10 +2420,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: payable(receiver)
         });
 
-        TokenPermissions memory permitted = TokenPermissions({
-            token: address(vault),
-            amount: 0
-        });
+        TokenPermissions memory permitted =
+            TokenPermissions({token: address(vault), amount: 0});
 
         PermitTransferFrom memory permit = PermitTransferFrom({
             permitted: permitted,
@@ -2316,7 +2429,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             deadline: type(uint256).max
         });
 
-        RemoveLiquidityPermit2Data memory params = RemoveLiquidityPermit2Data({
+        RemoveLiquidityPermit2Data memory params =
+        RemoveLiquidityPermit2Data({
             removeData: removeData,
             permit: permit,
             signature: ""
@@ -2324,13 +2438,16 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
 
         // #endregion create RemoveLiquidityData struct.
 
-        vm.expectRevert(IArrakisPublicVaultRouter.NothingToBurn.selector);
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.NothingToBurn.selector
+        );
 
         router.removeLiquidityPermit2(params);
     }
 
     function testRemoveLiquidityPermit2() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
@@ -2359,10 +2476,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             receiver: payable(receiver)
         });
 
-        TokenPermissions memory permitted = TokenPermissions({
-            token: address(vault),
-            amount: 1 ether
-        });
+        TokenPermissions memory permitted =
+            TokenPermissions({token: address(vault), amount: 1 ether});
 
         PermitTransferFrom memory permit = PermitTransferFrom({
             permitted: permitted,
@@ -2370,7 +2485,8 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             deadline: type(uint256).max
         });
 
-        RemoveLiquidityPermit2Data memory params = RemoveLiquidityPermit2Data({
+        RemoveLiquidityPermit2Data memory params =
+        RemoveLiquidityPermit2Data({
             removeData: removeData,
             permit: permit,
             signature: ""
@@ -2428,70 +2544,103 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     function swap(SwapAndAddData memory params_)
         external
         payable
-    returns (uint256 amount0Diff, uint256 amount1Diff) {
-        (, bytes memory returnsData) = address(this).call(params_.swapData.swapPayload);
-        (amount0Diff, amount1Diff) = abi.decode(returnsData, (uint256, uint256));
+        returns (uint256 amount0Diff, uint256 amount1Diff)
+    {
+        (, bytes memory returnsData) =
+            address(this).call(params_.swapData.swapPayload);
+        (amount0Diff, amount1Diff) =
+            abi.decode(returnsData, (uint256, uint256));
     }
 
-    function swap1() external returns (uint256 amount0Diff, uint256 amount1Diff) {
+    function swap1()
+        external
+        returns (uint256 amount0Diff, uint256 amount1Diff)
+    {
         amount0Diff = 2000e6;
         amount1Diff = 1e18;
-        deal(USDC, address(router), 2000e6);    
+        deal(USDC, address(router), 2000e6);
     }
 
-    function swap2() external returns (uint256 amount0Diff, uint256 amount1Diff) {
+    function swap2()
+        external
+        returns (uint256 amount0Diff, uint256 amount1Diff)
+    {
         amount0Diff = 0;
         amount1Diff = 0;
-        deal(USDC, address(router), 2000e6);    
+        deal(USDC, address(router), 2000e6);
     }
 
-    function swap3() external returns (uint256 amount0Diff, uint256 amount1Diff) {
+    function swap3()
+        external
+        returns (uint256 amount0Diff, uint256 amount1Diff)
+    {
         amount0Diff = 2100e6;
         amount1Diff = 1e18;
-        deal(USDC, address(router), 2100e6);    
+        deal(USDC, address(router), 2100e6);
     }
 
-    function swap4() external returns (uint256 amount0Diff, uint256 amount1Diff) {
+    function swap4()
+        external
+        returns (uint256 amount0Diff, uint256 amount1Diff)
+    {
         amount0Diff = 2000e6;
         amount1Diff = 11e17;
-        deal(WETH, address(router), 11e17);    
+        deal(WETH, address(router), 11e17);
     }
 
-    function swap5() external returns (uint256 amount0Diff, uint256 amount1Diff) {
+    function swap5()
+        external
+        returns (uint256 amount0Diff, uint256 amount1Diff)
+    {
         amount0Diff = 11e17;
         amount1Diff = 2000e6;
-        deal(address(router), 11e17);    
+        deal(address(router), 11e17);
     }
 
-    function swap6() external returns (uint256 amount0Diff, uint256 amount1Diff) {
+    function swap6()
+        external
+        returns (uint256 amount0Diff, uint256 amount1Diff)
+    {
         amount0Diff = 2000e6;
         amount1Diff = 11e17;
-        deal(address(router), 11e17);      
+        deal(address(router), 11e17);
     }
 
-    function swap7() external returns (uint256 amount0Diff, uint256 amount1Diff) {
+    function swap7()
+        external
+        returns (uint256 amount0Diff, uint256 amount1Diff)
+    {
         amount0Diff = 2000e6;
         amount1Diff = 1e18;
-        deal(USDC, address(router), 1e18);      
+        deal(USDC, address(router), 1e18);
     }
 
-    function swap8() external returns (uint256 amount0Diff, uint256 amount1Diff) {
+    function swap8()
+        external
+        returns (uint256 amount0Diff, uint256 amount1Diff)
+    {
         amount0Diff = 1e18;
         amount1Diff = 2000e6;
-        deal(USDC, address(router), 1e18);      
+        deal(USDC, address(router), 1e18);
     }
 
-    function swap9() external returns (uint256 amount0Diff, uint256 amount1Diff) {
+    function swap9()
+        external
+        returns (uint256 amount0Diff, uint256 amount1Diff)
+    {
         amount0Diff = 2000e6;
         amount1Diff = 10e17;
-        deal(WETH, address(router), 10e17);    
+        deal(WETH, address(router), 10e17);
     }
 
     // #endregion swapper mock.
 
     // #region ERC1271 mocks.
 
-    function isValidSignature(bytes32, bytes memory) external view returns (bytes4 magicValue) {
+    function isValidSignature(
+        bytes32,
+        bytes memory
+    ) external view returns (bytes4 magicValue) {
         magicValue = 0x1626ba7e;
     }
 

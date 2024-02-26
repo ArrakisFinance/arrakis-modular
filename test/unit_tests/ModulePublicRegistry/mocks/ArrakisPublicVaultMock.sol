@@ -13,7 +13,5 @@ contract ArrakisPublicVaultMock {
     function withdrawManagerFee()
         external
         returns (uint256 amount0, uint256 amount1)
-    {
-        
-    }
+    {}
 }

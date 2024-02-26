@@ -73,6 +73,4 @@ contract ArrakisMetaVaultPublicTest is Test {
     // - [ ] completeOwnershipHandover
     //     - [ ] always reverts
     function testRevert_completeOwnershipHandover() public {}
-
-
 }
