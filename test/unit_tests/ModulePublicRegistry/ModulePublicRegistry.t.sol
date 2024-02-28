@@ -58,27 +58,21 @@ contract ModulePublicRegistryTest is TestWrapper {
         // #region create public module registry.
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory), owner, address(guardian), admin
+            owner, address(guardian), admin
         );
+
+        modulePublicRegistry.initialize(address(factory));
 
         // #endregion create public module registry.
     }
 
     // #region test constructor.
 
-    function testConstructorFactoryAddressZero() public {
-        vm.expectRevert(IModuleRegistry.AddressZero.selector);
-
-        modulePublicRegistry = new ModulePublicRegistry(
-            address(0), owner, address(guardian), admin
-        );
-    }
-
     function testConstructorOwnerAddressZero() public {
         vm.expectRevert(IModuleRegistry.AddressZero.selector);
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory), address(0), address(guardian), admin
+            address(0), address(guardian), admin
         );
     }
 
@@ -86,7 +80,7 @@ contract ModulePublicRegistryTest is TestWrapper {
         vm.expectRevert(IModuleRegistry.AddressZero.selector);
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory), owner, address(0), admin
+            owner, address(0), admin
         );
     }
 
@@ -94,18 +88,15 @@ contract ModulePublicRegistryTest is TestWrapper {
         vm.expectRevert(IModuleRegistry.AddressZero.selector);
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory), owner, address(guardian), address(0)
+            owner, address(guardian), address(0)
         );
     }
 
     function testConstructor() public {
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory), owner, address(guardian), admin
+            owner, address(guardian), admin
         );
 
-        assertEq(
-            address(factory), address(modulePublicRegistry.factory())
-        );
         assertEq(owner, modulePublicRegistry.owner());
         assertEq(pauser, modulePublicRegistry.guardian());
         assertEq(admin, modulePublicRegistry.admin());
@@ -113,14 +104,42 @@ contract ModulePublicRegistryTest is TestWrapper {
 
     // #endregion test constructor.
 
+    // #region test initialize.
+
+    function testInitializeFactoryAddressZero() public {
+        modulePublicRegistry = new ModulePublicRegistry(
+            owner, address(guardian), admin
+        );
+
+        vm.expectRevert(IModuleRegistry.AddressZero.selector);
+
+        modulePublicRegistry.initialize(address(0));
+    }
+
+    function testInitialize() public {
+        modulePublicRegistry = new ModulePublicRegistry(
+            owner, address(guardian), admin
+        );
+
+        modulePublicRegistry.initialize(address(factory));
+
+        assertEq(
+            address(factory), address(modulePublicRegistry.factory())
+        );
+    }
+
+    // #endregion test initialize.
+
     // #region test whitelist beacon.
 
     function testWhitelistBeaconOnlyOwner() public {
         address[] memory beacons = new address[](0);
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory), owner, address(guardian), admin
+            owner, address(guardian), admin
         );
+
+        modulePublicRegistry.initialize(address(factory));
 
         vm.expectRevert(Ownable.Unauthorized.selector);
 
@@ -134,8 +153,10 @@ contract ModulePublicRegistryTest is TestWrapper {
         beacons[0] = beacon;
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory), owner, address(guardian), admin
+            owner, address(guardian), admin
         );
+
+        modulePublicRegistry.initialize(address(factory));
 
         vm.expectRevert(IModuleRegistry.NotBeacon.selector);
         vm.prank(owner);
@@ -161,8 +182,10 @@ contract ModulePublicRegistryTest is TestWrapper {
         beacons[0] = address(beacon);
 
         modulePublicRegistry = new ModulePublicRegistry(
-            address(factory), owner, address(guardian), admin
+            owner, address(guardian), admin
         );
+
+        modulePublicRegistry.initialize(address(factory));
 
         vm.expectRevert(IModuleRegistry.NotSameAdmin.selector);
         vm.prank(owner);

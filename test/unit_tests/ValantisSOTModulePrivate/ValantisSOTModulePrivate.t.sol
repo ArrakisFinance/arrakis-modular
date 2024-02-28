@@ -122,16 +122,15 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
 
         // #region create valantis module.
 
-        module = new ValantisModulePrivate();
+        module = new ValantisModulePrivate(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(sovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
 
         // #endregion create valantis module.
@@ -252,16 +251,15 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePrivate();
+        module = new ValantisModulePrivate(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
 
         // #endregion create valantis module.
@@ -291,16 +289,15 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePrivate();
+        module = new ValantisModulePrivate(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
 
         // #endregion create valantis module.

@@ -10,20 +10,17 @@ import {BeaconProxyExtended} from "../proxy/BeaconProxyExtended.sol";
 
 import {EnumerableSet} from
     "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {Initializable} from
+    "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
-abstract contract ModuleRegistry is IModuleRegistry, Ownable {
+abstract contract ModuleRegistry is IModuleRegistry, Ownable, Initializable {
     using EnumerableSet for EnumerableSet.AddressSet;
-
-    // #region public immutable.
-
-    IArrakisMetaVaultFactory public immutable factory;
-
-    // #endregion public immutable.
 
     // #region public properties.
 
+    IArrakisMetaVaultFactory public factory;
     /// @dev should be a timelock contract.
     address public admin;
 
@@ -42,23 +39,34 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable {
     // #endregion internal properties.
 
     constructor(
-        address factory_,
         address owner_,
         address guardian_,
         address admin_
     ) {
         if (
-            factory_ == address(0) || owner_ == address(0)
+            owner_ == address(0)
                 || guardian_ == address(0) || admin_ == address(0)
         ) {
             revert AddressZero();
         }
-
-        factory = IArrakisMetaVaultFactory(factory_);
         _initializeOwner(owner_);
         _guardian = guardian_;
         admin = admin_;
     }
+
+    // #region initialize.
+
+    /// @dev function used to initialize module registry.
+    /// @param factory_ address of ArrakisMetaVaultFactory,
+    ///  who is the only one who can call the init management function.
+    function initialize(address factory_) external initializer {
+        if (factory_ == address(0))
+            revert AddressZero();
+        
+        factory = IArrakisMetaVaultFactory(factory_);
+    }
+
+    // #endregion initialize.
 
     // #region public view functions.
 

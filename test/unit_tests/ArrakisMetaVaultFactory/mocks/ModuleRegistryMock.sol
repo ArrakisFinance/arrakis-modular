@@ -51,6 +51,8 @@ contract ModuleRegistryMock is IModuleRegistry {
 
     // #region state modifying functions.
 
+    function initialize(address factory_) external {}
+
     function whitelistBeacons(address[] calldata beacons_) external {
         uint256 length = beacons_.length;
 

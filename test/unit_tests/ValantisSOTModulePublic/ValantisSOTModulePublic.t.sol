@@ -131,16 +131,15 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         // #region create valantis module.
 
-        module = new ValantisModulePublic();
+        module = new ValantisModulePublic(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(sovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
 
         // #endregion create valantis module.
@@ -148,128 +147,99 @@ contract ValantisSOTModuleTest is TestWrapper {
 
     // #region test constructor.
 
-    function testConstructorMetaVaultAddressZero() public {
-        module = new ValantisModulePublic();
-
+    function testConstructorGuardianAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
-        module.initialize(
-            address(0),
-            address(sovereignPool),
-            address(sovereignALM),
-            INIT0,
-            INIT1,
-            MAX_SLIPPAGE,
-            address(oracle),
-            address(guardian)
-        );
+        module = new ValantisModulePublic(address(0));
     }
 
-    function testConstructorSovereignPoolAddressZero() public {
-        module = new ValantisModulePublic();
+    // #endregion test constructor.
+
+    // #region test initialize.
+
+    function testInitializeSovereignPoolAddressZero() public {
+        module = new ValantisModulePublic(address(guardian));
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
         module.initialize(
-            address(metaVault),
             address(0),
             address(sovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
     }
 
-    function testConstructorSovereignALMAddressZero() public {
-        module = new ValantisModulePublic();
+    function testInitializeSovereignALMAddressZero() public {
+        module = new ValantisModulePublic(address(guardian));
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(0),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
     }
 
-    function testConstructorInitsAreZeros() public {
-        module = new ValantisModulePublic();
+    function testInitializeInitsAreZeros() public {
+        module = new ValantisModulePublic(address(guardian));
 
         vm.expectRevert(IArrakisLPModule.InitsAreZeros.selector);
 
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(sovereignALM),
             0,
             0,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
     }
 
-    function testConstructorSlippageBiggerThanTenPercent() public {
-        module = new ValantisModulePublic();
+    function testInitializeSlippageBiggerThanTenPercent() public {
+        module = new ValantisModulePublic(address(guardian));
 
         vm.expectRevert(
             IValantisSOTModule.MaxSlippageGtTenPercent.selector
         );
 
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(sovereignALM),
             INIT0,
             INIT1,
             TEN_PERCENT * 2,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
     }
 
-    function testConstructorOracleAddressZero() public {
-        module = new ValantisModulePublic();
+    function testInitializeOracleAddressZero() public {
+        module = new ValantisModulePublic(address(guardian));
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(sovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(0),
-            address(guardian)
+            address(metaVault)
         );
     }
 
-    function testConstructorGuardianAddressZero() public {
-        module = new ValantisModulePublic();
-
-        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-
-        module.initialize(
-            address(metaVault),
-            address(sovereignPool),
-            address(sovereignALM),
-            INIT0,
-            INIT1,
-            MAX_SLIPPAGE,
-            address(oracle),
-            address(0)
-        );
-    }
-
-    function testConstructor() public {
+    function testInitialize() public {
         assertEq(address(module.metaVault()), address(metaVault));
         assertEq(address(module.pool()), address(sovereignPool));
         assertEq(address(module.alm()), address(sovereignALM));
@@ -281,7 +251,23 @@ contract ValantisSOTModuleTest is TestWrapper {
         assertEq(address(module.guardian()), pauser);
     }
 
-    // #endregion test constructor.
+    function testInitializeMetaVaultAddressZero() public {
+        module = new ValantisModulePublic(address(guardian));
+
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+
+        module.initialize(
+            address(sovereignPool),
+            address(sovereignALM),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(oracle),
+            address(0)
+        );
+    }
+
+    // #endregion test initialize.
 
     // #region test pause.
 
@@ -467,16 +453,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePublic();
+        module = new ValantisModulePublic(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
 
         // #endregion create valantis module.
@@ -507,16 +492,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePublic();
+        module = new ValantisModulePublic(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
 
         // #endregion create valantis module.
@@ -726,16 +710,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePublic();
+        module = new ValantisModulePublic(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
 
         // #endregion create valantis module.
@@ -782,16 +765,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePublic();
+        module = new ValantisModulePublic(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
 
         // #endregion create valantis module.
@@ -961,16 +943,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePublic();
+        module = new ValantisModulePublic(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
 
         // #endregion create valantis module.
@@ -1010,16 +991,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePublic();
+        module = new ValantisModulePublic(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
 
         // #endregion create valantis module.
@@ -1131,16 +1111,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePublic();
+        module = new ValantisModulePublic(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
 
         // #endregion create valantis module.
@@ -1176,16 +1155,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePublic();
+        module = new ValantisModulePublic(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
             address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
 
         // #endregion create valantis module.

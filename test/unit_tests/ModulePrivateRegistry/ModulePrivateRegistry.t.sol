@@ -50,8 +50,10 @@ contract ModulePrivateRegistryTest is TestWrapper {
         guardian.setPauser(pauser);
 
         modulePrivateRegistry = new ModulePrivateRegistry(
-            address(factory), owner, address(guardian), admin
+            owner, address(guardian), admin
         );
+
+        modulePrivateRegistry.initialize(address(factory));
     }
 
     // #region test create module for private vault.

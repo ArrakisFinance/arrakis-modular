@@ -19,6 +19,8 @@ contract ValantisModulePublic is
 {
     using SafeERC20 for IERC20Metadata;
 
+    constructor(address guardian_) ValantisModule(guardian_) {}
+
     /// @notice deposit function for public vault.
     /// @param depositor_ address that will provide the tokens.
     /// @param proportion_ percentage of portfolio position vault want to expand.

@@ -79,15 +79,31 @@ abstract contract ValantisModule is
 
     // #endregion modifiers.
 
+    constructor(address guardian_) {
+        if (guardian_ == address(0)) revert AddressZero();
+        
+        _guardian = guardian_;
+    }
+
+    /// @notice initialize function to delegate call onced the beacon proxy is deployed,
+    /// for initializing the valantis module.
+    /// who can call deposit and withdraw functions.
+    /// @param pool_ address of the valantis sovereign pool.
+    /// @param alm_ address of the valantis SOT ALM.
+    /// @param init0_ initial amount of token0 to provide to valantis module.
+    /// @param init1_ initial amount of token1 to provide to valantis module.
+    /// @param maxSlippage_ allowed to manager for rebalancing the inventory using
+    /// swap.
+    /// @param oracle_ address of the oracle used by the valantis SOT module.
+    /// @param metaVault_ address of the meta vault
     function initialize(
-        address metaVault_,
         address pool_,
         address alm_,
         uint256 init0_,
         uint256 init1_,
         uint24 maxSlippage_,
         address oracle_,
-        address guardian_
+        address metaVault_
     ) external initializer {
         if (metaVault_ == address(0)) revert AddressZero();
         if (pool_ == address(0)) revert AddressZero();
@@ -97,7 +113,6 @@ abstract contract ValantisModule is
             revert MaxSlippageGtTenPercent();
         }
         if (oracle_ == address(0)) revert AddressZero();
-        if (guardian_ == address(0)) revert AddressZero();
 
         metaVault = IArrakisMetaVault(metaVault_);
         pool = ISovereignPool(pool_);
@@ -111,7 +126,6 @@ abstract contract ValantisModule is
 
         maxSlippage = maxSlippage_;
         oracle = IOracleWrapper(oracle_);
-        _guardian = guardian_;
     }
 
     // #region guardian functions.

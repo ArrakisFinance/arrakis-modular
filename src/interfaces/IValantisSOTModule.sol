@@ -42,6 +42,27 @@ interface IValantisSOTModule {
 
     // #region state modifying functions.
 
+    /// @notice initialize function to delegate call onced the beacon proxy is deployed,
+    /// for initializing the valantis module.
+    /// who can call deposit and withdraw functions.
+    /// @param pool_ address of the valantis sovereign pool.
+    /// @param alm_ address of the valantis SOT ALM.
+    /// @param init0_ initial amount of token0 to provide to valantis module.
+    /// @param init1_ initial amount of token1 to provide to valantis module.
+    /// @param maxSlippage_ allowed to manager for rebalancing the inventory using
+    /// swap.
+    /// @param oracle_ address of the oracle used by the valantis SOT module.
+    /// @param metaVault_ address of the meta vault
+    function initialize(
+        address pool_,
+        address alm_,
+        uint256 init0_,
+        uint256 init1_,
+        uint24 maxSlippage_,
+        address oracle_,
+        address metaVault_
+    ) external;
+
     /// @notice function to swap token0->token1 or token1->token0 and then change
     /// inventory.
     /// @param zeroForOne_ boolean if true token0->token1, if false token1->token0.
