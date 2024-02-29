@@ -179,7 +179,6 @@ abstract contract ValantisModule is
     )
         external
         onlyMetaVault
-        whenNotPaused
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
