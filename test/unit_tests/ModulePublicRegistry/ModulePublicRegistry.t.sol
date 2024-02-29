@@ -68,6 +68,7 @@ contract ModulePublicRegistryTest is TestWrapper {
 
     // #region test constructor.
 
+
     function testConstructorOwnerAddressZero() public {
         vm.expectRevert(IModuleRegistry.AddressZero.selector);
 
