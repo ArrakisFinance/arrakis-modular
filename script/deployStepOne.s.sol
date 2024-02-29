@@ -35,7 +35,7 @@ address constant guardianPauser = address(0);
 
 // #region arrakis timeLock.
 
-uint256 constant minDelay = 2 days;
+uint256 constant minDelay = 0 days;
 address constant proposer = address(0);
 address constant executor = address(0);
 address constant timeLockAdmin = address(0);

@@ -24,8 +24,6 @@ import {IModuleRegistry} from
     "../../../src/interfaces/IModuleRegistry.sol";
 import {IModulePublicRegistry} from
     "../../../src/interfaces/IModulePublicRegistry.sol";
-import {BeaconProxyExtended} from
-    "../../../src/proxy/BeaconProxyExtended.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
@@ -621,11 +619,6 @@ contract ModulePublicRegistryTest is TestWrapper {
 
         address module = modulePublicRegistry.createModule(
             address(publicVault), address(beacon), payload
-        );
-
-        assertEq(
-            BeaconProxyExtended(payable(module)).beacon(),
-            address(beacon)
         );
     }
 

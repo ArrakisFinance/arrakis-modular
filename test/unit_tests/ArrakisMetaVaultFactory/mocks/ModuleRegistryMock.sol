@@ -3,9 +3,9 @@ pragma solidity ^0.8.20;
 
 import {IModuleRegistry} from
     "../../../../src/interfaces/IModuleRegistry.sol";
-import {BeaconProxyExtended} from
-    "../../../../src/proxy/BeaconProxyExtended.sol";
 
+import {BeaconProxy} from
+    "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {EnumerableSet} from
     "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
@@ -80,8 +80,7 @@ contract ModuleRegistryMock is IModuleRegistry {
             abi.encodePacked(tx.origin, block.number, payload_)
         );
 
-        module = address(
-            new BeaconProxyExtended{salt: salt}(beacon_, payload_)
-        );
+        module =
+            address(new BeaconProxy{salt: salt}(beacon_, payload_));
     }
 }

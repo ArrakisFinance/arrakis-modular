@@ -148,9 +148,6 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             address(factory),
             WETH
         );
-
-        vm.prank(owner);
-        router.updateSwapExecutor(address(this));
     }
 
     function testConstructorFactoryAddressZero() public {

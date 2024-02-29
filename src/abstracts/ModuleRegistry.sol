@@ -6,12 +6,13 @@ import {IArrakisMetaVaultFactory} from
     "../interfaces/IArrakisMetaVaultFactory.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
-import {BeaconProxyExtended} from "../proxy/BeaconProxyExtended.sol";
 
 import {EnumerableSet} from
     "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {Initializable} from
     "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {BeaconProxy} from
+    "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
@@ -198,9 +199,8 @@ abstract contract ModuleRegistry is
             abi.encodePacked(tx.origin, block.number, payload_)
         );
 
-        module = address(
-            new BeaconProxyExtended{salt: salt}(beacon_, payload_)
-        );
+        module =
+            address(new BeaconProxy{salt: salt}(beacon_, payload_));
 
         // #endregion interactions.
 
