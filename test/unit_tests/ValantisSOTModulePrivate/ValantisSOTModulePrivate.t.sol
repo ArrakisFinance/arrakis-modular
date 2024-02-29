@@ -133,8 +133,11 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
             address(metaVault)
         );
 
+        vm.prank(manager);
+        module.setManagerFeePIPS(TEN_PERCENT/10);
+
         vm.prank(owner);
-        module.setALM(address(sovereignALM));
+        module.setALMAndManagerFees(address(sovereignALM));
 
         // #endregion create valantis module.
     }
@@ -265,7 +268,7 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         );
 
         vm.prank(owner);
-        module.setALM(address(buggySovereignALM));
+        module.setALMAndManagerFees(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -305,7 +308,7 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         );
 
         vm.prank(owner);
-        module.setALM(address(buggySovereignALM));
+        module.setALMAndManagerFees(address(buggySovereignALM));
 
         // #endregion create valantis module.
 

@@ -143,7 +143,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         );
 
         vm.prank(owner);
-        module.setALM(address(sovereignALM));
+        module.setALMAndManagerFees(address(sovereignALM));
 
         // #endregion create valantis module.
     }
@@ -190,7 +190,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         vm.prank(owner);
-        module.setALM(address(0));
+        module.setALMAndManagerFees(address(0));
     }
 
     function testInitializeInitsAreZeros() public {
@@ -464,7 +464,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         );
 
         vm.prank(owner);
-        module.setALM(address(buggySovereignALM));
+        module.setALMAndManagerFees(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -505,7 +505,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         );
 
         vm.prank(owner);
-        module.setALM(address(buggySovereignALM));
+        module.setALMAndManagerFees(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -725,7 +725,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         );
 
         vm.prank(owner);
-        module.setALM(address(buggySovereignALM));
+        module.setALMAndManagerFees(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -782,7 +782,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         );
 
         vm.prank(owner);
-        module.setALM(address(buggySovereignALM));
+        module.setALMAndManagerFees(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -962,7 +962,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         );
 
         vm.prank(owner);
-        module.setALM(address(buggySovereignALM));
+        module.setALMAndManagerFees(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -1012,7 +1012,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         );
 
         vm.prank(owner);
-        module.setALM(address(buggySovereignALM));
+        module.setALMAndManagerFees(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -1134,7 +1134,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         );
 
         vm.prank(owner);
-        module.setALM(address(buggySovereignALM));
+        module.setALMAndManagerFees(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -1180,7 +1180,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         );
 
         vm.prank(owner);
-        module.setALM(address(buggySovereignALM));
+        module.setALMAndManagerFees(address(buggySovereignALM));
 
         // #endregion create valantis module.
 

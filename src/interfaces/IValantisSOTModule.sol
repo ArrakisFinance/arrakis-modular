@@ -67,9 +67,9 @@ interface IValantisSOTModule {
         address metaVault_
     ) external;
 
-    /// @notice set SOT function.
+    /// @notice set SOT and initialize manager fees function.
     /// @param alm_ address of the valantis SOT ALM.
-    function setALM(address alm_) external;
+    function setALMAndManagerFees(address alm_) external;
 
     /// @notice function to swap token0->token1 or token1->token0 and then change
     /// inventory.

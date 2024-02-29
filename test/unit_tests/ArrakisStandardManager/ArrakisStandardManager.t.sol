@@ -745,9 +745,6 @@ contract ArrakisStandardManagerTest is TestWrapper {
         vm.prank(factory);
         manager.initManagement(params);
 
-        vm.prank(owner);
-        manager.setDefaultManagerFeePIPS(address(vault));
-
         // #endregion call through the factory initManagement.
 
         // #endregion init management.
@@ -925,9 +922,6 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         vm.prank(factory);
         manager.initManagement(params);
-
-        vm.prank(owner);
-        manager.setDefaultManagerFeePIPS(address(vault));
 
         // #endregion call through the factory initManagement.
 
@@ -2526,9 +2520,6 @@ contract ArrakisStandardManagerTest is TestWrapper {
             vm.prank(factory);
             manager.initManagement(params);
 
-            vm.prank(owner);
-            manager.setDefaultManagerFeePIPS(address(vault));
-
             // #endregion call through the factory initManagement.
         }
 
@@ -2906,9 +2897,6 @@ contract ArrakisStandardManagerTest is TestWrapper {
             vm.prank(factory);
             manager.initManagement(params);
 
-            vm.prank(owner);
-            manager.setDefaultManagerFeePIPS(address(vault));
-
             // #endregion call through the factory initManagement.
         }
 
@@ -3010,9 +2998,6 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
             vm.prank(factory);
             manager.initManagement(params);
-
-            vm.prank(owner);
-            manager.setDefaultManagerFeePIPS(address(vault));
 
             // #endregion call through the factory initManagement.
         }
@@ -3130,9 +3115,6 @@ contract ArrakisStandardManagerTest is TestWrapper {
             vm.prank(factory);
             manager.initManagement(params);
 
-            vm.prank(owner);
-            manager.setDefaultManagerFeePIPS(address(vault));
-
             // #endregion call through the factory initManagement.
         }
 
@@ -3249,9 +3231,6 @@ contract ArrakisStandardManagerTest is TestWrapper {
             vm.prank(factory);
             manager.initManagement(params);
 
-            vm.prank(owner);
-            manager.setDefaultManagerFeePIPS(address(vault));
-
             // #endregion call through the factory initManagement.
         }
 
@@ -3361,9 +3340,6 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
             vm.prank(factory);
             manager.initManagement(params);
-
-            vm.prank(owner);
-            manager.setDefaultManagerFeePIPS(address(vault));
 
             // #endregion call through the factory initManagement.
         }
@@ -3501,9 +3477,6 @@ contract ArrakisStandardManagerTest is TestWrapper {
             vm.prank(factory);
             manager.initManagement(params);
 
-            vm.prank(owner);
-            manager.setDefaultManagerFeePIPS(address(vault));
-
             // #endregion call through the factory initManagement.
         }
 
@@ -3602,9 +3575,6 @@ contract ArrakisStandardManagerTest is TestWrapper {
             vm.prank(factory);
             manager.initManagement(params);
 
-            vm.prank(owner);
-            manager.setDefaultManagerFeePIPS(address(vault));
-
             // #endregion call through the factory initManagement.
         }
 
@@ -3695,9 +3665,6 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
             vm.prank(factory);
             manager.initManagement(params);
-
-            vm.prank(owner);
-            manager.setDefaultManagerFeePIPS(address(vault));
 
             // #endregion call through the factory initManagement.
         }

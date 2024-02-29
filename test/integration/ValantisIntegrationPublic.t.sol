@@ -288,20 +288,13 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         _addToContractsToApprove(address(alm));
 
         vm.prank(IOwnable(vault).owner());
-        IValantisSOTModule(m).setALM(address(alm));
+        IValantisSOTModule(m).setALMAndManagerFees(address(alm));
 
         vm.prank(address(this));
         alm.setMaxTokenVolumes(100e18, 20_000e18);
         alm.setMaxAllowedQuotes(2);
 
         // #endregion valantis mock.
-
-        // #region set default manager fees.
-
-        vm.prank(owner);
-        IArrakisStandardManager(manager).setDefaultManagerFeePIPS(vault);
-
-        // #endregion set default manager fees.
 
         uint160 sqrtSpotPriceX96 = alm.getSqrtOraclePriceX96();
 

@@ -48,10 +48,8 @@ interface IArrakisStandardManager {
         uint256 endIndex, uint256 numberOfVaults
     );
     error OnlyGuardian(address caller, address guardian);
-    error FactoryAlreadySet();
     error OnlyFactory(address caller, address factory);
     error VaultNotDeployed();
-    error NotManagerFeesInitialization();
 
     // #endregion errors.
 
@@ -136,12 +134,6 @@ interface IArrakisStandardManager {
         address vault_,
         bool isSetReceiverToken0_,
         address receiver_
-    ) external;
-
-    /// @notice function used to initialize the fees taken by manager for a specific vault.
-    /// @param vault_ address of the vault.
-    function setDefaultManagerFeePIPS(
-        address vault_
     ) external;
 
     /// @notice function used to decrease the fees taken by manager for a specific managed vault.

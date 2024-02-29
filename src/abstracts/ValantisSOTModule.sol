@@ -57,6 +57,7 @@ abstract contract ValantisModule is
 
     uint256 internal _init0;
     uint256 internal _init1;
+    uint256 internal _managerFeePIPS;
 
     // #endregion internal properties.
 
@@ -149,9 +150,9 @@ abstract contract ValantisModule is
 
     // #region only vault owner.
 
-    /// @notice set SOT function.
+    /// @notice set SOT and init manager fees function.
     /// @param alm_ address of the valantis SOT ALM.
-    function setALM(address alm_) external {
+    function setALMAndManagerFees(address alm_) external {
         if (address(alm) != address(0))
             revert ALMAlreadySet();
         if (msg.sender != IOwnable(address(metaVault)).owner())
@@ -159,7 +160,9 @@ abstract contract ValantisModule is
         if (alm_ == address(0)) revert AddressZero();
 
         alm = ISOT(alm_);
+        pool.setPoolManagerFeeBips(_managerFeePIPS / 1e2);
 
+        emit LogSetManagerFeePIPS(0, _managerFeePIPS);
         emit LogSetALM(alm_);
     }
 
@@ -262,7 +265,7 @@ abstract contract ValantisModule is
         external
         whenNotPaused
     {
-        uint256 _oldFee = pool.poolManagerFeeBips();
+        uint256 _oldFee = _managerFeePIPS;
 
         // #region checks.
 
@@ -274,9 +277,12 @@ abstract contract ValantisModule is
 
         // #endregion checks.
 
-        pool.setPoolManagerFeeBips(newFeePIPS_ / 1e2);
+        _managerFeePIPS = newFeePIPS_;
 
-        emit LogSetManagerFeePIPS(_oldFee, newFeePIPS_ / 1e2);
+        if(address(alm) != address(0) || _oldFee != 0)
+            pool.setPoolManagerFeeBips(newFeePIPS_ / 1e2);
+
+        emit LogSetManagerFeePIPS(_oldFee, newFeePIPS_);
     }
 
     /// @notice function to swap token0->token1 or token1->token0 and then change
@@ -450,7 +456,7 @@ abstract contract ValantisModule is
     /// @notice function used to get manager fees.
     /// @return managerFeePIPS amount of token1 that manager earned.
     function managerFeePIPS() external view returns (uint256) {
-        return pool.poolManagerFeeBips() * 1e2;
+        return _managerFeePIPS;
     }
 
     /// @notice function used to get the initial amounts needed to open a position.
