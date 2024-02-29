@@ -78,11 +78,13 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         router = new ArrakisPublicVaultRouter(
             NATIVE_COIN,
             address(PERMIT2),
-            address(this),
             owner,
             address(factory),
             WETH
         );
+
+        vm.prank(owner);
+        router.updateSwapExecutor(address(this));
     }
 
     // #region test constructor.
@@ -95,7 +97,6 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         router = new ArrakisPublicVaultRouter(
             NATIVE_COIN,
             address(PERMIT2),
-            address(this),
             owner,
             address(factory),
             address(0)
