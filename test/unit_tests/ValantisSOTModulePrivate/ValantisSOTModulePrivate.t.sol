@@ -134,7 +134,7 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         );
 
         vm.prank(manager);
-        module.setManagerFeePIPS(TEN_PERCENT/10);
+        module.setManagerFeePIPS(TEN_PERCENT / 10);
 
         vm.prank(owner);
         module.setALMAndManagerFees(address(sovereignALM));

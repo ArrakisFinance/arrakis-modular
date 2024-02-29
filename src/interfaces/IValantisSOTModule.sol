@@ -40,9 +40,7 @@ interface IValantisSOTModule {
         uint256 newBalance1
     );
 
-    event LogSetALM(
-        address alm
-    );
+    event LogSetALM(address alm);
 
     // #endregion events.
 
@@ -101,7 +99,6 @@ interface IValantisSOTModule {
     function setPriceBounds(
         uint160 _sqrtPriceLowX96,
         uint160 _sqrtPriceHighX96,
-        
         uint160 _expectedSqrtSpotPriceLowerX96,
         uint160 _expectedSqrtSpotPriceUpperX96
     ) external;

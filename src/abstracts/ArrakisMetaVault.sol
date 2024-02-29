@@ -78,16 +78,15 @@ abstract contract ArrakisMetaVault is
         if (token1_ == address(0)) revert AddressZero("Token 1");
         if (token0_ > token1_) revert Token0GtToken1();
         if (token0_ == token1_) revert Token0EqToken1();
-        if (token0 != address(0) || token1 != address(0))
+        if (token0 != address(0) || token1 != address(0)) {
             revert AddressNotZero();
+        }
 
         token0 = token0_;
         token1 = token1_;
     }
 
-    function initialize(
-        address module_
-    ) external initializer {
+    function initialize(address module_) external initializer {
         if (module_ == address(0)) revert AddressZero("Module");
 
         _whitelistedModules.add(module_);

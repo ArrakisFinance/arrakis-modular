@@ -178,7 +178,6 @@ contract ValantisSOTModuleTest is TestWrapper {
     function testInitializeSovereignALMAddressZero() public {
         module = new ValantisModulePublic(address(guardian));
 
-
         module.initialize(
             address(sovereignPool),
             INIT0,
@@ -1237,10 +1236,8 @@ contract ValantisSOTModuleTest is TestWrapper {
     // #region test setPriceBounds.
 
     function testSetPriceBoundsOnlyManager() public {
-        uint160 sqrtPriceLowX96 =
-            TickMath.getSqrtRatioAtTick(10);
-        uint160 sqrtPriceHighX96 =
-            TickMath.getSqrtRatioAtTick(10);
+        uint160 sqrtPriceLowX96 = TickMath.getSqrtRatioAtTick(10);
+        uint160 sqrtPriceHighX96 = TickMath.getSqrtRatioAtTick(10);
 
         uint160 expectedSqrtSpotPriceUpperX96 =
             TickMath.getSqrtRatioAtTick(31);
@@ -1264,10 +1261,8 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testSetPriceBounds() public {
-        uint160 sqrtPriceLowX96 =
-            TickMath.getSqrtRatioAtTick(10);
-        uint160 sqrtPriceHighX96 =
-            TickMath.getSqrtRatioAtTick(10);
+        uint160 sqrtPriceLowX96 = TickMath.getSqrtRatioAtTick(10);
+        uint160 sqrtPriceHighX96 = TickMath.getSqrtRatioAtTick(10);
 
         uint160 expectedSqrtSpotPriceUpperX96 =
             TickMath.getSqrtRatioAtTick(31);

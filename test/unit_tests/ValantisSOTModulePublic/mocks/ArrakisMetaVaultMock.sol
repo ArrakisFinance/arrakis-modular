@@ -22,5 +22,4 @@ contract ArrakisMetaVaultMock {
     function setOwner(address owner_) external {
         owner = owner_;
     }
-
 }

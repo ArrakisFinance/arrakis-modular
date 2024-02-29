@@ -88,7 +88,7 @@ abstract contract ValantisModule is
 
     constructor(address guardian_) {
         if (guardian_ == address(0)) revert AddressZero();
-        
+
         _guardian = guardian_;
     }
 
@@ -96,7 +96,7 @@ abstract contract ValantisModule is
     /// for initializing the valantis module.
     /// who can call deposit and withdraw functions.
     /// @param pool_ address of the valantis sovereign pool.
-    
+
     /// @param init0_ initial amount of token0 to provide to valantis module.
     /// @param init1_ initial amount of token1 to provide to valantis module.
     /// @param maxSlippage_ allowed to manager for rebalancing the inventory using
@@ -153,10 +153,12 @@ abstract contract ValantisModule is
     /// @notice set SOT and init manager fees function.
     /// @param alm_ address of the valantis SOT ALM.
     function setALMAndManagerFees(address alm_) external {
-        if (address(alm) != address(0))
+        if (address(alm) != address(0)) {
             revert ALMAlreadySet();
-        if (msg.sender != IOwnable(address(metaVault)).owner())
+        }
+        if (msg.sender != IOwnable(address(metaVault)).owner()) {
             revert OnlyMetaVaultOwner();
+        }
         if (alm_ == address(0)) revert AddressZero();
 
         alm = ISOT(alm_);
@@ -278,8 +280,9 @@ abstract contract ValantisModule is
 
         _managerFeePIPS = newFeePIPS_;
 
-        if(address(alm) != address(0) || _oldFee != 0)
+        if (address(alm) != address(0) || _oldFee != 0) {
             pool.setPoolManagerFeeBips(newFeePIPS_ / 1e2);
+        }
 
         emit LogSetManagerFeePIPS(_oldFee, newFeePIPS_);
     }

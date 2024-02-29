@@ -10,45 +10,64 @@ import {Vm} from "forge-std/Vm.sol";
 
 import {TestWrapper} from "../utils/TestWrapper.sol";
 
-import {ModulePublicRegistry} from "../../src/ModulePublicRegistry.sol";
-import {ArrakisMetaVaultPublic} from "../../src/ArrakisMetaVaultPublic.sol";
-import {ArrakisMetaVaultFactory} from "../../src/ArrakisMetaVaultFactory.sol";
-import {ArrakisPublicVaultRouter} from "../../src/ArrakisPublicVaultRouter.sol";
+import {ModulePublicRegistry} from
+    "../../src/ModulePublicRegistry.sol";
+import {ArrakisMetaVaultPublic} from
+    "../../src/ArrakisMetaVaultPublic.sol";
+import {ArrakisMetaVaultFactory} from
+    "../../src/ArrakisMetaVaultFactory.sol";
+import {ArrakisPublicVaultRouter} from
+    "../../src/ArrakisPublicVaultRouter.sol";
 import {RouterSwapExecutor} from "../../src/RouterSwapExecutor.sol";
-import {ArrakisStandardManager} from "../../src/ArrakisStandardManager.sol";
+import {ArrakisStandardManager} from
+    "../../src/ArrakisStandardManager.sol";
 import {Guardian} from "../../src/Guardian.sol";
-import {ValantisModulePublic} from "../../src/modules/ValantisSOTModulePublic.sol";
+import {ValantisModulePublic} from
+    "../../src/modules/ValantisSOTModulePublic.sol";
 
 import {SetupParams} from "../../src/structs/SManager.sol";
 
-import {IModulePublicRegistry} from "../../src/interfaces/IModulePublicRegistry.sol";
-import {IModuleRegistry} from "../../src/interfaces/IModuleRegistry.sol";
-import {IArrakisMetaVaultPublic} from "../../src/interfaces/IArrakisMetaVaultPublic.sol";
-import {IArrakisMetaVault} from "../../src/interfaces/IArrakisMetaVault.sol";
-import {IArrakisMetaVaultFactory} from "../../src/interfaces/IArrakisMetaVaultFactory.sol";
-import {IArrakisPublicVaultRouter} from "../../src/interfaces/IArrakisPublicVaultRouter.sol";
-import {IRouterSwapExecutor} from "../../src/interfaces/IRouterSwapExecutor.sol";
-import {IArrakisStandardManager} from "../../src/interfaces/IArrakisStandardManager.sol";
-import {IValantisSOTModule} from "../../src/interfaces/IValantisSOTModule.sol";
+import {IModulePublicRegistry} from
+    "../../src/interfaces/IModulePublicRegistry.sol";
+import {IModuleRegistry} from
+    "../../src/interfaces/IModuleRegistry.sol";
+import {IArrakisMetaVaultPublic} from
+    "../../src/interfaces/IArrakisMetaVaultPublic.sol";
+import {IArrakisMetaVault} from
+    "../../src/interfaces/IArrakisMetaVault.sol";
+import {IArrakisMetaVaultFactory} from
+    "../../src/interfaces/IArrakisMetaVaultFactory.sol";
+import {IArrakisPublicVaultRouter} from
+    "../../src/interfaces/IArrakisPublicVaultRouter.sol";
+import {IRouterSwapExecutor} from
+    "../../src/interfaces/IRouterSwapExecutor.sol";
+import {IArrakisStandardManager} from
+    "../../src/interfaces/IArrakisStandardManager.sol";
+import {IValantisSOTModule} from
+    "../../src/interfaces/IValantisSOTModule.sol";
 import {IOracleWrapper} from "../../src/interfaces/IOracleWrapper.sol";
 import {IOwnable} from "../../src/interfaces/IOwnable.sol";
-import {IArrakisLPModule} from "../../src/interfaces/IArrakisLPModule.sol";
+import {IArrakisLPModule} from
+    "../../src/interfaces/IArrakisLPModule.sol";
 
-import {NATIVE_COIN, TEN_PERCENT} from "../../src/constants/CArrakis.sol";
+import {
+    NATIVE_COIN,
+    TEN_PERCENT
+} from "../../src/constants/CArrakis.sol";
 
-import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {UpgradeableBeacon} from
+    "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {SOTBase} from "@valantis/contracts-test/base/SOTBase.t.sol";
-import {ERC20} from "../../lib/valantis-sot/lib/valantis-core/lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import {MockSigner} from '@valantis/contracts-test/mocks/MockSigner.sol';
-import {
-    SOT,
-    SOTConstructorArgs
-} from "@valantis/contracts/SOT.sol";
-import {
-    SovereignPoolConstructorArgs
-} from '../../lib/valantis-sot/lib/valantis-core/test/base/SovereignPoolBase.t.sol';
+import {ERC20} from
+    "../../lib/valantis-sot/lib/valantis-core/lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {MockSigner} from
+    "@valantis/contracts-test/mocks/MockSigner.sol";
+import {SOT, SOTConstructorArgs} from "@valantis/contracts/SOT.sol";
+import {SovereignPoolConstructorArgs} from
+    "../../lib/valantis-sot/lib/valantis-core/test/base/SovereignPoolBase.t.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
@@ -114,14 +133,18 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         (feedToken0, feedToken1) = deployChainlinkOracles(18, 6);
 
         // NOTE : is it needed?
-        signer = vm.addr(uint256(keccak256(abi.encode("Mock Signer"))));
+        signer =
+            vm.addr(uint256(keccak256(abi.encode("Mock Signer"))));
 
         // Set initial price to 2000 for token0 and 1 for token1 (Similar to Eth/USDC pair)
-        feedToken0.updateAnswer(SafeCast.toInt256(FullMath.mulDiv(1e6, 1e18, 2000e6)));
+        feedToken0.updateAnswer(
+            SafeCast.toInt256(FullMath.mulDiv(1e6, 1e18, 2000e6))
+        );
         //feedToken0.updateAnswer(2000e18);
         feedToken1.updateAnswer(1e6);
 
-        SovereignPoolConstructorArgs memory poolArgs = _generateDefaultConstructorArgs();
+        SovereignPoolConstructorArgs memory poolArgs =
+            _generateDefaultConstructorArgs();
         pool = this.deploySovereignPool(poolArgs);
 
         // #endregion valantis setup.
@@ -129,15 +152,22 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
-        defaultReceiver = vm.addr(uint256(keccak256(abi.encode("Default Receiver"))));
+        defaultReceiver = vm.addr(
+            uint256(keccak256(abi.encode("Default Receiver")))
+        );
 
-        arrakisTimeLock = vm.addr(uint256(keccak256(abi.encode("Arrakis Time Lock"))));
+        arrakisTimeLock = vm.addr(
+            uint256(keccak256(abi.encode("Arrakis Time Lock")))
+        );
 
         /// @dev we will not use it so we mock it.
-        address privateModule = vm.addr(uint256(keccak256(abi.encode("Private Module"))));
+        address privateModule =
+            vm.addr(uint256(keccak256(abi.encode("Private Module"))));
 
         executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
-        stratAnnouncer = vm.addr(uint256(keccak256(abi.encode("Strategy Announcer"))));
+        stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
         deployer = vm.addr(uint256(keccak256(abi.encode("Deployer"))));
 
         // #region create guardian.
@@ -154,13 +184,16 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         // #region create modules.
 
-        moduleRegistry = _deployPublicRegistry(owner, guardian, arrakisTimeLock);
+        moduleRegistry =
+            _deployPublicRegistry(owner, guardian, arrakisTimeLock);
 
         // #endregion create modules.
 
         // #region create factory.
 
-        factory = _deployArrakisMetaVaultFactory(owner, manager, moduleRegistry, privateModule);
+        factory = _deployArrakisMetaVaultFactory(
+            owner, manager, moduleRegistry, privateModule
+        );
 
         // #endregion create factory.
 
@@ -188,8 +221,13 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         // #region create valantis module beacon.
 
-        valantisImplementation = _deployValantisImplementation(guardian);
-        valantisBeacon = address(new UpgradeableBeacon(valantisImplementation, arrakisTimeLock));
+        valantisImplementation =
+            _deployValantisImplementation(guardian);
+        valantisBeacon = address(
+            new UpgradeableBeacon(
+                valantisImplementation, arrakisTimeLock
+            )
+        );
 
         // #endregion create valantis module beacon.
 
@@ -229,7 +267,9 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         // #region create oracle wrapper.
 
         oracle = address(new OracleWrapper());
-        OracleWrapper(oracle).setPrice0(FullMath.mulDiv(1e6, 1e18, 2000e6));
+        OracleWrapper(oracle).setPrice0(
+            FullMath.mulDiv(1e6, 1e18, 2000e6)
+        );
         OracleWrapper(oracle).setPrice1(2000e6);
 
         // #endregion create oracle wrapper.
@@ -241,22 +281,46 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         init1 = 1e18;
         maxSlippage = TEN_PERCENT;
 
-        bytes memory moduleCreationPayload = abi.encodeWithSelector(IValantisSOTModule.initialize.selector, address(pool), init0, init1, maxSlippage, oracle);
-        bytes memory initManagementPayload = abi.encode(IOracleWrapper(oracle), TEN_PERCENT, uint256(60), executor, stratAnnouncer, maxSlippage);
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IValantisSOTModule.initialize.selector,
+            address(pool),
+            init0,
+            init1,
+            maxSlippage,
+            oracle
+        );
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
 
         vm.prank(deployer);
-        vault = IArrakisMetaVaultFactory(factory).deployPublicVault(salt, address(token0), address(token1), owner, valantisBeacon, moduleCreationPayload, initManagementPayload);
+        vault = IArrakisMetaVaultFactory(factory).deployPublicVault(
+            salt,
+            address(token0),
+            address(token1),
+            owner,
+            valantisBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
 
         // #endregion create public vault.
 
         address m = address(IArrakisMetaVault(vault).module());
-        
+
         vm.prank(pool.poolManager());
         pool.setPoolManager(m);
 
         // #region valantis mock.
 
-        int24 tick = TickMath.getTickAtSqrtRatio(1771595571142957102904975518859264);
+        int24 tick = TickMath.getTickAtSqrtRatio(
+            1_771_595_571_142_957_102_904_975_518_859_264
+        );
 
         SOTConstructorArgs memory args = SOTConstructorArgs({
             pool: address(pool),
@@ -265,7 +329,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
             liquidityProvider: m,
             feedToken0: address(feedToken0),
             feedToken1: address(feedToken1),
-            sqrtSpotPriceX96: 1771595571142957102904975518859264,
+            sqrtSpotPriceX96: 1_771_595_571_142_957_102_904_975_518_859_264,
             sqrtPriceLowX96: TickMath.getSqrtRatioAtTick(tick - 100),
             sqrtPriceHighX96: TickMath.getSqrtRatioAtTick(tick + 100),
             maxDelay: 9 minutes,
@@ -274,7 +338,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
             solverMaxDiscountBips: 200, // 2%
             maxOracleDeviationBound: 5000, // 50%
             minAMMFeeGrowthInPips: 100,
-            maxAMMFeeGrowthInPips: 10000,
+            maxAMMFeeGrowthInPips: 10_000,
             minAMMFee: 1 // 0.01%
         });
 
@@ -299,29 +363,30 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         uint160 sqrtSpotPriceX96 = alm.getSqrtOraclePriceX96();
 
         uint256 currentPrice = FullMath.mulDiv(
-                FullMath.mulDiv(
-                    sqrtSpotPriceX96, sqrtSpotPriceX96, 1 << 64
-                ),
-                10 ** 6,
-                1 << 128
-            );
+            FullMath.mulDiv(
+                sqrtSpotPriceX96, sqrtSpotPriceX96, 1 << 64
+            ),
+            10 ** 6,
+            1 << 128
+        );
 
         (sqrtSpotPriceX96,,) = alm.getAMMState();
 
         currentPrice = FullMath.mulDiv(
-                FullMath.mulDiv(
-                    sqrtSpotPriceX96, sqrtSpotPriceX96, 1 << 64
-                ),
-                10 ** 6,
-                1 << 128
-            );
+            FullMath.mulDiv(
+                sqrtSpotPriceX96, sqrtSpotPriceX96, 1 << 64
+            ),
+            10 ** 6,
+            1 << 128
+        );
     }
 
     // #region tests.
 
     function test_mint() public {
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
         deal(address(token0), user, init0);
         deal(address(token1), user, init1);
@@ -340,7 +405,8 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
         deal(address(token0), user, init0);
         deal(address(token1), user, init1);
@@ -368,7 +434,8 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
         deal(address(token0), user, init0);
         deal(address(token1), user, init1);
@@ -391,7 +458,8 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
         deal(address(token0), user, init0);
         deal(address(token1), user, init1);
@@ -416,7 +484,8 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
         deal(address(token0), user, init0);
         deal(address(token1), user, init1);
@@ -432,11 +501,13 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         // #endregion mint.
 
-        (uint256 amount0, uint256 amount1) = IArrakisLPModule(m).totalUnderlying();
+        (uint256 amount0, uint256 amount1) =
+            IArrakisLPModule(m).totalUnderlying();
         // console.logUint(amount0);
         // console.logUint(amount1);
 
-        (amount0, amount1) = IArrakisLPModule(m).totalUnderlyingAtPrice(TickMath.getSqrtRatioAtTick(10));
+        (amount0, amount1) = IArrakisLPModule(m)
+            .totalUnderlyingAtPrice(TickMath.getSqrtRatioAtTick(10));
 
         // console.logUint(amount0);
         // console.logUint(amount1);
@@ -446,7 +517,8 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
         deal(address(token0), user, init0);
         deal(address(token1), user, init1);
@@ -462,14 +534,17 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         // #endregion mint.
 
-        IArrakisLPModule(m).validateRebalance(IOracleWrapper(oracle), TEN_PERCENT);
+        IArrakisLPModule(m).validateRebalance(
+            IOracleWrapper(oracle), TEN_PERCENT
+        );
     }
 
     function test_swap() public {
         // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
         deal(address(token0), user, init0);
         deal(address(token1), user, init1);
@@ -492,11 +567,23 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         uint256 amountIn = 1000e6;
         address router = address(this);
 
-        uint160 expectedSqrtSpotPriceUpperX96 = 1771595571142957102904975518859264;
-        uint160 expectedSqrtSpotPriceLowerX96 = 1771595571142957102904975518859264;
-        bytes memory payload = abi.encodeWithSelector(this.swap.selector);
+        uint160 expectedSqrtSpotPriceUpperX96 =
+            1_771_595_571_142_957_102_904_975_518_859_264;
+        uint160 expectedSqrtSpotPriceLowerX96 =
+            1_771_595_571_142_957_102_904_975_518_859_264;
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap.selector);
 
-        bytes memory data = abi.encodeWithSelector(IValantisSOTModule.swap.selector, zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+        bytes memory data = abi.encodeWithSelector(
+            IValantisSOTModule.swap.selector,
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
 
         bytes[] memory datas = new bytes[](1);
         datas[0] = data;
@@ -509,7 +596,8 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         // #region mint.
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
         deal(address(token0), user, init0);
         deal(address(token1), user, init1);
@@ -525,12 +613,28 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         // #endregion mint.
 
-        uint160 sqrtPriceLowX96 = TickMath.getSqrtRatioAtTick(TickMath.getTickAtSqrtRatio(1771595571142957102904975518859264) - 10);
-        uint160 sqrtPriceHighX96 = TickMath.getSqrtRatioAtTick(TickMath.getTickAtSqrtRatio(1771595571142957102904975518859264) + 10);
-        uint160 expectedSqrtSpotPriceUpperX96 = 1771595571142957102904975518859264;
-        uint160 expectedSqrtSpotPriceLowerX96 = 1771595571142957102904975518859264;
+        uint160 sqrtPriceLowX96 = TickMath.getSqrtRatioAtTick(
+            TickMath.getTickAtSqrtRatio(
+                1_771_595_571_142_957_102_904_975_518_859_264
+            ) - 10
+        );
+        uint160 sqrtPriceHighX96 = TickMath.getSqrtRatioAtTick(
+            TickMath.getTickAtSqrtRatio(
+                1_771_595_571_142_957_102_904_975_518_859_264
+            ) + 10
+        );
+        uint160 expectedSqrtSpotPriceUpperX96 =
+            1_771_595_571_142_957_102_904_975_518_859_264;
+        uint160 expectedSqrtSpotPriceLowerX96 =
+            1_771_595_571_142_957_102_904_975_518_859_264;
 
-        bytes memory data = abi.encodeWithSelector(IValantisSOTModule.setPriceBounds.selector, sqrtPriceLowX96, sqrtPriceHighX96, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96);
+        bytes memory data = abi.encodeWithSelector(
+            IValantisSOTModule.setPriceBounds.selector,
+            sqrtPriceLowX96,
+            sqrtPriceHighX96,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96
+        );
 
         bytes[] memory datas = new bytes[](1);
         datas[0] = data;
@@ -543,31 +647,68 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
     // #region internal functions.
 
-    function _deployGuardian(address owner_, address pauser_) internal returns(address guardian) {
+    function _deployGuardian(
+        address owner_,
+        address pauser_
+    ) internal returns (address guardian) {
         return address(new Guardian(owner_, pauser_));
     }
 
-    function _deployManager(address guardian_) internal returns(address) {
+    function _deployManager(address guardian_)
+        internal
+        returns (address)
+    {
         /// @dev default fee pips is set at 10%
 
-        return address(new ArrakisStandardManager(TEN_PERCENT, NATIVE_COIN, 18, guardian_));
+        return address(
+            new ArrakisStandardManager(
+                TEN_PERCENT, NATIVE_COIN, 18, guardian_
+            )
+        );
     }
 
-    function _deployPublicRegistry(address owner_, address guardian_, address admin_) internal returns(address) {
-        return address(new ModulePublicRegistry(owner, guardian_, admin_));
+    function _deployPublicRegistry(
+        address owner_,
+        address guardian_,
+        address admin_
+    ) internal returns (address) {
+        return address(
+            new ModulePublicRegistry(owner, guardian_, admin_)
+        );
     }
 
-    function _deployValantisImplementation(address guardian_) internal returns(address) {
+    function _deployValantisImplementation(address guardian_)
+        internal
+        returns (address)
+    {
         return address(new ValantisModulePublic(guardian_));
     }
 
-    function _deployArrakisMetaVaultFactory(address owner_, address manager_, address modulePublicRegistry_, address modulePrivateRegistry_) internal returns(address) {
-        return address(new ArrakisMetaVaultFactory(owner_, manager_, modulePublicRegistry_, modulePrivateRegistry_));
+    function _deployArrakisMetaVaultFactory(
+        address owner_,
+        address manager_,
+        address modulePublicRegistry_,
+        address modulePrivateRegistry_
+    ) internal returns (address) {
+        return address(
+            new ArrakisMetaVaultFactory(
+                owner_,
+                manager_,
+                modulePublicRegistry_,
+                modulePrivateRegistry_
+            )
+        );
     }
 
     /// @dev should be called after creation of factory contract.
-    function _initializeManager(address owner_, address defaultReceiver_, address factory_) internal {
-        IArrakisStandardManager(manager).initialize(owner, defaultReceiver_, factory_);
+    function _initializeManager(
+        address owner_,
+        address defaultReceiver_,
+        address factory_
+    ) internal {
+        IArrakisStandardManager(manager).initialize(
+            owner, defaultReceiver_, factory_
+        );
     }
 
     /// @dev should be called after creation of factory contract.

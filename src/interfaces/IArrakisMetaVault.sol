@@ -121,9 +121,7 @@ interface IArrakisMetaVault {
 
     /// @notice function used to initialize default module.
     /// @param module_ address of the default module.
-    function initialize(
-        address module_
-    ) external;
+    function initialize(address module_) external;
 
     /// @notice function used to set module
     /// @param module_ address of the new module

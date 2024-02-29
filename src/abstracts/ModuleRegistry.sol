@@ -15,7 +15,11 @@ import {Initializable} from
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
-abstract contract ModuleRegistry is IModuleRegistry, Ownable, Initializable {
+abstract contract ModuleRegistry is
+    IModuleRegistry,
+    Ownable,
+    Initializable
+{
     using EnumerableSet for EnumerableSet.AddressSet;
 
     // #region public properties.
@@ -38,14 +42,10 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable, Initializable {
 
     // #endregion internal properties.
 
-    constructor(
-        address owner_,
-        address guardian_,
-        address admin_
-    ) {
+    constructor(address owner_, address guardian_, address admin_) {
         if (
-            owner_ == address(0)
-                || guardian_ == address(0) || admin_ == address(0)
+            owner_ == address(0) || guardian_ == address(0)
+                || admin_ == address(0)
         ) {
             revert AddressZero();
         }
@@ -60,9 +60,10 @@ abstract contract ModuleRegistry is IModuleRegistry, Ownable, Initializable {
     /// @param factory_ address of ArrakisMetaVaultFactory,
     ///  who is the only one who can call the init management function.
     function initialize(address factory_) external initializer {
-        if (factory_ == address(0))
+        if (factory_ == address(0)) {
             revert AddressZero();
-        
+        }
+
         factory = IArrakisMetaVaultFactory(factory_);
     }
 

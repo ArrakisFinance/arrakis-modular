@@ -49,9 +49,8 @@ contract ModulePrivateRegistryTest is TestWrapper {
 
         guardian.setPauser(pauser);
 
-        modulePrivateRegistry = new ModulePrivateRegistry(
-            owner, address(guardian), admin
-        );
+        modulePrivateRegistry =
+            new ModulePrivateRegistry(owner, address(guardian), admin);
 
         modulePrivateRegistry.initialize(address(factory));
     }

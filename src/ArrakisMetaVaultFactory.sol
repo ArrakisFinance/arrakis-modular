@@ -467,7 +467,9 @@ contract ArrakisMetaVaultFactory is
         /// so manager should follow this pattern where vault address is the first parameter of the function.
         bytes memory data = data_.length == 0
             ? abi.encodeWithSelector(selector, vault_)
-            : abi.encodePacked(abi.encodeWithSelector(selector, vault_), data_);
+            : abi.encodePacked(
+                abi.encodeWithSelector(selector, vault_), data_
+            );
 
         (bool success,) = manager.call(data);
 

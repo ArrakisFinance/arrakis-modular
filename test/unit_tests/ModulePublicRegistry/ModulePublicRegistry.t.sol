@@ -57,9 +57,8 @@ contract ModulePublicRegistryTest is TestWrapper {
 
         // #region create public module registry.
 
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner, address(guardian), admin
-        );
+        modulePublicRegistry =
+            new ModulePublicRegistry(owner, address(guardian), admin);
 
         modulePublicRegistry.initialize(address(factory));
 
@@ -67,7 +66,6 @@ contract ModulePublicRegistryTest is TestWrapper {
     }
 
     // #region test constructor.
-
 
     function testConstructorOwnerAddressZero() public {
         vm.expectRevert(IModuleRegistry.AddressZero.selector);
@@ -80,9 +78,8 @@ contract ModulePublicRegistryTest is TestWrapper {
     function testConstructorGuardianAddressZero() public {
         vm.expectRevert(IModuleRegistry.AddressZero.selector);
 
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner, address(0), admin
-        );
+        modulePublicRegistry =
+            new ModulePublicRegistry(owner, address(0), admin);
     }
 
     function testConstructorAdminAddressZero() public {
@@ -94,9 +91,8 @@ contract ModulePublicRegistryTest is TestWrapper {
     }
 
     function testConstructor() public {
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner, address(guardian), admin
-        );
+        modulePublicRegistry =
+            new ModulePublicRegistry(owner, address(guardian), admin);
 
         assertEq(owner, modulePublicRegistry.owner());
         assertEq(pauser, modulePublicRegistry.guardian());
@@ -108,9 +104,8 @@ contract ModulePublicRegistryTest is TestWrapper {
     // #region test initialize.
 
     function testInitializeFactoryAddressZero() public {
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner, address(guardian), admin
-        );
+        modulePublicRegistry =
+            new ModulePublicRegistry(owner, address(guardian), admin);
 
         vm.expectRevert(IModuleRegistry.AddressZero.selector);
 
@@ -118,9 +113,8 @@ contract ModulePublicRegistryTest is TestWrapper {
     }
 
     function testInitialize() public {
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner, address(guardian), admin
-        );
+        modulePublicRegistry =
+            new ModulePublicRegistry(owner, address(guardian), admin);
 
         modulePublicRegistry.initialize(address(factory));
 
@@ -136,9 +130,8 @@ contract ModulePublicRegistryTest is TestWrapper {
     function testWhitelistBeaconOnlyOwner() public {
         address[] memory beacons = new address[](0);
 
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner, address(guardian), admin
-        );
+        modulePublicRegistry =
+            new ModulePublicRegistry(owner, address(guardian), admin);
 
         modulePublicRegistry.initialize(address(factory));
 
@@ -153,9 +146,8 @@ contract ModulePublicRegistryTest is TestWrapper {
         address[] memory beacons = new address[](1);
         beacons[0] = beacon;
 
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner, address(guardian), admin
-        );
+        modulePublicRegistry =
+            new ModulePublicRegistry(owner, address(guardian), admin);
 
         modulePublicRegistry.initialize(address(factory));
 
@@ -182,9 +174,8 @@ contract ModulePublicRegistryTest is TestWrapper {
         address[] memory beacons = new address[](1);
         beacons[0] = address(beacon);
 
-        modulePublicRegistry = new ModulePublicRegistry(
-            owner, address(guardian), admin
-        );
+        modulePublicRegistry =
+            new ModulePublicRegistry(owner, address(guardian), admin);
 
         modulePublicRegistry.initialize(address(factory));
 
