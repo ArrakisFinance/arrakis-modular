@@ -10,6 +10,7 @@ import {ISOT} from "../interfaces/ISOT.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {PIPS} from "../constants/CArrakis.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
+import {IOwnable} from "../interfaces/IOwnable.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -46,11 +47,16 @@ abstract contract ValantisModule is
 
     // #endregion public properties.
 
+    // #region internal immutables.
+
+    address internal immutable _guardian;
+
+    // #endregion internal immutables.
+
     // #region internal properties.
 
     uint256 internal _init0;
     uint256 internal _init1;
-    address internal _guardian;
 
     // #endregion internal properties.
 
@@ -89,7 +95,7 @@ abstract contract ValantisModule is
     /// for initializing the valantis module.
     /// who can call deposit and withdraw functions.
     /// @param pool_ address of the valantis sovereign pool.
-    /// @param alm_ address of the valantis SOT ALM.
+    
     /// @param init0_ initial amount of token0 to provide to valantis module.
     /// @param init1_ initial amount of token1 to provide to valantis module.
     /// @param maxSlippage_ allowed to manager for rebalancing the inventory using
@@ -98,7 +104,6 @@ abstract contract ValantisModule is
     /// @param metaVault_ address of the meta vault
     function initialize(
         address pool_,
-        address alm_,
         uint256 init0_,
         uint256 init1_,
         uint24 maxSlippage_,
@@ -107,7 +112,6 @@ abstract contract ValantisModule is
     ) external initializer {
         if (metaVault_ == address(0)) revert AddressZero();
         if (pool_ == address(0)) revert AddressZero();
-        if (alm_ == address(0)) revert AddressZero();
         if (init0_ == 0 && init1_ == 0) revert InitsAreZeros();
         if (maxSlippage_ > PIPS / 10) {
             revert MaxSlippageGtTenPercent();
@@ -116,7 +120,6 @@ abstract contract ValantisModule is
 
         metaVault = IArrakisMetaVault(metaVault_);
         pool = ISovereignPool(pool_);
-        alm = ISOT(alm_);
 
         token0 = IERC20Metadata(metaVault.token0());
         token1 = IERC20Metadata(metaVault.token1());
@@ -143,6 +146,24 @@ abstract contract ValantisModule is
     }
 
     // #endregion guardian functions.
+
+    // #region only vault owner.
+
+    /// @notice set SOT function.
+    /// @param alm_ address of the valantis SOT ALM.
+    function setALM(address alm_) external {
+        if (address(alm) != address(0))
+            revert ALMAlreadySet();
+        if (msg.sender != IOwnable(address(metaVault)).owner())
+            revert OnlyMetaVaultOwner();
+        if (alm_ == address(0)) revert AddressZero();
+
+        alm = ISOT(alm_);
+
+        emit LogSetALM(alm_);
+    }
+
+    // #endregion only vault owner.
 
     /// @notice function used by metaVault to withdraw tokens from the strategy.
     /// @param receiver_ address that will receive tokens.
@@ -359,8 +380,8 @@ abstract contract ValantisModule is
         alm.depositLiquidity(
             balance0,
             balance1,
-            expectedSqrtSpotPriceUpperX96_,
-            expectedSqrtSpotPriceLowerX96_
+            expectedSqrtSpotPriceLowerX96_,
+            expectedSqrtSpotPriceUpperX96_
         );
 
         // #endregion deposit.
@@ -386,21 +407,21 @@ abstract contract ValantisModule is
     /// @notice fucntion used to set range on valantis AMM
     /// @param sqrtPriceLowX96_ lower bound of the range in sqrt price.
     /// @param sqrtPriceHighX96_ upper bound of the range in sqrt price.
-    /// @param expectedSqrtSpotPriceUpperX96_ expected lower limit of current spot
-    /// price (to prevent sandwich attack and manipulation).
     /// @param expectedSqrtSpotPriceLowerX96_ expected upper limit of current spot
     /// price (to prevent sandwich attack and manipulation).
+    /// @param expectedSqrtSpotPriceUpperX96_ expected lower limit of current spot
+    /// price (to prevent sandwich attack and manipulation).
     function setPriceBounds(
-        uint128 sqrtPriceLowX96_,
-        uint128 sqrtPriceHighX96_,
+        uint160 sqrtPriceLowX96_,
+        uint160 sqrtPriceHighX96_,
         uint160 expectedSqrtSpotPriceUpperX96_,
         uint160 expectedSqrtSpotPriceLowerX96_
     ) external onlyManager {
         alm.setPriceBounds(
             sqrtPriceLowX96_,
             sqrtPriceHighX96_,
-            expectedSqrtSpotPriceUpperX96_,
-            expectedSqrtSpotPriceLowerX96_
+            expectedSqrtSpotPriceLowerX96_,
+            expectedSqrtSpotPriceUpperX96_
         );
     }
 
@@ -480,7 +501,7 @@ abstract contract ValantisModule is
         uint8 decimals0 = token0.decimals();
 
         uint256 sqrtSpotPriceX96;
-        (sqrtSpotPriceX96,,) = alm.getAmmState();
+        (sqrtSpotPriceX96,,) = alm.getAMMState();
 
         uint256 currentPrice;
 

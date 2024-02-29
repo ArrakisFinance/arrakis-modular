@@ -195,6 +195,32 @@ contract ArrakisStandardManager is
         emit LogSetReceiverByToken(token, receiver_);
     }
 
+    /// @notice function used to initialize the fees taken by manager for a specific vault.
+    /// @param vault_ address of the vault.
+    function setDefaultManagerFeePIPS(
+        address vault_
+    ) external onlyOwner onlyWhitelistedVault(vault_) {
+        VaultInfo memory info = vaultInfo[vault_];
+        if(info.managerFeePIPS != 0 || info.lastRebalance != 0)
+            revert NotManagerFeesInitialization();
+
+        vaultInfo[vault_] = VaultInfo({
+            lastRebalance: info.lastRebalance,
+            cooldownPeriod: info.cooldownPeriod,
+            oracle: info.oracle,
+            executor: info.executor,
+            maxDeviation: info.maxDeviation,
+            stratAnnouncer: info.stratAnnouncer,
+            maxSlippagePIPS: info.maxSlippagePIPS,
+            managerFeePIPS: SafeCast.toUint24(defaultFeePIPS)
+        });
+
+        IArrakisLPModule(IArrakisMetaVault(vault_).module())
+            .setManagerFeePIPS(defaultFeePIPS);
+
+        emit LogChangeManagerFee(vault_, defaultFeePIPS);
+    }
+
     /// @notice function used to decrease the fees taken by manager for a specific vault.
     /// @param vault_ address of the vault.
     /// @param newFeePIPS_ fees in pips to set on the specific vault.
@@ -584,19 +610,12 @@ contract ArrakisStandardManager is
             executor: params_.executor,
             stratAnnouncer: params_.stratAnnouncer,
             maxSlippagePIPS: params_.maxSlippagePIPS,
-            managerFeePIPS: SafeCast.toUint24(defaultFeePIPS),
+            managerFeePIPS: 0,
             maxDeviation: params_.maxDeviation,
             cooldownPeriod: params_.cooldownPeriod
         });
 
         // #endregion effects.
-
-        // #region interactions.
-
-        IArrakisLPModule(IArrakisMetaVault(params_.vault).module())
-            .setManagerFeePIPS(defaultFeePIPS);
-
-        // #endregion interactions.
     }
 
     function _updateParamsChecks(SetupParams memory params_)

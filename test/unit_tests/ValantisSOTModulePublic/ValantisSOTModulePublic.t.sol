@@ -116,6 +116,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         metaVault = new ArrakisMetaVaultMock();
         metaVault.setManager(manager);
         metaVault.setToken0AndToken1(USDC, WETH);
+        metaVault.setOwner(owner);
 
         // #endregion create meta vault.
 
@@ -134,13 +135,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         module = new ValantisModulePublic(address(guardian));
         module.initialize(
             address(sovereignPool),
-            address(sovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
             address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALM(address(sovereignALM));
 
         // #endregion create valantis module.
     }
@@ -164,7 +167,6 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         module.initialize(
             address(0),
-            address(sovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
@@ -176,17 +178,19 @@ contract ValantisSOTModuleTest is TestWrapper {
     function testInitializeSovereignALMAddressZero() public {
         module = new ValantisModulePublic(address(guardian));
 
-        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
         module.initialize(
             address(sovereignPool),
-            address(0),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
             address(metaVault)
         );
+
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+        vm.prank(owner);
+        module.setALM(address(0));
     }
 
     function testInitializeInitsAreZeros() public {
@@ -196,7 +200,6 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         module.initialize(
             address(sovereignPool),
-            address(sovereignALM),
             0,
             0,
             MAX_SLIPPAGE,
@@ -214,7 +217,6 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         module.initialize(
             address(sovereignPool),
-            address(sovereignALM),
             INIT0,
             INIT1,
             TEN_PERCENT * 2,
@@ -230,7 +232,6 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         module.initialize(
             address(sovereignPool),
-            address(sovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
@@ -258,7 +259,6 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         module.initialize(
             address(sovereignPool),
-            address(sovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
@@ -456,13 +456,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         module = new ValantisModulePublic(address(guardian));
         module.initialize(
             address(sovereignPool),
-            address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
             address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALM(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -495,13 +497,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         module = new ValantisModulePublic(address(guardian));
         module.initialize(
             address(sovereignPool),
-            address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
             address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALM(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -713,13 +717,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         module = new ValantisModulePublic(address(guardian));
         module.initialize(
             address(sovereignPool),
-            address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
             address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALM(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -768,13 +774,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         module = new ValantisModulePublic(address(guardian));
         module.initialize(
             address(sovereignPool),
-            address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
             address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALM(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -946,13 +954,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         module = new ValantisModulePublic(address(guardian));
         module.initialize(
             address(sovereignPool),
-            address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
             address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALM(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -994,13 +1004,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         module = new ValantisModulePublic(address(guardian));
         module.initialize(
             address(sovereignPool),
-            address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
             address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALM(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -1114,13 +1126,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         module = new ValantisModulePublic(address(guardian));
         module.initialize(
             address(sovereignPool),
-            address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
             address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALM(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -1158,13 +1172,15 @@ contract ValantisSOTModuleTest is TestWrapper {
         module = new ValantisModulePublic(address(guardian));
         module.initialize(
             address(sovereignPool),
-            address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
             address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALM(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -1221,10 +1237,10 @@ contract ValantisSOTModuleTest is TestWrapper {
     // #region test setPriceBounds.
 
     function testSetPriceBoundsOnlyManager() public {
-        uint128 sqrtPriceLowX96 =
-            SafeCast.toUint128(TickMath.getSqrtRatioAtTick(10));
-        uint128 sqrtPriceHighX96 =
-            SafeCast.toUint128(TickMath.getSqrtRatioAtTick(10));
+        uint160 sqrtPriceLowX96 =
+            TickMath.getSqrtRatioAtTick(10);
+        uint160 sqrtPriceHighX96 =
+            TickMath.getSqrtRatioAtTick(10);
 
         uint160 expectedSqrtSpotPriceUpperX96 =
             TickMath.getSqrtRatioAtTick(31);
@@ -1242,16 +1258,16 @@ contract ValantisSOTModuleTest is TestWrapper {
         module.setPriceBounds(
             sqrtPriceLowX96,
             sqrtPriceHighX96,
-            expectedSqrtSpotPriceUpperX96,
-            expectedSqrtSpotPriceLowerX96
+            expectedSqrtSpotPriceLowerX96,
+            expectedSqrtSpotPriceUpperX96
         );
     }
 
     function testSetPriceBounds() public {
-        uint128 sqrtPriceLowX96 =
-            SafeCast.toUint128(TickMath.getSqrtRatioAtTick(10));
-        uint128 sqrtPriceHighX96 =
-            SafeCast.toUint128(TickMath.getSqrtRatioAtTick(10));
+        uint160 sqrtPriceLowX96 =
+            TickMath.getSqrtRatioAtTick(10);
+        uint160 sqrtPriceHighX96 =
+            TickMath.getSqrtRatioAtTick(10);
 
         uint160 expectedSqrtSpotPriceUpperX96 =
             TickMath.getSqrtRatioAtTick(31);
@@ -1263,8 +1279,8 @@ contract ValantisSOTModuleTest is TestWrapper {
         module.setPriceBounds(
             sqrtPriceLowX96,
             sqrtPriceHighX96,
-            expectedSqrtSpotPriceUpperX96,
-            expectedSqrtSpotPriceLowerX96
+            expectedSqrtSpotPriceLowerX96,
+            expectedSqrtSpotPriceUpperX96
         );
     }
 

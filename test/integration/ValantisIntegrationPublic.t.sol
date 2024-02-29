@@ -19,6 +19,8 @@ import {ArrakisStandardManager} from "../../src/ArrakisStandardManager.sol";
 import {Guardian} from "../../src/Guardian.sol";
 import {ValantisModulePublic} from "../../src/modules/ValantisSOTModulePublic.sol";
 
+import {SetupParams} from "../../src/structs/SManager.sol";
+
 import {IModulePublicRegistry} from "../../src/interfaces/IModulePublicRegistry.sol";
 import {IModuleRegistry} from "../../src/interfaces/IModuleRegistry.sol";
 import {IArrakisMetaVaultPublic} from "../../src/interfaces/IArrakisMetaVaultPublic.sol";
@@ -28,16 +30,36 @@ import {IArrakisPublicVaultRouter} from "../../src/interfaces/IArrakisPublicVaul
 import {IRouterSwapExecutor} from "../../src/interfaces/IRouterSwapExecutor.sol";
 import {IArrakisStandardManager} from "../../src/interfaces/IArrakisStandardManager.sol";
 import {IValantisSOTModule} from "../../src/interfaces/IValantisSOTModule.sol";
+import {IOracleWrapper} from "../../src/interfaces/IOracleWrapper.sol";
+import {IOwnable} from "../../src/interfaces/IOwnable.sol";
+import {IArrakisLPModule} from "../../src/interfaces/IArrakisLPModule.sol";
 
 import {NATIVE_COIN, TEN_PERCENT} from "../../src/constants/CArrakis.sol";
 
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import {SOTBase} from "../../lib/valantis-sot/test/base/SOTBase.t.sol";
-// import {SOTBase} from "@valantis/contracts-test/base/SOTBase.t.sol";
+import {SOTBase} from "@valantis/contracts-test/base/SOTBase.t.sol";
+import {ERC20} from "../../lib/valantis-sot/lib/valantis-core/lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {MockSigner} from '@valantis/contracts-test/mocks/MockSigner.sol';
+import {
+    SOT,
+    SOTConstructorArgs
+} from "@valantis/contracts/SOT.sol";
+import {
+    SovereignPoolConstructorArgs
+} from '../../lib/valantis-sot/lib/valantis-core/test/base/SovereignPoolBase.t.sol';
+
+import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
+import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
+
+// #region mocks.
+
+import {OracleWrapper} from "./mocks/OracleWrapper.sol";
+
+// #endregion mocks.
 
 contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
-
     // #region constant properties.
 
     address public constant WETH =
@@ -64,8 +86,46 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
     address public valantisBeacon;
 
     address public vault;
+    address public executor;
+    address public stratAnnouncer;
 
-    function setUp() public {
+    // #region mocks.
+
+    address public oracle;
+    address public deployer;
+    address public signer;
+
+    // #endregion mocks.
+
+    // #region vault infos.
+
+    uint256 public init0;
+    uint256 public init1;
+    uint24 public maxSlippage;
+
+    // #endregion vault infos.
+
+    SOT public alm;
+
+    function setUp() public override {
+        // #region valantis setup.
+        (token0, token1) = (ERC20(USDC), ERC20(WETH));
+
+        (feedToken0, feedToken1) = deployChainlinkOracles(18, 6);
+
+        // NOTE : is it needed?
+        signer = vm.addr(uint256(keccak256(abi.encode("Mock Signer"))));
+
+        // Set initial price to 2000 for token0 and 1 for token1 (Similar to Eth/USDC pair)
+        feedToken0.updateAnswer(SafeCast.toInt256(FullMath.mulDiv(1e6, 1e18, 2000e6)));
+        //feedToken0.updateAnswer(2000e18);
+        feedToken1.updateAnswer(1e6);
+
+        SovereignPoolConstructorArgs memory poolArgs = _generateDefaultConstructorArgs();
+        pool = this.deploySovereignPool(poolArgs);
+
+        // #endregion valantis setup.
+
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
 
@@ -75,6 +135,10 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         /// @dev we will not use it so we mock it.
         address privateModule = vm.addr(uint256(keccak256(abi.encode("Private Module"))));
+
+        executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        stratAnnouncer = vm.addr(uint256(keccak256(abi.encode("Strategy Announcer"))));
+        deployer = vm.addr(uint256(keccak256(abi.encode("Deployer"))));
 
         // #region create guardian.
 
@@ -99,6 +163,16 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         factory = _deployArrakisMetaVaultFactory(owner, manager, moduleRegistry, privateModule);
 
         // #endregion create factory.
+
+        // #region whitelist a public deployer.
+
+        address[] memory deployers = new address[](1);
+        deployers[0] = deployer;
+
+        vm.prank(owner);
+        IArrakisMetaVaultFactory(factory).whitelistDeployer(deployers);
+
+        // #endregion whitelist a public deployer.
 
         // #region initialize manager.
 
@@ -137,22 +211,339 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         // #endregion create valantis sot alm.
 
+        // #region set sot alm.
+
+        // Reserves in the ratio 1: 2000
+
+        // Max volume for token0 ( Eth ) is 100, and for token1 ( USDC ) is 20,000
+
+        // #endregion set sot alm.
+
+        // #region set pool.
+
+        vm.prank(pool.poolManager());
+        // pool.setPoolManager();
+
+        // #endregion set pool.
+
+        // #region create oracle wrapper.
+
+        oracle = address(new OracleWrapper());
+        OracleWrapper(oracle).setPrice0(FullMath.mulDiv(1e6, 1e18, 2000e6));
+        OracleWrapper(oracle).setPrice1(2000e6);
+
+        // #endregion create oracle wrapper.
+
         // #region create public vault.
 
-        bytes32 salt = abi.encode("Public vault salt");
+        bytes32 salt = keccak256(abi.encode("Public vault salt"));
+        init0 = 2000e6;
+        init1 = 1e18;
+        maxSlippage = TEN_PERCENT;
 
-        bytes memory moduleCreationPayload = abi.encodeWithSelector(IValantisSOTModule.initialize.selector, );
-        bytes memory initManagementPayload = abi.encodeWithSelector(bytes4, arg);
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(IValantisSOTModule.initialize.selector, address(pool), init0, init1, maxSlippage, oracle);
+        bytes memory initManagementPayload = abi.encode(IOracleWrapper(oracle), TEN_PERCENT, uint256(60), executor, stratAnnouncer, maxSlippage);
 
-        vault = IArrakisMetaVaultFactory(factory).deployPublicVault(salt_, USDC, WETH, owner, valantisBeacon, , );
+        vm.prank(deployer);
+        vault = IArrakisMetaVaultFactory(factory).deployPublicVault(salt, address(token0), address(token1), owner, valantisBeacon, moduleCreationPayload, initManagementPayload);
 
         // #endregion create public vault.
+
+        address m = address(IArrakisMetaVault(vault).module());
+        
+        vm.prank(pool.poolManager());
+        pool.setPoolManager(m);
+
+        // #region valantis mock.
+
+        int24 tick = TickMath.getTickAtSqrtRatio(1771595571142957102904975518859264);
+
+        SOTConstructorArgs memory args = SOTConstructorArgs({
+            pool: address(pool),
+            manager: address(this),
+            signer: signer,
+            liquidityProvider: m,
+            feedToken0: address(feedToken0),
+            feedToken1: address(feedToken1),
+            sqrtSpotPriceX96: 1771595571142957102904975518859264,
+            sqrtPriceLowX96: TickMath.getSqrtRatioAtTick(tick - 100),
+            sqrtPriceHighX96: TickMath.getSqrtRatioAtTick(tick + 100),
+            maxDelay: 9 minutes,
+            maxOracleUpdateDurationFeed0: 10 minutes,
+            maxOracleUpdateDurationFeed1: 10 minutes,
+            solverMaxDiscountBips: 200, // 2%
+            maxOracleDeviationBound: 5000, // 50%
+            minAMMFeeGrowthInPips: 100,
+            maxAMMFeeGrowthInPips: 10000,
+            minAMMFee: 1 // 0.01%
+        });
+
+        vm.startPrank(pool.poolManager());
+        alm = new SOT(args);
+        pool.setALM(address(alm));
+        pool.setSwapFeeModule(address(alm));
+        vm.stopPrank();
+
+        _addToContractsToApprove(address(pool));
+        _addToContractsToApprove(address(alm));
+
+        vm.prank(IOwnable(vault).owner());
+        IValantisSOTModule(m).setALM(address(alm));
+
+        vm.prank(address(this));
+        alm.setMaxTokenVolumes(100e18, 20_000e18);
+        alm.setMaxAllowedQuotes(2);
+
+        // #endregion valantis mock.
+
+        // #region set default manager fees.
+
+        vm.prank(owner);
+        IArrakisStandardManager(manager).setDefaultManagerFeePIPS(vault);
+
+        // #endregion set default manager fees.
+
+        uint160 sqrtSpotPriceX96 = alm.getSqrtOraclePriceX96();
+
+        uint256 currentPrice = FullMath.mulDiv(
+                FullMath.mulDiv(
+                    sqrtSpotPriceX96, sqrtSpotPriceX96, 1 << 64
+                ),
+                10 ** 6,
+                1 << 128
+            );
+
+        (sqrtSpotPriceX96,,) = alm.getAMMState();
+
+        currentPrice = FullMath.mulDiv(
+                FullMath.mulDiv(
+                    sqrtSpotPriceX96, sqrtSpotPriceX96, 1 << 64
+                ),
+                10 ** 6,
+                1 << 128
+            );
     }
 
     // #region tests.
 
-    function test_deposit() public {
+    function test_mint() public {
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
+        deal(address(token0), user, init0);
+        deal(address(token1), user, init1);
+
+        address m = address(IArrakisMetaVault(vault).module());
+
+        vm.startPrank(user);
+        token0.approve(m, init0);
+        token1.approve(m, init1);
+
+        IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
+        vm.stopPrank();
+    }
+
+    function test_burn() public {
+        // #region mint.
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        deal(address(token0), user, init0);
+        deal(address(token1), user, init1);
+
+        address m = address(IArrakisMetaVault(vault).module());
+
+        vm.startPrank(user);
+        token0.approve(m, init0);
+        token1.approve(m, init1);
+
+        IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
+        vm.stopPrank();
+
+        // #endregion mint.
+
+        // #region burn.
+
+        vm.startPrank(receiver);
+        IArrakisMetaVaultPublic(vault).burn(1e18, user);
+
+        // #endregion burn.
+    }
+
+    function test_withdrawManagerBalance() public {
+        // #region mint.
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        deal(address(token0), user, init0);
+        deal(address(token1), user, init1);
+
+        address m = address(IArrakisMetaVault(vault).module());
+
+        vm.startPrank(user);
+        token0.approve(m, init0);
+        token1.approve(m, init1);
+
+        IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
+        vm.stopPrank();
+
+        // #endregion mint.
+
+        IArrakisLPModule(m).withdrawManagerBalance();
+    }
+
+    function test_getManagerValues() public {
+        // #region mint.
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        deal(address(token0), user, init0);
+        deal(address(token1), user, init1);
+
+        address m = address(IArrakisMetaVault(vault).module());
+
+        vm.startPrank(user);
+        token0.approve(m, init0);
+        token1.approve(m, init1);
+
+        IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
+        vm.stopPrank();
+
+        // #endregion mint.
+
+        // console.logUint(IArrakisLPModule(m).managerBalance0());
+        // console.logUint(IArrakisLPModule(m).managerBalance1());
+        // console.logUint(IArrakisLPModule(m).managerFeePIPS());
+    }
+
+    function test_getReservers() public {
+        // #region mint.
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        deal(address(token0), user, init0);
+        deal(address(token1), user, init1);
+
+        address m = address(IArrakisMetaVault(vault).module());
+
+        vm.startPrank(user);
+        token0.approve(m, init0);
+        token1.approve(m, init1);
+
+        IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
+        vm.stopPrank();
+
+        // #endregion mint.
+
+        (uint256 amount0, uint256 amount1) = IArrakisLPModule(m).totalUnderlying();
+        // console.logUint(amount0);
+        // console.logUint(amount1);
+
+        (amount0, amount1) = IArrakisLPModule(m).totalUnderlyingAtPrice(TickMath.getSqrtRatioAtTick(10));
+
+        // console.logUint(amount0);
+        // console.logUint(amount1);
+    }
+
+    function test_validateRebalance() public {
+        // #region mint.
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        deal(address(token0), user, init0);
+        deal(address(token1), user, init1);
+
+        address m = address(IArrakisMetaVault(vault).module());
+
+        vm.startPrank(user);
+        token0.approve(m, init0);
+        token1.approve(m, init1);
+
+        IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
+        vm.stopPrank();
+
+        // #endregion mint.
+
+        IArrakisLPModule(m).validateRebalance(IOracleWrapper(oracle), TEN_PERCENT);
+    }
+
+    function test_swap() public {
+        // #region mint.
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        deal(address(token0), user, init0);
+        deal(address(token1), user, init1);
+
+        address m = address(IArrakisMetaVault(vault).module());
+
+        vm.startPrank(user);
+        token0.approve(m, init0);
+        token1.approve(m, init1);
+
+        IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
+        vm.stopPrank();
+
+        // #endregion mint.
+
+        (uint160 sqrtSpotPriceX96,,) = alm.getAMMState();
+
+        bool zeroForOne = true; // USDC -> WETH.
+        uint256 expectedMinReturn = 0.5 ether;
+        uint256 amountIn = 1000e6;
+        address router = address(this);
+
+        uint160 expectedSqrtSpotPriceUpperX96 = 1771595571142957102904975518859264;
+        uint160 expectedSqrtSpotPriceLowerX96 = 1771595571142957102904975518859264;
+        bytes memory payload = abi.encodeWithSelector(this.swap.selector);
+
+        bytes memory data = abi.encodeWithSelector(IValantisSOTModule.swap.selector, zeroForOne, expectedMinReturn, amountIn, router, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96, payload);
+
+        bytes[] memory datas = new bytes[](1);
+        datas[0] = data;
+
+        vm.prank(executor);
+        IArrakisStandardManager(manager).rebalance(vault, datas);
+    }
+
+    function test_setPriceBounds() public {
+        // #region mint.
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        deal(address(token0), user, init0);
+        deal(address(token1), user, init1);
+
+        address m = address(IArrakisMetaVault(vault).module());
+
+        vm.startPrank(user);
+        token0.approve(m, init0);
+        token1.approve(m, init1);
+
+        IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
+        vm.stopPrank();
+
+        // #endregion mint.
+
+        uint160 sqrtPriceLowX96 = TickMath.getSqrtRatioAtTick(TickMath.getTickAtSqrtRatio(1771595571142957102904975518859264) - 10);
+        uint160 sqrtPriceHighX96 = TickMath.getSqrtRatioAtTick(TickMath.getTickAtSqrtRatio(1771595571142957102904975518859264) + 10);
+        uint160 expectedSqrtSpotPriceUpperX96 = 1771595571142957102904975518859264;
+        uint160 expectedSqrtSpotPriceLowerX96 = 1771595571142957102904975518859264;
+
+        bytes memory data = abi.encodeWithSelector(IValantisSOTModule.setPriceBounds.selector, sqrtPriceLowX96, sqrtPriceHighX96, expectedSqrtSpotPriceUpperX96, expectedSqrtSpotPriceLowerX96);
+
+        bytes[] memory datas = new bytes[](1);
+        datas[0] = data;
+
+        vm.prank(executor);
+        IArrakisStandardManager(manager).rebalance(vault, datas);
     }
 
     // #endregion tests.
@@ -192,4 +583,13 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
     }
 
     // #endregion internal functions.
+
+    // #region swap router mock.
+
+    function swap() external {
+        ERC20(USDC).transferFrom(msg.sender, address(this), 1000e6);
+        deal(WETH, msg.sender, 1.5 ether);
+    }
+
+    // #endregion swap router mock.
 }

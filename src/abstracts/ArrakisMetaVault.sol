@@ -70,19 +70,26 @@ abstract contract ArrakisMetaVault is
         emit LogSetManager(manager_);
     }
 
-    function initialize(
+    function initializeTokens(
         address token0_,
-        address token1_,
-        address module_
-    ) external initializer {
+        address token1_
+    ) external {
         if (token0_ == address(0)) revert AddressZero("Token 0");
         if (token1_ == address(0)) revert AddressZero("Token 1");
         if (token0_ > token1_) revert Token0GtToken1();
         if (token0_ == token1_) revert Token0EqToken1();
-        if (module_ == address(0)) revert AddressZero("Module");
+        if (token0 != address(0) || token1 != address(0))
+            revert AddressNotZero();
 
         token0 = token0_;
         token1 = token1_;
+    }
+
+    function initialize(
+        address module_
+    ) external initializer {
+        if (module_ == address(0)) revert AddressZero("Module");
+
         _whitelistedModules.add(module_);
         module = IArrakisLPModule(module_);
 

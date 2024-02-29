@@ -107,6 +107,7 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         metaVault = new ArrakisMetaVaultMock();
         metaVault.setManager(manager);
         metaVault.setToken0AndToken1(USDC, WETH);
+        metaVault.setOwner(owner);
 
         // #endregion create meta vault.
 
@@ -125,13 +126,15 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         module = new ValantisModulePrivate(address(guardian));
         module.initialize(
             address(sovereignPool),
-            address(sovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
             address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALM(address(sovereignALM));
 
         // #endregion create valantis module.
     }
@@ -254,13 +257,15 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         module = new ValantisModulePrivate(address(guardian));
         module.initialize(
             address(sovereignPool),
-            address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
             address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALM(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -292,13 +297,15 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         module = new ValantisModulePrivate(address(guardian));
         module.initialize(
             address(sovereignPool),
-            address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
             address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALM(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
