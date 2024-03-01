@@ -2,5 +2,5 @@
 pragma solidity ^0.8.20;
 
 interface ICreationCode {
-    function getCreationCode() external view returns(bytes memory);
+    function getCreationCode() external pure returns(bytes memory);
 }

@@ -29,8 +29,8 @@ uint256 constant cooldownPeriod = 0;
 address constant executor = address(0);
 address constant stratAnnouncer = address(0);
 
-address constant valantisUpgradeableBeacon = address(0);
-address constant factory = address(0);
+address constant valantisUpgradeableBeacon = 0x64E8578aDE41D3F82B18680adBB552F07383bCfa;
+address constant factory = 0xBe2881693B6F203ad60D04FC283E17165B0f2A1b;
 
 contract ValantisVaultOne is Script {
     function setUp() public {}
