@@ -9,8 +9,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {IArrakisMetaVaultFactory} from
     "./interfaces/IArrakisMetaVaultFactory.sol";
-import {ArrakisMetaVaultPublic} from "./ArrakisMetaVaultPublic.sol";
-import {ArrakisMetaVaultPrivate} from "./ArrakisMetaVaultPrivate.sol";
+import {ICreationCode} from "./interfaces/ICreationCode.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IModuleRegistry} from "./interfaces/IModuleRegistry.sol";
@@ -33,6 +32,8 @@ contract ArrakisMetaVaultFactory is
 
     address public immutable moduleRegistryPublic;
     address public immutable moduleRegistryPrivate;
+    address public immutable creationCodePublicVault;
+    address public immutable creationCodePrivateVault;
     PALMVaultNFT public immutable nft;
 
     // #endregion immutable properties.
@@ -52,18 +53,24 @@ contract ArrakisMetaVaultFactory is
         address owner_,
         address manager_,
         address moduleRegistryPublic_,
-        address moduleRegistryPrivate_
+        address moduleRegistryPrivate_,
+        address creationCodePublicVault_,
+        address creationCodePrivateVault_
     ) {
         if (
             owner_ == address(0) || manager_ == address(0)
                 || moduleRegistryPublic_ == address(0)
                 || moduleRegistryPrivate_ == address(0)
+                || creationCodePublicVault_ == address(0)
+                || creationCodePrivateVault_ == address(0)
         ) revert AddressZero();
 
         _initializeOwner(owner_);
         manager = manager_;
         moduleRegistryPublic = moduleRegistryPublic_;
         moduleRegistryPrivate = moduleRegistryPrivate_;
+        creationCodePublicVault = creationCodePublicVault_;
+        creationCodePrivateVault = creationCodePrivateVault_;
         nft = new PALMVaultNFT();
     }
 
@@ -169,7 +176,7 @@ contract ArrakisMetaVaultFactory is
 
             // #region get the creation code for TokenMetaVault.
             bytes memory creationCode = abi.encodePacked(
-                type(ArrakisMetaVaultPublic).creationCode,
+                ICreationCode(creationCodePublicVault).getCreationCode(),
                 abi.encode(
                     timeLock,
                     name,
@@ -245,7 +252,7 @@ contract ArrakisMetaVaultFactory is
         // #region get the creation code for TokenMetaVault.
 
         bytes memory creationCode = abi.encodePacked(
-            type(ArrakisMetaVaultPrivate).creationCode,
+            ICreationCode(creationCodePrivateVault).getCreationCode(),
             abi.encode(moduleRegistryPrivate, manager, address(nft))
         );
 

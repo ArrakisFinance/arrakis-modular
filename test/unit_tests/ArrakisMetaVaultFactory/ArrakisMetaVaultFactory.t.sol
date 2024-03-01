@@ -10,6 +10,8 @@ import {
     ArrakisMetaVaultFactory,
     IArrakisMetaVaultFactory
 } from "../../../src/ArrakisMetaVaultFactory.sol";
+import {CreationCodePublicVault} from "../../../src/CreationCodePublicVault.sol";
+import {CreationCodePrivateVault} from "../../../src/CreationCodePrivateVault.sol";
 import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
 import {PALMVaultNFT} from "../../../src/PALMVaultNFT.sol";
@@ -51,6 +53,9 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     address public owner;
 
     address public beaconAdmin;
+
+    address public creationCodePublicVault;
+    address public creationCodePrivateVault;
 
     // #region mock.
 
@@ -114,11 +119,20 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         // #endregion manager.
 
+        // #region creation code contracts.
+
+        creationCodePublicVault = address(new CreationCodePublicVault());
+        creationCodePrivateVault = address(new CreationCodePrivateVault());
+
+        // #endregion creation code contracts.
+
         factory = new ArrakisMetaVaultFactory(
             address(this),
             address(manager),
             address(publicRegistry),
-            address(privateRegistry)
+            address(privateRegistry),
+            creationCodePublicVault,
+            creationCodePrivateVault
         );
 
         nft = factory.nft();
@@ -133,7 +147,9 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
             address(0),
             address(manager),
             address(publicRegistry),
-            address(privateRegistry)
+            address(privateRegistry),
+            creationCodePublicVault,
+            creationCodePrivateVault
         );
     }
 
@@ -144,7 +160,9 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
             address(this),
             address(0),
             address(publicRegistry),
-            address(privateRegistry)
+            address(privateRegistry),
+            creationCodePublicVault,
+            creationCodePrivateVault
         );
     }
 
@@ -155,7 +173,9 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
             address(this),
             address(manager),
             address(0),
-            address(privateRegistry)
+            address(privateRegistry),
+            creationCodePublicVault,
+            creationCodePrivateVault
         );
     }
 
@@ -166,7 +186,9 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
             address(this),
             address(manager),
             address(publicRegistry),
-            address(0)
+            address(0),
+            creationCodePublicVault,
+            creationCodePrivateVault
         );
     }
 
@@ -505,7 +527,9 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
             address(this),
             address(m),
             address(publicRegistry),
-            address(privateRegistry)
+            address(privateRegistry),
+            creationCodePublicVault,
+            creationCodePrivateVault
         );
 
         nft = factory.nft();
@@ -566,7 +590,9 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
             address(this),
             address(m),
             address(publicRegistry),
-            address(privateRegistry)
+            address(privateRegistry),
+            creationCodePublicVault,
+            creationCodePrivateVault
         );
 
         nft = factory.nft();

@@ -14,6 +14,8 @@ import {ArrakisMetaVaultFactory} from
 import {RouterSwapExecutor} from "../src/RouterSwapExecutor.sol";
 import {ArrakisPublicVaultRouter} from
     "../src/ArrakisPublicVaultRouter.sol";
+import {CreationCodePublicVault} from "../src/CreationCodePublicVault.sol";
+import {CreationCodePrivateVault} from "../src/CreationCodePrivateVault.sol";
 
 import {NATIVE_COIN} from "../src/constants/CArrakis.sol";
 
@@ -28,17 +30,17 @@ import {TransparentUpgradeableProxy} from
 
 // #region guardian params.
 
-address constant guardianOwner = address(0);
-address constant guardianPauser = address(0);
+address constant guardianOwner = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant guardianPauser = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion guardian params.
 
 // #region arrakis timeLock.
 
 uint256 constant minDelay = 0 days;
-address constant proposer = address(0);
-address constant executor = address(0);
-address constant timeLockAdmin = address(0);
+address constant proposer = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant executor = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant timeLockAdmin = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion arrakis timeLock.
 
@@ -47,38 +49,38 @@ address constant timeLockAdmin = address(0);
 uint256 constant defaultFeePIPS = 0;
 address constant nativeToken = NATIVE_COIN;
 uint8 constant nativeTokenDecimals = 18;
-address constant managerOwner = address(0);
+address constant managerOwner = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion arrakis standard manager.
 
 // #region public module registry.
 
-address constant publicModuleRegistryOwner = address(0);
+address constant publicModuleRegistryOwner = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion public module registry.
 
 // #region private module registry.
 
-address constant privateModuleRegistryOwner = address(0);
+address constant privateModuleRegistryOwner = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion private module registry.
 
 // #region factory.
 
-address constant factoryOwner = address(0);
+address constant factoryOwner = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion factory.
 
 // #region router.
 
 address constant permit2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
-address constant routerOwner = address(0);
-address constant weth = address(0);
+address constant routerOwner = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant weth = 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9;
 
 // #endregion router.
 
 /// @dev default address that will receiver tokens earned by manager.
-address constant defaultReceiver = address(0);
+address constant defaultReceiver = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion value to set.
 
@@ -88,6 +90,8 @@ contract DeployStepOne is Script {
     address public manager;
     address public publicRegistry;
     address public privateRegistry;
+    address public creationCodePublicVault;
+    address public creationCodePrivateVault;
     address public factory;
     address public router;
     address public routerExecutor;
@@ -99,6 +103,8 @@ contract DeployStepOne is Script {
 
         address account = vm.addr(privateKey);
 
+        console.logAddress(account);
+
         vm.startBroadcast(privateKey);
 
         _deployGuardian();
@@ -106,14 +112,16 @@ contract DeployStepOne is Script {
         _deployArrakisStandardManager(guardian, arrakisTimeLock);
         _deployModuleRegistryPublic(guardian, arrakisTimeLock);
         _deployModuleRegistryPrivate(guardian, arrakisTimeLock);
-        _deployFactory(manager, publicRegistry, privateRegistry);
+        _deployCreationCodePublicVault();
+        _deployCreationCodePrivateVault();
+        _deployFactory(manager, publicRegistry, privateRegistry, creationCodePublicVault, creationCodePrivateVault);
         _deployRouter(factory);
         _deployRouterExecutor(router);
 
         _initializeManager(factory);
         _initializePublicModuleRegistry(factory);
         _initializePrivateModuleRegistry(factory);
-        _initializeRouter(routerExecutor);
+        // _initializeRouter(routerExecutor);
 
         vm.stopBroadcast();
     }
@@ -247,19 +255,45 @@ contract DeployStepOne is Script {
 
     // #endregion deploy private module registry.
 
+    // #region deploy creation code public vault.
+
+    function _deployCreationCodePublicVault() internal returns(address) {
+        creationCodePublicVault = address(new CreationCodePublicVault());
+
+        console.logString("Creation Code Public Vault Address : ");
+        console.logAddress(creationCodePublicVault);
+    }
+
+    // #endregion deploy creation code public vault.
+
+    // #region deploy creation code private vault.
+
+    function _deployCreationCodePrivateVault() internal returns(address) {
+        creationCodePrivateVault = address(new CreationCodePrivateVault());
+
+        console.logString("Creation Code Private Vault Address : ");
+        console.logAddress(creationCodePrivateVault);
+    }
+
+    // #endregion deploy creation code private vault.
+
     // #region deploy factory.
 
     function _deployFactory(
         address manager_,
         address publicRegistry_,
-        address privateRegistry
+        address privateRegistry_,
+        address createCodePublicVault_,
+        address createCodePrivateVault_
     ) internal returns (address) {
         factory = address(
             new ArrakisMetaVaultFactory(
                 factoryOwner,
                 manager_,
                 publicRegistry_,
-                privateRegistry
+                privateRegistry_,
+                createCodePublicVault_,
+                createCodePrivateVault_
             )
         );
 
