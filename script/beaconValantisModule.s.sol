@@ -13,8 +13,8 @@ import {UpgradeableBeacon} from
 /// @dev after this script we should whitelist the valantis UpgradeableBeacon through the multisig
 /// by calling whitelistBeacon of ModulePublicRegistry with the created UpgradeableBeacon.
 
-address constant arrakisTimeLock = 0x30496218Ad394c677092dAbf9Ab1CF8406C588aB;
-address constant guardian = 0xC164893891d312876C8B0A59811DB096f8a740Cc;
+address constant arrakisTimeLock = 0x6c277E32706BCC2D8711e6F5c957436205523FC0;
+address constant guardian = 0xdA26E9790C15bB2Be5ccf59419679103b5958AbF;
 
 contract BeaconValantisModule is Script {
     function setUp() public {}

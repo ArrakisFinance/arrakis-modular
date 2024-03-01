@@ -20,7 +20,7 @@ address constant vaultWeth = 0x376e46d54AabfEd100aD1F4E252fe801bFdeC092;
 address constant timeLockWeth = 0x6866f6408Ac4471695A8575Da99BA8E01C043Cae;
 address constant almWeth = 0xf678F3DF67EBea04b3a0c1C2636eEc2504c92BA2;
 
-contract ValantisVaultTwo is Script {
+contract ValantisVaultThree is Script {
     function setUp() public {}
 
     function run() public {
@@ -36,13 +36,13 @@ contract ValantisVaultTwo is Script {
 
         bytes memory data = abi.encodeWithSelector(IValantisSOTModule.setALMAndManagerFees.selector, alm);
 
-        TimeLock(timeLock).schedule(module, 0, data, bytes32(0), bytes32(0), 1 minutes);
+        TimeLock(timeLock).execute(module, 0, data, bytes32(0), bytes32(0));
 
         module = address(IArrakisMetaVault(vaultWeth).module());
 
         data = abi.encodeWithSelector(IValantisSOTModule.setALMAndManagerFees.selector, almWeth);
 
-        TimeLock(timeLockWeth).schedule(module, 0, data, bytes32(0), bytes32(0), 1 minutes);
+        TimeLock(timeLockWeth).execute(module, 0, data, bytes32(0), bytes32(0));
 
         console.logString("Valantis Public Vault is initialized");
         console.logAddress(vault);
