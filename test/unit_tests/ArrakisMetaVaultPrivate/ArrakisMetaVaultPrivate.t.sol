@@ -70,7 +70,9 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
 
         // #region initialize vault.
 
-        vault.initialize(USDC, WETH, address(module));
+        vault.initializeTokens(USDC, WETH);
+
+        vault.initialize(address(module));
 
         // #endregion initiliaze vault.
     }

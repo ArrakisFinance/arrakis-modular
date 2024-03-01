@@ -85,11 +85,13 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         router = new ArrakisPublicVaultRouter(
             NATIVE_COIN,
             address(PERMIT2),
-            address(this),
             owner,
             address(factory),
             WETH
         );
+
+        vm.prank(owner);
+        router.updateSwapExecutor(address(this));
     }
 
     // #region test constructor.
@@ -102,7 +104,6 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         router = new ArrakisPublicVaultRouter(
             address(0),
             address(PERMIT2),
-            address(this),
             owner,
             address(factory),
             WETH
@@ -115,28 +116,24 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         );
 
         router = new ArrakisPublicVaultRouter(
-            NATIVE_COIN,
-            address(0),
-            address(this),
-            owner,
-            address(factory),
-            WETH
+            NATIVE_COIN, address(0), owner, address(factory), WETH
         );
     }
 
     function testConstructorSwapperAddressZero() public {
-        vm.expectRevert(
-            IArrakisPublicVaultRouter.AddressZero.selector
-        );
-
         router = new ArrakisPublicVaultRouter(
             NATIVE_COIN,
             address(PERMIT2),
-            address(0),
             owner,
             address(factory),
             WETH
         );
+
+        vm.expectRevert(
+            IArrakisPublicVaultRouter.AddressZero.selector
+        );
+        vm.prank(owner);
+        router.updateSwapExecutor(address(0));
     }
 
     function testConstructorOwnerAddressZero() public {
@@ -147,7 +144,6 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         router = new ArrakisPublicVaultRouter(
             NATIVE_COIN,
             address(PERMIT2),
-            address(this),
             address(0),
             address(factory),
             WETH
@@ -160,12 +156,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         );
 
         router = new ArrakisPublicVaultRouter(
-            NATIVE_COIN,
-            address(PERMIT2),
-            address(this),
-            owner,
-            address(0),
-            WETH
+            NATIVE_COIN, address(PERMIT2), owner, address(0), WETH
         );
     }
 

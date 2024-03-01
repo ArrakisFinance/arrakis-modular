@@ -26,6 +26,8 @@ interface IValantisSOTModule {
     error OverMaxDeviation();
     error Deposit0();
     error Deposit1();
+    error OnlyMetaVaultOwner();
+    error ALMAlreadySet();
 
     // #endregion errors.
 
@@ -38,9 +40,34 @@ interface IValantisSOTModule {
         uint256 newBalance1
     );
 
+    event LogSetALM(address alm);
+
     // #endregion events.
 
     // #region state modifying functions.
+
+    /// @notice initialize function to delegate call onced the beacon proxy is deployed,
+    /// for initializing the valantis module.
+    /// who can call deposit and withdraw functions.
+    /// @param pool_ address of the valantis sovereign pool.
+    /// @param init0_ initial amount of token0 to provide to valantis module.
+    /// @param init1_ initial amount of token1 to provide to valantis module.
+    /// @param maxSlippage_ allowed to manager for rebalancing the inventory using
+    /// swap.
+    /// @param oracle_ address of the oracle used by the valantis SOT module.
+    /// @param metaVault_ address of the meta vault
+    function initialize(
+        address pool_,
+        uint256 init0_,
+        uint256 init1_,
+        uint24 maxSlippage_,
+        address oracle_,
+        address metaVault_
+    ) external;
+
+    /// @notice set SOT and initialize manager fees function.
+    /// @param alm_ address of the valantis SOT ALM.
+    function setALMAndManagerFees(address alm_) external;
 
     /// @notice function to swap token0->token1 or token1->token0 and then change
     /// inventory.
@@ -64,15 +91,16 @@ interface IValantisSOTModule {
     /// @notice fucntion used to set range on valantis AMM
     /// @param _sqrtPriceLowX96 lower bound of the range in sqrt price.
     /// @param _sqrtPriceHighX96 upper bound of the range in sqrt price.
-    /// @param _expectedSqrtSpotPriceUpperX96 expected lower limit of current spot
-    /// price (to prevent sandwich attack and manipulation).
+
     /// @param _expectedSqrtSpotPriceLowerX96 expected upper limit of current spot
     /// price (to prevent sandwich attack and manipulation).
+    /// @param _expectedSqrtSpotPriceUpperX96 expected lower limit of current spot
+    /// price (to prevent sandwich attack and manipulation).
     function setPriceBounds(
-        uint128 _sqrtPriceLowX96,
-        uint128 _sqrtPriceHighX96,
-        uint160 _expectedSqrtSpotPriceUpperX96,
-        uint160 _expectedSqrtSpotPriceLowerX96
+        uint160 _sqrtPriceLowX96,
+        uint160 _sqrtPriceHighX96,
+        uint160 _expectedSqrtSpotPriceLowerX96,
+        uint160 _expectedSqrtSpotPriceUpperX96
     ) external;
 
     // #endregion state modifiying functions.

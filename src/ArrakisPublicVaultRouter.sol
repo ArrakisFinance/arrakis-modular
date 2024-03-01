@@ -53,11 +53,12 @@ contract ArrakisPublicVaultRouter is
 
     address public immutable nativeToken;
     IPermit2 public immutable permit2;
-    IRouterSwapExecutor public immutable swapper;
     IArrakisMetaVaultFactory public immutable factory;
     IWETH9 public immutable weth;
 
     // #endregion immutable properties.
+
+    IRouterSwapExecutor public swapper;
 
     // #region modifiers.
 
@@ -71,20 +72,18 @@ contract ArrakisPublicVaultRouter is
     constructor(
         address nativeToken_,
         address permit2_,
-        address swapper_,
         address owner_,
         address factory_,
         address weth_
     ) {
         if (
             nativeToken_ == address(0) || permit2_ == address(0)
-                || swapper_ == address(0) || owner_ == address(0)
-                || factory_ == address(0) || weth_ == address(0)
+                || owner_ == address(0) || factory_ == address(0)
+                || weth_ == address(0)
         ) revert AddressZero();
 
         nativeToken = nativeToken_;
         permit2 = IPermit2(permit2_);
-        swapper = IRouterSwapExecutor(swapper_);
         _initializeOwner(owner_);
         factory = IArrakisMetaVaultFactory(factory_);
         weth = IWETH9(weth_);
@@ -102,6 +101,15 @@ contract ArrakisPublicVaultRouter is
     /// @dev only callable by owner
     function unpause() external whenPaused onlyOwner {
         _unpause();
+    }
+
+    function updateSwapExecutor(address swapper_)
+        external
+        whenNotPaused
+        onlyOwner
+    {
+        if (swapper_ == address(0)) revert AddressZero();
+        swapper = IRouterSwapExecutor(swapper_);
     }
 
     // #endregion owner functions.

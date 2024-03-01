@@ -62,6 +62,11 @@ interface IModuleRegistry {
 
     // #region state modifying functions.
 
+    /// @dev function used to initialize module registry.
+    /// @param factory_ address of ArrakisMetaVaultFactory,
+    ///  who is the only one who can call the init management function.
+    function initialize(address factory_) external;
+
     /// @notice function used to whitelist IBeacon  that contain
     /// implementation of valid module.
     /// @param beacons_ list of beacon to whitelist.

@@ -10,6 +10,7 @@ import {ISOT} from "../interfaces/ISOT.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {PIPS} from "../constants/CArrakis.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
+import {IOwnable} from "../interfaces/IOwnable.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -46,11 +47,17 @@ abstract contract ValantisModule is
 
     // #endregion public properties.
 
+    // #region internal immutables.
+
+    address internal immutable _guardian;
+
+    // #endregion internal immutables.
+
     // #region internal properties.
 
     uint256 internal _init0;
     uint256 internal _init1;
-    address internal _guardian;
+    uint256 internal _managerFeePIPS;
 
     // #endregion internal properties.
 
@@ -79,29 +86,41 @@ abstract contract ValantisModule is
 
     // #endregion modifiers.
 
+    constructor(address guardian_) {
+        if (guardian_ == address(0)) revert AddressZero();
+
+        _guardian = guardian_;
+    }
+
+    /// @notice initialize function to delegate call onced the beacon proxy is deployed,
+    /// for initializing the valantis module.
+    /// who can call deposit and withdraw functions.
+    /// @param pool_ address of the valantis sovereign pool.
+
+    /// @param init0_ initial amount of token0 to provide to valantis module.
+    /// @param init1_ initial amount of token1 to provide to valantis module.
+    /// @param maxSlippage_ allowed to manager for rebalancing the inventory using
+    /// swap.
+    /// @param oracle_ address of the oracle used by the valantis SOT module.
+    /// @param metaVault_ address of the meta vault
     function initialize(
-        address metaVault_,
         address pool_,
-        address alm_,
         uint256 init0_,
         uint256 init1_,
         uint24 maxSlippage_,
         address oracle_,
-        address guardian_
+        address metaVault_
     ) external initializer {
         if (metaVault_ == address(0)) revert AddressZero();
         if (pool_ == address(0)) revert AddressZero();
-        if (alm_ == address(0)) revert AddressZero();
         if (init0_ == 0 && init1_ == 0) revert InitsAreZeros();
         if (maxSlippage_ > PIPS / 10) {
             revert MaxSlippageGtTenPercent();
         }
         if (oracle_ == address(0)) revert AddressZero();
-        if (guardian_ == address(0)) revert AddressZero();
 
         metaVault = IArrakisMetaVault(metaVault_);
         pool = ISovereignPool(pool_);
-        alm = ISOT(alm_);
 
         token0 = IERC20Metadata(metaVault.token0());
         token1 = IERC20Metadata(metaVault.token1());
@@ -111,7 +130,6 @@ abstract contract ValantisModule is
 
         maxSlippage = maxSlippage_;
         oracle = IOracleWrapper(oracle_);
-        _guardian = guardian_;
     }
 
     // #region guardian functions.
@@ -130,6 +148,28 @@ abstract contract ValantisModule is
 
     // #endregion guardian functions.
 
+    // #region only vault owner.
+
+    /// @notice set SOT and init manager fees function.
+    /// @param alm_ address of the valantis SOT ALM.
+    function setALMAndManagerFees(address alm_) external {
+        if (address(alm) != address(0)) {
+            revert ALMAlreadySet();
+        }
+        if (msg.sender != IOwnable(address(metaVault)).owner()) {
+            revert OnlyMetaVaultOwner();
+        }
+        if (alm_ == address(0)) revert AddressZero();
+
+        alm = ISOT(alm_);
+        pool.setPoolManagerFeeBips(_managerFeePIPS / 1e2);
+
+        emit LogSetManagerFeePIPS(0, _managerFeePIPS);
+        emit LogSetALM(alm_);
+    }
+
+    // #endregion only vault owner.
+
     /// @notice function used by metaVault to withdraw tokens from the strategy.
     /// @param receiver_ address that will receive tokens.
     /// @param proportion_ number of share needed to be withdrawn.
@@ -141,7 +181,6 @@ abstract contract ValantisModule is
     )
         external
         onlyMetaVault
-        whenNotPaused
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
@@ -227,7 +266,7 @@ abstract contract ValantisModule is
         external
         whenNotPaused
     {
-        uint256 _oldFee = pool.poolManagerFeeBips();
+        uint256 _oldFee = _managerFeePIPS;
 
         // #region checks.
 
@@ -239,9 +278,13 @@ abstract contract ValantisModule is
 
         // #endregion checks.
 
-        pool.setPoolManagerFeeBips(newFeePIPS_ / 1e2);
+        _managerFeePIPS = newFeePIPS_;
 
-        emit LogSetManagerFeePIPS(_oldFee, newFeePIPS_ / 1e2);
+        if (address(alm) != address(0) || _oldFee != 0) {
+            pool.setPoolManagerFeeBips(newFeePIPS_ / 1e2);
+        }
+
+        emit LogSetManagerFeePIPS(_oldFee, newFeePIPS_);
     }
 
     /// @notice function to swap token0->token1 or token1->token0 and then change
@@ -345,8 +388,8 @@ abstract contract ValantisModule is
         alm.depositLiquidity(
             balance0,
             balance1,
-            expectedSqrtSpotPriceUpperX96_,
-            expectedSqrtSpotPriceLowerX96_
+            expectedSqrtSpotPriceLowerX96_,
+            expectedSqrtSpotPriceUpperX96_
         );
 
         // #endregion deposit.
@@ -372,21 +415,21 @@ abstract contract ValantisModule is
     /// @notice fucntion used to set range on valantis AMM
     /// @param sqrtPriceLowX96_ lower bound of the range in sqrt price.
     /// @param sqrtPriceHighX96_ upper bound of the range in sqrt price.
-    /// @param expectedSqrtSpotPriceUpperX96_ expected lower limit of current spot
-    /// price (to prevent sandwich attack and manipulation).
     /// @param expectedSqrtSpotPriceLowerX96_ expected upper limit of current spot
     /// price (to prevent sandwich attack and manipulation).
+    /// @param expectedSqrtSpotPriceUpperX96_ expected lower limit of current spot
+    /// price (to prevent sandwich attack and manipulation).
     function setPriceBounds(
-        uint128 sqrtPriceLowX96_,
-        uint128 sqrtPriceHighX96_,
+        uint160 sqrtPriceLowX96_,
+        uint160 sqrtPriceHighX96_,
         uint160 expectedSqrtSpotPriceUpperX96_,
         uint160 expectedSqrtSpotPriceLowerX96_
     ) external onlyManager {
         alm.setPriceBounds(
             sqrtPriceLowX96_,
             sqrtPriceHighX96_,
-            expectedSqrtSpotPriceUpperX96_,
-            expectedSqrtSpotPriceLowerX96_
+            expectedSqrtSpotPriceLowerX96_,
+            expectedSqrtSpotPriceUpperX96_
         );
     }
 
@@ -415,7 +458,7 @@ abstract contract ValantisModule is
     /// @notice function used to get manager fees.
     /// @return managerFeePIPS amount of token1 that manager earned.
     function managerFeePIPS() external view returns (uint256) {
-        return pool.poolManagerFeeBips() * 1e2;
+        return _managerFeePIPS;
     }
 
     /// @notice function used to get the initial amounts needed to open a position.
@@ -466,7 +509,7 @@ abstract contract ValantisModule is
         uint8 decimals0 = token0.decimals();
 
         uint256 sqrtSpotPriceX96;
-        (sqrtSpotPriceX96,,) = alm.getAmmState();
+        (sqrtSpotPriceX96,,) = alm.getAMMState();
 
         uint256 currentPrice;
 

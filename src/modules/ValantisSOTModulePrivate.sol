@@ -16,6 +16,8 @@ contract ValantisModulePrivate is
 {
     using SafeERC20 for IERC20Metadata;
 
+    constructor(address guardian_) ValantisModule(guardian_) {}
+
     /// @notice deposit function for private vault.
     /// @param depositor_ address that will provide the tokens.
     /// @param amount0_ amount of token0 that depositor want to send to module.

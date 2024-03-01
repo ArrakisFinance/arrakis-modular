@@ -64,13 +64,13 @@ contract SovereignALMMock {
     }
 
     function setPriceBounds(
-        uint128 _sqrtPriceLowX96,
-        uint128 _sqrtPriceHighX96,
+        uint160 _sqrtPriceLowX96,
+        uint160 _sqrtPriceHighX96,
         uint160 _expectedSqrtSpotPriceUpperX96,
         uint160 _expectedSqrtSpotPriceLowerX96
     ) external {}
 
-    function getAmmState()
+    function getAMMState()
         external
         view
         returns (uint160, uint160, uint160)

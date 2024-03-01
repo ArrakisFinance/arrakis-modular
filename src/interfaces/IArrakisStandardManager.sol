@@ -48,7 +48,6 @@ interface IArrakisStandardManager {
         uint256 endIndex, uint256 numberOfVaults
     );
     error OnlyGuardian(address caller, address guardian);
-    error FactoryAlreadySet();
     error OnlyFactory(address caller, address factory);
     error VaultNotDeployed();
 
@@ -102,6 +101,16 @@ interface IArrakisStandardManager {
     // #endregion events.
 
     // #region functions.
+
+    /// @notice function used to initialize standard manager proxy.
+    /// @param owner_ address of the owner of standard manager.
+    /// @param defaultReceiver_ address of the receiver of tokens (by default).
+    /// @param factory_ ArrakisMetaVaultFactory contract address.
+    function initialize(
+        address owner_,
+        address defaultReceiver_,
+        address factory_
+    ) external;
 
     /// @notice function used to pause the manager.
     /// @dev only callable by guardian

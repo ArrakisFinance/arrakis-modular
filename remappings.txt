@@ -6,3 +6,5 @@
 @create3/contracts/=lib/create3/contracts/
 @v3-lib-0.8/contracts=lib/v3-lib-0.8/contracts/
 forge-std/=lib/forge-std/src/
+@valantis/contracts/=lib/valantis-sot/src/
+@valantis/contracts-test/=lib/valantis-sot/test/

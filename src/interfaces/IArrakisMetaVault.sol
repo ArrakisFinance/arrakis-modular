@@ -14,6 +14,9 @@ interface IArrakisMetaVault {
     // TODO remove the argument.
     error AddressZero(string property);
 
+    /// @dev triggered when tokens are already initialized
+    error AddressNotZero();
+
     /// @dev triggered when the caller is different than
     /// the manager.
     error OnlyManager(address caller, address manager);
@@ -108,15 +111,17 @@ interface IArrakisMetaVault {
 
     // #endregion events.
 
-    /// @notice function used to initialize default module.
+    /// @notice function used to initialize tokens.
     /// @param token0_ address of the first token of the token pair.
     /// @param token1_ address of the second token of the token pair.
-    /// @param module_ address of the default module.
-    function initialize(
+    function initializeTokens(
         address token0_,
-        address token1_,
-        address module_
+        address token1_
     ) external;
+
+    /// @notice function used to initialize default module.
+    /// @param module_ address of the default module.
+    function initialize(address module_) external;
 
     /// @notice function used to set module
     /// @param module_ address of the new module

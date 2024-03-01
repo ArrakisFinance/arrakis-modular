@@ -10,11 +10,10 @@ contract ModulePrivateRegistry is
     IModulePrivateRegistry
 {
     constructor(
-        address factory_,
         address owner_,
         address guardian_,
         address admin_
-    ) ModuleRegistry(factory_, owner_, guardian_, admin_) {}
+    ) ModuleRegistry(owner_, guardian_, admin_) {}
 
     // #region public state modifying functions.
 

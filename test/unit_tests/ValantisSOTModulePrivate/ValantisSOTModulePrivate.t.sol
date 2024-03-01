@@ -107,6 +107,7 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         metaVault = new ArrakisMetaVaultMock();
         metaVault.setManager(manager);
         metaVault.setToken0AndToken1(USDC, WETH);
+        metaVault.setOwner(owner);
 
         // #endregion create meta vault.
 
@@ -122,17 +123,21 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
 
         // #region create valantis module.
 
-        module = new ValantisModulePrivate();
+        module = new ValantisModulePrivate(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
-            address(sovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
+
+        vm.prank(manager);
+        module.setManagerFeePIPS(TEN_PERCENT / 10);
+
+        vm.prank(owner);
+        module.setALMAndManagerFees(address(sovereignALM));
 
         // #endregion create valantis module.
     }
@@ -252,17 +257,18 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePrivate();
+        module = new ValantisModulePrivate(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
-            address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALMAndManagerFees(address(buggySovereignALM));
 
         // #endregion create valantis module.
 
@@ -291,17 +297,18 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePrivate();
+        module = new ValantisModulePrivate(address(guardian));
         module.initialize(
-            address(metaVault),
             address(sovereignPool),
-            address(buggySovereignALM),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(oracle),
-            address(guardian)
+            address(metaVault)
         );
+
+        vm.prank(owner);
+        module.setALMAndManagerFees(address(buggySovereignALM));
 
         // #endregion create valantis module.
 

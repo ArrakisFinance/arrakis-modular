@@ -183,6 +183,9 @@ contract ArrakisMetaVaultFactory is
             vault = Create3.create3(salt, creationCode);
         }
 
+        _publicVaults.add(vault);
+        IArrakisMetaVault(vault).initializeTokens(token0_, token1_);
+
         // #region create a module.
         address module;
 
@@ -198,9 +201,7 @@ contract ArrakisMetaVaultFactory is
 
         // #endregion create a module.
 
-        IArrakisMetaVault(vault).initialize(token0_, token1_, module);
-
-        _publicVaults.add(vault);
+        IArrakisMetaVault(vault).initialize(module);
 
         _initManagement(vault, initManagementPayload_);
 
@@ -252,6 +253,8 @@ contract ArrakisMetaVaultFactory is
 
         vault = Create3.create3(salt, creationCode);
         nft.mint(owner_, uint256(uint160(vault)));
+        _privateVaults.add(vault);
+        IArrakisMetaVault(vault).initializeTokens(token0_, token1_);
 
         // #region create a module.
 
@@ -267,11 +270,9 @@ contract ArrakisMetaVaultFactory is
                 .createModule(vault, beacon_, moduleCreationPayload);
         }
 
-        IArrakisMetaVault(vault).initialize(token0_, token1_, module);
+        IArrakisMetaVault(vault).initialize(module);
 
         // #endregion create a module.
-
-        _privateVaults.add(vault);
 
         _initManagement(vault, initManagementPayload_);
 
@@ -466,7 +467,9 @@ contract ArrakisMetaVaultFactory is
         /// so manager should follow this pattern where vault address is the first parameter of the function.
         bytes memory data = data_.length == 0
             ? abi.encodeWithSelector(selector, vault_)
-            : abi.encodeWithSelector(selector, vault_, data_);
+            : abi.encodePacked(
+                abi.encodeWithSelector(selector, vault_), data_
+            );
 
         (bool success,) = manager.call(data);
 
