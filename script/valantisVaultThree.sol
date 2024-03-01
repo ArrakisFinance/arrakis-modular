@@ -36,13 +36,13 @@ contract ValantisVaultThree is Script {
 
         bytes memory data = abi.encodeWithSelector(IValantisSOTModule.setALMAndManagerFees.selector, alm);
 
-        TimeLock(timeLock).execute(module, 0, data, bytes32(0), bytes32(0));
+        TimeLock(payable(timeLock)).execute(module, 0, data, bytes32(0), bytes32(0));
 
         module = address(IArrakisMetaVault(vaultWeth).module());
 
         data = abi.encodeWithSelector(IValantisSOTModule.setALMAndManagerFees.selector, almWeth);
 
-        TimeLock(timeLockWeth).execute(module, 0, data, bytes32(0), bytes32(0));
+        TimeLock(payable(timeLockWeth)).execute(module, 0, data, bytes32(0), bytes32(0));
 
         console.logString("Valantis Public Vault is initialized");
         console.logAddress(vault);
