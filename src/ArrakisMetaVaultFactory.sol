@@ -176,7 +176,8 @@ contract ArrakisMetaVaultFactory is
 
             // #region get the creation code for TokenMetaVault.
             bytes memory creationCode = abi.encodePacked(
-                ICreationCode(creationCodePublicVault).getCreationCode(),
+                ICreationCode(creationCodePublicVault).getCreationCode(
+                ),
                 abi.encode(
                     timeLock,
                     name,

@@ -10,8 +10,10 @@ import {
     ArrakisMetaVaultFactory,
     IArrakisMetaVaultFactory
 } from "../../../src/ArrakisMetaVaultFactory.sol";
-import {CreationCodePublicVault} from "../../../src/CreationCodePublicVault.sol";
-import {CreationCodePrivateVault} from "../../../src/CreationCodePrivateVault.sol";
+import {CreationCodePublicVault} from
+    "../../../src/CreationCodePublicVault.sol";
+import {CreationCodePrivateVault} from
+    "../../../src/CreationCodePrivateVault.sol";
 import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
 import {PALMVaultNFT} from "../../../src/PALMVaultNFT.sol";
@@ -121,8 +123,10 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
 
         // #region creation code contracts.
 
-        creationCodePublicVault = address(new CreationCodePublicVault());
-        creationCodePrivateVault = address(new CreationCodePrivateVault());
+        creationCodePublicVault =
+            address(new CreationCodePublicVault());
+        creationCodePrivateVault =
+            address(new CreationCodePrivateVault());
 
         // #endregion creation code contracts.
 

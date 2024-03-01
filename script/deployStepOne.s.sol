@@ -14,8 +14,10 @@ import {ArrakisMetaVaultFactory} from
 import {RouterSwapExecutor} from "../src/RouterSwapExecutor.sol";
 import {ArrakisPublicVaultRouter} from
     "../src/ArrakisPublicVaultRouter.sol";
-import {CreationCodePublicVault} from "../src/CreationCodePublicVault.sol";
-import {CreationCodePrivateVault} from "../src/CreationCodePrivateVault.sol";
+import {CreationCodePublicVault} from
+    "../src/CreationCodePublicVault.sol";
+import {CreationCodePrivateVault} from
+    "../src/CreationCodePrivateVault.sol";
 
 import {NATIVE_COIN} from "../src/constants/CArrakis.sol";
 
@@ -30,8 +32,10 @@ import {TransparentUpgradeableProxy} from
 
 // #region guardian params.
 
-address constant guardianOwner = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
-address constant guardianPauser = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant guardianOwner =
+    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant guardianPauser =
+    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion guardian params.
 
@@ -40,7 +44,8 @@ address constant guardianPauser = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 uint256 constant minDelay = 0 days;
 address constant proposer = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 address constant executor = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
-address constant timeLockAdmin = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant timeLockAdmin =
+    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion arrakis timeLock.
 
@@ -49,38 +54,44 @@ address constant timeLockAdmin = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 uint256 constant defaultFeePIPS = 0;
 address constant nativeToken = NATIVE_COIN;
 uint8 constant nativeTokenDecimals = 18;
-address constant managerOwner = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant managerOwner =
+    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion arrakis standard manager.
 
 // #region public module registry.
 
-address constant publicModuleRegistryOwner = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant publicModuleRegistryOwner =
+    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion public module registry.
 
 // #region private module registry.
 
-address constant privateModuleRegistryOwner = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant privateModuleRegistryOwner =
+    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion private module registry.
 
 // #region factory.
 
-address constant factoryOwner = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant factoryOwner =
+    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion factory.
 
 // #region router.
 
 address constant permit2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
-address constant routerOwner = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant routerOwner =
+    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 address constant weth = 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9;
 
 // #endregion router.
 
 /// @dev default address that will receiver tokens earned by manager.
-address constant defaultReceiver = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant defaultReceiver =
+    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
 
 // #endregion value to set.
 
@@ -114,7 +125,13 @@ contract DeployStepOne is Script {
         _deployModuleRegistryPrivate(guardian, arrakisTimeLock);
         _deployCreationCodePublicVault();
         _deployCreationCodePrivateVault();
-        _deployFactory(manager, publicRegistry, privateRegistry, creationCodePublicVault, creationCodePrivateVault);
+        _deployFactory(
+            manager,
+            publicRegistry,
+            privateRegistry,
+            creationCodePublicVault,
+            creationCodePrivateVault
+        );
         _deployRouter(factory);
         _deployRouterExecutor(router);
 
@@ -257,8 +274,12 @@ contract DeployStepOne is Script {
 
     // #region deploy creation code public vault.
 
-    function _deployCreationCodePublicVault() internal returns(address) {
-        creationCodePublicVault = address(new CreationCodePublicVault());
+    function _deployCreationCodePublicVault()
+        internal
+        returns (address)
+    {
+        creationCodePublicVault =
+            address(new CreationCodePublicVault());
 
         console.logString("Creation Code Public Vault Address : ");
         console.logAddress(creationCodePublicVault);
@@ -268,8 +289,12 @@ contract DeployStepOne is Script {
 
     // #region deploy creation code private vault.
 
-    function _deployCreationCodePrivateVault() internal returns(address) {
-        creationCodePrivateVault = address(new CreationCodePrivateVault());
+    function _deployCreationCodePrivateVault()
+        internal
+        returns (address)
+    {
+        creationCodePrivateVault =
+            address(new CreationCodePrivateVault());
 
         console.logString("Creation Code Private Vault Address : ");
         console.logAddress(creationCodePrivateVault);

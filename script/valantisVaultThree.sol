@@ -16,8 +16,10 @@ import {TimeLock} from "../src/TimeLock.sol";
 address constant vault = 0x376e46d54AabfEd100aD1F4E252fe801bFdeC092;
 address constant timeLock = 0x6843F708F3a7c624b4d1c806Af9003Fc31b90438;
 address constant alm = 0xf678F3DF67EBea04b3a0c1C2636eEc2504c92BA2;
-address constant vaultWeth = 0x376e46d54AabfEd100aD1F4E252fe801bFdeC092;
-address constant timeLockWeth = 0x6866f6408Ac4471695A8575Da99BA8E01C043Cae;
+address constant vaultWeth =
+    0x376e46d54AabfEd100aD1F4E252fe801bFdeC092;
+address constant timeLockWeth =
+    0x6866f6408Ac4471695A8575Da99BA8E01C043Cae;
 address constant almWeth = 0xf678F3DF67EBea04b3a0c1C2636eEc2504c92BA2;
 
 contract ValantisVaultThree is Script {
@@ -34,15 +36,23 @@ contract ValantisVaultThree is Script {
 
         address module = address(IArrakisMetaVault(vault).module());
 
-        bytes memory data = abi.encodeWithSelector(IValantisSOTModule.setALMAndManagerFees.selector, alm);
+        bytes memory data = abi.encodeWithSelector(
+            IValantisSOTModule.setALMAndManagerFees.selector, alm
+        );
 
-        TimeLock(payable(timeLock)).execute(module, 0, data, bytes32(0), bytes32(0));
+        TimeLock(payable(timeLock)).execute(
+            module, 0, data, bytes32(0), bytes32(0)
+        );
 
         module = address(IArrakisMetaVault(vaultWeth).module());
 
-        data = abi.encodeWithSelector(IValantisSOTModule.setALMAndManagerFees.selector, almWeth);
+        data = abi.encodeWithSelector(
+            IValantisSOTModule.setALMAndManagerFees.selector, almWeth
+        );
 
-        TimeLock(payable(timeLockWeth)).execute(module, 0, data, bytes32(0), bytes32(0));
+        TimeLock(payable(timeLockWeth)).execute(
+            module, 0, data, bytes32(0), bytes32(0)
+        );
 
         console.logString("Valantis Public Vault is initialized");
         console.logAddress(vault);

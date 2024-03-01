@@ -210,7 +210,12 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         // #region create factory.
 
         factory = _deployArrakisMetaVaultFactory(
-            owner, manager, moduleRegistry, privateModule, creationCodePublicVault, creationCodePrivateVault
+            owner,
+            manager,
+            moduleRegistry,
+            privateModule,
+            creationCodePublicVault,
+            creationCodePrivateVault
         );
 
         // #endregion create factory.
@@ -702,11 +707,17 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         return address(new ValantisModulePublic(guardian_));
     }
 
-    function _deployCreationCodePublicVault() internal returns(address) {
+    function _deployCreationCodePublicVault()
+        internal
+        returns (address)
+    {
         return address(new CreationCodePublicVault());
     }
 
-    function _deployCreationCodePrivateVault() internal returns(address) {
+    function _deployCreationCodePrivateVault()
+        internal
+        returns (address)
+    {
         return address(new CreationCodePrivateVault());
     }
 
