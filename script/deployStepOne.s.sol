@@ -51,7 +51,7 @@ address constant timeLockAdmin =
 
 // #region arrakis standard manager.
 
-uint256 constant defaultFeePIPS = PIPS/100;
+uint256 constant defaultFeePIPS = PIPS / 100;
 address constant nativeToken = NATIVE_COIN;
 uint8 constant nativeTokenDecimals = 18;
 address constant managerOwner =

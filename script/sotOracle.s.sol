@@ -4,7 +4,8 @@ pragma solidity ^0.8.20;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 
-import {IArrakisMetaVault} from "../src/interfaces/IArrakisMetaVault.sol";
+import {IArrakisMetaVault} from
+    "../src/interfaces/IArrakisMetaVault.sol";
 import {SOTOracleWrapper} from "../src/modules/SOTOracleWrapper.sol";
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -33,7 +34,8 @@ contract SOTOracle is Script {
         uint8 decimals0 = ERC20(token0).decimals();
         uint8 decimals1 = ERC20(token1).decimals();
 
-        address oracleWrapper = address(new SOTOracleWrapper(alm, decimals0, decimals1));
+        address oracleWrapper =
+            address(new SOTOracleWrapper(alm, decimals0, decimals1));
 
         console.logString("SOT Oracle wrapper Address : ");
         console.logAddress(oracleWrapper);
