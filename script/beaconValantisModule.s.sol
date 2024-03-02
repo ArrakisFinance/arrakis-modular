@@ -14,8 +14,8 @@ import {UpgradeableBeacon} from
 /// by calling whitelistBeacon of ModulePublicRegistry with the created UpgradeableBeacon.
 
 address constant arrakisTimeLock =
-    0x6c277E32706BCC2D8711e6F5c957436205523FC0;
-address constant guardian = 0xdA26E9790C15bB2Be5ccf59419679103b5958AbF;
+    0x7726Ae33b359CAbaD7287CE5859018DC034c160D;
+address constant guardian = 0x744c477Dc5658Ca8afe87A94771594Ac8c8302A5;
 
 contract BeaconValantisModule is Script {
     function setUp() public {}

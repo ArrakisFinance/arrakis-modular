@@ -13,14 +13,22 @@ import {TimeLock} from "../src/TimeLock.sol";
 /// @dev ask to valantis team to grant module as poolManager (sovereignPool) and
 /// liquidityProvider (sot alm) before running this script.
 
-address constant vault = 0x376e46d54AabfEd100aD1F4E252fe801bFdeC092;
-address constant timeLock = 0x6843F708F3a7c624b4d1c806Af9003Fc31b90438;
+// Uncomment for sepolia
+
+// address constant vault = 0x376e46d54AabfEd100aD1F4E252fe801bFdeC092;
+// address constant timeLock = 0x6843F708F3a7c624b4d1c806Af9003Fc31b90438;
+// address constant alm = 0xf678F3DF67EBea04b3a0c1C2636eEc2504c92BA2;
+// address constant vaultWeth =
+//     0xdCfD78eD927C4FbcFd3e6d949f3E066dfA051BCD;
+// address constant timeLockWeth =
+//     0x6866f6408Ac4471695A8575Da99BA8E01C043Cae;
+// address constant almWeth = 0xe12C96BEED4aa9ddfB05b2b87Cd6EDf6c666962A;
+
+// For Gnosis chain.
+
+address constant vault = 0xC40436B14924e238ea51BdC2f70d9958247C26a3;
+address constant timeLock = 0x5BF2329cc985F5299C50d0C1247DeCF409ea99E7;
 address constant alm = 0xf678F3DF67EBea04b3a0c1C2636eEc2504c92BA2;
-address constant vaultWeth =
-    0x376e46d54AabfEd100aD1F4E252fe801bFdeC092;
-address constant timeLockWeth =
-    0x6866f6408Ac4471695A8575Da99BA8E01C043Cae;
-address constant almWeth = 0xf678F3DF67EBea04b3a0c1C2636eEc2504c92BA2;
 
 contract ValantisVaultThree is Script {
     function setUp() public {}
@@ -44,15 +52,17 @@ contract ValantisVaultThree is Script {
             module, 0, data, bytes32(0), bytes32(0)
         );
 
-        module = address(IArrakisMetaVault(vaultWeth).module());
+        // Uncomment for sepolia
 
-        data = abi.encodeWithSelector(
-            IValantisSOTModule.setALMAndManagerFees.selector, almWeth
-        );
+        // module = address(IArrakisMetaVault(vaultWeth).module());
 
-        TimeLock(payable(timeLockWeth)).execute(
-            module, 0, data, bytes32(0), bytes32(0)
-        );
+        // data = abi.encodeWithSelector(
+        //     IValantisSOTModule.setALMAndManagerFees.selector, almWeth
+        // );
+
+        // TimeLock(payable(timeLockWeth)).execute(
+        //     module, 0, data, bytes32(0), bytes32(0)
+        // );
 
         console.logString("Valantis Public Vault is initialized");
         console.logAddress(vault);

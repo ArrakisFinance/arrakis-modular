@@ -14,13 +14,13 @@ import {PIPS} from "../src/constants/CArrakis.sol";
 /// @dev before this script we should whitelist the deployer as public vault deployer using the multisig
 /// on the factory side.
 
-bytes32 constant salt = keccak256(abi.encode("Salt 2"));
-address constant token0 = 0x4F5e836680b9aac98dFA2af775D29Bdd8C68cB91;
-address constant token1 = 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9;
+bytes32 constant salt = keccak256(abi.encode("Salt"));
+address constant token0 = 0x64efc365149C78C55bfccaB24A48Ae03AffCa572;
+address constant token1 = 0x682d49D0Ead2B178DE4125781d2CEd108bEe41fD;
 address constant vaultOwner =
     0x9403de4457C3a28F3CA8190bfbb4e1B1Cc88D978;
 
-address constant pool = 0x8Cb689ABDB29381A9ABeE33889601d90D528A47a;
+address constant pool = 0xaDbA01d7903D4055DCA19eB6778f08EaB42C7589;
 uint256 constant init0 = 2000e6;
 uint256 constant init1 = 1e18;
 uint24 constant maxSlippage = PIPS / 50;
@@ -33,8 +33,8 @@ address constant stratAnnouncer =
     0x9403de4457C3a28F3CA8190bfbb4e1B1Cc88D978;
 
 address constant valantisUpgradeableBeacon =
-    0xF4A0D83a7114e435cFB2D2E248d633b4C9cC8ED5;
-address constant factory = 0x10ca44D32e6d01E24cD33162634284e39BA4C471;
+    0xF5488214f5dEb15D0964a2593d7e94a4D74e1151;
+address constant factory = 0xe19Ae7e26993BB13D17A2aD7074Ad31bC2Ce72BA;
 
 contract ValantisVaultOne is Script {
     function setUp() public {}

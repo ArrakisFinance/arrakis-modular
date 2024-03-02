@@ -19,7 +19,7 @@ import {CreationCodePublicVault} from
 import {CreationCodePrivateVault} from
     "../src/CreationCodePrivateVault.sol";
 
-import {NATIVE_COIN} from "../src/constants/CArrakis.sol";
+import {NATIVE_COIN, PIPS} from "../src/constants/CArrakis.sol";
 
 import {TimelockController} from
     "@openzeppelin/contracts/governance/TimelockController.sol";
@@ -33,50 +33,50 @@ import {TransparentUpgradeableProxy} from
 // #region guardian params.
 
 address constant guardianOwner =
-    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+    0x969cA3961FCeaFd3Cb3C1CA9ecdd475babcD704D;
 address constant guardianPauser =
-    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+    0x969cA3961FCeaFd3Cb3C1CA9ecdd475babcD704D;
 
 // #endregion guardian params.
 
 // #region arrakis timeLock.
 
 uint256 constant minDelay = 0 days;
-address constant proposer = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
-address constant executor = 0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+address constant proposer = 0x969cA3961FCeaFd3Cb3C1CA9ecdd475babcD704D;
+address constant executor = 0x969cA3961FCeaFd3Cb3C1CA9ecdd475babcD704D;
 address constant timeLockAdmin =
-    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+    0x969cA3961FCeaFd3Cb3C1CA9ecdd475babcD704D;
 
 // #endregion arrakis timeLock.
 
 // #region arrakis standard manager.
 
-uint256 constant defaultFeePIPS = 0;
+uint256 constant defaultFeePIPS = PIPS/100;
 address constant nativeToken = NATIVE_COIN;
 uint8 constant nativeTokenDecimals = 18;
 address constant managerOwner =
-    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+    0x969cA3961FCeaFd3Cb3C1CA9ecdd475babcD704D;
 
 // #endregion arrakis standard manager.
 
 // #region public module registry.
 
 address constant publicModuleRegistryOwner =
-    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+    0x969cA3961FCeaFd3Cb3C1CA9ecdd475babcD704D;
 
 // #endregion public module registry.
 
 // #region private module registry.
 
 address constant privateModuleRegistryOwner =
-    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+    0x969cA3961FCeaFd3Cb3C1CA9ecdd475babcD704D;
 
 // #endregion private module registry.
 
 // #region factory.
 
 address constant factoryOwner =
-    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+    0x969cA3961FCeaFd3Cb3C1CA9ecdd475babcD704D;
 
 // #endregion factory.
 
@@ -84,14 +84,14 @@ address constant factoryOwner =
 
 address constant permit2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 address constant routerOwner =
-    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
-address constant weth = 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9;
+    0x969cA3961FCeaFd3Cb3C1CA9ecdd475babcD704D;
+address constant weth = 0x6A023CCd1ff6F2045C3309768eAd9E68F978f6e1;
 
 // #endregion router.
 
 /// @dev default address that will receiver tokens earned by manager.
 address constant defaultReceiver =
-    0x17E41e0B22D781DBBb0bB6978fdabEf84d5d51B1;
+    0x969cA3961FCeaFd3Cb3C1CA9ecdd475babcD704D;
 
 // #endregion value to set.
 
