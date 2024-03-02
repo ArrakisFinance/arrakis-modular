@@ -24,6 +24,10 @@ import {ArrakisStandardManager} from
 import {Guardian} from "../../src/Guardian.sol";
 import {ValantisModulePublic} from
     "../../src/modules/ValantisSOTModulePublic.sol";
+import {CreationCodePublicVault} from
+    "../../src/CreationCodePublicVault.sol";
+import {CreationCodePrivateVault} from
+    "../../src/CreationCodePrivateVault.sol";
 
 import {SetupParams} from "../../src/structs/SManager.sol";
 
@@ -97,6 +101,8 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
     /// @dev that mock arrakis time lock that should be used to upgrade module beacon
     /// and manager implementation.
     address public arrakisTimeLock;
+    address public creationCodePublicVault;
+    address public creationCodePrivateVault;
 
     /// @dev the default address that will receive the manager fees.
     address public defaultReceiver;
@@ -189,10 +195,27 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         // #endregion create modules.
 
+        // #region creation code public vault.
+
+        creationCodePublicVault = _deployCreationCodePublicVault();
+
+        // #endregion creation code public vault.
+
+        // #region creation code private vault.
+
+        creationCodePrivateVault = _deployCreationCodePrivateVault();
+
+        // #endregion creation code private vault.
+
         // #region create factory.
 
         factory = _deployArrakisMetaVaultFactory(
-            owner, manager, moduleRegistry, privateModule
+            owner,
+            manager,
+            moduleRegistry,
+            privateModule,
+            creationCodePublicVault,
+            creationCodePrivateVault
         );
 
         // #endregion create factory.
@@ -684,18 +707,36 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         return address(new ValantisModulePublic(guardian_));
     }
 
+    function _deployCreationCodePublicVault()
+        internal
+        returns (address)
+    {
+        return address(new CreationCodePublicVault());
+    }
+
+    function _deployCreationCodePrivateVault()
+        internal
+        returns (address)
+    {
+        return address(new CreationCodePrivateVault());
+    }
+
     function _deployArrakisMetaVaultFactory(
         address owner_,
         address manager_,
         address modulePublicRegistry_,
-        address modulePrivateRegistry_
+        address modulePrivateRegistry_,
+        address creationCodePublicVault_,
+        address creationCodePrivateVault_
     ) internal returns (address) {
         return address(
             new ArrakisMetaVaultFactory(
                 owner_,
                 manager_,
                 modulePublicRegistry_,
-                modulePrivateRegistry_
+                modulePrivateRegistry_,
+                creationCodePublicVault_,
+                creationCodePrivateVault_
             )
         );
     }

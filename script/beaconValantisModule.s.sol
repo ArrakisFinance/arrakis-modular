@@ -6,7 +6,6 @@ import {console} from "forge-std/console.sol";
 
 import {ValantisModulePublic} from
     "../src/modules/ValantisSOTModulePublic.sol";
-import {ModulePublicRegistry} from "../src/ModulePublicRegistry.sol";
 
 import {UpgradeableBeacon} from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
@@ -14,8 +13,9 @@ import {UpgradeableBeacon} from
 /// @dev after this script we should whitelist the valantis UpgradeableBeacon through the multisig
 /// by calling whitelistBeacon of ModulePublicRegistry with the created UpgradeableBeacon.
 
-address constant arrakisTimeLock = address(0);
-address constant guardian = address(0);
+address constant arrakisTimeLock =
+    0x7726Ae33b359CAbaD7287CE5859018DC034c160D;
+address constant guardian = 0x744c477Dc5658Ca8afe87A94771594Ac8c8302A5;
 
 contract BeaconValantisModule is Script {
     function setUp() public {}

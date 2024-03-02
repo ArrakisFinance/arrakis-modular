@@ -218,7 +218,10 @@ abstract contract ModuleRegistry is
         // #endregion assertions.
     }
 
-    function _checkVaultNotAddressZero(address vault_) internal {
+    function _checkVaultNotAddressZero(address vault_)
+        internal
+        pure
+    {
         if (vault_ == address(0)) revert AddressZero();
     }
 

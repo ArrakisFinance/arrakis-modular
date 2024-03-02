@@ -30,7 +30,7 @@ address constant vault = 0xC40436B14924e238ea51BdC2f70d9958247C26a3;
 address constant timeLock = 0x5BF2329cc985F5299C50d0C1247DeCF409ea99E7;
 address constant alm = 0xC9D65f4836C3E6BF4e4181b32a0F2FB45d2BcF28;
 
-contract ValantisVaultTwo is Script {
+contract ValantisVaultThree is Script {
     function setUp() public {}
 
     function run() public {
@@ -48,8 +48,8 @@ contract ValantisVaultTwo is Script {
             IValantisSOTModule.setALMAndManagerFees.selector, alm
         );
 
-        TimeLock(payable(timeLock)).schedule(
-            module, 0, data, bytes32(0), bytes32(0), 1 minutes
+        TimeLock(payable(timeLock)).execute(
+            module, 0, data, bytes32(0), bytes32(0)
         );
 
         // Uncomment for sepolia
@@ -60,8 +60,8 @@ contract ValantisVaultTwo is Script {
         //     IValantisSOTModule.setALMAndManagerFees.selector, almWeth
         // );
 
-        // TimeLock(payable(timeLockWeth)).schedule(
-        //     module, 0, data, bytes32(0), bytes32(0), 1 minutes
+        // TimeLock(payable(timeLockWeth)).execute(
+        //     module, 0, data, bytes32(0), bytes32(0)
         // );
 
         console.logString("Valantis Public Vault is initialized");
