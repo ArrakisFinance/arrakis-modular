@@ -28,7 +28,7 @@ import {TimeLock} from "../src/TimeLock.sol";
 
 address constant vault = 0xC40436B14924e238ea51BdC2f70d9958247C26a3;
 address constant timeLock = 0x5BF2329cc985F5299C50d0C1247DeCF409ea99E7;
-address constant alm = 0xf678F3DF67EBea04b3a0c1C2636eEc2504c92BA2;
+address constant alm = 0xC9D65f4836C3E6BF4e4181b32a0F2FB45d2BcF28;
 
 contract ValantisVaultTwo is Script {
     function setUp() public {}
