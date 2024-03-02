@@ -14,6 +14,7 @@ import {PIPS} from "../src/constants/CArrakis.sol";
 /// @dev before this script we should whitelist the deployer as public vault deployer using the multisig
 /// on the factory side.
 
+
 bytes32 constant salt = keccak256(abi.encode("Salt 2"));
 address constant token0 = 0x64efc365149C78C55bfccaB24A48Ae03AffCa572;
 address constant token1 = 0x682d49D0Ead2B178DE4125781d2CEd108bEe41fD;
