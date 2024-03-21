@@ -362,6 +362,17 @@ contract ArrakisStandardManager is
         uint256 _length = payloads_.length;
 
         for (uint256 i; i < _length; i++) {
+            // #region check if the function called isn't the setManagerFeePIPS.
+
+            bytes4 selector = bytes4(payloads_[i][:4]);
+
+            if (
+                IArrakisLPModule.setManagerFeePIPS.selector
+                    == selector
+            ) revert SetManagerFeeCallNotAllowed();
+
+            // #endregion check if the function called isn't the setManagerFeePIPS.
+
             (bool success,) = address(module).call(payloads_[i]);
 
             if (!success) revert CallFailed(payloads_[i]);

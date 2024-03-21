@@ -16,7 +16,6 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 address constant vault = 0x0F3dA211578795e950699Ab56704c6Def49D772c;
 address constant alm = 0xffb666fE4C401Af7FbdE1C7b675f379dfF34997D;
 
-
 contract SOTOracle is Script {
     function setUp() public {}
 

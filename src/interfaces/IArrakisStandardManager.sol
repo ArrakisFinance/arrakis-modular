@@ -50,6 +50,7 @@ interface IArrakisStandardManager {
     error OnlyGuardian(address caller, address guardian);
     error OnlyFactory(address caller, address factory);
     error VaultNotDeployed();
+    error SetManagerFeeCallNotAllowed();
 
     // #endregion errors.
 
