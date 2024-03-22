@@ -39,7 +39,7 @@ Moreover, Arrakis Modular high standards of security and trust in regards of fun
 
 Lastly, the inclusion of a public vault router simplifies the user experience. It allows users to effortlessly deposit their tokens, including ETH, through mechanisms like token approvals or permit2, abstracting the complexity of MEV-protected swaps and offering a streamlined liquidity provision process.
 
-[arrakis-modular-diagram](./arrakis-modular-diagram.svg)
+![arrakis-modular-diagram](./arrakis-modular-diagram.png)
 
 ---
 
