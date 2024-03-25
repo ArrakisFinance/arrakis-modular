@@ -109,4 +109,4 @@ This module will be the first implementation for an `ArrakisMetaVault`, integrat
 
 As outlined earlier, this contract will implement the `IArrakisLPModule` to conform to the standardized interface required by Arrakis modules.
 
-This abstract contract also has its private ([ValantisSOTModulePrivate.sol](../src/modules/ValantisSOTModulePrivate.sol)) and public ([ValantisSOTModulePrivate.sol](../src/modules/ValantisSOTModulePublic.sol)) implementations.
+This abstract contract also has its private ([ValantisSOTModulePrivate.sol](../src/modules/ValantisSOTModulePrivate.sol)) and public ([ValantisSOTModulePublic.sol](../src/modules/ValantisSOTModulePublic.sol)) implementations.
