@@ -76,7 +76,7 @@ A registry for modules that can be whitelisted and used by public vaults. It mod
 This contract deploys new instances of `ArrakisMetaVaultPublic` and `ArrakisMetaVaultPrivate`, along with their corresponding modules. While public vault deployments require permission, private vault deployments do not. It maintains a record of all deployed vaults, categorized by type.
 
 ### [ArrakisStandardManager.sol](../src/ArrakisStandardManager.sol)
-A manager contract that institutes additional safety measures to ensure that delegated LP management is secure and trust-minimized. This includes, among other guarantees, performing oracle checks and slippage checks on various management operations, such as asset rebalancing or swapping. Arrakis uses this contract as the central point for actively managing both public and private vaults.
+A manager contract that institutes additional safety measures to ensure that delegated LP management is secure and trust-minimized. This includes, among other guarantees, performing oracle checks and slippage checks on various management operations, such as asset rebalancing or swapping. Arrakis uses this contract as the central point for actively managing both public and private vaults (note that this management is done by interacting directly with the modules, and not with the meta-vault).
 
 Additionally, Arrakis employs this contract to set up and collect management fees as part of its share of generated revenue.
 
