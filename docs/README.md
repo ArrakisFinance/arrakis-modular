@@ -43,69 +43,70 @@ Lastly, the inclusion of a public vault router simplifies the user experience. I
 
 ## Contract Overview
 
-### ArrakisMetaVault.sol
+### [ArrakisMetaVault.sol](../src/abstracts/ArrakisMetaVault.sol)
 
 An abstract contract that forms the foundation of the minimal Arrakis meta-vault standard. It outlines the interfaces and patterns applicable to all meta-vaults. A functional `ArrakisMetaVault` connects to a module contract that exclusively defines the vault's integration with an underlying liquidity consumer protocol —typically a DEX— using standardized interfaces. This contract is abstract because it is extended to delineate the differences in the `Public` and `Private` meta-vault types, most notably how they tokenize and how the deposit and withdrawal functions are implemented.
 
-### ArrakisMetaVaultPublic.sol
+### [ArrakisMetaVaultPublic.sol](../src/ArrakisMetaVaultPublic.sol)
 
 A meta-vault designed for public usage  by implementing a shared LP strategy (or position) among all participants. It allows for either the configuration or delegation of the active management of the vault's assets. This variant inherits from, and extends, the abstract `ArrakisMetaVault`, employing the ERC20 pattern to represent proportional ownership of the assets under management.
 
 Deployments of public vaults are **permissioned**, taking into account the sensitive security parameters that affect multiple parties and are under the time-locked control of a vault owner. This level of control is intended to manage who can deploy, configure, and own these public vaults. Ultimately, such authority would be vested in the “Arrakis DAO.”
 
-### ArrakisMetaVaultPrivate.sol
+### [ArrakisMetaVaultPrivate.sol](../src/ArrakisMetaVaultPrivate.sol)
 
 A meta-vault tailored for private use, where only the vault owner is permitted to add or remove liquidity. The vault owner retains the capability to configure or delegate the active management of the vault's assets. Inheriting from `ArrakisMetaVault`, this contract extends the abstract version to create a private meta-vault, which employs `PALMVaultNFT` for denoting ownership.
 
 Deployments of private vaults are **permissionless** and are not bound by a time-lock, given that the sensitive security parameters are intrinsically controlled by the custodian of the vault funds—that is, the owner acts as the sole user of the vault.
 
-### PALMVaultNFT.sol
+### [PALMVaultNFT.sol](../src/PALMVaultNFT.sol)
 
 An NFT contract designed to tokenize the ownership of private vaults, thus rendering them transferable. It is a standard NFT contract equipped with a dynamic token URI, which will facilitate a distinctive SVG design for each token.
 
-### ModuleRegistry.sol
+### [ModuleRegistry.sol](../src/abstracts/ModuleRegistry.sol)
 An abstract contract that manages beacon whitelisting/blacklisting to ensure only modules that are deemed safe and correct can be utilized by vaults. It implements an internal function for deploying new instances of a module (another beacon proxy) for a specific vault.
 
-### ModulePrivateRegistry.sol
+### [ModulePrivateRegistry.sol](../src/ModulePrivateRegistry.sol)
 A registry for modules that can be whitelisted and utilized by private vaults. This registry adapts the module creation logic to ensure that modules are exclusively created for private vaults.
 
-### ModulePublicRegistry.sol
+### [ModulePublicRegistry.sol](../src/ModulePublicRegistry.sol)
 A registry for modules that can be whitelisted and used by public vaults. It modifies the module creation logic to guarantee that modules are only generated for public vaults.
 
-### ArrakisMetaVaultFactory.sol
+### [ArrakisMetaVaultFactory.sol](../src/ArrakisMetaVaultFactory.sol)
 This contract deploys new instances of `ArrakisMetaVaultPublic` and `ArrakisMetaVaultPrivate`, along with their corresponding modules. While public vault deployments require permission, private vault deployments do not. It maintains a record of all deployed vaults, categorized by type.
 
-### ArrakisStandardManager.sol
+### [ArrakisStandardManager.sol](../src/ArrakisStandardManager.sol)
 A manager contract that institutes additional safety measures to ensure that delegated LP management is secure and trust-minimized. This includes, among other guarantees, performing oracle checks and slippage checks on various management operations, such as asset rebalancing or swapping. Arrakis uses this contract as the central point for actively managing both public and private vaults.
 
 Additionally, Arrakis employs this contract to set up and collect management fees as part of its share of generated revenue.
 
-### IArrakisLPModule.sol
+### [IArrakisLPModule.sol](../src/interfaces/IArrakisLPModule.sol)
 
 An interface to which all Arrakis Modules must conform. It encompasses withdrawal functions—both for users to retrieve their funds and for the manager to claim their portion of generated revenues. Additionally, it includes security functions to pause or unpause the vault in the event that user funds are jeopardized due to unforeseen circumstances. The interface also provides several view functions that supply essential vault information or assist other system contracts in conducting safety checks.
 
 Although interfaces themselves cannot contain bugs, modules are critical in the new system, and as such, any input on the architecture of its interface is welcome. The aim for this interface is to be generic and adaptable, ensuring it can safely integrate with the existing system and accommodate any future module ideas.
 
-### ArrakisPublicVaultRouter.sol
+### [ArrakisPublicVaultRouter.sol](../src/ArrakisPublicVaultRouter.sol)
 A router contract that incorporates permit2 to assist depositors in adding liquidity to `ArrakisMetaVaultPublic` instances in a secure and user-friendly manner. It also enables users to contribute ETH directly, bypassing the need for them to wrap it beforehand.
 
-### RouterSwapExecutor.sol
+### [RouterSwapExecutor.sol](../src/RouterSwapExecutor.sol)
 A sub-component of `ArrakisPublicVaultRouter` designated for MEV-protected swaps. Implemented as an intermediary contract to address security concerns about these generic, low-level swaps being exploited.
 
-### TimeLock.sol
+### [TimeLock.sol](../src/TimeLock.sol)
 A slightly modified generic timelock contract which ensures the timelock cannot transfer ownership of the vault away from the timelock itself. A new instance of this contract is employed for each public Arrakis vault, ensuring that security parameters cannot be hastily reconfigured by a compromised vault owner to extract value from the vault.
 
-### Guardian.sol
+### [Guardian.sol](../src/Guardian.sol)
 This contract assumes the role of an emergency pauser, capable of halting system operations in the event of a critical error or vulnerability. The pausing authority would ultimately reside with a “Guardian Multisig,” akin to the system used by AAVE. For any contracts that are upgradeable (modules are all beacon proxies and could potentially be upgradeable), a timelock would be in place. Hence, while pauses can be executed quickly, upgrades are intentionally slowed down.
 
----
 
 ## Valantis Integration
 
 Arrakis Modular's first integration will be with Valantis, a new DEX that aims to introduce innovative design concepts to the AMM space.
 
-### ValantisSOTModule.sol
+### [ValantisSOTModule.sol](../src/abstracts/ValantisSOTModule.sol)
 
-This module will be the first implementation for an `ArrakisMetaVaultPublic`, integrating with the Arrakis Modular system in a production environment and interfacing with a specific Sovereign Pool type from the new Valantis DEX.
+This module will be the first implementation for an `ArrakisMetaVault`, integrating with the Arrakis Modular system in a production environment and interfacing with a specific Sovereign Pool type from the new Valantis DEX.
 
 As outlined earlier, this contract will implement the `IArrakisLPModule` to conform to the standardized interface required by Arrakis modules.
+
+This abstract contract also has its private ([ValantisSOTModulePrivate.sol](../src/modules/ValantisSOTModulePrivate.sol)) and public ([ValantisSOTModulePrivate.sol](../src/modules/ValantisSOTModulePublic.sol)) implementations.
