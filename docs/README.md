@@ -27,7 +27,7 @@ After the market signaled the desire for private vaults managed by a third-party
 
 Drawing on over two years of insights and learnings from operating a liquidity management system, Arrakis Modular adopts a more opinionated design approach. This approach aims to streamline the system by reducing the complexity inherited from having three different, independent smart contract layers. To achieve this, all components are combined within a single monorepo, enhancing collaboration, simplifying maintenance, and aligning with the modular design principles of Arrakis Modular. This consolidation reflects our commitment to improving developer experience and system coherence, paving the way for more efficient and flexible liquidity management solutions.
 
-# System Design
+## System Design
 
 At the heart of the Arrakis Modular system is the concept of meta-vaults. These meta-vaults enable users wishing to provide liquidity with two distinct assets to do so across any trading venue—without the need to deploy or migrate funds to new vaults. Meta-vaults have the capability to whitelist various modules, essentially smart contracts that establish integration with liquidity-consuming dApps. This design ensures that as new DEXs emerge, liquidity provision becomes a matter of simply creating and whitelisting a new module compatible with the DEX, and then activating it.
 
@@ -41,58 +41,71 @@ Lastly, the inclusion of a public vault router simplifies the user experience. I
 
 ![arrakis-modular-diagram](./arrakis-modular-diagram.png)
 
-# Contract Overview
-
-- ArrakisMetaVault.sol 
-- ArrakisMetaVaultPublic.sol
-- ArrakisMetaVaultPrivate.sol
-- PALMVaultNFT.sol
-- ModuleRegistry.sol
-- ModulePrivateRegistry.sol
-- ModulePublicRegistry.sol
-- ArrakisMetaVaultFactory.sol
-- ArrakisStandardManager.sol
-- ArrakisPublicVaultRouter.sol
-- RouterSwapExecutor.sol
-- Guardian.sol
-- TimeLock.sol
+## Contract Overview
 
 ### ArrakisMetaVault.sol
 
-This abstract is the core of the minimal Arrakis Meta Vault standard. It encodes the interfaces and patterns of an Arrakis Meta Vault. A functional ArrakisMetaVault has a module contract connected to it which entirely defines how the vault integrates with an underlying Liquidity Provision protocol, using standard interfaces. This contract is abstract because it is extended to expose the differenced in the Public and Private vault type, most notable how they are tokenized and how the deposit function is implemented.
+An abstract contract that forms the foundation of the minimal Arrakis meta-vault standard. It outlines the interfaces and patterns applicable to all meta-vaults. A functional `ArrakisMetaVault` connects to a module contract that exclusively defines the vault's integration with an underlying liquidity consumer protocol —typically a DEX— using standardized interfaces. This contract is abstract because it is extended to delineate the differences in the `Public` and `Private` meta-vault types, most notably how they tokenize and how the deposit and withdrawal functions are implemented.
 
 ### ArrakisMetaVaultPublic.sol
-This inherits and extends the abstract ArrakisMetaVault.sol to create the ERC20 wrapped “public” Arrakis Meta Vault. If we want to create a shared LP position/strategy which can configure or delegate LP active management on behalf of all participants, then we’ll deploy an instance of this through the Factory contract. Public Vault deployments are permissioned since sensitive security parameters for multiple parties are under the timelocked control of a vault owner, so we want some ability to control who might deploy/configure/own these public vaults. Eventually this authority would be under the control of the “Arrakis DAO.”
+
+A meta-vault designed for public usage  by implementing a shared LP strategy (or position) among all participants. It allows for either the configuration or delegation of the active management of the vault's assets. This variant inherits from, and extends, the abstract `ArrakisMetaVault`, employing the ERC20 pattern to represent proportional ownership of the assets under management.
+
+Deployments of public vaults are **permissioned**, taking into account the sensitive security parameters that affect multiple parties and are under the time-locked control of a vault owner. This level of control is intended to manage who can deploy, configure, and own these public vaults. Ultimately, such authority would be vested in the “Arrakis DAO.”
 
 ### ArrakisMetaVaultPrivate.sol
-This inherits and extends the abstract ArrakisMetaVault.sol to create the “private” Arrakis Meta Vault, where only the vault owner controls adding or removing liquidity. If you want to create an LP management contract for your own private liquidity (we call this PALM for private active liquidity management) you’d deploy an instance of this through the Factory contract. Ownership is not timelocked and deployment is permissionless in this case, since the sensitive security parameters are fundamentally under the control of the custodian of the vault funds (i.e. the owner is the user).
+
+A meta-vault tailored for private use, where only the vault owner is permitted to add or remove liquidity. The vault owner retains the capability to configure or delegate the active management of the vault's assets. Inheriting from `ArrakisMetaVault`, this contract extends the abstract version to create a private meta-vault, which employs `PALMVaultNFT` for denoting ownership.
+
+Deployments of private vaults are **permissionless** and are not bound by a time-lock, given that the sensitive security parameters are intrinsically controlled by the custodian of the vault funds—that is, the owner acts as the sole user of the vault.
 
 ### PALMVaultNFT.sol
-An NFT contract that allows ownership of private vaults to each be tokenized and thus transferrable. Very standard NFT contract (we might add some fun visuals to the tokenURI but this has no effect on contract security AFAIU)
+
+An NFT contract designed to tokenize the ownership of private vaults, thus rendering them transferable. It is a standard NFT contract equipped with a dynamic token URI, which will facilitate a distinctive SVG design for each token.
 
 ### ModuleRegistry.sol
-This abstract handles the simple duty of “module” whitelistsing, so only modules deemed safe and correct can be used by vaults.
+An abstract contract that manages beacon whitelisting/blacklisting to ensure only modules that are deemed safe and correct can be utilized by vaults. It implements an internal function for deploying new instances of a module (another beacon proxy) for a specific vault.
 
 ### ModulePrivateRegistry.sol
-registry of all modules which can be whitelisted and used by private vaults.
+A registry for modules that can be whitelisted and utilized by private vaults. This registry adapts the module creation logic to ensure that modules are exclusively created for private vaults.
 
-### ModulePublicRegsitry.sol
-registry of all modules which can be whitelisted and used by public vaults.
+### ModulePublicRegistry.sol
+A registry for modules that can be whitelisted and used by public vaults. It modifies the module creation logic to guarantee that modules are only generated for public vaults.
 
 ### ArrakisMetaVaultFactory.sol
-deploys fresh instances of ArrakisMetaVaultPublic and ArrakisMetaVaultPrivate public vault deployments are permissioned, but private vault ones are not. Stores complete list of all vaults deployed, by type.
+This contract deploys new instances of `ArrakisMetaVaultPublic` and `ArrakisMetaVaultPrivate`, along with their corresponding modules. While public vault deployments require permission, private vault deployments do not. It maintains a record of all deployed vaults, categorized by type.
 
 ### ArrakisStandardManager.sol
-The manager contract that adds additional safety checks to make delegated LP management safe and as trustless as possible. Arrakis will use this as the entry point to actively manage both private vaults and public vaults. Also how we confiuge/harvest manager fee collection for Arrakis protocol to take cut of revenues generated.
+A manager contract that institutes additional safety measures to ensure that delegated LP management is secure and trust-minimized. This includes, among other guarantees, performing oracle checks and slippage checks on various management operations, such as asset rebalancing or swapping. Arrakis uses this contract as the central point for actively managing both public and private vaults.
+
+Additionally, Arrakis employs this contract to set up and collect management fees as part of its share of generated revenue.
+
+### IArrakisLPModule.sol
+
+An interface to which all Arrakis Modules must conform. It encompasses withdrawal functions—both for users to retrieve their funds and for the manager to claim their portion of generated revenues. Additionally, it includes security functions to pause or unpause the vault in the event that user funds are jeopardized due to unforeseen circumstances. The interface also provides several view functions that supply essential vault information or assist other system contracts in conducting safety checks.
+
+Although interfaces themselves cannot contain bugs, modules are critical in the new system, and as such, any input on the architecture of its interface is welcome. The aim for this interface is to be generic and adaptable, ensuring it can safely integrate with the existing system and accommodate any future module ideas.
 
 ### ArrakisPublicVaultRouter.sol
-A router contract which integrates permit2 which helps depositors add liquidity to ArrakisMetaVaultPublic instances, safely and conveniently.
+A router contract that incorporates permit2 to assist depositors in adding liquidity to `ArrakisMetaVaultPublic` instances in a secure and user-friendly manner. It also enables users to contribute ETH directly, bypassing the need for them to wrap it beforehand.
 
-### RouterSwapExecutor.so
-A sub-component of the Public Vault Router used for swapping safely (need the middleman contract here for security concerns on these generic low level swaps being abused)
+### RouterSwapExecutor.sol
+A sub-component of `ArrakisPublicVaultRouter` designated for MEV-protected swaps. Implemented as an intermediary contract to address security concerns about these generic, low-level swaps being exploited.
 
 ### TimeLock.sol
-A slightly modified generic timelock (so that timelock cannot transfer ownership of the vault away from the timelock contract) a fresh instance of this is used for each Public Arrakis vault to make sure that security parameters cannot be rushingly reconfigured by a compromised public vault owner to extract value from the public vault.
+A slightly modified generic timelock contract which ensures the timelock cannot transfer ownership of the vault away from the timelock itself. A new instance of this contract is employed for each public Arrakis vault, ensuring that security parameters cannot be hastily reconfigured by a compromised vault owner to extract value from the vault.
 
 ### Guardian.sol
-This contract is in charge of a rushing pauser role who can pause parts of the system in the case of critical error/vulnerability. This authority would be ultimately in the hands of some “Guardian Multisig” much like how AAVE works today. For any upgradeable contracts (modules are all beacon proxies and could potentially be upgradeable) there would be a timelock. So pauses are rushing but upgrades are slow.
+This contract assumes the role of an emergency pauser, capable of halting system operations in the event of a critical error or vulnerability. The pausing authority would ultimately reside with a “Guardian Multisig,” akin to the system used by AAVE. For any contracts that are upgradeable (modules are all beacon proxies and could potentially be upgradeable), a timelock would be in place. Hence, while pauses can be executed quickly, upgrades are intentionally slowed down.
+
+---
+
+## Valantis Integration
+
+Arrakis Modular's first integration will be with Valantis, a new DEX that aims to introduce innovative design concepts to the AMM space.
+
+### ValantisSOTModule.sol
+
+This module will be the first implementation for an `ArrakisMetaVaultPublic`, integrating with the Arrakis Modular system in a production environment and interfacing with a specific Sovereign Pool type from the new Valantis DEX.
+
+As outlined earlier, this contract will implement the `IArrakisLPModule` to conform to the standardized interface required by Arrakis modules.
