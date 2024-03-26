@@ -3497,6 +3497,164 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
     // #endregion test rebalance.
 
+    // #region test announceStrategy.
+
+    function testAnnouceStrategyNotWhitelistedVault() public {
+        address vault =
+            vm.addr(uint256(keccak256(abi.encode("Vault"))));
+
+        string memory strategy = "SOT";
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisStandardManager.NotWhitelistedVault.selector,
+                vault
+            )
+        );
+        manager.announceStrategy(vault, strategy);
+    }
+
+    function testAnnouceStrategyOnlyStratAnnouncer() public {
+        // #region init management.
+
+        uint24 maxDeviation = TEN_PERCENT; // 10%
+        uint256 cooldownPeriod = 60; // 60 seconds.
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        uint24 maxSlippagePIPS = TEN_PERCENT;
+        ArrakisMetaVaultMock vault;
+
+        {
+            // #region create module.
+
+            LpModuleMock module = new LpModuleMock();
+
+            // #endregion create module.
+
+            // #region create vault.
+
+            vault = new ArrakisMetaVaultMock();
+            vault.setManager(address(manager));
+            vault.setModule(address(module));
+
+            // #endregion create vault.
+        }
+
+        // #region create oracle.
+
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+
+        // #endregion create oracle.
+
+        {
+            // #region set params.
+
+            SetupParams memory params = SetupParams({
+                vault: address(vault),
+                oracle: IOracleWrapper(oracle),
+                maxDeviation: maxDeviation,
+                cooldownPeriod: cooldownPeriod,
+                executor: executor,
+                stratAnnouncer: stratAnnouncer,
+                maxSlippagePIPS: maxSlippagePIPS
+            });
+
+            // #endregion set params.
+
+            // #region call through the factory initManagement.
+
+            vm.prank(factory);
+            manager.initManagement(params);
+
+            // #endregion call through the factory initManagement.
+        }
+
+        // #endregion init management.
+
+        string memory strategy = "SOT";
+
+        vm.expectRevert(
+                IArrakisStandardManager.OnlyStratAnnouncer.selector
+        );
+        manager.announceStrategy(address(vault), strategy);
+    }
+
+    function testAnnouceStrategy() public {
+        // #region init management.
+
+        uint24 maxDeviation = TEN_PERCENT; // 10%
+        uint256 cooldownPeriod = 60; // 60 seconds.
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        uint24 maxSlippagePIPS = TEN_PERCENT;
+        ArrakisMetaVaultMock vault;
+
+        {
+            // #region create module.
+
+            LpModuleMock module = new LpModuleMock();
+
+            // #endregion create module.
+
+            // #region create vault.
+
+            vault = new ArrakisMetaVaultMock();
+            vault.setManager(address(manager));
+            vault.setModule(address(module));
+
+            // #endregion create vault.
+        }
+
+        // #region create oracle.
+
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+
+        // #endregion create oracle.
+
+        {
+            // #region set params.
+
+            SetupParams memory params = SetupParams({
+                vault: address(vault),
+                oracle: IOracleWrapper(oracle),
+                maxDeviation: maxDeviation,
+                cooldownPeriod: cooldownPeriod,
+                executor: executor,
+                stratAnnouncer: stratAnnouncer,
+                maxSlippagePIPS: maxSlippagePIPS
+            });
+
+            // #endregion set params.
+
+            // #region call through the factory initManagement.
+
+            vm.prank(factory);
+            manager.initManagement(params);
+
+            // #endregion call through the factory initManagement.
+        }
+
+        // #endregion init management.
+
+        string memory strategy = "SOT";
+
+        vm.expectEmit();
+        emit IArrakisStandardManager.LogStrategyAnnouncement(address(vault), strategy);
+
+        vm.prank(stratAnnouncer);
+        manager.announceStrategy(address(vault), strategy);
+    }
+
+    // #endregion test annouceStrategy.
+
     // #region test initializedVaults.
 
     function testInitializedVaultsStartIndexLtEndIndex() public {
