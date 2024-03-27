@@ -61,7 +61,9 @@ contract ValantisVaultFour is Script {
             manager, 0, data, bytes32(0), bytes32(0), 1 minutes
         );
 
-        console.logString("Valantis Public Vault oracle update scheduled");
+        console.logString(
+            "Valantis Public Vault oracle update scheduled"
+        );
         console.logAddress(vault);
 
         vm.stopBroadcast();

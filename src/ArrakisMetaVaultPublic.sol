@@ -6,8 +6,11 @@ import {IArrakisMetaVaultPublic} from
 import {IArrakisLPModulePublic} from
     "./interfaces/IArrakisLPModulePublic.sol";
 import {
-    ArrakisMetaVault, PIPS
+    ArrakisMetaVault, BASE
 } from "./abstracts/ArrakisMetaVault.sol";
+import {
+    MINIMUM_LIQUIDITY
+} from "./constants/CArrakis.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
@@ -53,12 +56,15 @@ contract ArrakisMetaVaultPublic is
         uint256 supply = totalSupply();
 
         uint256 proportion = FullMath.mulDiv(
-            shares_, PIPS, supply > 0 ? supply : 1 ether
+            shares_, BASE, supply > 0 ? supply : 1 ether
         );
 
-        if (proportion == 0) revert CannotMintProportionZero();
-
         if (receiver_ == address(0)) revert AddressZero("Receiver");
+
+        if(supply == 0) {
+            _mint(address(0), MINIMUM_LIQUIDITY);
+            shares_ = shares_ - MINIMUM_LIQUIDITY;
+        }
 
         _mint(receiver_, shares_);
 
@@ -80,9 +86,8 @@ contract ArrakisMetaVaultPublic is
         uint256 supply = totalSupply();
         if (shares_ > supply) revert BurnOverflow();
 
-        uint256 proportion = FullMath.mulDiv(shares_, PIPS, supply);
+        uint256 proportion = FullMath.mulDiv(shares_, BASE, supply);
 
-        if (proportion == 0) revert CannotBurnProportionZero();
         if (receiver_ == address(0)) revert AddressZero("Receiver");
 
         _burn(msg.sender, shares_);

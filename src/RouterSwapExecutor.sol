@@ -52,11 +52,6 @@ contract RouterSwapExecutor is IRouterSwapExecutor {
         uint256 valueToSend;
         if (params_.swapData.zeroForOne) {
             if (token0 != nativeToken) {
-                IERC20(token0).safeTransferFrom(
-                    router,
-                    address(this),
-                    params_.swapData.amountInSwap
-                );
                 balanceBefore =
                     IERC20(token0).balanceOf(address(this));
                 IERC20(token0).safeIncreaseAllowance(
@@ -69,11 +64,6 @@ contract RouterSwapExecutor is IRouterSwapExecutor {
             }
         } else {
             if (token1 != nativeToken) {
-                IERC20(token1).safeTransferFrom(
-                    router,
-                    address(this),
-                    params_.swapData.amountInSwap
-                );
                 balanceBefore =
                     IERC20(token1).balanceOf(address(this));
                 IERC20(token1).safeIncreaseAllowance(

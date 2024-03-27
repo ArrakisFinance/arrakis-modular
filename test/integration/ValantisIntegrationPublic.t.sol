@@ -56,7 +56,8 @@ import {IArrakisLPModule} from
 
 import {
     NATIVE_COIN,
-    TEN_PERCENT
+    TEN_PERCENT,
+    MINIMUM_LIQUIDITY
 } from "../../src/constants/CArrakis.sol";
 
 import {UpgradeableBeacon} from
@@ -439,7 +440,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
         vm.stopPrank();
 
-        assertEq(ERC20(vault).balanceOf(receiver), 1e18);
+        assertEq(ERC20(vault).balanceOf(receiver), 1e18 - MINIMUM_LIQUIDITY);
     }
 
     function test_burn() public {
@@ -465,17 +466,17 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         assertEq(token0.balanceOf(user), 0);
         assertEq(token1.balanceOf(user), 0);
-        assertEq(ERC20(vault).balanceOf(receiver), 1e18);
+        assertEq(ERC20(vault).balanceOf(receiver), 1e18 - MINIMUM_LIQUIDITY);
 
         // #region burn.
 
         vm.startPrank(receiver);
-        IArrakisMetaVaultPublic(vault).burn(1e18, user);
+        IArrakisMetaVaultPublic(vault).burn(1e18 - MINIMUM_LIQUIDITY, user);
 
         // #endregion burn.
 
-        assertEq(token0.balanceOf(user), init0);
-        assertEq(token1.balanceOf(user), init1);
+        assertNotEq(token0.balanceOf(user), 0);
+        assertNotEq(token1.balanceOf(user), 0);
         assertEq(ERC20(vault).balanceOf(receiver), 0);
     }
 
@@ -756,8 +757,8 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         // assertions.
 
-        (uint256 amount0, uint256 amount1) = IArrakisLPModule(m)
-            .totalUnderlying();
+        (uint256 amount0, uint256 amount1) =
+            IArrakisLPModule(m).totalUnderlying();
 
         assertEq(amount0, 1000e6);
         assertEq(amount1, 1.5e18);

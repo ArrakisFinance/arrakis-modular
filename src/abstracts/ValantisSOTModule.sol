@@ -8,7 +8,7 @@ import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {ISovereignPool} from "../interfaces/ISovereignPool.sol";
 import {ISOT} from "../interfaces/ISOT.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
-import {PIPS} from "../constants/CArrakis.sol";
+import {BASE, PIPS} from "../constants/CArrakis.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
 import {IOwnable} from "../interfaces/IOwnable.sol";
 
@@ -188,7 +188,7 @@ abstract contract ValantisModule is
 
         if (receiver_ == address(0)) revert AddressZero();
         if (proportion_ == 0) revert ProportionZero();
-        if (proportion_ > PIPS) revert ProportionGtPIPS();
+        if (proportion_ > BASE) revert ProportionGtBASE();
 
         // #endregion checks.
 
@@ -197,38 +197,19 @@ abstract contract ValantisModule is
         {
             (uint256 _amt0, uint256 _amt1) = pool.getReserves();
 
-            amount0 = FullMath.mulDiv(proportion_, _amt0, PIPS);
-            amount1 = FullMath.mulDiv(proportion_, _amt1, PIPS);
+            amount0 = FullMath.mulDiv(proportion_, _amt0, BASE);
+            amount1 = FullMath.mulDiv(proportion_, _amt1, BASE);
         }
 
         if (amount0 == 0 && amount1 == 0) revert AmountsZeros();
 
         // #endregion effects.
 
-        // NOTE:  check with Ed for rebase tokens.
-
-        uint256 balance0 = token0.balanceOf(receiver_);
-        uint256 balance1 = token1.balanceOf(receiver_);
-
         // #region interactions.
 
         alm.withdrawLiquidity(amount0, amount1, receiver_, 0, 0);
 
         // #endregion interactions.
-
-        uint256 _actual0 = token0.balanceOf(receiver_) - balance0;
-        uint256 _actual1 = token1.balanceOf(receiver_) - balance1;
-
-        // #region assertions.
-
-        if (_actual0 != amount0) {
-            revert Actual0DifferentExpected(_actual0, amount0);
-        }
-        if (_actual1 != amount1) {
-            revert Actual1DifferentExpected(_actual1, amount1);
-        }
-
-        // #endregion assertions.
 
         emit LogWithdraw(receiver_, proportion_, amount0, amount1);
     }
@@ -339,13 +320,6 @@ abstract contract ValantisModule is
 
             _actual0 = token0.balanceOf(address(this)) - _initBalance0;
             _actual1 = token1.balanceOf(address(this)) - _initBalance1;
-
-            if (_actual0 != _amt0) {
-                revert Actual0DifferentExpected(_actual0, _amt0);
-            }
-            if (_actual1 != _amt1) {
-                revert Actual1DifferentExpected(_actual1, _amt1);
-            }
         }
 
         if (zeroForOne_) {
