@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IModuleRegistry} from "../interfaces/IModuleRegistry.sol";
-import {PIPS} from "../constants/CArrakis.sol";
+import {BASE} from "../constants/CArrakis.sol";
 
 import {ReentrancyGuard} from
     "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -122,7 +122,7 @@ abstract contract ArrakisMetaVault is
         // #region move tokens to the new module.
 
         /// @dev we transfer here all tokens to the new module.
-        _module.withdraw(module_, PIPS);
+        _module.withdraw(module_, BASE);
 
         // #endregion move tokens to the new module.
 

@@ -7,8 +7,6 @@ interface IArrakisMetaVaultPublic {
     error MintZero();
     error BurnZero();
     error BurnOverflow();
-    error CannotMintProportionZero();
-    error CannotBurnProportionZero();
 
     // #endregion errors.
 

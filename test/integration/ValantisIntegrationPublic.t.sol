@@ -56,7 +56,8 @@ import {IArrakisLPModule} from
 
 import {
     NATIVE_COIN,
-    TEN_PERCENT
+    TEN_PERCENT,
+    MINIMUM_LIQUIDITY
 } from "../../src/constants/CArrakis.sol";
 
 import {UpgradeableBeacon} from
@@ -64,13 +65,24 @@ import {UpgradeableBeacon} from
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import {SOTBase} from "@valantis/contracts-test/base/SOTBase.t.sol";
+import {
+    SOTBase,
+    Math
+} from "@valantis/contracts-test/base/SOTBase.t.sol";
 import {ERC20} from
     "../../lib/valantis-sot/lib/valantis-core/lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {MockSigner} from
     "@valantis/contracts-test/mocks/MockSigner.sol";
-import {SOT, SOTConstructorArgs} from "@valantis/contracts/SOT.sol";
-import {SovereignPoolConstructorArgs} from
+import {
+    SOT,
+    SOTConstructorArgs,
+    SolverOrderType
+} from "@valantis/contracts/SOT.sol";
+import {
+    SovereignPoolConstructorArgs,
+    SovereignPoolSwapParams,
+    SovereignPoolSwapContextData
+} from
     "../../lib/valantis-sot/lib/valantis-core/test/base/SovereignPoolBase.t.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
@@ -139,8 +151,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         (feedToken0, feedToken1) = deployChainlinkOracles(18, 6);
 
         // NOTE : is it needed?
-        signer =
-            vm.addr(uint256(keccak256(abi.encode("Mock Signer"))));
+        signer = address(new MockSigner());
 
         // Set initial price to 2000 for token0 and 1 for token1 (Similar to Eth/USDC pair)
         feedToken0.updateAnswer(
@@ -282,9 +293,6 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         // #region set pool.
 
-        vm.prank(pool.poolManager());
-        // pool.setPoolManager();
-
         // #endregion set pool.
 
         // #region create oracle wrapper.
@@ -377,6 +385,11 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         vm.prank(IOwnable(vault).owner());
         IValantisSOTModule(m).setALMAndManagerFees(address(alm));
 
+        vm.prank(alm.manager());
+        alm.setSolverFeeInBips(100, 100);
+        vm.prank(alm.manager());
+        alm.setMaxOracleDeviationBips(500);
+
         vm.prank(address(this));
         alm.setMaxTokenVolumes(100e18, 20_000e18);
         alm.setMaxAllowedQuotes(2);
@@ -395,6 +408,10 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         (sqrtSpotPriceX96,,) = alm.getAMMState();
 
+        // price = ((sqrt^2/1<<64) * (10 ** 6)) / 1 << 128
+        // price * 1 << 128 = (sqrt^2/1<<64) * (10 ** 6)
+        // (price * (1 << 128)) / (10 ** 6) = (sqrt^2/1<<64)
+        // ((price * (1 << 128)) / (10 ** 6)) * (1 << 64) = sqrt^2
         currentPrice = FullMath.mulDiv(
             FullMath.mulDiv(
                 sqrtSpotPriceX96, sqrtSpotPriceX96, 1 << 64
@@ -422,6 +439,8 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
         vm.stopPrank();
+
+        assertEq(ERC20(vault).balanceOf(receiver), 1e18 - MINIMUM_LIQUIDITY);
     }
 
     function test_burn() public {
@@ -445,12 +464,20 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         // #endregion mint.
 
+        assertEq(token0.balanceOf(user), 0);
+        assertEq(token1.balanceOf(user), 0);
+        assertEq(ERC20(vault).balanceOf(receiver), 1e18 - MINIMUM_LIQUIDITY);
+
         // #region burn.
 
         vm.startPrank(receiver);
-        IArrakisMetaVaultPublic(vault).burn(1e18, user);
+        IArrakisMetaVaultPublic(vault).burn(1e18 - MINIMUM_LIQUIDITY, user);
 
         // #endregion burn.
+
+        assertNotEq(token0.balanceOf(user), 0);
+        assertNotEq(token1.balanceOf(user), 0);
+        assertEq(ERC20(vault).balanceOf(receiver), 0);
     }
 
     function test_withdrawManagerBalance() public {
@@ -498,9 +525,95 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         // #endregion mint.
 
-        // console.logUint(IArrakisLPModule(m).managerBalance0());
-        // console.logUint(IArrakisLPModule(m).managerBalance1());
-        // console.logUint(IArrakisLPModule(m).managerFeePIPS());
+        // #region do a swap.
+
+        address swapper =
+            vm.addr(uint256(keccak256(abi.encode("Swapper"))));
+        address swapReceiver =
+            vm.addr(uint256(keccak256(abi.encode("Swap Receiver"))));
+
+        uint256 amountIn = 100e6;
+        bool isZeroForOne = true;
+
+        deal(address(token0), swapper, amountIn);
+
+        vm.prank(swapper);
+        token0.approve(address(pool), amountIn);
+
+        // #region do a solver swap.
+
+        SolverOrderType memory sotParams = _getSensibleSOTParams();
+        // ((price * (1 << 128)) / (10 ** 6)) * (1 << 64) = sqrt^2
+        sotParams.sqrtSpotPriceX96New = SafeCast.toUint160(
+            Math.sqrt(
+                FullMath.mulDiv(
+                    FullMath.mulDiv(
+                        FullMath.mulDiv(
+                            499_999_999_999_999, 995, 1000
+                        ),
+                        (1 << 128),
+                        (10 ** token0.decimals())
+                    ),
+                    (1 << 64),
+                    1
+                )
+            )
+        );
+        sotParams.solverPriceX192Discounted = FullMath.mulDiv(
+            FullMath.mulDiv(
+                FullMath.mulDiv(499_999_999_999_999, 1010, 1000),
+                (1 << 128),
+                (10 ** token0.decimals())
+            ),
+            (1 << 64),
+            1
+        );
+        sotParams.solverPriceX192Base = FullMath.mulDiv(
+            FullMath.mulDiv(
+                499_999_999_999_999,
+                (1 << 128),
+                (10 ** token0.decimals())
+            ),
+            (1 << 64),
+            1
+        );
+        sotParams.authorizedRecipient = swapReceiver;
+        sotParams.authorizedSender = swapper;
+
+        // #endregion do a solver swap.
+
+        // increase swapper balance.
+
+        SovereignPoolSwapContextData memory data =
+        SovereignPoolSwapContextData({
+            externalContext: MockSigner(signer).getSignedQuote(sotParams),
+            verifierContext: bytes(""),
+            swapCallbackContext: bytes(""),
+            swapFeeModuleContext: bytes("1")
+        });
+        SovereignPoolSwapParams memory params =
+        SovereignPoolSwapParams({
+            isSwapCallback: false,
+            isZeroToOne: isZeroForOne,
+            amountIn: amountIn,
+            amountOutMin: 0,
+            recipient: swapReceiver,
+            deadline: block.timestamp + 2,
+            swapTokenOut: isZeroForOne ? address(token1) : address(token0),
+            swapContext: data
+        });
+
+        uint128 preLiquidity = alm.effectiveAMMLiquidity();
+
+        vm.prank(swapper);
+        pool.swap(params);
+
+        // #endregion do a swap.
+
+        (,,, uint16 solverFeeBipsToken0, uint16 solverFeeBipsToken1,)
+        = alm.solverReadSlot();
+
+        assert(IArrakisLPModule(m).managerBalance0() > 0);
     }
 
     function test_getReservers() public {
@@ -526,14 +639,42 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         (uint256 amount0, uint256 amount1) =
             IArrakisLPModule(m).totalUnderlying();
-        // console.logUint(amount0);
-        // console.logUint(amount1);
+
+        (amount0, amount1) = IArrakisLPModule(m).totalUnderlying();
+
+        assertEq(amount0, init0);
+        assertEq(amount1, init1);
+    }
+
+    function test_getReservesAtPrice() public {
+        // #region mint.
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        deal(address(token0), user, init0);
+        deal(address(token1), user, init1);
+
+        address m = address(IArrakisMetaVault(vault).module());
+
+        vm.startPrank(user);
+        token0.approve(m, init0);
+        token1.approve(m, init1);
+
+        IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
+        vm.stopPrank();
+
+        // #endregion mint.
+
+        (uint256 amount0, uint256 amount1) =
+            IArrakisLPModule(m).totalUnderlying();
 
         (amount0, amount1) = IArrakisLPModule(m)
             .totalUnderlyingAtPrice(TickMath.getSqrtRatioAtTick(10));
 
-        // console.logUint(amount0);
-        // console.logUint(amount1);
+        assertNotEq(amount0, 0);
+        assertNotEq(amount1, 0);
     }
 
     function test_validateRebalance() public {
@@ -583,7 +724,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         // #endregion mint.
 
-        (uint160 sqrtSpotPriceX96,,) = alm.getAMMState();
+        //(uint160 sqrtSpotPriceX96,,) = alm.getAMMState();
 
         bool zeroForOne = true; // USDC -> WETH.
         uint256 expectedMinReturn = 0.5 ether;
@@ -613,6 +754,14 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         vm.prank(executor);
         IArrakisStandardManager(manager).rebalance(vault, datas);
+
+        // assertions.
+
+        (uint256 amount0, uint256 amount1) =
+            IArrakisLPModule(m).totalUnderlying();
+
+        assertEq(amount0, 1000e6);
+        assertEq(amount1, 1.5e18);
     }
 
     function test_setPriceBounds() public {
@@ -662,8 +811,24 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         bytes[] memory datas = new bytes[](1);
         datas[0] = data;
 
+        (, uint160 low, uint160 high) = alm.getAMMState();
+
+        int24 tick = TickMath.getTickAtSqrtRatio(
+            1_771_595_571_142_957_102_904_975_518_859_264
+        );
+
+        assertEq(low, TickMath.getSqrtRatioAtTick(tick - 100));
+        assertEq(high, TickMath.getSqrtRatioAtTick(tick + 100));
+
         vm.prank(executor);
         IArrakisStandardManager(manager).rebalance(vault, datas);
+
+        // assertions the price bounds
+
+        (, low, high) = alm.getAMMState();
+
+        assertEq(low, sqrtPriceLowX96);
+        assertEq(high, sqrtPriceHighX96);
     }
 
     // #endregion tests.
@@ -673,7 +838,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
     function _deployGuardian(
         address owner_,
         address pauser_
-    ) internal returns (address guardian) {
+    ) internal returns (address) {
         return address(new Guardian(owner_, pauser_));
     }
 
@@ -696,7 +861,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         address admin_
     ) internal returns (address) {
         return address(
-            new ModulePublicRegistry(owner, guardian_, admin_)
+            new ModulePublicRegistry(owner_, guardian_, admin_)
         );
     }
 
@@ -748,7 +913,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         address factory_
     ) internal {
         IArrakisStandardManager(manager).initialize(
-            owner, defaultReceiver_, factory_
+            owner_, defaultReceiver_, factory_
         );
     }
 
