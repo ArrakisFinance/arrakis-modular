@@ -14,24 +14,23 @@ import {PIPS} from "../src/constants/CArrakis.sol";
 /// @dev before this script we should whitelist the deployer as public vault deployer using the multisig
 /// on the factory side.
 
-
-bytes32 constant salt = keccak256(abi.encode("Salt 2"));
+bytes32 constant salt = keccak256(abi.encode("Salt 5"));
 address constant token0 = 0x64efc365149C78C55bfccaB24A48Ae03AffCa572;
 address constant token1 = 0x682d49D0Ead2B178DE4125781d2CEd108bEe41fD;
 address constant vaultOwner =
-    0x9403de4457C3a28F3CA8190bfbb4e1B1Cc88D978;
+    0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
-address constant pool = 0xF636790d517D2fD5277A869891B78D1bFAcB96f5;
-uint256 constant init0 = 2000e6;
+address constant pool = 0x46046EaA48097729604CbA5603E440E4021b61D7;
+uint256 constant init0 = 3200e6;
 uint256 constant init1 = 1e18;
 uint24 constant maxSlippage = PIPS / 50;
-address constant oracle = 0x9403de4457C3a28F3CA8190bfbb4e1B1Cc88D978;
+address constant oracle = 0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
 uint24 constant maxDeviation = PIPS / 50;
 uint256 constant cooldownPeriod = 60;
-address constant executor = 0x9403de4457C3a28F3CA8190bfbb4e1B1Cc88D978;
+address constant executor = 0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 address constant stratAnnouncer =
-    0x9403de4457C3a28F3CA8190bfbb4e1B1Cc88D978;
+    0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
 address constant valantisUpgradeableBeacon =
     0xF5488214f5dEb15D0964a2593d7e94a4D74e1151;
@@ -44,6 +43,9 @@ contract ValantisVaultOne is Script {
         uint256 privateKey = vm.envUint("PK_TEST");
 
         address account = vm.addr(privateKey);
+
+        console.logString("Deployer : ");
+        console.logAddress(account);
 
         vm.startBroadcast(privateKey);
 

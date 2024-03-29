@@ -31,7 +31,7 @@ interface IArrakisLPModule {
 
     /// @dev triggered if during withdraw more than 100% of the
     /// position.
-    error ProportionGtPIPS();
+    error ProportionGtBASE();
 
     /// @dev triggered when manager want to set his more
     /// earned by the position than 100% of fees earned.

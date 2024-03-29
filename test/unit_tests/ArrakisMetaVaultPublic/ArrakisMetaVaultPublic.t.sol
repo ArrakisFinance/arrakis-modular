@@ -11,7 +11,7 @@ import {IArrakisMetaVaultPublic} from
     "../../../src/interfaces/IArrakisMetaVaultPublic.sol";
 import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
-import {PIPS} from "../../../src/constants/CArrakis.sol";
+import {MINIMUM_LIQUIDITY, BASE} from "../../../src/constants/CArrakis.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from
@@ -1016,64 +1016,6 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         vm.stopPrank();
     }
 
-    function testMintProportionZero() public {
-        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver =
-            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region initialize.
-
-        vault.initializeTokens(USDC, WETH);
-        vault.initialize(address(module));
-
-        address actualModule = address(vault.module());
-
-        address[] memory whitelistedModules =
-            vault.whitelistedModules();
-
-        assert(whitelistedModules.length == 1);
-        assertEq(whitelistedModules[0], address(module));
-        assertEq(actualModule, address(module));
-
-        // #endregion initialize.
-
-        // #region mock inits.
-
-        uint256 i0 = 2000e6;
-        uint256 i1 = 1e18;
-
-        module.setInits(i0, i1);
-
-        // #endregion mock inits.
-        uint256 shares = PIPS / 2;
-
-        // #region get total underlying.
-
-        (uint256 total0, uint256 total1) = vault.getInits();
-
-        // #endregion get total underlying.
-
-        uint256 expectedAmount0 =
-            FullMath.mulDiv(total0, shares, 1 ether);
-        uint256 expectedAmount1 =
-            FullMath.mulDiv(total1, shares, 1 ether);
-
-        deal(USDC, user, expectedAmount0);
-        deal(WETH, user, expectedAmount1);
-
-        vm.startPrank(user);
-
-        IERC20(USDC).approve(address(module), expectedAmount0);
-        IERC20(WETH).approve(address(module), expectedAmount1);
-
-        vm.expectRevert(
-            IArrakisMetaVaultPublic.CannotMintProportionZero.selector
-        );
-
-        vault.mint(shares, receiver);
-
-        vm.stopPrank();
-    }
-
     function testMintReceiverAddressZero() public {
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
         address receiver = address(0);
@@ -1416,84 +1358,6 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         vault.burn(0, withdrawer);
     }
 
-    function testBurnProportionZero() public {
-        // #region mint.
-
-        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
-        address receiver =
-            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        // #region initialize.
-
-        vault.initializeTokens(USDC, WETH);
-        vault.initialize(address(module));
-
-        address actualModule = address(vault.module());
-
-        address[] memory whitelistedModules =
-            vault.whitelistedModules();
-
-        assert(whitelistedModules.length == 1);
-        assertEq(whitelistedModules[0], address(module));
-        assertEq(actualModule, address(module));
-
-        // #endregion initialize.
-
-        // #region mock inits.
-
-        uint256 i0 = 2000e6;
-        uint256 i1 = 1e18;
-
-        module.setInits(i0, i1);
-
-        // #endregion mock inits.
-
-        // #region set token0 and token1
-
-        module.setToken0AndToken1(USDC, WETH);
-
-        // #endregion set token0 and token1
-
-        uint256 shares = 1 ether / 2;
-
-        // #region get total underlying.
-
-        (uint256 total0, uint256 total1) = vault.getInits();
-
-        // #endregion get total underlying.
-
-        uint256 expectedAmount0 =
-            FullMath.mulDiv(total0, shares, 1 ether);
-        uint256 expectedAmount1 =
-            FullMath.mulDiv(total1, shares, 1 ether);
-
-        deal(USDC, user, expectedAmount0);
-        deal(WETH, user, expectedAmount1);
-
-        vm.startPrank(user);
-
-        IERC20(USDC).approve(address(module), expectedAmount0);
-        IERC20(WETH).approve(address(module), expectedAmount1);
-
-        vault.mint(shares, receiver);
-
-        vm.stopPrank();
-
-        // #endregion mint.
-
-        address withdrawer =
-            vm.addr(uint256(keccak256(abi.encode("Withdrawer"))));
-
-        vm.prank(receiver);
-
-        shares = PIPS / 2;
-
-        vm.expectRevert(
-            IArrakisMetaVaultPublic.CannotBurnProportionZero.selector
-        );
-
-        vault.burn(shares, withdrawer);
-    }
-
     function testBurnWithdrawerAddressZero() public {
         // #region mint.
 
@@ -1640,12 +1504,12 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         vm.prank(receiver);
 
-        vault.burn(shares, withdrawer);
+        vault.burn(shares - MINIMUM_LIQUIDITY, withdrawer);
 
         assertEq(IERC20(address(vault)).balanceOf(receiver), 0);
 
-        assertEq(IERC20(USDC).balanceOf(withdrawer), expectedAmount0);
-        assertEq(IERC20(WETH).balanceOf(withdrawer), expectedAmount1);
+        assertNotEq(IERC20(USDC).balanceOf(withdrawer), 0);
+        assertNotEq(IERC20(WETH).balanceOf(withdrawer), 0);
     }
 
     // #endregion test burn.

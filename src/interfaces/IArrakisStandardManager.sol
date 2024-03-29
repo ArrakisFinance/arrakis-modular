@@ -50,6 +50,8 @@ interface IArrakisStandardManager {
     error OnlyGuardian(address caller, address guardian);
     error OnlyFactory(address caller, address factory);
     error VaultNotDeployed();
+    error SetManagerFeeCallNotAllowed();
+    error OnlyStratAnnouncer();
 
     // #endregion errors.
 
@@ -97,6 +99,7 @@ interface IArrakisStandardManager {
         address indexed vault, address module, bytes[] payloads
     );
     event LogSetFactory(address vaultFactory);
+    event LogStrategyAnnouncement(address vault, string strategy);
 
     // #endregion events.
 
@@ -192,6 +195,14 @@ interface IArrakisStandardManager {
     /// @notice function used to update meta vault management informations.
     /// @param params_ struct containing all the data for updating the vault.
     function updateVaultInfo(SetupParams calldata params_) external;
+
+    /// @notice function used to announce the strategy that the vault will follow.
+    /// @param vault_ address of arrakis meta vault that will follow the strategy.
+    /// @param strategy_ string containing the strategy name that will be used.
+    function announceStrategy(
+        address vault_,
+        string memory strategy_
+    ) external;
 
     // #endregion functions.
 

@@ -362,6 +362,17 @@ contract ArrakisStandardManager is
         uint256 _length = payloads_.length;
 
         for (uint256 i; i < _length; i++) {
+            // #region check if the function called isn't the setManagerFeePIPS.
+
+            bytes4 selector = bytes4(payloads_[i][:4]);
+
+            if (
+                IArrakisLPModule.setManagerFeePIPS.selector
+                    == selector
+            ) revert SetManagerFeeCallNotAllowed();
+
+            // #endregion check if the function called isn't the setManagerFeePIPS.
+
             (bool success,) = address(module).call(payloads_[i]);
 
             if (!success) revert CallFailed(payloads_[i]);
@@ -491,6 +502,27 @@ contract ArrakisStandardManager is
 
     // #endregion initManagements.
 
+    receive() external payable {}
+
+    /// @notice function used to announce the strategy that the vault will follow.
+    /// @param vault_ address of arrakis meta vault that will follow the strategy.
+    /// @param strategy_ string containing the strategy name that will be used.
+    function announceStrategy(
+        address vault_,
+        string memory strategy_
+    ) external onlyWhitelistedVault(vault_) {
+        // #region checks.
+
+        VaultInfo memory info = vaultInfo[vault_];
+        if (info.stratAnnouncer != msg.sender) {
+            revert OnlyStratAnnouncer();
+        }
+
+        // #endregion checks.
+
+        emit LogStrategyAnnouncement(vault_, strategy_);
+    }
+
     // #region view public functions.
 
     /// @notice function used to get a list of managed vaults.
@@ -515,8 +547,6 @@ contract ArrakisStandardManager is
         }
         return vs;
     }
-
-    receive() external payable {}
 
     /// @notice function used to get the number of vault under management.
     /// @param numberOfVaults number of under management vault.
