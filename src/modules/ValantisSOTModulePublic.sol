@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {IArrakisLPModulePublic} from
     "../interfaces/IArrakisLPModulePublic.sol";
 import {ValantisModule} from "../abstracts/ValantisSOTModule.sol";
-import {PIPS} from "../constants/CArrakis.sol";
+import {BASE} from "../constants/CArrakis.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -53,8 +53,8 @@ contract ValantisModulePublic is
                 _amt1 = _init1;
             }
 
-            amount0 = FullMath.mulDiv(proportion_, _amt0, PIPS);
-            amount1 = FullMath.mulDiv(proportion_, _amt1, PIPS);
+            amount0 = FullMath.mulDiv(proportion_, _amt0, BASE);
+            amount1 = FullMath.mulDiv(proportion_, _amt1, BASE);
         }
 
         // #endregion effects.

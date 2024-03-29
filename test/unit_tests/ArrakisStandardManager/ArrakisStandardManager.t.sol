@@ -3578,7 +3578,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         string memory strategy = "SOT";
 
         vm.expectRevert(
-                IArrakisStandardManager.OnlyStratAnnouncer.selector
+            IArrakisStandardManager.OnlyStratAnnouncer.selector
         );
         manager.announceStrategy(address(vault), strategy);
     }
@@ -3647,7 +3647,9 @@ contract ArrakisStandardManagerTest is TestWrapper {
         string memory strategy = "SOT";
 
         vm.expectEmit();
-        emit IArrakisStandardManager.LogStrategyAnnouncement(address(vault), strategy);
+        emit IArrakisStandardManager.LogStrategyAnnouncement(
+            address(vault), strategy
+        );
 
         vm.prank(stratAnnouncer);
         manager.announceStrategy(address(vault), strategy);

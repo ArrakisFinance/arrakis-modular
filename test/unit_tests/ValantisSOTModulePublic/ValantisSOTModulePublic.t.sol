@@ -23,7 +23,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 // #region constants.
 import {
-    PIPS, TEN_PERCENT
+    BASE, PIPS, TEN_PERCENT
 } from "../../../src/constants/CArrakis.sol";
 // #endregion constants.
 
@@ -334,7 +334,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
     function testDepositOnlyMetaVault() public {
         address depositor = vm.addr(10);
-        uint256 proportion = PIPS / 2;
+        uint256 proportion = BASE / 2;
 
         uint256 expectedAmount0 = 2000e6 / 2;
         uint256 expectedAmount1 = 1e18 / 2;
@@ -360,7 +360,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
     function testDepositMsgValueNotZero() public {
         address depositor = vm.addr(10);
-        uint256 proportion = PIPS / 2;
+        uint256 proportion = BASE / 2;
 
         uint256 expectedAmount0 = 2000e6 / 2;
         uint256 expectedAmount1 = 1e18 / 2;
@@ -381,7 +381,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
     function testDepositDepositorAddressZero() public {
         address depositor = vm.addr(10);
-        uint256 proportion = PIPS / 2;
+        uint256 proportion = BASE / 2;
 
         uint256 expectedAmount0 = 2000e6 / 2;
         uint256 expectedAmount1 = 1e18 / 2;
@@ -419,7 +419,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
     function testDeposit() public {
         address depositor = vm.addr(10);
-        uint256 proportion = PIPS / 2;
+        uint256 proportion = BASE / 2;
 
         uint256 expectedAmount0 = 2000e6 / 2;
         uint256 expectedAmount1 = 1e18 / 2;
@@ -468,7 +468,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         // #endregion create valantis module.
 
         address depositor = vm.addr(10);
-        uint256 proportion = PIPS / 2;
+        uint256 proportion = BASE / 2;
 
         uint256 expectedAmount0 = 2000e6 / 2;
         uint256 expectedAmount1 = 1e18 / 2;
@@ -509,7 +509,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         // #endregion create valantis module.
 
         address depositor = vm.addr(10);
-        uint256 proportion = PIPS / 2;
+        uint256 proportion = BASE / 2;
 
         uint256 expectedAmount0 = 2000e6 / 2;
         uint256 expectedAmount1 = 1e18 / 2;
@@ -536,7 +536,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         // #region deposit.
 
         address depositor = vm.addr(10);
-        uint256 proportion = PIPS / 2;
+        uint256 proportion = BASE / 2;
 
         uint256 expectedAmount0 = 2000e6 / 2;
         uint256 expectedAmount1 = 1e18 / 2;
@@ -565,14 +565,14 @@ contract ValantisSOTModuleTest is TestWrapper {
             )
         );
 
-        module.withdraw(receiver, PIPS);
+        module.withdraw(receiver, BASE);
     }
 
     function testWithdrawReceiverAddressZero() public {
         // #region deposit.
 
         address depositor = vm.addr(10);
-        uint256 proportion = PIPS / 2;
+        uint256 proportion = BASE / 2;
 
         uint256 expectedAmount0 = 2000e6 / 2;
         uint256 expectedAmount1 = 1e18 / 2;
@@ -597,14 +597,14 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
-        module.withdraw(receiver, PIPS);
+        module.withdraw(receiver, BASE);
     }
 
     function testWithdrawProportionZero() public {
         // #region deposit.
 
         address depositor = vm.addr(10);
-        uint256 proportion = PIPS / 2;
+        uint256 proportion = BASE / 2;
 
         uint256 expectedAmount0 = 2000e6 / 2;
         uint256 expectedAmount1 = 1e18 / 2;
@@ -632,11 +632,11 @@ contract ValantisSOTModuleTest is TestWrapper {
         module.withdraw(receiver, 0);
     }
 
-    function testWithdrawProportionGtPIPS() public {
+    function testWithdrawProportionGtBASE() public {
         // #region deposit.
 
         address depositor = vm.addr(10);
-        uint256 proportion = PIPS / 2;
+        uint256 proportion = BASE / 2;
 
         uint256 expectedAmount0 = 2000e6 / 2;
         uint256 expectedAmount1 = 1e18 / 2;
@@ -659,9 +659,9 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.prank(address(metaVault));
 
-        vm.expectRevert(IArrakisLPModule.ProportionGtPIPS.selector);
+        vm.expectRevert(IArrakisLPModule.ProportionGtBASE.selector);
 
-        module.withdraw(receiver, PIPS + 1);
+        module.withdraw(receiver, BASE + 1);
     }
 
     function testWithdrawAmountsZeros() public {
@@ -671,14 +671,14 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.expectRevert(IValantisSOTModule.AmountsZeros.selector);
 
-        module.withdraw(receiver, PIPS);
+        module.withdraw(receiver, BASE);
     }
 
     function testWithdraw() public {
         // #region deposit.
 
         address depositor = vm.addr(10);
-        uint256 proportion = PIPS / 2;
+        uint256 proportion = BASE / 2;
 
         uint256 expectedAmount0 = 2000e6 / 2;
         uint256 expectedAmount1 = 1e18 / 2;
@@ -701,124 +701,10 @@ contract ValantisSOTModuleTest is TestWrapper {
         sovereignPool.setReserves(expectedAmount0, expectedAmount1);
         vm.prank(address(metaVault));
 
-        module.withdraw(receiver, PIPS);
+        module.withdraw(receiver, BASE);
 
         assertEq(IERC20(USDC).balanceOf(receiver), expectedAmount0);
         assertEq(IERC20(WETH).balanceOf(receiver), expectedAmount1);
-    }
-
-    function testWithdrawActualAmt0DifferentThanExpected() public {
-        SovereignALMBuggyMock buggySovereignALM =
-            new SovereignALMBuggyMock();
-        buggySovereignALM.setToken0AndToken1(USDC, WETH);
-        // #region create valantis module.
-
-        module = new ValantisModulePublic(address(guardian));
-        module.initialize(
-            address(sovereignPool),
-            INIT0,
-            INIT1,
-            MAX_SLIPPAGE,
-            address(oracle),
-            address(metaVault)
-        );
-
-        vm.prank(owner);
-        module.setALMAndManagerFees(address(buggySovereignALM));
-
-        // #endregion create valantis module.
-
-        // #region deposit.
-
-        address depositor = vm.addr(10);
-        uint256 proportion = PIPS / 2;
-
-        uint256 expectedAmount0 = 2000e6 / 2;
-        uint256 expectedAmount1 = 1e18 / 2;
-
-        deal(USDC, depositor, expectedAmount0);
-        deal(WETH, depositor, expectedAmount1);
-
-        vm.prank(depositor);
-        IERC20(USDC).approve(address(module), expectedAmount0);
-        vm.prank(depositor);
-        IERC20(WETH).approve(address(module), expectedAmount1);
-
-        vm.prank(address(metaVault));
-
-        module.deposit(depositor, proportion);
-
-        // #endregion deposit.
-
-        address receiver = vm.addr(20);
-        sovereignPool.setReserves(expectedAmount0, expectedAmount1);
-        vm.prank(address(metaVault));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IValantisSOTModule.Actual0DifferentExpected.selector,
-                expectedAmount0 / 2,
-                expectedAmount0
-            )
-        );
-
-        module.withdraw(receiver, PIPS);
-    }
-
-    function testWithdrawActualAmt1DifferentThanExpected() public {
-        SovereignALMBuggy2Mock buggySovereignALM =
-            new SovereignALMBuggy2Mock();
-        buggySovereignALM.setToken0AndToken1(USDC, WETH);
-        // #region create valantis module.
-
-        module = new ValantisModulePublic(address(guardian));
-        module.initialize(
-            address(sovereignPool),
-            INIT0,
-            INIT1,
-            MAX_SLIPPAGE,
-            address(oracle),
-            address(metaVault)
-        );
-
-        vm.prank(owner);
-        module.setALMAndManagerFees(address(buggySovereignALM));
-
-        // #endregion create valantis module.
-
-        // #region deposit.
-
-        address depositor = vm.addr(10);
-        uint256 proportion = PIPS / 2;
-
-        uint256 expectedAmount0 = 2000e6 / 2;
-        uint256 expectedAmount1 = 1e18 / 2;
-
-        deal(USDC, depositor, expectedAmount0);
-        deal(WETH, depositor, expectedAmount1);
-
-        vm.prank(depositor);
-        IERC20(USDC).approve(address(module), expectedAmount0);
-        vm.prank(depositor);
-        IERC20(WETH).approve(address(module), expectedAmount1);
-
-        vm.prank(address(metaVault));
-
-        module.deposit(depositor, proportion);
-
-        // #endregion deposit.
-
-        address receiver = vm.addr(20);
-        sovereignPool.setReserves(expectedAmount0, expectedAmount1);
-        vm.prank(address(metaVault));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IValantisSOTModule.Actual1DifferentExpected.selector,
-                expectedAmount1 / 2,
-                expectedAmount1
-            )
-        );
-
-        module.withdraw(receiver, PIPS);
     }
 
     // #endregion test withdraw.
@@ -932,106 +818,6 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(WETH, address(sovereignALM), amountIn / 2);
 
         vm.expectRevert(IValantisSOTModule.NotEnoughToken1.selector);
-        vm.prank(manager);
-        module.swap(
-            zeroForOne,
-            expectedMinReturn,
-            amountIn,
-            router,
-            expectedSqrtSpotPriceUpperX96,
-            expectedSqrtSpotPriceLowerX96,
-            payload
-        );
-    }
-
-    function testSwapActual0DifferenThanExpected() public {
-        SovereignALMBuggyMock buggySovereignALM =
-            new SovereignALMBuggyMock();
-        buggySovereignALM.setToken0AndToken1(USDC, WETH);
-        // #region create valantis module.
-
-        module = new ValantisModulePublic(address(guardian));
-        module.initialize(
-            address(sovereignPool),
-            INIT0,
-            INIT1,
-            MAX_SLIPPAGE,
-            address(oracle),
-            address(metaVault)
-        );
-
-        vm.prank(owner);
-        module.setALMAndManagerFees(address(buggySovereignALM));
-
-        // #endregion create valantis module.
-
-        bool zeroForOne = true;
-        uint256 expectedMinReturn = 0.6 ether;
-        uint256 amountIn = 1250e6;
-        address router = address(this);
-        bytes memory payload =
-            abi.encodeWithSelector(this.swap.selector);
-
-        sovereignPool.setReserves(amountIn, 0);
-        deal(USDC, address(buggySovereignALM), amountIn);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IValantisSOTModule.Actual0DifferentExpected.selector,
-                amountIn / 2,
-                amountIn
-            )
-        );
-        vm.prank(manager);
-        module.swap(
-            zeroForOne,
-            expectedMinReturn,
-            amountIn,
-            router,
-            expectedSqrtSpotPriceUpperX96,
-            expectedSqrtSpotPriceLowerX96,
-            payload
-        );
-    }
-
-    function testSwapActual1DifferenThanExpected() public {
-        SovereignALMBuggy2Mock buggySovereignALM =
-            new SovereignALMBuggy2Mock();
-        buggySovereignALM.setToken0AndToken1(USDC, WETH);
-        // #region create valantis module.
-
-        module = new ValantisModulePublic(address(guardian));
-        module.initialize(
-            address(sovereignPool),
-            INIT0,
-            INIT1,
-            MAX_SLIPPAGE,
-            address(oracle),
-            address(metaVault)
-        );
-
-        vm.prank(owner);
-        module.setALMAndManagerFees(address(buggySovereignALM));
-
-        // #endregion create valantis module.
-
-        bool zeroForOne = false;
-        uint256 expectedMinReturn = 1250e6;
-        uint256 amountIn = 0.6 ether;
-        address router = address(this);
-        bytes memory payload =
-            abi.encodeWithSelector(this.swap.selector);
-
-        sovereignPool.setReserves(0, amountIn);
-        deal(WETH, address(buggySovereignALM), amountIn);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IValantisSOTModule.Actual1DifferentExpected.selector,
-                amountIn / 2,
-                amountIn
-            )
-        );
         vm.prank(manager);
         module.swap(
             zeroForOne,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {PIPS} from "../../../../src/constants/CArrakis.sol";
+import {BASE} from "../../../../src/constants/CArrakis.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -29,8 +29,8 @@ contract NewLpModuleBuggyMock {
         address depositor_,
         uint256 proportion_
     ) external returns (uint256 amount0, uint256 amount1) {
-        amount0 = FullMath.mulDiv(init0, proportion_, PIPS);
-        amount1 = FullMath.mulDiv(init1, proportion_, PIPS);
+        amount0 = FullMath.mulDiv(init0, proportion_, BASE);
+        amount1 = FullMath.mulDiv(init1, proportion_, BASE);
 
         if (amount0 > 0) {
             token0.transferFrom(depositor_, address(this), amount0);
@@ -47,8 +47,8 @@ contract NewLpModuleBuggyMock {
         amount0 = token0.balanceOf(address(this)) - managerBalance0;
         amount1 = token1.balanceOf(address(this)) - managerBalance1;
 
-        amount0 = FullMath.mulDiv(amount0, proportion_, PIPS);
-        amount1 = FullMath.mulDiv(amount1, proportion_, PIPS);
+        amount0 = FullMath.mulDiv(amount0, proportion_, BASE);
+        amount1 = FullMath.mulDiv(amount1, proportion_, BASE);
 
         if (amount0 > 0) token0.transfer(receiver_, amount0);
         if (amount1 > 0) token1.transfer(receiver_, amount1);
