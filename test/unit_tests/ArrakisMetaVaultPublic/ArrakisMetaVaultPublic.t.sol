@@ -11,7 +11,10 @@ import {IArrakisMetaVaultPublic} from
     "../../../src/interfaces/IArrakisMetaVaultPublic.sol";
 import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
-import {MINIMUM_LIQUIDITY, BASE} from "../../../src/constants/CArrakis.sol";
+import {
+    MINIMUM_LIQUIDITY,
+    BASE
+} from "../../../src/constants/CArrakis.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from

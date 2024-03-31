@@ -101,14 +101,12 @@ abstract contract ValantisModule is
     /// @param init1_ initial amount of token1 to provide to valantis module.
     /// @param maxSlippage_ allowed to manager for rebalancing the inventory using
     /// swap.
-    /// @param oracle_ address of the oracle used by the valantis SOT module.
     /// @param metaVault_ address of the meta vault
     function initialize(
         address pool_,
         uint256 init0_,
         uint256 init1_,
         uint24 maxSlippage_,
-        address oracle_,
         address metaVault_
     ) external initializer {
         if (metaVault_ == address(0)) revert AddressZero();
@@ -117,7 +115,6 @@ abstract contract ValantisModule is
         if (maxSlippage_ > PIPS / 10) {
             revert MaxSlippageGtTenPercent();
         }
-        if (oracle_ == address(0)) revert AddressZero();
 
         metaVault = IArrakisMetaVault(metaVault_);
         pool = ISovereignPool(pool_);
@@ -129,7 +126,6 @@ abstract contract ValantisModule is
         _init1 = init1_;
 
         maxSlippage = maxSlippage_;
-        oracle = IOracleWrapper(oracle_);
     }
 
     // #region guardian functions.
@@ -150,9 +146,13 @@ abstract contract ValantisModule is
 
     // #region only vault owner.
 
-    /// @notice set SOT and init manager fees function.
+    /// @notice set SOT, oracle (wrapper of SOT) and init manager fees function.
     /// @param alm_ address of the valantis SOT ALM.
-    function setALMAndManagerFees(address alm_) external {
+    /// @param oracle_ address of the oracle used by the valantis SOT module.
+    function setALMAndManagerFees(
+        address alm_,
+        address oracle_
+    ) external {
         if (address(alm) != address(0)) {
             revert ALMAlreadySet();
         }
@@ -160,8 +160,10 @@ abstract contract ValantisModule is
             revert OnlyMetaVaultOwner();
         }
         if (alm_ == address(0)) revert AddressZero();
+        if (oracle_ == address(0)) revert AddressZero();
 
         alm = ISOT(alm_);
+        oracle = IOracleWrapper(oracle_);
         pool.setPoolManagerFeeBips(_managerFeePIPS / 1e2);
 
         emit LogSetManagerFeePIPS(0, _managerFeePIPS);

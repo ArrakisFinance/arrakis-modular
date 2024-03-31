@@ -29,6 +29,7 @@ import {TimeLock} from "../src/TimeLock.sol";
 address constant vault = 0x89Ea626ECAC279a535ec7bA6ab1Fe0ab6a4eB440;
 address constant timeLock = 0xD41479D3f6c42cF6F532DF0F64Ca132342661f07;
 address constant alm = 0xb6Cf5502e64d79d96f09138b8F808412502d03cc;
+address constant oracle = address(0);
 
 contract ValantisVaultTwo is Script {
     function setUp() public {}
@@ -45,7 +46,9 @@ contract ValantisVaultTwo is Script {
         address module = address(IArrakisMetaVault(vault).module());
 
         bytes memory data = abi.encodeWithSelector(
-            IValantisSOTModule.setALMAndManagerFees.selector, alm
+            IValantisSOTModule.setALMAndManagerFees.selector,
+            alm,
+            oracle
         );
 
         TimeLock(payable(timeLock)).schedule(

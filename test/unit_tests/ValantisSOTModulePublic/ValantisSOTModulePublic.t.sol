@@ -23,7 +23,9 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 // #region constants.
 import {
-    BASE, PIPS, TEN_PERCENT
+    BASE,
+    PIPS,
+    TEN_PERCENT
 } from "../../../src/constants/CArrakis.sol";
 // #endregion constants.
 
@@ -138,12 +140,13 @@ contract ValantisSOTModuleTest is TestWrapper {
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
-            address(oracle),
             address(metaVault)
         );
 
         vm.prank(owner);
-        module.setALMAndManagerFees(address(sovereignALM));
+        module.setALMAndManagerFees(
+            address(sovereignALM), address(oracle)
+        );
 
         // #endregion create valantis module.
     }
@@ -166,12 +169,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
         module.initialize(
-            address(0),
-            INIT0,
-            INIT1,
-            MAX_SLIPPAGE,
-            address(oracle),
-            address(metaVault)
+            address(0), INIT0, INIT1, MAX_SLIPPAGE, address(metaVault)
         );
     }
 
@@ -183,13 +181,28 @@ contract ValantisSOTModuleTest is TestWrapper {
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
-            address(oracle),
             address(metaVault)
         );
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         vm.prank(owner);
-        module.setALMAndManagerFees(address(0));
+        module.setALMAndManagerFees(address(0), address(oracle));
+    }
+
+    function testInitializeOracleAddressZero() public {
+        module = new ValantisModulePublic(address(guardian));
+
+        module.initialize(
+            address(sovereignPool),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(metaVault)
+        );
+
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+        vm.prank(owner);
+        module.setALMAndManagerFees(address(sovereignALM), address(0));
     }
 
     function testInitializeInitsAreZeros() public {
@@ -202,7 +215,6 @@ contract ValantisSOTModuleTest is TestWrapper {
             0,
             0,
             MAX_SLIPPAGE,
-            address(oracle),
             address(metaVault)
         );
     }
@@ -219,22 +231,6 @@ contract ValantisSOTModuleTest is TestWrapper {
             INIT0,
             INIT1,
             TEN_PERCENT * 2,
-            address(oracle),
-            address(metaVault)
-        );
-    }
-
-    function testInitializeOracleAddressZero() public {
-        module = new ValantisModulePublic(address(guardian));
-
-        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-
-        module.initialize(
-            address(sovereignPool),
-            INIT0,
-            INIT1,
-            MAX_SLIPPAGE,
-            address(0),
             address(metaVault)
         );
     }
@@ -247,7 +243,6 @@ contract ValantisSOTModuleTest is TestWrapper {
         assertEq(init0, INIT0);
         assertEq(init1, INIT1);
         assertEq(module.maxSlippage(), MAX_SLIPPAGE);
-        assertEq(address(module.oracle()), address(oracle));
         assertEq(address(module.guardian()), pauser);
     }
 
@@ -261,7 +256,6 @@ contract ValantisSOTModuleTest is TestWrapper {
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
-            address(oracle),
             address(0)
         );
     }
@@ -458,12 +452,13 @@ contract ValantisSOTModuleTest is TestWrapper {
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
-            address(oracle),
             address(metaVault)
         );
 
         vm.prank(owner);
-        module.setALMAndManagerFees(address(buggySovereignALM));
+        module.setALMAndManagerFees(
+            address(buggySovereignALM), address(oracle)
+        );
 
         // #endregion create valantis module.
 
@@ -499,12 +494,13 @@ contract ValantisSOTModuleTest is TestWrapper {
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
-            address(oracle),
             address(metaVault)
         );
 
         vm.prank(owner);
-        module.setALMAndManagerFees(address(buggySovereignALM));
+        module.setALMAndManagerFees(
+            address(buggySovereignALM), address(oracle)
+        );
 
         // #endregion create valantis module.
 
@@ -914,12 +910,13 @@ contract ValantisSOTModuleTest is TestWrapper {
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
-            address(oracle),
             address(metaVault)
         );
 
         vm.prank(owner);
-        module.setALMAndManagerFees(address(buggySovereignALM));
+        module.setALMAndManagerFees(
+            address(buggySovereignALM), address(oracle)
+        );
 
         // #endregion create valantis module.
 
@@ -960,12 +957,13 @@ contract ValantisSOTModuleTest is TestWrapper {
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
-            address(oracle),
             address(metaVault)
         );
 
         vm.prank(owner);
-        module.setALMAndManagerFees(address(buggySovereignALM));
+        module.setALMAndManagerFees(
+            address(buggySovereignALM), address(oracle)
+        );
 
         // #endregion create valantis module.
 

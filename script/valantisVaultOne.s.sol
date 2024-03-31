@@ -54,8 +54,7 @@ contract ValantisVaultOne is Script {
             pool,
             init0,
             init1,
-            maxSlippage,
-            oracle
+            maxSlippage
         );
         bytes memory initManagementPayload = abi.encode(
             IOracleWrapper(oracle),

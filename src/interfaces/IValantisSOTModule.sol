@@ -52,20 +52,22 @@ interface IValantisSOTModule {
     /// @param init1_ initial amount of token1 to provide to valantis module.
     /// @param maxSlippage_ allowed to manager for rebalancing the inventory using
     /// swap.
-    /// @param oracle_ address of the oracle used by the valantis SOT module.
     /// @param metaVault_ address of the meta vault
     function initialize(
         address pool_,
         uint256 init0_,
         uint256 init1_,
         uint24 maxSlippage_,
-        address oracle_,
         address metaVault_
     ) external;
 
     /// @notice set SOT and initialize manager fees function.
     /// @param alm_ address of the valantis SOT ALM.
-    function setALMAndManagerFees(address alm_) external;
+    /// @param oracle_ address of the oracle used by the valantis SOT module.
+    function setALMAndManagerFees(
+        address alm_,
+        address oracle_
+    ) external;
 
     /// @notice function to swap token0->token1 or token1->token0 and then change
     /// inventory.

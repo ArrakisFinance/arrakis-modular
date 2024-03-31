@@ -317,8 +317,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
             address(pool),
             init0,
             init1,
-            maxSlippage,
-            oracle
+            maxSlippage
         );
         bytes memory initManagementPayload = abi.encode(
             IOracleWrapper(oracle),
@@ -383,7 +382,9 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         _addToContractsToApprove(address(alm));
 
         vm.prank(IOwnable(vault).owner());
-        IValantisSOTModule(m).setALMAndManagerFees(address(alm));
+        IValantisSOTModule(m).setALMAndManagerFees(
+            address(alm), oracle
+        );
 
         vm.prank(alm.manager());
         alm.setSolverFeeInBips(100, 100);
@@ -440,7 +441,9 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
         vm.stopPrank();
 
-        assertEq(ERC20(vault).balanceOf(receiver), 1e18 - MINIMUM_LIQUIDITY);
+        assertEq(
+            ERC20(vault).balanceOf(receiver), 1e18 - MINIMUM_LIQUIDITY
+        );
     }
 
     function test_burn() public {
@@ -466,12 +469,16 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         assertEq(token0.balanceOf(user), 0);
         assertEq(token1.balanceOf(user), 0);
-        assertEq(ERC20(vault).balanceOf(receiver), 1e18 - MINIMUM_LIQUIDITY);
+        assertEq(
+            ERC20(vault).balanceOf(receiver), 1e18 - MINIMUM_LIQUIDITY
+        );
 
         // #region burn.
 
         vm.startPrank(receiver);
-        IArrakisMetaVaultPublic(vault).burn(1e18 - MINIMUM_LIQUIDITY, user);
+        IArrakisMetaVaultPublic(vault).burn(
+            1e18 - MINIMUM_LIQUIDITY, user
+        );
 
         // #endregion burn.
 
