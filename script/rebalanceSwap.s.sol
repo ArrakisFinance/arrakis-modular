@@ -11,7 +11,7 @@ import {IValantisSOTModule} from
 import {IArrakisStandardManager} from
     "../src/interfaces/IArrakisStandardManager.sol";
 
-import {Dex} from "../src/tests/Dex.sol";
+import {Dex} from "../test/tests/Dex.sol";
 
 address constant vault = address(0);
 bool constant isZeroForOne = true;

@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 
-import {Dex} from "../src/tests/Dex.sol";
+import {Dex} from "../test/tests/Dex.sol";
 
 /// @dev before this script we should whitelist the deployer as public vault deployer using the multisig
 /// on the factory side.
