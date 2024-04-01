@@ -15,6 +15,7 @@ import {
 import {NATIVE_COIN} from "../../../src/constants/CArrakis.sol";
 import {ArrakisPublicVaultRouter} from
     "../../../src/ArrakisPublicVaultRouter.sol";
+import {RouterSwapExecutor} from "../../../src/RouterSwapExecutor.sol";
 import {
     AddLiquidityData,
     SwapAndAddData,
@@ -63,6 +64,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     // #region public properties.
 
     ArrakisPublicVaultRouter public router;
+    RouterSwapExecutor public swapExecutor;
     address public owner;
 
     // #endregion public properties.
@@ -90,8 +92,11 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             WETH
         );
 
+        swapExecutor =
+            new RouterSwapExecutor(address(router), NATIVE_COIN);
+
         vm.prank(owner);
-        router.updateSwapExecutor(address(this));
+        router.updateSwapExecutor(address(swapExecutor));
     }
 
     // #region test constructor.
@@ -163,7 +168,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     function testConstructor() public {
         assertEq(router.nativeToken(), NATIVE_COIN);
         assertEq(address(router.permit2()), address(PERMIT2));
-        assertEq(address(router.swapper()), address(this));
+        assertEq(address(router.swapper()), address(swapExecutor));
         assertEq(router.owner(), owner);
         assertEq(address(router.factory()), address(factory));
     }
@@ -915,6 +920,9 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         deal(WETH, address(this), 2e18);
         IERC20(WETH).approve(address(router), 2e18);
 
+        vm.prank(owner);
+        router.updateSwapExecutor(address(this));
+
         vm.expectRevert(
             IArrakisPublicVaultRouter.NothingToMint.selector
         );
@@ -1110,7 +1118,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             amount1Min: 2000e6,
             amountSharesMin: 1 ether,
             vault: address(vault),
-            receiver: address(0)
+            receiver: address(this)
         });
 
         SwapData memory swapData = SwapData({
@@ -2543,85 +2551,68 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
             abi.decode(returnsData, (uint256, uint256));
     }
 
-    function swap1()
-        external
-        returns (uint256 amount0Diff, uint256 amount1Diff)
-    {
-        amount0Diff = 2000e6;
-        amount1Diff = 1e18;
-        deal(USDC, address(router), 2000e6);
+    function swap1() external {
+        IERC20(WETH).transferFrom(msg.sender, address(this), 1e18);
+        // amount0Diff = 2000e6;
+        // amount1Diff = 1e18;
+        deal(USDC, address(swapExecutor), 2000e6);
     }
 
     function swap2()
         external
         returns (uint256 amount0Diff, uint256 amount1Diff)
     {
+        IERC20(WETH).transferFrom(msg.sender, address(this), 1e18);
         amount0Diff = 0;
         amount1Diff = 0;
-        deal(USDC, address(router), 2000e6);
+        deal(USDC, address(swapExecutor), 2000e6);
     }
 
-    function swap3()
-        external
-        returns (uint256 amount0Diff, uint256 amount1Diff)
-    {
-        amount0Diff = 2100e6;
-        amount1Diff = 1e18;
-        deal(USDC, address(router), 2100e6);
+    function swap3() external {
+        IERC20(WETH).transferFrom(msg.sender, address(this), 1e18);
+        // amount0Diff = 2100e6;
+        // amount1Diff = 1e18;
+        deal(USDC, address(swapExecutor), 2100e6);
     }
 
-    function swap4()
-        external
-        returns (uint256 amount0Diff, uint256 amount1Diff)
-    {
-        amount0Diff = 2000e6;
-        amount1Diff = 11e17;
-        deal(WETH, address(router), 11e17);
+    function swap4() external {
+        IERC20(USDC).transferFrom(msg.sender, address(this), 2000e6);
+        // amount0Diff = 2000e6;
+        // amount1Diff = 11e17;
+        deal(WETH, address(swapExecutor), 11e17);
     }
 
-    function swap5()
-        external
-        returns (uint256 amount0Diff, uint256 amount1Diff)
-    {
-        amount0Diff = 11e17;
-        amount1Diff = 2000e6;
-        deal(address(router), 11e17);
+    function swap5() external {
+        IERC20(USDC).transferFrom(msg.sender, address(this), 2000e6);
+        // amount0Diff = 11e17;
+        // amount1Diff = 2000e6;
+        deal(address(swapExecutor), 11e17);
     }
 
-    function swap6()
-        external
-        returns (uint256 amount0Diff, uint256 amount1Diff)
-    {
-        amount0Diff = 2000e6;
-        amount1Diff = 11e17;
-        deal(address(router), 11e17);
+    function swap6() external {
+        IERC20(USDC).transferFrom(msg.sender, address(this), 2000e6);
+        // amount0Diff = 2000e6;
+        // amount1Diff = 11e17;
+        deal(address(swapExecutor), 11e17);
     }
 
-    function swap7()
-        external
-        returns (uint256 amount0Diff, uint256 amount1Diff)
-    {
-        amount0Diff = 2000e6;
-        amount1Diff = 1e18;
-        deal(USDC, address(router), 1e18);
+    function swap7() external payable {
+        // amount0Diff = 2000e6;
+        // amount1Diff = 1e18;
+        deal(USDC, address(swapExecutor), 1e18);
     }
 
-    function swap8()
-        external
-        returns (uint256 amount0Diff, uint256 amount1Diff)
-    {
-        amount0Diff = 1e18;
-        amount1Diff = 2000e6;
-        deal(USDC, address(router), 1e18);
+    function swap8() external payable {
+        // amount0Diff = 1e18;
+        // amount1Diff = 2000e6;
+        deal(USDC, address(swapExecutor), 1e18);
     }
 
-    function swap9()
-        external
-        returns (uint256 amount0Diff, uint256 amount1Diff)
-    {
-        amount0Diff = 2000e6;
-        amount1Diff = 10e17;
-        deal(WETH, address(router), 10e17);
+    function swap9() external {
+        IERC20(USDC).transferFrom(msg.sender, address(this), 2000e6);
+        // amount0Diff = 2000e6;
+        // amount1Diff = 10e17;
+        deal(WETH, address(swapExecutor), 10e17);
     }
 
     // #endregion swapper mock.

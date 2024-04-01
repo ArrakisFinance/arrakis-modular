@@ -8,9 +8,7 @@ import {IArrakisLPModulePublic} from
 import {
     ArrakisMetaVault, BASE
 } from "./abstracts/ArrakisMetaVault.sol";
-import {
-    MINIMUM_LIQUIDITY
-} from "./constants/CArrakis.sol";
+import {MINIMUM_LIQUIDITY} from "./constants/CArrakis.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
@@ -61,7 +59,7 @@ contract ArrakisMetaVaultPublic is
 
         if (receiver_ == address(0)) revert AddressZero("Receiver");
 
-        if(supply == 0) {
+        if (supply == 0) {
             _mint(address(0), MINIMUM_LIQUIDITY);
             shares_ = shares_ - MINIMUM_LIQUIDITY;
         }
