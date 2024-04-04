@@ -18,7 +18,7 @@ git clone https://github.com/ArrakisFinance/arrakis-modular.git
 ```
 forge build
 ```
-5. Create `.env` file
+5. Create `.env` file using `.envExample` as a reference.
 6. Execute the test suite by running:
 ```
 forge test -vv
