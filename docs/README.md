@@ -1,5 +1,29 @@
 # Arrakis Modular
 
+## Getting Started
+
+In order to run the test suite of Arrakis modular, follow these steps:
+
+1. Clone the repository by running:
+```
+# if using an SSH key
+git clone git@github.com:ArrakisFinance/arrakis-modular.git
+```
+```
+# otherwise
+git clone https://github.com/ArrakisFinance/arrakis-modular.git
+```
+2. As the Valantis librari is private, you'll have to manually paste `valantis-sot` inside `lib/`.
+3. Install the required submodules and compile the contracts by running:
+```
+forge build
+```
+5. Create `.env` file using `.envExample` as a reference.
+6. Execute the test suite by running:
+```
+forge test -vv
+```
+
 ## Motivation: 
 
 Arrakis Modular represents the next evolution of Arrakis Finance's liquidity management, aiming to overcome the limitations of previous versions (V1 and V2). Traditionally, our LP vaults allowed Liquidity Providers (LPs) to actively manage or delegate the management of their (DEX) liquidity positions. LPs could invest in shared liquidity provision strategies by holding an ERC20 token representing a share of the underlying strategy. However, Arrakis V1 and V2 were specifically built around Uniswap V3. Therefore, the previous standards were incompatible with other DEXs, and in order to support alternative venues —like Uniswap V4, Balancer, Ambient, etc.— Arrakis would have to make a completely new standard for every integration.
