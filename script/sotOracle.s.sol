@@ -13,8 +13,8 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// @dev ask to valantis team to grant module as poolManager (sovereignPool) and
 /// liquidityProvider (sot alm) before running this script.
 
-address constant vault = 0x89Ea626ECAC279a535ec7bA6ab1Fe0ab6a4eB440;
-address constant alm = 0xb6Cf5502e64d79d96f09138b8F808412502d03cc;
+address constant vault = 0x55C21FD657ebBD4D91b2051d9e327D8fdE9c415D;
+address constant alm = 0x8D5817DbA8dAfDc57ef7a2Fc22B845f28d496c61;
 
 contract SOTOracle is Script {
     function setUp() public {}
