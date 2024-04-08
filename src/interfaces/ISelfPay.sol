@@ -7,7 +7,15 @@ interface ISelfPay {
     // #region errors.
 
     error AddressZero();
+    error CantBeSelfPay();
     error VaultNFTNotTransferedOrApproved();
+    error SameW3F();
+    error SameRouter();
+    error SameReceiver();
+    error EmptyCallData();
+    error CallFailed();
+    error CallerNotW3F();
+    error NotEnoughTokenToPayForRebalance();
 
     // #endregion errors.
 
@@ -16,6 +24,21 @@ interface ISelfPay {
     event LogSetW3F(address oldW3F, address newW3F);
     event LogSetRouter(address oldRouter, address newRouter);
     event LogSetReceiver(address oldReceiver, address newReceiver);
+    event LogOwnerDeposit(uint256 amount0, uint256 amount1);
+    event LogOwnerWithdraw(
+        uint256 proportion, uint256 amount0, uint256 amount1
+    );
+    event LogOwnerWhitelistDepositors(address[] depositors);
+    event LogOwnerBlacklistDepositors(address[] depositors);
+    event LogOwnerWhitelistModules(
+        address[] beacons, bytes[] payloads
+    );
+    event LogOwnerBlacklistModules(address[] modules);
+    event LogOwnerCallRouter(
+        bytes payload, uint256 amount0, uint256 amount1
+    );
+    event LogOwnerCallNFT(bytes payload);
+    event LogOwnerUpdateVaultInfo(SetupParams params);
 
     // #endregion events.
 
