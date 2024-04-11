@@ -14,15 +14,15 @@ import {PIPS} from "../src/constants/CArrakis.sol";
 /// @dev before this script we should whitelist the deployer as public vault deployer using the multisig
 /// on the factory side.
 
-bytes32 constant salt = keccak256(abi.encode("Salt 6"));
-address constant token0 = 0x64efc365149C78C55bfccaB24A48Ae03AffCa572;
-address constant token1 = 0x682d49D0Ead2B178DE4125781d2CEd108bEe41fD;
+bytes32 constant salt = keccak256(abi.encode("Salt 7"));
+address constant token0 = 0x6A023CCd1ff6F2045C3309768eAd9E68F978f6e1;
+address constant token1 = 0xDDAfbb505ad214D7b80b1f830fcCc89B60fb7A83;
 address constant vaultOwner =
     0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
-address constant pool = 0xF18b966Ad80eC4a866a7E795Cb1a0D5fdF59DC66;
-uint256 constant init0 = 3200e6;
-uint256 constant init1 = 1e18;
+address constant pool = 0xc878036B38Eb491D2C058F4030c2E10eA8f6A326;
+uint256 constant init0 = 1e18;
+uint256 constant init1 = 3200e6;
 uint24 constant maxSlippage = PIPS / 50;
 address constant oracle = 0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 

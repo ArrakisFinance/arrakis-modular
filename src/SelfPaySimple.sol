@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {ISelfPay, SetupParams} from "./interfaces/ISelfPay.sol";
+import {
+    ISelfPaySimple, SetupParams
+} from "./interfaces/ISelfPaySimple.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {VaultInfo} from "./structs/SManager.sol";
 import {IArrakisStandardManager} from
@@ -30,8 +32,8 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-contract SelfPay is
-    ISelfPay,
+contract SelfPaySimple is
+    ISelfPaySimple,
     Ownable,
     Initializable,
     IERC721Receiver,
@@ -62,7 +64,6 @@ contract SelfPay is
     // #region public properties.
 
     address public w3f;
-    address public router;
     address public receiver;
 
     // #endregion public properties.
@@ -73,7 +74,6 @@ contract SelfPay is
         address manager_,
         address nft_,
         address w3f_,
-        address router_,
         address receiver_,
         address usdc_,
         address oracle_,
@@ -86,9 +86,8 @@ contract SelfPay is
         if (
             owner_ == address(0) || vault_ == address(0)
                 || manager_ == address(0) || nft_ == address(0)
-                || w3f_ == address(0) || router_ == address(0)
-                || receiver_ == address(0) || usdc_ == address(0)
-                || weth_ == address(0)
+                || w3f_ == address(0) || receiver_ == address(0)
+                || usdc_ == address(0) || weth_ == address(0)
         ) revert AddressZero();
 
         // #endregion checks.
@@ -123,7 +122,6 @@ contract SelfPay is
         manager = manager_;
         nft = nft_;
         w3f = w3f_;
-        router = router_;
         receiver = receiver_;
         oracle = IOracleWrapper(oracle_);
         oracleIsInversed = oracleIsInversed_;
@@ -133,7 +131,6 @@ contract SelfPay is
         buffer = buffer_;
 
         emit LogSetW3F(address(0), w3f_);
-        emit LogSetRouter(address(0), router_);
         emit LogSetReceiver(address(0), receiver_);
     }
 
@@ -188,14 +185,6 @@ contract SelfPay is
             );
         }
 
-        // add selfPay contract as depositor on the vault.
-        address[] memory depositors = new address[](1);
-        depositors[0] = address(this);
-
-        IArrakisMetaVaultPrivate(_vault).whitelistDepositors(
-            depositors
-        );
-
         // call updateVault of manager.
         SetupParams memory params = SetupParams({
             vault: _vault,
@@ -214,52 +203,10 @@ contract SelfPay is
 
     // #region state modifying functions.
 
-    function deposit(
-        uint256 amount0_,
-        uint256 amount1_
-    ) external payable onlyOwner {
-        address _vault = vault;
-        address _token0 = token0;
-        address _token1 = token1;
-
-        // #region effects.
-
-        address module = address(IArrakisMetaVault(_vault).module());
-
-        // #endregion effects.
-
-        // #region interactions.
-
-        // get the tokens and approve.
-        if (amount0_ > 0 && _token0 != NATIVE_COIN) {
-            IERC20(_token0).safeTransferFrom(
-                msg.sender, address(this), amount0_
-            );
-            IERC20(_token0).safeIncreaseAllowance(module, amount0_);
-        }
-
-        if (amount1_ > 0 && _token1 != NATIVE_COIN) {
-            IERC20(_token1).safeTransferFrom(
-                msg.sender, address(this), amount1_
-            );
-            IERC20(_token1).safeIncreaseAllowance(module, amount1_);
-        }
-
-        // call metaVault deposit.
-
-        IArrakisMetaVaultPrivate(_vault).deposit{value: msg.value}(
-            amount0_, amount1_
-        );
-
-        // #endregion interactions.
-
-        emit LogOwnerDeposit(amount0_, amount1_);
-    }
-
     function withdraw(
         uint256 proportion_,
         address receiver_
-    ) external onlyOwner returns(uint256 amount0, uint256 amount1) {
+    ) external onlyOwner returns (uint256 amount0, uint256 amount1) {
         (amount0, amount1) = IArrakisMetaVaultPrivate(
             vault
         ).withdraw(proportion_, receiver_);
@@ -317,16 +264,6 @@ contract SelfPay is
         emit LogSetW3F(_w3f, w3f_);
     }
 
-    function setRouter(address router_) external onlyOwner {
-        address _router = router;
-        if (router_ == address(0)) revert AddressZero();
-        if (router_ == _router) revert SameRouter();
-
-        router = router_;
-
-        emit LogSetW3F(_router, router_);
-    }
-
     function setReceiver(address receiver_) external onlyOwner {
         address _receiver = receiver;
         if (receiver_ == address(0)) revert AddressZero();
@@ -335,40 +272,6 @@ contract SelfPay is
         receiver = receiver_;
 
         emit LogSetW3F(_receiver, receiver_);
-    }
-
-    function callRouter(
-        uint256 amount0_,
-        uint256 amount1_,
-        bytes calldata payload_
-    ) external payable onlyOwner nonReentrant {
-        address _token0 = token0;
-        address _token1 = token1;
-        address _router = router;
-
-        if (payload_.length == 0) revert EmptyCallData();
-
-        if (amount0_ > 0 && _token0 != NATIVE_COIN) {
-            if (_token0 != NATIVE_COIN) {
-                IERC20(_token0).safeTransferFrom(
-                    msg.sender, address(this), amount0_
-                );
-                IERC20(_token0).safeIncreaseAllowance(_router, amount0_);
-            }
-        }
-
-        if (amount1_ > 0 && _token1 != NATIVE_COIN) {
-            IERC20(_token1).safeTransferFrom(
-                msg.sender, address(this), amount1_
-            );
-            IERC20(_token1).safeIncreaseAllowance(_router, amount1_);
-        }
-
-        (bool success,) = _router.call{value: msg.value}(payload_);
-
-        if (!success) revert CallFailed();
-
-        emit LogOwnerCallRouter(payload_, amount0_, amount1_);
     }
 
     function callNFT(bytes calldata payload_)
