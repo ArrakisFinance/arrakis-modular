@@ -259,10 +259,10 @@ contract SelfPay is
     function withdraw(
         uint256 proportion_,
         address receiver_
-    ) external onlyOwner returns(uint256 amount0, uint256 amount1) {
-        (amount0, amount1) = IArrakisMetaVaultPrivate(
-            vault
-        ).withdraw(proportion_, receiver_);
+    ) external onlyOwner returns (uint256 amount0, uint256 amount1) {
+        (amount0, amount1) = IArrakisMetaVaultPrivate(vault).withdraw(
+            proportion_, receiver_
+        );
 
         emit LogOwnerWithdraw(proportion_, amount0, amount1);
     }
@@ -353,7 +353,9 @@ contract SelfPay is
                 IERC20(_token0).safeTransferFrom(
                     msg.sender, address(this), amount0_
                 );
-                IERC20(_token0).safeIncreaseAllowance(_router, amount0_);
+                IERC20(_token0).safeIncreaseAllowance(
+                    _router, amount0_
+                );
             }
         }
 
@@ -404,7 +406,7 @@ contract SelfPay is
 
         IArrakisStandardManager(manager).rebalance(vault, payloads_);
 
-        uint256 gasCost = gas - gasleft() + buffer;
+        uint256 gasCost = gas - gasleft() + (buffer * tx.gasprice);
 
         address module = address(IArrakisMetaVault(_vault).module());
 

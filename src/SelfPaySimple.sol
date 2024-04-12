@@ -2,7 +2,8 @@
 pragma solidity ^0.8.20;
 
 import {
-    ISelfPaySimple, SetupParams
+    ISelfPaySimple,
+    SetupParams
 } from "./interfaces/ISelfPaySimple.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {VaultInfo} from "./structs/SManager.sol";
@@ -207,9 +208,9 @@ contract SelfPaySimple is
         uint256 proportion_,
         address receiver_
     ) external onlyOwner returns (uint256 amount0, uint256 amount1) {
-        (amount0, amount1) = IArrakisMetaVaultPrivate(
-            vault
-        ).withdraw(proportion_, receiver_);
+        (amount0, amount1) = IArrakisMetaVaultPrivate(vault).withdraw(
+            proportion_, receiver_
+        );
 
         emit LogOwnerWithdraw(proportion_, amount0, amount1);
     }

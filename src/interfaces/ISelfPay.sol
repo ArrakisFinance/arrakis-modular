@@ -50,7 +50,10 @@ interface ISelfPay {
     /// @notice function to deposit token0 and token1 into metaVault.
     /// @param amount0_ amount of token0 to deposit.
     /// @param amount1_ amount of token1 to deposit.
-    function deposit(uint256 amount0_, uint256 amount1_) external payable;
+    function deposit(
+        uint256 amount0_,
+        uint256 amount1_
+    ) external payable;
 
     /// @notice function to withdraw token0 and token1 from the metaVault.
     /// @param proportion_ percentage of share to remove.
