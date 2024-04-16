@@ -14,19 +14,18 @@ import {TimeLock} from "../src/TimeLock.sol";
 
 // For Gnosis chain.
 
-address constant vault = 0x55C21FD657ebBD4D91b2051d9e327D8fdE9c415D;
+address constant vault = 0x2b15756E32Af0B47FB1d44DB1F7b71FeB457c5E7;
 address payable constant manager =
     payable(0x9E09D9943B40685e8B78f6DC43069652dd6E6efD);
-address constant timeLock = 0x6Db15200e553bc0Ca146ebD7838502e5d33255cf;
+address constant timeLock = 0xb527cb6AD6A92041fA7bAFe41798F8c46f070a20;
 address constant sotOracleWrapper =
-    0x5C84594d6fC8c4a6faEe0EEDF0B9E49D23243170;
+    0x781a349e66Cf9E909af1EcDEFb75Fc3B87e54D3a;
 
 contract ValantisVaultFive is Script {
     function setUp() public {}
 
     function run() public {
         uint256 privateKey = vm.envUint("PK_TEST");
-
         address account = vm.addr(privateKey);
 
         console.log(account);

@@ -14,14 +14,14 @@ import {TimeLock} from "../src/TimeLock.sol";
 
 // For Gnosis chain.
 
-address constant vault = 0x2b15756E32Af0B47FB1d44DB1F7b71FeB457c5E7;
+address constant vault = 0x55C21FD657ebBD4D91b2051d9e327D8fdE9c415D;
 address payable constant manager =
     payable(0x9E09D9943B40685e8B78f6DC43069652dd6E6efD);
-address constant timeLock = 0xb527cb6AD6A92041fA7bAFe41798F8c46f070a20;
-address constant sotOracleWrapper =
-    0x781a349e66Cf9E909af1EcDEFb75Fc3B87e54D3a;
+address constant timeLock = 0x6Db15200e553bc0Ca146ebD7838502e5d33255cf;
+address constant executor =
+    0xacf11AFFD3ED865FA2Df304eC5048C29597F38F9;
 
-contract ValantisVaultFour is Script {
+contract ValantisVaultSeven is Script {
     function setUp() public {}
 
     function run() public {
@@ -36,16 +36,16 @@ contract ValantisVaultFour is Script {
         (
             ,
             uint256 cooldownPeriod,
-            ,
+            IOracleWrapper oracle,
             uint24 maxDeviation,
-            address executor,
+            ,
             address stratAnnouncer,
             uint24 maxSlippagePIPS,
         ) = ArrakisStandardManager(manager).vaultInfo(vault);
 
         SetupParams memory params = SetupParams({
             vault: vault,
-            oracle: IOracleWrapper(sotOracleWrapper),
+            oracle: oracle,
             maxDeviation: maxDeviation,
             cooldownPeriod: cooldownPeriod,
             executor: executor,
@@ -57,13 +57,11 @@ contract ValantisVaultFour is Script {
             ArrakisStandardManager.updateVaultInfo.selector, params
         );
 
-        TimeLock(payable(timeLock)).schedule(
-            manager, 0, data, bytes32(0), bytes32(0), 1 minutes
+        TimeLock(payable(timeLock)).execute(
+            manager, 0, data, bytes32(0), bytes32(0)
         );
 
-        console.logString(
-            "Valantis Public Vault oracle update scheduled"
-        );
+        console.logString("Valantis Public Vault oracle updated");
         console.logAddress(vault);
 
         vm.stopBroadcast();

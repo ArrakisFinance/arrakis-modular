@@ -26,10 +26,10 @@ import {TimeLock} from "../src/TimeLock.sol";
 
 // For Gnosis chain.
 
-address constant vault = 0x55C21FD657ebBD4D91b2051d9e327D8fdE9c415D;
-address constant timeLock = 0x6Db15200e553bc0Ca146ebD7838502e5d33255cf;
-address constant alm = 0x8D5817DbA8dAfDc57ef7a2Fc22B845f28d496c61;
-address constant oracle = 0x5C84594d6fC8c4a6faEe0EEDF0B9E49D23243170;
+address constant vault = 0x2b15756E32Af0B47FB1d44DB1F7b71FeB457c5E7;
+address constant timeLock = 0xb527cb6AD6A92041fA7bAFe41798F8c46f070a20;
+address constant alm = 0xd82f6EA32Bde6daD6BB35B27CE98406709af43f9;
+address constant oracle = 0x781a349e66Cf9E909af1EcDEFb75Fc3B87e54D3a;
 
 contract ValantisVaultTwo is Script {
     function setUp() public {}
