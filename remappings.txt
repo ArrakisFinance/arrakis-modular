@@ -8,3 +8,4 @@
 forge-std/=lib/forge-std/src/
 @valantis/contracts/=lib/valantis-sot/src/
 @valantis/contracts-test/=lib/valantis-sot/test/
+@gelato/automate/contracts/=lib/automate/contracts/

@@ -9,22 +9,17 @@ interface ISelfPay {
     error AddressZero();
     error CantBeSelfPay();
     error VaultNFTNotTransferedOrApproved();
-    error SameW3F();
-    error SameRouter();
-    error SameReceiver();
+    error SameExecutor();
     error EmptyCallData();
     error CallFailed();
-    error CallerNotW3F();
-    error NotEnoughTokenToPayForRebalance();
+    error OnlyExecutor();
 
     // #endregion errors.
 
     // #region events.
 
-    event LogSetW3F(address oldW3F, address newW3F);
+    event LogSetExecutor(address oldExecutor, address newExecutor);
     event LogSetRouter(address oldRouter, address newRouter);
-    event LogSetReceiver(address oldReceiver, address newReceiver);
-    event LogOwnerDeposit(uint256 amount0, uint256 amount1);
     event LogOwnerWithdraw(
         uint256 proportion, uint256 amount0, uint256 amount1
     );
@@ -34,9 +29,6 @@ interface ISelfPay {
         address[] beacons, bytes[] payloads
     );
     event LogOwnerBlacklistModules(address[] modules);
-    event LogOwnerCallRouter(
-        bytes payload, uint256 amount0, uint256 amount1
-    );
     event LogOwnerCallNFT(bytes payload);
     event LogOwnerUpdateVaultInfo(SetupParams params);
 
@@ -46,14 +38,6 @@ interface ISelfPay {
 
     /// @notice function to initialize selfPay contract.
     function initialize() external;
-
-    /// @notice function to deposit token0 and token1 into metaVault.
-    /// @param amount0_ amount of token0 to deposit.
-    /// @param amount1_ amount of token1 to deposit.
-    function deposit(
-        uint256 amount0_,
-        uint256 amount1_
-    ) external payable;
 
     /// @notice function to withdraw token0 and token1 from the metaVault.
     /// @param proportion_ percentage of share to remove.
@@ -87,30 +71,10 @@ interface ISelfPay {
     /// @param beacons_ array of modules beacons to blacklist.
     function blacklistModules(address[] memory beacons_) external;
 
-    /// @notice function to set the new web3 function address
-    /// whom will call the rebalance function of selfPay.
-    /// @param w3f_ address of new web3 function.
-    function setW3F(address w3f_) external;
-
-    /// @notice function to set the new router interfaces.
-    /// @param router_ address of the new router
-    function setRouter(address router_) external;
-
-    /// @notice function to set the new receiver that will
-    /// get tokens related to gas cost of rebalance.
-    /// @param receiver_ address of the new receiver.
-    function setReceiver(address receiver_) external;
-
-    /// @notice function to call router to use user
-    /// friendly function to deposit/withdraw tokens form vault.
-    /// @param amount0_ amount of token0 to sent to router.
-    /// @param amount1_ amount of token1 to sent to router.
-    /// @param payload_ call data to call router with.
-    function callRouter(
-        uint256 amount0_,
-        uint256 amount1_,
-        bytes memory payload_
-    ) external payable;
+    /// @notice function to set the new executor that will
+    /// call rebalance function.
+    /// @param executor_ address of the new executor.
+    function setExecutor(address executor_) external;
 
     /// @notice function to call palmNFT.
     /// @param payload_ call data to palmNFT with.
@@ -154,19 +118,8 @@ interface ISelfPay {
 
     /// @notice function that return address of the executor of
     /// rebalance action.
-    /// @return w3f address of executor.
-    function w3f() external returns (address);
-
-    /// @notice function that return address of private router
-    /// for using user friendly interface to provide liquidity to
-    /// vault.
-    /// @return router address of the private router.
-    function router() external returns (address);
-
-    /// @notice function that return address of the receiver of
-    /// tokens withdrawal due to gas cost payment.
-    /// @return receiver of gas cost token
-    function receiver() external returns (address);
+    /// @return executor address of executor.
+    function executor() external returns (address);
 
     // #endregion external view functions.
 }

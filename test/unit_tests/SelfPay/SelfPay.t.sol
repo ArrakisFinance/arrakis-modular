@@ -23,41 +23,50 @@ import {ArrakisMetaVaultPrivateMock} from
     "./mocks/ArrakisMetaVaultPrivateMock.sol";
 import {ArrakisStandardManagerMock} from
     "./mocks/ArrakisStandardManagerMock.sol";
-import {OracleWrapperMock} from "./mocks/OracleWrapperMock.sol";
 import {PalmNFTMock} from "./mocks/PalmNFTMock.sol";
-import {ArrakisPrivateVaultRouterMock} from
-    "./mocks/ArrakisPrivateVaultRouterMock.sol";
 import {TokenMock} from "./mocks/TokenMock.sol";
+import {AutomateMock} from "./mocks/AutomateMock.sol";
 
 // #endregion mocks.
 
 contract SelfPayTest is TestWrapper {
     // #region constant.
 
-    address public usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    uint256 public buffer = 10_000;
 
     // #endregion constant.
 
     address public owner;
-    address public w3f;
-    address public receiver;
+    address public executor;
+    address public feeCollector;
+    address public taskCreator;
+    address public gelato;
+
     SelfPay public selfPay;
+    IOracleWrapper public oracle;
 
     ArrakisMetaVaultPrivateMock public vault;
     ArrakisStandardManagerMock public manager;
-    OracleWrapperMock public oracle;
     PalmNFTMock public palmNFT;
-    ArrakisPrivateVaultRouterMock public router;
+    AutomateMock public automate;
 
     address public token0;
     address public token1;
 
     function setUp() public {
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
-        w3f = vm.addr(uint256(keccak256(abi.encode("W3F"))));
-        receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        taskCreator =
+            vm.addr(uint256(keccak256(abi.encode("TaskCreator"))));
+        oracle = IOracleWrapper(
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))))
+        );
+        feeCollector =
+            vm.addr(uint256(keccak256(abi.encode("FeeCollector"))));
+        gelato = 
+            vm.addr(uint256(keccak256(abi.encode("Gelato"))));
+
+        automate = new AutomateMock(feeCollector, weth, gelato);
 
         // #region initialize mocks contracts.
 
@@ -66,7 +75,7 @@ contract SelfPayTest is TestWrapper {
         // #endregion initialize mocks contracts.
 
         token0 = address(new TokenMock("Token 0", "TKNZ"));
-        token1 = usdc;
+        token1 = weth;
 
         vault.setTokens(token0, token1);
 
@@ -74,7 +83,7 @@ contract SelfPayTest is TestWrapper {
 
         // #region create selfPay.
 
-        _createSelfPay(false);
+        _createSelfPay();
 
         // #endregion create selfPay.
     }
@@ -86,27 +95,21 @@ contract SelfPayTest is TestWrapper {
 
         vault = new ArrakisMetaVaultPrivateMock();
         manager = new ArrakisStandardManagerMock();
-        oracle = new OracleWrapperMock();
         palmNFT = new PalmNFTMock();
-        router = new ArrakisPrivateVaultRouterMock();
 
         // #endregion initialize mocks contracts.
     }
 
-    function _createSelfPay(bool oracleIsInversed_) internal {
+    function _createSelfPay() internal {
         selfPay = new SelfPay(
             owner,
             address(vault),
             address(manager),
             address(palmNFT),
-            w3f,
-            address(router),
-            receiver,
-            usdc,
-            address(oracle),
-            oracleIsInversed_,
-            weth,
-            buffer
+            executor,
+            address(automate),
+            taskCreator,
+            weth
         );
     }
 
@@ -119,7 +122,7 @@ contract SelfPayTest is TestWrapper {
 
         vm.expectRevert(ISelfPay.AddressZero.selector);
 
-        _createSelfPay(false);
+        _createSelfPay();
     }
 
     function testConstructorVaultAddressZero() public {
@@ -127,7 +130,7 @@ contract SelfPayTest is TestWrapper {
 
         vm.expectRevert(ISelfPay.AddressZero.selector);
 
-        _createSelfPay(false);
+        _createSelfPay();
     }
 
     function testConstructorManagerAddressZero() public {
@@ -135,7 +138,7 @@ contract SelfPayTest is TestWrapper {
 
         vm.expectRevert(ISelfPay.AddressZero.selector);
 
-        _createSelfPay(false);
+        _createSelfPay();
     }
 
     function testConstructorPalmNFTAddressZero() public {
@@ -143,39 +146,15 @@ contract SelfPayTest is TestWrapper {
 
         vm.expectRevert(ISelfPay.AddressZero.selector);
 
-        _createSelfPay(false);
+        _createSelfPay();
     }
 
-    function testConstructorW3FAddressZero() public {
-        w3f = address(0);
+    function testConstructorExecutorAddressZero() public {
+        executor = address(0);
 
         vm.expectRevert(ISelfPay.AddressZero.selector);
 
-        _createSelfPay(false);
-    }
-
-    function testConstructorRouterAddressZero() public {
-        router = ArrakisPrivateVaultRouterMock(address(0));
-
-        vm.expectRevert(ISelfPay.AddressZero.selector);
-
-        _createSelfPay(false);
-    }
-
-    function testConstructorReceiverAddressZero() public {
-        receiver = address(0);
-
-        vm.expectRevert(ISelfPay.AddressZero.selector);
-
-        _createSelfPay(false);
-    }
-
-    function testConstructorUSDCAddressZero() public {
-        usdc = address(0);
-
-        vm.expectRevert(ISelfPay.AddressZero.selector);
-
-        _createSelfPay(false);
+        _createSelfPay();
     }
 
     function testConstructorWETHAddressZero() public {
@@ -183,7 +162,7 @@ contract SelfPayTest is TestWrapper {
 
         vm.expectRevert(ISelfPay.AddressZero.selector);
 
-        _createSelfPay(false);
+        _createSelfPay();
     }
 
     function testConstructorCanBeSelfPay() public {
@@ -196,7 +175,7 @@ contract SelfPayTest is TestWrapper {
 
         vm.expectRevert(ISelfPay.CantBeSelfPay.selector);
 
-        _createSelfPay(false);
+        _createSelfPay();
     }
 
     // #endregion test constructor.
@@ -255,53 +234,28 @@ contract SelfPayTest is TestWrapper {
 
     // #endregion test initialize.
 
-    // #region test deposit.
-
-    function testDepositOnlyOwner() public {
-        address depositor =
-            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
-
-        uint256 amount0 = 1e18;
-        uint256 amount1 = 3500e6;
-
-        deal(token0, depositor, amount0);
-        deal(token1, depositor, amount1);
-
-        IERC20(token0).approve(address(selfPay), amount0);
-        IERC20(token1).approve(address(selfPay), amount1);
-
-        vm.expectRevert(Ownable.Unauthorized.selector);
-
-        selfPay.deposit(amount0, amount1);
-    }
-
-    function testDeposit() public {
-        address depositor = owner;
-
-        uint256 amount0 = 1e18;
-        uint256 amount1 = 3500e6;
-
-        deal(token0, depositor, amount0);
-        deal(token1, depositor, amount1);
-
-        vm.startPrank(owner);
-        IERC20(token0).approve(address(selfPay), amount0);
-        IERC20(token1).approve(address(selfPay), amount1);
-
-        selfPay.deposit(amount0, amount1);
-        vm.stopPrank();
-    }
-
-    // #endregion test deposit.
-
     // #region test withdraw.
 
     function testWithdrawOnlyOwner() public {
         address receiver =
             vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        address[] memory depositors = new address[](1);
+        depositors[0] = depositor;
+
+        // #region whitelist a depositor.
+
+        vm.prank(owner);
+        selfPay.whitelistDepositors(depositors);
+
+        // #endregion whitelist a depositor.
+
         // #region deposit.
 
-        address depositor = owner;
+        address module = address(vault.module());
 
         uint256 amount0 = 1e18;
         uint256 amount1 = 3500e6;
@@ -311,10 +265,10 @@ contract SelfPayTest is TestWrapper {
 
         vm.startPrank(depositor);
 
-        IERC20(token0).approve(address(selfPay), amount0);
-        IERC20(token1).approve(address(selfPay), amount1);
+        IERC20(token0).approve(module, amount0);
+        IERC20(token1).approve(module, amount1);
 
-        selfPay.deposit(amount0, amount1);
+        vault.deposit(amount0, amount1);
 
         vm.stopPrank();
 
@@ -328,9 +282,23 @@ contract SelfPayTest is TestWrapper {
     function testWithdraw() public {
         address receiver =
             vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        address[] memory depositors = new address[](1);
+        depositors[0] = depositor;
+
+        // #region whitelist a depositor.
+
+        vm.prank(owner);
+        selfPay.whitelistDepositors(depositors);
+
+        // #endregion whitelist a depositor.
+
         // #region deposit.
 
-        address depositor = owner;
+        address module = address(vault.module());
 
         uint256 amount0 = 1e18;
         uint256 amount1 = 3500e6;
@@ -340,16 +308,17 @@ contract SelfPayTest is TestWrapper {
 
         vm.startPrank(depositor);
 
-        IERC20(token0).approve(address(selfPay), amount0);
-        IERC20(token1).approve(address(selfPay), amount1);
+        IERC20(token0).approve(module, amount0);
+        IERC20(token1).approve(module, amount1);
 
-        selfPay.deposit(amount0, amount1);
+        vault.deposit(amount0, amount1);
+
+        vm.stopPrank();
 
         // #endregion deposit.
 
+        vm.prank(owner);
         selfPay.withdraw(BASE, receiver);
-
-        vm.stopPrank();
     }
 
     // #endregion test withdraw.
@@ -480,191 +449,42 @@ contract SelfPayTest is TestWrapper {
 
     // #endregion test blacklistModules.
 
-    // #region test setW3F.
+    // #region test executor.
 
-    function testSetW3fOnlyOwner() public {
-        address w3f = vm.addr(uint256(keccak256(abi.encode("W3F"))));
+    function testSetExecutorOnlyOwner() public {
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
 
         vm.expectRevert(Ownable.Unauthorized.selector);
-        selfPay.setW3F(w3f);
+        selfPay.setExecutor(executor);
     }
 
-    function testSetW3fAddressZero() public {
-        address w3f = address(0);
+    function testSetExecutorAddressZero() public {
+        address executor = address(0);
 
         vm.expectRevert(ISelfPay.AddressZero.selector);
         vm.prank(owner);
-        selfPay.setW3F(w3f);
+        selfPay.setExecutor(executor);
     }
 
-    function testSetW3fSame() public {
-        address w3f = vm.addr(uint256(keccak256(abi.encode("W3F"))));
+    function testSetExecutorSame() public {
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
 
-        vm.expectRevert(ISelfPay.SameW3F.selector);
+        vm.expectRevert(ISelfPay.SameExecutor.selector);
         vm.prank(owner);
-        selfPay.setW3F(w3f);
+        selfPay.setExecutor(executor);
     }
 
-    function testSetW3f() public {
-        address w3f = vm.addr(uint256(keccak256(abi.encode("W3F2"))));
-
-        vm.prank(owner);
-        selfPay.setW3F(w3f);
-    }
-
-    // #endregion test setW3F.
-
-    // #region test setRouter.
-
-    function testSetRouterOnlyOwner() public {
-        address router =
-            vm.addr(uint256(keccak256(abi.encode("Router"))));
-
-        vm.expectRevert(Ownable.Unauthorized.selector);
-        selfPay.setRouter(router);
-    }
-
-    function testSetRouterAddressZero() public {
-        address router = address(0);
-
-        vm.expectRevert(ISelfPay.AddressZero.selector);
-        vm.prank(owner);
-        selfPay.setRouter(router);
-    }
-
-    function testSetRouterSame() public {
-        address router =
-            vm.addr(uint256(keccak256(abi.encode("Router"))));
+    function testSetExecutor() public {
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor2"))));
 
         vm.prank(owner);
-        selfPay.setRouter(router);
-
-        vm.expectRevert(ISelfPay.SameRouter.selector);
-        vm.prank(owner);
-        selfPay.setRouter(router);
+        selfPay.setExecutor(executor);
     }
 
-    function testSetRouter() public {
-        address router =
-            vm.addr(uint256(keccak256(abi.encode("Router2"))));
-
-        vm.prank(owner);
-        selfPay.setRouter(router);
-    }
-
-    // #endregion test setRouter.
-
-    // #region test setReceiver.
-
-    function testSetReceiverOnlyOwner() public {
-        address receiver =
-            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-
-        vm.expectRevert(Ownable.Unauthorized.selector);
-        selfPay.setReceiver(receiver);
-    }
-
-    function testSetReceiverAddressZero() public {
-        address receiver = address(0);
-
-        vm.expectRevert(ISelfPay.AddressZero.selector);
-        vm.prank(owner);
-        selfPay.setReceiver(receiver);
-    }
-
-    function testSetReceiverSame() public {
-        address receiver =
-            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-
-        vm.prank(owner);
-        vm.expectRevert(ISelfPay.SameReceiver.selector);
-        selfPay.setReceiver(receiver);
-    }
-
-    function testSetReceiver() public {
-        address receiver =
-            vm.addr(uint256(keccak256(abi.encode("Receiver2"))));
-
-        vm.prank(owner);
-        selfPay.setReceiver(receiver);
-    }
-
-    // #endregion test setReceiver.
-
-    // #region test callRouter.
-
-    function testCallRouterOnlyOwner() public {
-        address depositor = owner;
-
-        uint256 amount0 = 1e18;
-        uint256 amount1 = 3500e6;
-
-        deal(token0, depositor, amount0);
-        deal(token1, depositor, amount1);
-
-        vm.startPrank(depositor);
-
-        IERC20(token0).approve(address(selfPay), amount0);
-        IERC20(token1).approve(address(selfPay), amount1);
-
-        vm.stopPrank();
-
-        bytes memory payload = abi.encodeWithSelector(
-            ArrakisPrivateVaultRouterMock.test.selector
-        );
-
-        vm.expectRevert(Ownable.Unauthorized.selector);
-        selfPay.callRouter(amount0, amount1, payload);
-    }
-
-    function testCallRouterFailingCall() public {
-        address depositor = owner;
-
-        uint256 amount0 = 1e18;
-        uint256 amount1 = 3500e6;
-
-        deal(token0, depositor, amount0);
-        deal(token1, depositor, amount1);
-
-        vm.startPrank(depositor);
-
-        IERC20(token0).approve(address(selfPay), amount0);
-        IERC20(token1).approve(address(selfPay), amount1);
-
-        bytes memory payload = abi.encodeWithSelector(
-            ArrakisPrivateVaultRouterMock.failTest.selector
-        );
-
-        vm.expectRevert(ISelfPay.CallFailed.selector);
-        selfPay.callRouter(amount0, amount1, payload);
-
-        vm.stopPrank();
-    }
-
-    function testCallRouter() public {
-        address depositor = owner;
-
-        uint256 amount0 = 1e18;
-        uint256 amount1 = 3500e6;
-
-        deal(token0, depositor, amount0);
-        deal(token1, depositor, amount1);
-
-        vm.startPrank(depositor);
-
-        IERC20(token0).approve(address(selfPay), amount0);
-        IERC20(token1).approve(address(selfPay), amount1);
-
-        bytes memory payload = abi.encodeWithSelector(
-            ArrakisPrivateVaultRouterMock.test.selector
-        );
-
-        selfPay.callRouter(amount0, amount1, payload);
-
-        vm.stopPrank();
-    }
-
-    // #endregion test callRouter.
+    // #endregion test setExecutor.
 
     // #region test callNFT.
 

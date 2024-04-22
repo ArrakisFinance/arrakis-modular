@@ -6,13 +6,25 @@ import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {VaultInfo} from "./structs/SManager.sol";
 import {IArrakisStandardManager} from
     "./interfaces/IArrakisStandardManager.sol";
-import {IOracleWrapper} from "./interfaces/IOracleWrapper.sol";
 import {IArrakisMetaVaultPrivate} from
     "./interfaces/IArrakisMetaVaultPrivate.sol";
-import {NATIVE_COIN} from "./constants/CArrakis.sol";
 import {IWETH9} from "./interfaces/IWETH9.sol";
+import {IOracleWrapper} from "./interfaces/IOracleWrapper.sol";
+
+// #region gelato.
+
+import {AutomateReady} from
+    "@gelato/automate/contracts/integrations/AutomateReady.sol";
+
+// #endregion gelato.
+
+// #region solady.
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
+
+// #endregion solady.
+
+// #region openzeppelin.
 
 import {Initializable} from
     "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -28,14 +40,19 @@ import {ReentrancyGuard} from
     "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
+// #endregion openzeppelin.
+
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
+import {console} from "forge-std/console.sol";
+
 contract SelfPay is
-    ISelfPay,
+    AutomateReady,
     Ownable,
     Initializable,
-    IERC721Receiver,
-    ReentrancyGuard
+    ReentrancyGuard,
+    ISelfPay,
+    IERC721Receiver
 {
     using SafeERC20 for IERC20;
     using Address for address payable;
@@ -48,22 +65,13 @@ contract SelfPay is
     address public immutable manager;
     address public immutable nft;
 
-    address public immutable usdc;
     address public immutable weth;
-
-    uint256 public immutable buffer;
-
-    // eth/usdc chainlink oracle.
-    IOracleWrapper public immutable oracle;
-    bool public immutable oracleIsInversed;
 
     // #endregion immutable public properties.
 
     // #region public properties.
 
-    address public w3f;
-    address public router;
-    address public receiver;
+    address public executor;
 
     // #endregion public properties.
 
@@ -72,23 +80,18 @@ contract SelfPay is
         address vault_,
         address manager_,
         address nft_,
-        address w3f_,
-        address router_,
-        address receiver_,
-        address usdc_,
-        address oracle_,
-        bool oracleIsInversed_,
-        address weth_,
-        uint256 buffer_
-    ) {
+        address executor_,
+        address automate_,
+        address taskCreator_,
+        address weth_
+    ) AutomateReady(automate_, taskCreator_) {
         // #region checks.
 
         if (
             owner_ == address(0) || vault_ == address(0)
                 || manager_ == address(0) || nft_ == address(0)
-                || w3f_ == address(0) || router_ == address(0)
-                || receiver_ == address(0) || usdc_ == address(0)
-                || weth_ == address(0)
+                || executor_ == address(0) || automate_ == address(0)
+                || taskCreator_ == address(0) || weth_ == address(0)
         ) revert AddressZero();
 
         // #endregion checks.
@@ -97,22 +100,19 @@ contract SelfPay is
         address _token1 = IArrakisMetaVault(vault_).token1();
 
         bool canBeSelfPay;
-        if (
-            _token0 == NATIVE_COIN || _token0 == usdc_
-                || _token0 == weth_
-        ) {
-            canBeSelfPay = true;
-        }
-        if (
-            _token1 == NATIVE_COIN || _token1 == usdc_
-                || _token1 == weth_
-        ) {
+
+        (, address feeToken) = _getFeeDetails();
+
+        if (_token0 == feeToken || _token1 == feeToken) {
             canBeSelfPay = true;
         }
 
-        if (!canBeSelfPay) {
-            revert CantBeSelfPay();
+        if (feeToken == ETH && (_token0 == weth_ || _token1 == weth_))
+        {
+            canBeSelfPay = true;
         }
+
+        if (!canBeSelfPay) revert CantBeSelfPay();
 
         _initializeOwner(owner_);
         vault = vault_;
@@ -122,19 +122,9 @@ contract SelfPay is
 
         manager = manager_;
         nft = nft_;
-        w3f = w3f_;
-        router = router_;
-        receiver = receiver_;
-        oracle = IOracleWrapper(oracle_);
-        oracleIsInversed = oracleIsInversed_;
-        usdc = usdc_;
+        executor = executor_;
+
         weth = weth_;
-
-        buffer = buffer_;
-
-        emit LogSetW3F(address(0), w3f_);
-        emit LogSetRouter(address(0), router_);
-        emit LogSetReceiver(address(0), receiver_);
     }
 
     function initialize() external initializer {
@@ -148,17 +138,14 @@ contract SelfPay is
         /// is transferred or atleast we have approval.
 
         bool getApproved;
-        address owner;
+        address tokenOwner;
         uint256 tokenId = uint256(uint160(_vault));
 
         if (
-            (owner = IERC721(_nft).ownerOf(uint256(uint160(_vault))))
+            (tokenOwner = IERC721(_nft).ownerOf(tokenId))
                 != address(this)
         ) {
-            if (
-                IERC721(_nft).getApproved(uint256(uint160(_vault)))
-                    == address(this)
-            ) {
+            if (IERC721(_nft).getApproved(tokenId) == address(this)) {
                 getApproved = true;
             } else {
                 revert VaultNFTNotTransferedOrApproved();
@@ -184,17 +171,9 @@ contract SelfPay is
         // get the vault ownership.
         if (getApproved) {
             IERC721(_nft).safeTransferFrom(
-                owner, address(this), uint256(uint160(_vault)), ""
+                tokenOwner, address(this), tokenId, ""
             );
         }
-
-        // add selfPay contract as depositor on the vault.
-        address[] memory depositors = new address[](1);
-        depositors[0] = address(this);
-
-        IArrakisMetaVaultPrivate(_vault).whitelistDepositors(
-            depositors
-        );
 
         // call updateVault of manager.
         SetupParams memory params = SetupParams({
@@ -213,48 +192,6 @@ contract SelfPay is
     }
 
     // #region state modifying functions.
-
-    function deposit(
-        uint256 amount0_,
-        uint256 amount1_
-    ) external payable onlyOwner {
-        address _vault = vault;
-        address _token0 = token0;
-        address _token1 = token1;
-
-        // #region effects.
-
-        address module = address(IArrakisMetaVault(_vault).module());
-
-        // #endregion effects.
-
-        // #region interactions.
-
-        // get the tokens and approve.
-        if (amount0_ > 0 && _token0 != NATIVE_COIN) {
-            IERC20(_token0).safeTransferFrom(
-                msg.sender, address(this), amount0_
-            );
-            IERC20(_token0).safeIncreaseAllowance(module, amount0_);
-        }
-
-        if (amount1_ > 0 && _token1 != NATIVE_COIN) {
-            IERC20(_token1).safeTransferFrom(
-                msg.sender, address(this), amount1_
-            );
-            IERC20(_token1).safeIncreaseAllowance(module, amount1_);
-        }
-
-        // call metaVault deposit.
-
-        IArrakisMetaVaultPrivate(_vault).deposit{value: msg.value}(
-            amount0_, amount1_
-        );
-
-        // #endregion interactions.
-
-        emit LogOwnerDeposit(amount0_, amount1_);
-    }
 
     function withdraw(
         uint256 proportion_,
@@ -307,70 +244,14 @@ contract SelfPay is
         emit LogOwnerBlacklistModules(modules_);
     }
 
-    function setW3F(address w3f_) external onlyOwner {
-        address _w3f = w3f;
-        if (w3f_ == address(0)) revert AddressZero();
-        if (w3f_ == _w3f) revert SameW3F();
+    function setExecutor(address executor_) external onlyOwner {
+        address _executor = executor;
+        if (executor_ == address(0)) revert AddressZero();
+        if (executor_ == _executor) revert SameExecutor();
 
-        w3f = w3f_;
+        executor = executor_;
 
-        emit LogSetW3F(_w3f, w3f_);
-    }
-
-    function setRouter(address router_) external onlyOwner {
-        address _router = router;
-        if (router_ == address(0)) revert AddressZero();
-        if (router_ == _router) revert SameRouter();
-
-        router = router_;
-
-        emit LogSetW3F(_router, router_);
-    }
-
-    function setReceiver(address receiver_) external onlyOwner {
-        address _receiver = receiver;
-        if (receiver_ == address(0)) revert AddressZero();
-        if (receiver_ == _receiver) revert SameReceiver();
-
-        receiver = receiver_;
-
-        emit LogSetW3F(_receiver, receiver_);
-    }
-
-    function callRouter(
-        uint256 amount0_,
-        uint256 amount1_,
-        bytes calldata payload_
-    ) external payable onlyOwner nonReentrant {
-        address _token0 = token0;
-        address _token1 = token1;
-        address _router = router;
-
-        if (payload_.length == 0) revert EmptyCallData();
-
-        if (amount0_ > 0 && _token0 != NATIVE_COIN) {
-            if (_token0 != NATIVE_COIN) {
-                IERC20(_token0).safeTransferFrom(
-                    msg.sender, address(this), amount0_
-                );
-                IERC20(_token0).safeIncreaseAllowance(
-                    _router, amount0_
-                );
-            }
-        }
-
-        if (amount1_ > 0 && _token1 != NATIVE_COIN) {
-            IERC20(_token1).safeTransferFrom(
-                msg.sender, address(this), amount1_
-            );
-            IERC20(_token1).safeIncreaseAllowance(_router, amount1_);
-        }
-
-        (bool success,) = _router.call{value: msg.value}(payload_);
-
-        if (!success) revert CallFailed();
-
-        emit LogOwnerCallRouter(payload_, amount0_, amount1_);
+        emit LogSetExecutor(_executor, executor_);
     }
 
     function callNFT(bytes calldata payload_)
@@ -400,175 +281,87 @@ contract SelfPay is
         external
         nonReentrant
     {
-        uint256 gas = gasleft();
-        address _vault = vault;
-        if (msg.sender != w3f) revert CallerNotW3F();
+        if (msg.sender != executor) revert OnlyExecutor();
+
+        address module = address(IArrakisMetaVault(vault).module());
+        (uint256 fee, address feeToken) = _getFeeDetails();
 
         IArrakisStandardManager(manager).rebalance(vault, payloads_);
 
-        uint256 gasCost = gas - gasleft() + (buffer * tx.gasprice);
-
-        address module = address(IArrakisMetaVault(_vault).module());
-
-        if (token0 == NATIVE_COIN) {
+        if (feeToken == token0) {
             (uint256 amount0, uint256 amount1) =
             IArrakisMetaVaultPrivate(vault).withdraw(
                 1e18, address(this)
             );
 
-            if (gasCost > amount0) {
-                revert NotEnoughTokenToPayForRebalance();
-            }
+            _transfer(fee, feeToken);
 
-            amount0 = amount0 - gasCost;
-
-            payable(w3f).sendValue(gasCost);
+            amount0 = amount0 - fee;
 
             IERC20(token1).safeIncreaseAllowance(module, amount1);
 
-            IArrakisMetaVaultPrivate(vault).deposit{value: amount0}(
-                amount0, amount1
-            );
+            if (feeToken == ETH) {
+                IArrakisMetaVaultPrivate(vault).deposit{
+                    value: amount0
+                }(amount0, amount1);
+            } else {
+                IERC20(token0).safeIncreaseAllowance(module, amount0);
+
+                IArrakisMetaVaultPrivate(vault).deposit(
+                    amount0, amount1
+                );
+            }
 
             return;
         }
-        if (token0 == weth) {
+
+        if (feeToken == token1) {
             (uint256 amount0, uint256 amount1) =
-            IArrakisMetaVaultPrivate(_vault).withdraw(
+            IArrakisMetaVaultPrivate(vault).withdraw(
                 1e18, address(this)
             );
 
-            if (gasCost > amount0) {
-                revert NotEnoughTokenToPayForRebalance();
+            _transfer(fee, feeToken);
+
+            amount1 = amount1 - fee;
+
+            IERC20(token0).safeIncreaseAllowance(module, amount0);
+
+            if (feeToken == ETH) {
+                IArrakisMetaVaultPrivate(vault).deposit{
+                    value: amount1
+                }(amount0, amount1);
+            } else {
+                IERC20(token1).safeIncreaseAllowance(module, amount1);
+
+                IArrakisMetaVaultPrivate(vault).deposit(
+                    amount0, amount1
+                );
             }
 
-            amount0 = amount0 - gasCost;
+            return;
+        }
 
-            IWETH9(weth).withdraw(gasCost);
+        if (feeToken == ETH) {
+            (uint256 amount0, uint256 amount1) =
+            IArrakisMetaVaultPrivate(vault).withdraw(
+                1e18, address(this)
+            );
 
-            payable(w3f).sendValue(gasCost);
+            if (token0 == weth) {
+                amount0 = amount0 - fee;
+            } else {
+                amount1 = amount1 - fee;
+            }
+
+            IWETH9(weth).withdraw(fee);
+
+            _transfer(fee, feeToken);
 
             IERC20(token0).safeIncreaseAllowance(module, amount0);
             IERC20(token1).safeIncreaseAllowance(module, amount1);
-
-            IArrakisMetaVaultPrivate(_vault).deposit(amount0, amount1);
-
-            return;
-        }
-
-        if (token1 == NATIVE_COIN) {
-            (uint256 amount0, uint256 amount1) =
-            IArrakisMetaVaultPrivate(vault).withdraw(
-                1e18, address(this)
-            );
-
-            if (gasCost > amount1) {
-                revert NotEnoughTokenToPayForRebalance();
-            }
-
-            amount1 = amount1 - gasCost;
-
-            payable(w3f).sendValue(gasCost);
-
-            IERC20(token0).safeIncreaseAllowance(module, amount0);
-
-            IArrakisMetaVaultPrivate(vault).deposit{value: amount1}(
-                amount0, amount1
-            );
-
-            return;
-        }
-        if (token1 == weth) {
-            (uint256 amount0, uint256 amount1) =
-            IArrakisMetaVaultPrivate(vault).withdraw(
-                1e18, address(this)
-            );
-
-            if (gasCost > amount1) {
-                revert NotEnoughTokenToPayForRebalance();
-            }
-
-            amount1 = amount1 - gasCost;
-
-            IWETH9(weth).withdraw(gasCost);
-
-            payable(w3f).sendValue(gasCost);
 
             IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
-
-            return;
-        }
-
-        if (token0 == usdc) {
-            (uint256 amount0, uint256 amount1) =
-            IArrakisMetaVaultPrivate(vault).withdraw(
-                1e18, address(this)
-            );
-
-            uint256 amount0InEth = oracleIsInversed
-                ? FullMath.mulDiv(amount0 * 1e18, oracle.getPrice1(), 1e6)
-                : FullMath.mulDiv(amount0 * 1e18, oracle.getPrice0(), 1e6);
-
-            if (gasCost > amount0InEth) {
-                revert NotEnoughTokenToPayForRebalance();
-            }
-
-            amount0InEth = amount0InEth - gasCost;
-
-            uint256 amountToSend = oracleIsInversed
-                ? FullMath.mulDiv(
-                    amount0InEth * 1e6, oracle.getPrice0(), 1e18
-                )
-                : FullMath.mulDiv(
-                    amount0InEth * 1e6, oracle.getPrice1(), 1e18
-                );
-
-            IERC20(token0).safeTransfer(w3f, amountToSend);
-            IERC20(token0).safeIncreaseAllowance(
-                module, amount0 - amountToSend
-            );
-            IERC20(token1).safeIncreaseAllowance(module, amount1);
-
-            IArrakisMetaVaultPrivate(vault).deposit(
-                amount0 - amountToSend, amount1
-            );
-
-            return;
-        }
-
-        if (token1 == usdc) {
-            (uint256 amount0, uint256 amount1) =
-            IArrakisMetaVaultPrivate(vault).withdraw(
-                1e18, address(this)
-            );
-
-            uint256 amount1InEth = oracleIsInversed
-                ? FullMath.mulDiv(amount1 * 1e18, oracle.getPrice1(), 1e6)
-                : FullMath.mulDiv(amount1 * 1e18, oracle.getPrice0(), 1e6);
-
-            if (gasCost > amount1InEth) {
-                revert NotEnoughTokenToPayForRebalance();
-            }
-
-            amount1InEth = amount1InEth - gasCost;
-
-            uint256 amountToSend = oracleIsInversed
-                ? FullMath.mulDiv(
-                    amount1InEth * 1e6, oracle.getPrice0(), 1e18
-                )
-                : FullMath.mulDiv(
-                    amount1InEth * 1e6, oracle.getPrice1(), 1e18
-                );
-
-            IERC20(token1).safeTransfer(w3f, amountToSend);
-            IERC20(token1).safeIncreaseAllowance(
-                module, amount1 - amountToSend
-            );
-            IERC20(token0).safeIncreaseAllowance(module, amount0);
-
-            IArrakisMetaVaultPrivate(vault).deposit(
-                amount0, amount1 - amountToSend
-            );
 
             return;
         }

@@ -19,3 +19,6 @@
 [submodule "lib/valantis-core"]
 	path = lib/valantis-sot
 	url = https://github.com/ValantisLabs/valantis-core
+[submodule "lib/automate"]
+	path = lib/automate
+	url = https://github.com/gelatodigital/automate
