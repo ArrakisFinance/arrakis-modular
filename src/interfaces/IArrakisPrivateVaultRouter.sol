@@ -13,18 +13,11 @@ interface IArrakisPrivateVaultRouter {
 
     error AddressZero();
     error NotEnoughNativeTokenSent();
-    error NoNativeTokenAndValueNotZero();
     error OnlyPrivateVault();
     error OnlyDepositor();
     error RouterIsNotDepositor();
     error EmptyAmounts();
-    error NothingToMint();
-    error NothingToBurn();
-    error BelowMinAmounts();
-    error SwapCallFailed();
-    error ReceivedBelowMinimum();
     error LengthMismatch();
-    error NoNativeToken();
     error Deposit0();
     error Deposit1();
     error MsgValueZero();
@@ -73,18 +66,13 @@ interface IArrakisPrivateVaultRouter {
     function swapAndAddLiquidity(SwapAndAddData memory params_)
         external
         payable
-        returns (
-            uint256 amount0Diff,
-            uint256 amount1Diff
-        );
+        returns (uint256 amount0Diff, uint256 amount1Diff);
 
     /// @notice addLiquidityPermit2 adds liquidity to public vault of interest (mints LP tokens)
     /// @param params_ AddLiquidityPermit2Data struct containing data for adding liquidity
     function addLiquidityPermit2(
         AddLiquidityPermit2Data memory params_
-    )
-        external
-        payable;
+    ) external payable;
 
     /// @notice swapAndAddLiquidityPermit2 transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddPermit2Data struct containing data for swap
@@ -95,10 +83,7 @@ interface IArrakisPrivateVaultRouter {
     )
         external
         payable
-        returns (
-            uint256 amount0Diff,
-            uint256 amount1Diff
-        );
+        returns (uint256 amount0Diff, uint256 amount1Diff);
 
     /// @notice wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of iPnterest (mints L tokens)
     /// @param params_ AddLiquidityData struct containing data for adding liquidity
@@ -113,18 +98,13 @@ interface IArrakisPrivateVaultRouter {
     function wrapAndSwapAndAddLiquidity(SwapAndAddData memory params_)
         external
         payable
-        returns (
-            uint256 amount0Diff,
-            uint256 amount1Diff
-        );
+        returns (uint256 amount0Diff, uint256 amount1Diff);
 
     /// @notice wrapAndAddLiquidityPermit2 wrap eth and adds liquidity to public vault of interest (mints LP tokens)
     /// @param params_ AddLiquidityPermit2Data struct containing data for adding liquidity
     function wrapAndAddLiquidityPermit2(
         AddLiquidityPermit2Data memory params_
-    )
-        external
-        payable;
+    ) external payable;
 
     /// @notice wrapAndSwapAndAddLiquidityPermit2 wrap eth and transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddPermit2Data struct containing data for swap
@@ -135,10 +115,7 @@ interface IArrakisPrivateVaultRouter {
     )
         external
         payable
-        returns (
-            uint256 amount0Diff,
-            uint256 amount1Diff
-        );
+        returns (uint256 amount0Diff, uint256 amount1Diff);
 
     // #endregion functions.
 }

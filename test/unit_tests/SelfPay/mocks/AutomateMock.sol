@@ -27,9 +27,7 @@ contract AutomateMock is IAutomate {
         bytes calldata,
         ModuleData calldata,
         address
-    ) external returns (bytes32) {
-
-    }
+    ) external returns (bytes32) {}
 
     function cancelTask(bytes32) external {}
 

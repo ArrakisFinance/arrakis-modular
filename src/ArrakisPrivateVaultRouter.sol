@@ -61,30 +61,33 @@ contract ArrakisPrivateVaultRouter is
     // #region modifiers.
 
     modifier onlyPrivateVault(address vault_) {
-        if (!factory.isPrivateVault(vault_)) revert OnlyPrivateVault();
+        if (!factory.isPrivateVault(vault_)) {
+            revert OnlyPrivateVault();
+        }
         _;
     }
 
     modifier onlyDepositor(address vault_) {
-        address[] memory depositors = IArrakisMetaVaultPrivate(vault_).depositors();
+        address[] memory depositors =
+            IArrakisMetaVaultPrivate(vault_).depositors();
 
         bool isDepositor;
         bool routerIsDepositor;
         uint256 length = depositors.length;
-        for(uint256 i; i<length; i++) {
-            if(depositors[i] == msg.sender) {
+        for (uint256 i; i < length; i++) {
+            if (depositors[i] == msg.sender) {
                 isDepositor = true;
                 continue;
             }
 
-            if(depositors[i] == address(this)) {
+            if (depositors[i] == address(this)) {
                 routerIsDepositor = true;
                 continue;
             }
         }
 
-        if(!isDepositor) revert OnlyDepositor();
-        if(!routerIsDepositor) revert RouterIsNotDepositor();
+        if (!isDepositor) revert OnlyDepositor();
+        if (!routerIsDepositor) revert RouterIsNotDepositor();
         _;
     }
 
@@ -152,7 +155,6 @@ contract ArrakisPrivateVaultRouter is
 
         address token0 = IArrakisMetaVault(params_.vault).token0();
         address token1 = IArrakisMetaVault(params_.vault).token1();
-
         // #endregion checks.
 
         // #region interactions.
@@ -178,10 +180,17 @@ contract ArrakisPrivateVaultRouter is
         );
 
         if (msg.value > 0) {
-            if (token0 == nativeToken && msg.value > params_.amount0) {
-                payable(msg.sender).sendValue(msg.value - params_.amount0);
-            } else if (token1 == nativeToken && msg.value > params_.amount1) {
-                payable(msg.sender).sendValue(msg.value - params_.amount1);
+            if (token0 == nativeToken && msg.value > params_.amount0)
+            {
+                payable(msg.sender).sendValue(
+                    msg.value - params_.amount0
+                );
+            } else if (
+                token1 == nativeToken && msg.value > params_.amount1
+            ) {
+                payable(msg.sender).sendValue(
+                    msg.value - params_.amount1
+                );
             }
         }
 
@@ -199,10 +208,7 @@ contract ArrakisPrivateVaultRouter is
         whenNotPaused
         onlyPrivateVault(params_.addData.vault)
         onlyDepositor(params_.addData.vault)
-        returns (
-            uint256 amount0Diff,
-            uint256 amount1Diff
-        )
+        returns (uint256 amount0Diff, uint256 amount1Diff)
     {
         // #region checks.
 
@@ -281,7 +287,11 @@ contract ArrakisPrivateVaultRouter is
         // #endregion checks.
 
         _permit2AddLengthOneOrTwo(
-            params_, token0, token1, params_.addData.amount0, params_.addData.amount1
+            params_,
+            token0,
+            token1,
+            params_.addData.amount0,
+            params_.addData.amount1
         );
 
         _addLiquidity(
@@ -306,10 +316,7 @@ contract ArrakisPrivateVaultRouter is
         whenNotPaused
         onlyPrivateVault(params_.swapAndAddData.addData.vault)
         onlyDepositor(params_.swapAndAddData.addData.vault)
-        returns (
-            uint256 amount0Diff,
-            uint256 amount1Diff
-        )
+        returns (uint256 amount0Diff, uint256 amount1Diff)
     {
         if (
             params_.swapAndAddData.addData.amount0 == 0
@@ -327,7 +334,7 @@ contract ArrakisPrivateVaultRouter is
 
         _permit2SwapAndAddLengthOneOrTwo(params_, token0, token1);
 
-        (amount0Diff , amount1Diff) =
+        (amount0Diff, amount1Diff) =
         _swapAndAddLiquiditySendBackLeftOver(
             params_.swapAndAddData, token0, token1
         );
@@ -395,7 +402,9 @@ contract ArrakisPrivateVaultRouter is
         if (token0 == address(weth) && msg.value > params_.amount0) {
             weth.withdraw(msg.value - params_.amount0);
             payable(msg.sender).sendValue(msg.value - params_.amount0);
-        } else if (token1 == address(weth) && msg.value > params_.amount1) {
+        } else if (
+            token1 == address(weth) && msg.value > params_.amount1
+        ) {
             weth.withdraw(msg.value - params_.amount1);
             payable(msg.sender).sendValue(msg.value - params_.amount1);
         }
@@ -414,10 +423,7 @@ contract ArrakisPrivateVaultRouter is
         whenNotPaused
         onlyPrivateVault(params_.addData.vault)
         onlyDepositor(params_.addData.vault)
-        returns (
-            uint256 amount0Diff,
-            uint256 amount1Diff
-        )
+        returns (uint256 amount0Diff, uint256 amount1Diff)
     {
         if (msg.value == 0) {
             revert MsgValueZero();
@@ -456,9 +462,7 @@ contract ArrakisPrivateVaultRouter is
         if (token0 != address(weth)) {
             if (params_.addData.amount0 > 0) {
                 IERC20(token0).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    params_.addData.amount0
+                    msg.sender, address(this), params_.addData.amount0
                 );
             }
         } else if (params_.addData.amount0 != msg.value) {
@@ -467,9 +471,7 @@ contract ArrakisPrivateVaultRouter is
         if (token1 != address(weth)) {
             if (params_.addData.amount1 > 0) {
                 IERC20(token1).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    params_.addData.amount1
+                    msg.sender, address(this), params_.addData.amount1
                 );
             }
         } else if (params_.addData.amount1 != msg.value) {
@@ -477,10 +479,8 @@ contract ArrakisPrivateVaultRouter is
         }
 
         // #endregion interactions.
-        (
-            amount0Diff,
-            amount1Diff
-        ) = _swapAndAddLiquidity(params_, token0, token1); 
+        (amount0Diff, amount1Diff) =
+            _swapAndAddLiquidity(params_, token0, token1);
     }
 
     /// @notice wrapAndAddLiquidityPermit2 wrap eth and adds liquidity to public vault of interest (mints LP tokens)
@@ -527,7 +527,11 @@ contract ArrakisPrivateVaultRouter is
         // #endregion checks.
 
         _permit2AddLengthOne(
-            params_, token0, token1, params_.addData.amount0, params_.addData.amount1
+            params_,
+            token0,
+            token1,
+            params_.addData.amount0,
+            params_.addData.amount1
         );
 
         _addLiquidity(
@@ -538,12 +542,22 @@ contract ArrakisPrivateVaultRouter is
             token1
         );
 
-        if (token0 == address(weth) && msg.value > params_.addData.amount0) {
+        if (
+            token0 == address(weth)
+                && msg.value > params_.addData.amount0
+        ) {
             weth.withdraw(msg.value - params_.addData.amount0);
-            payable(msg.sender).sendValue(msg.value - params_.addData.amount0);
-        } else if (token1 == address(weth) && msg.value > params_.addData.amount1) {
+            payable(msg.sender).sendValue(
+                msg.value - params_.addData.amount0
+            );
+        } else if (
+            token1 == address(weth)
+                && msg.value > params_.addData.amount1
+        ) {
             weth.withdraw(msg.value - params_.addData.amount1);
-            payable(msg.sender).sendValue(msg.value - params_.addData.amount1);
+            payable(msg.sender).sendValue(
+                msg.value - params_.addData.amount1
+            );
         }
     }
 
@@ -560,10 +574,7 @@ contract ArrakisPrivateVaultRouter is
         whenNotPaused
         onlyPrivateVault(params_.swapAndAddData.addData.vault)
         onlyDepositor(params_.swapAndAddData.addData.vault)
-        returns (
-            uint256 amount0Diff,
-            uint256 amount1Diff
-        )
+        returns (uint256 amount0Diff, uint256 amount1Diff)
     {
         if (msg.value == 0) {
             revert MsgValueZero();
@@ -610,10 +621,7 @@ contract ArrakisPrivateVaultRouter is
 
         _permit2SwapAndAddLengthOne(params_, token0, token1);
 
-        (
-            amount0Diff,
-            amount1Diff
-        ) = _swapAndAddLiquidity(
+        (amount0Diff, amount1Diff) = _swapAndAddLiquidity(
             params_.swapAndAddData, token0, token1
         );
     }
@@ -649,7 +657,9 @@ contract ArrakisPrivateVaultRouter is
             balance1 = address(this).balance;
         }
 
-        IArrakisMetaVaultPrivate(vault_).deposit{value: valueToSend}(amount0_, amount1_);
+        IArrakisMetaVaultPrivate(vault_).deposit{value: valueToSend}(
+            amount0_, amount1_
+        );
 
         // #region assertion check to verify if vault exactly what expected.
         // NOTE: check rebase edge case?
@@ -686,13 +696,7 @@ contract ArrakisPrivateVaultRouter is
         SwapAndAddData memory params_,
         address token0_,
         address token1_
-    )
-        internal
-        returns (
-            uint256 amount0Diff,
-            uint256 amount1Diff
-        )
-    {
+    ) internal returns (uint256 amount0Diff, uint256 amount1Diff) {
         uint256 valueToSend;
         if (params_.swapData.zeroForOne) {
             if (token0_ != nativeToken) {
@@ -742,17 +746,9 @@ contract ArrakisPrivateVaultRouter is
         SwapAndAddData memory params_,
         address token0_,
         address token1_
-    )
-        internal
-        returns (
-            uint256 amount0Diff,
-            uint256 amount1Diff
-        )
-    {
-        (
-            amount0Diff,
-            amount1Diff
-        ) = _swapAndAddLiquidity(params_, token0_, token1_);
+    ) internal returns (uint256 amount0Diff, uint256 amount1Diff) {
+        (amount0Diff, amount1Diff) =
+            _swapAndAddLiquidity(params_, token0_, token1_);
     }
 
     function _permit2AddLengthOne(

@@ -7,17 +7,17 @@ import {EnumerableSet} from
 contract ArrakisMetaVaultFactoryMock {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    EnumerableSet.AddressSet internal publicVaults;
+    EnumerableSet.AddressSet internal privateVaults;
 
-    function addPublicVault(address publicVault_) external {
-        publicVaults.add(publicVault_);
+    function addPrivateVault(address privateVault_) external {
+        privateVaults.add(privateVault_);
     }
 
-    function isPublicVault(address vault_)
+    function isPrivateVault(address vault_)
         external
         view
         returns (bool)
     {
-        return publicVaults.contains(vault_);
+        return privateVaults.contains(vault_);
     }
 }

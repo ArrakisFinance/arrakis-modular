@@ -284,9 +284,10 @@ contract SelfPay is
         if (msg.sender != executor) revert OnlyExecutor();
 
         address module = address(IArrakisMetaVault(vault).module());
-        (uint256 fee, address feeToken) = _getFeeDetails();
 
         IArrakisStandardManager(manager).rebalance(vault, payloads_);
+
+        (uint256 fee, address feeToken) = _getFeeDetails();
 
         if (feeToken == token0) {
             (uint256 amount0, uint256 amount1) =

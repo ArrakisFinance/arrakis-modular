@@ -63,8 +63,7 @@ contract SelfPayTest is TestWrapper {
         );
         feeCollector =
             vm.addr(uint256(keccak256(abi.encode("FeeCollector"))));
-        gelato = 
-            vm.addr(uint256(keccak256(abi.encode("Gelato"))));
+        gelato = vm.addr(uint256(keccak256(abi.encode("Gelato"))));
 
         automate = new AutomateMock(feeCollector, weth, gelato);
 
