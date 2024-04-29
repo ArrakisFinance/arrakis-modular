@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {ArrakisPrivateVaultMock, NATIVE_COIN} from "./ArrakisPrivateVaultMock.sol";
+import {
+    ArrakisPrivateVaultMock,
+    NATIVE_COIN
+} from "./ArrakisPrivateVaultMock.sol";
 
 contract ArrakisPrivateVaultMockBuggy is ArrakisPrivateVaultMock {
     function deposit(
@@ -10,7 +13,7 @@ contract ArrakisPrivateVaultMockBuggy is ArrakisPrivateVaultMock {
     ) external payable override {
         amount0_ = amount0_ - 2;
         if (address(token0) == NATIVE_COIN) {
-            require(amount0_ == msg.value);
+            payable(msg.sender).transfer(2);
         } else {
             token0.transferFrom(msg.sender, address(this), amount0_);
         }

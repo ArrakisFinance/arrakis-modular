@@ -149,12 +149,14 @@ contract ArrakisPrivateVaultRouter is
         onlyDepositor(params_.vault)
     {
         // #region checks.
+
         if (params_.amount0 == 0 && params_.amount1 == 0) {
             revert EmptyAmounts();
         }
 
         address token0 = IArrakisMetaVault(params_.vault).token0();
         address token1 = IArrakisMetaVault(params_.vault).token1();
+
         // #endregion checks.
 
         // #region interactions.

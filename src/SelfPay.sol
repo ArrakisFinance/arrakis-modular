@@ -186,6 +186,17 @@ contract SelfPay is
             maxSlippagePIPS: maxSlippagePIPS
         });
 
+        // #region whitelist as depositor.
+
+        address[] memory depositors = new address[](1);
+        depositors[0] = address(this);
+
+        IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+            depositors
+        );
+
+        // #endregion whitelist as depositor.
+
         IArrakisStandardManager(_manager).updateVaultInfo(params);
 
         // #endregion interactions.
@@ -285,8 +296,6 @@ contract SelfPay is
 
         address module = address(IArrakisMetaVault(vault).module());
 
-        IArrakisStandardManager(manager).rebalance(vault, payloads_);
-
         (uint256 fee, address feeToken) = _getFeeDetails();
 
         if (feeToken == token0) {
@@ -366,6 +375,8 @@ contract SelfPay is
 
             return;
         }
+
+        IArrakisStandardManager(manager).rebalance(vault, payloads_);
     }
 
     receive() external payable {}

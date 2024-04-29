@@ -33,7 +33,7 @@ contract ArrakisPrivateVaultMock {
 
     // #region view functions.
 
-    function depositors() external view returns(address[] memory) {
+    function depositors() external view returns (address[] memory) {
         return _depositors.values();
     }
 
