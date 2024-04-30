@@ -1595,7 +1595,9 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
 
     // #region test swapAndAddLiquidityPermit2.
 
-    function testSwapAndAddLiquidityPermit2OnlyPrivateVault() public {
+    function testSwapAndAddLiquidityPermit2OnlyPrivateVault()
+        public
+    {
         // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
@@ -1691,7 +1693,9 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
         router.swapAndAddLiquidityPermit2(params);
     }
 
-    function testSwapAndAddLiquidityPermit2OnlyRouterAsDepositor() public {
+    function testSwapAndAddLiquidityPermit2OnlyRouterAsDepositor()
+        public
+    {
         // #region create private vault.
 
         ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
@@ -2122,7 +2126,7 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
 
         vault.addDepositor(address(this));
         vault.addDepositor(address(router));
-        
+
         // #endregion add depositor.
 
         uint256 wethAmountToWrapAndAdd = 1e18;
@@ -2178,7 +2182,9 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
         });
 
         vm.expectRevert(
-            IArrakisPrivateVaultRouter.NativeTokenNotSupported.selector
+            IArrakisPrivateVaultRouter
+                .NativeTokenNotSupported
+                .selector
         );
 
         router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(
@@ -2220,7 +2226,9 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
         });
 
         vm.expectRevert(
-            IArrakisPrivateVaultRouter.NativeTokenNotSupported.selector
+            IArrakisPrivateVaultRouter
+                .NativeTokenNotSupported
+                .selector
         );
 
         router.wrapAndAddLiquidity{value: wethAmountToWrapAndAdd}(
@@ -2559,7 +2567,9 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
 
     // #region test wrapAndSwapAndAddLiquidity.
 
-    function testWethAndSwapAndAddLiquidityOnlyPrivateVault() public {
+    function testWethAndSwapAndAddLiquidityOnlyPrivateVault()
+        public
+    {
         // #region create public vault.
 
         ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
@@ -2626,7 +2636,9 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
         router.wrapAndSwapAndAddLiquidity(params);
     }
 
-    function testWethAndSwapAndAddLiquidityOnlyRouterDepositor() public {
+    function testWethAndSwapAndAddLiquidityOnlyRouterDepositor()
+        public
+    {
         // #region create private vault.
 
         ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
@@ -2805,7 +2817,9 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
             SwapAndAddData({swapData: swapData, addData: addData});
 
         vm.expectRevert(
-            IArrakisPrivateVaultRouter.NativeTokenNotSupported.selector
+            IArrakisPrivateVaultRouter
+                .NativeTokenNotSupported
+                .selector
         );
 
         router.wrapAndSwapAndAddLiquidity{
@@ -2858,7 +2872,9 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
             SwapAndAddData({swapData: swapData, addData: addData});
 
         vm.expectRevert(
-            IArrakisPrivateVaultRouter.NativeTokenNotSupported.selector
+            IArrakisPrivateVaultRouter
+                .NativeTokenNotSupported
+                .selector
         );
 
         router.wrapAndSwapAndAddLiquidity{
@@ -3536,7 +3552,9 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
         });
 
         vm.expectRevert(
-            IArrakisPrivateVaultRouter.NativeTokenNotSupported.selector
+            IArrakisPrivateVaultRouter
+                .NativeTokenNotSupported
+                .selector
         );
 
         router.wrapAndAddLiquidityPermit2{
@@ -3597,7 +3615,9 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
         });
 
         vm.expectRevert(
-            IArrakisPrivateVaultRouter.NativeTokenNotSupported.selector
+            IArrakisPrivateVaultRouter
+                .NativeTokenNotSupported
+                .selector
         );
 
         router.wrapAndAddLiquidityPermit2{
@@ -4350,7 +4370,9 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
         });
 
         vm.expectRevert(
-            IArrakisPrivateVaultRouter.NativeTokenNotSupported.selector
+            IArrakisPrivateVaultRouter
+                .NativeTokenNotSupported
+                .selector
         );
 
         router.wrapAndSwapAndAddLiquidityPermit2{
@@ -4420,7 +4442,9 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
         });
 
         vm.expectRevert(
-            IArrakisPrivateVaultRouter.NativeTokenNotSupported.selector
+            IArrakisPrivateVaultRouter
+                .NativeTokenNotSupported
+                .selector
         );
 
         router.wrapAndSwapAndAddLiquidityPermit2{
@@ -5034,8 +5058,7 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
 
     // #endregion test wrapAndSwapAndAddLiquidityPermit2.
 
-
-    receive() payable external {}
+    receive() external payable {}
 
     // #region swap mock functions.
 
@@ -5064,7 +5087,7 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
         amount0Diff = 1e18;
         amount1Diff = 2000e6;
         IERC20(WETH).transferFrom(msg.sender, address(this), 1e18);
-        deal(USDC,address(swapExecutor), 2000e6);
+        deal(USDC, address(swapExecutor), 2000e6);
     }
 
     function swap2()

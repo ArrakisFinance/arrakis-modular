@@ -1,20 +1,34 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {UnderlyingPayload, ComputeFeesPayload, PositionUnderlying, GetFeesPayload, RangeData} from "../structs/SUniswapV4.sol";
+import {
+    UnderlyingPayload,
+    ComputeFeesPayload,
+    PositionUnderlying,
+    GetFeesPayload,
+    RangeData
+} from "../structs/SUniswapV4.sol";
 import {PIPS} from "../constants/CArrakis.sol";
 
-import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {IPoolManager} from
+    "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
-import {FixedPoint128} from "@uniswap/v4-core/src/libraries/FixedPoint128.sol";
-import {SqrtPriceMath} from "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
-import {PoolIdLibrary, PoolId} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {FixedPoint128} from
+    "@uniswap/v4-core/src/libraries/FixedPoint128.sol";
+import {SqrtPriceMath} from
+    "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
+import {
+    PoolIdLibrary,
+    PoolId
+} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
-import {LiquidityAmounts} from "@uniswap/v4-periphery/contracts/libraries/LiquidityAmounts.sol";
+import {LiquidityAmounts} from
+    "@uniswap/v4-periphery/contracts/libraries/LiquidityAmounts.sol";
 
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 library UnderlyingV4 {
@@ -28,19 +42,15 @@ library UnderlyingV4 {
         uint256 fee1;
         for (uint256 i; i < underlyingPayload_.ranges.length; i++) {
             {
-                (
-                    uint256 a0,
-                    uint256 a1,
-                    uint256 f0,
-                    uint256 f1
-                ) = underlyingMint(
-                        RangeData({
-                            self: underlyingPayload_.self,
-                            range: underlyingPayload_.ranges[i],
-                            poolManager: underlyingPayload_.poolManager
-                        }),
-                        proportion_
-                    );
+                (uint256 a0, uint256 a1, uint256 f0, uint256 f1) =
+                underlyingMint(
+                    RangeData({
+                        self: underlyingPayload_.self,
+                        range: underlyingPayload_.ranges[i],
+                        poolManager: underlyingPayload_.poolManager
+                    }),
+                    proportion_
+                );
                 amount0 += a0;
                 amount1 += a1;
                 fee0 += f0;
@@ -67,22 +77,22 @@ library UnderlyingV4 {
 
         amount0 += FullMath.mulDivRoundingUp(
             proportion_,
-            fee0 +
-                IERC20(underlyingPayload_.token0).balanceOf(
+            fee0
+                + IERC20(underlyingPayload_.token0).balanceOf(
                     underlyingPayload_.self
-                ) +
-                IERC20(underlyingPayload_.token0).balanceOf(metaVault_) +
-                leftOver0,
+                )
+                + IERC20(underlyingPayload_.token0).balanceOf(metaVault_)
+                + leftOver0,
             PIPS
         );
         amount1 += FullMath.mulDivRoundingUp(
             proportion_,
-            fee1 +
-                IERC20(underlyingPayload_.token1).balanceOf(
+            fee1
+                + IERC20(underlyingPayload_.token1).balanceOf(
                     underlyingPayload_.self
-                ) +
-                IERC20(underlyingPayload_.token1).balanceOf(metaVault_) +
-                leftOver1,
+                )
+                + IERC20(underlyingPayload_.token1).balanceOf(metaVault_)
+                + leftOver1,
             PIPS
         );
     }
@@ -93,7 +103,12 @@ library UnderlyingV4 {
     )
         public
         view
-        returns (uint256 amount0, uint256 amount1, uint256 fee0, uint256 fee1)
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 fee0,
+            uint256 fee1
+        )
     {
         return _totalUnderlyingWithFees(underlyingPayload_, 0);
     }
@@ -104,9 +119,16 @@ library UnderlyingV4 {
     )
         public
         view
-        returns (uint256 amount0, uint256 amount1, uint256 fee0, uint256 fee1)
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 fee0,
+            uint256 fee1
+        )
     {
-        return _totalUnderlyingWithFees(underlyingPayload_, sqrtPriceX96_);
+        return _totalUnderlyingWithFees(
+            underlyingPayload_, sqrtPriceX96_
+        );
     }
 
     function underlying(
@@ -115,12 +137,18 @@ library UnderlyingV4 {
     )
         public
         view
-        returns (uint256 amount0, uint256 amount1, uint256 fee0, uint256 fee1)
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 fee0,
+            uint256 fee1
+        )
     {
-        (uint160 sqrtPriceX96, , ) = underlying_.poolManager.getSlot0(
+        (uint160 sqrtPriceX96,,,) = underlying_.poolManager.getSlot0(
             PoolIdLibrary.toId(underlying_.range.poolKey)
         );
-        PositionUnderlying memory positionUnderlying = PositionUnderlying({
+        PositionUnderlying memory positionUnderlying =
+        PositionUnderlying({
             sqrtPriceX96: sqrtPriceX96_ > 0 ? sqrtPriceX96_ : sqrtPriceX96,
             poolManager: underlying_.poolManager,
             poolKey: underlying_.range.poolKey,
@@ -128,9 +156,8 @@ library UnderlyingV4 {
             lowerTick: underlying_.range.lowerTick,
             upperTick: underlying_.range.upperTick
         });
-        (amount0, amount1, fee0, fee1) = getUnderlyingBalances(
-            positionUnderlying
-        );
+        (amount0, amount1, fee0, fee1) =
+            getUnderlyingBalances(positionUnderlying);
     }
 
     function underlyingMint(
@@ -139,12 +166,18 @@ library UnderlyingV4 {
     )
         public
         view
-        returns (uint256 amount0, uint256 amount1, uint256 fee0, uint256 fee1)
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 fee0,
+            uint256 fee1
+        )
     {
-        (uint160 sqrtPriceX96, , ) = underlying_.poolManager.getSlot0(
+        (uint160 sqrtPriceX96,,,) = underlying_.poolManager.getSlot0(
             PoolIdLibrary.toId(underlying_.range.poolKey)
         );
-        PositionUnderlying memory positionUnderlying = PositionUnderlying({
+        PositionUnderlying memory positionUnderlying =
+        PositionUnderlying({
             sqrtPriceX96: sqrtPriceX96,
             poolManager: underlying_.poolManager,
             poolKey: underlying_.range.poolKey,
@@ -152,10 +185,8 @@ library UnderlyingV4 {
             lowerTick: underlying_.range.lowerTick,
             upperTick: underlying_.range.upperTick
         });
-        (amount0, amount1, fee0, fee1) = getUnderlyingBalancesMint(
-            positionUnderlying,
-            proportion_
-        );
+        (amount0, amount1, fee0, fee1) =
+            getUnderlyingBalancesMint(positionUnderlying, proportion_);
     }
 
     // solhint-disable-next-line function-max-lines
@@ -174,18 +205,19 @@ library UnderlyingV4 {
     {
         Position.Info memory positionInfo;
         {
-            PoolId poolId = PoolIdLibrary.toId(positionUnderlying_.poolKey);
+            PoolId poolId =
+                PoolIdLibrary.toId(positionUnderlying_.poolKey);
 
             // compute current fees earned
             (
                 uint256 feeGrowthInside0X128,
                 uint256 feeGrowthInside1X128
             ) = _getFeeGrowthInside(
-                    poolId,
-                    positionUnderlying_.poolManager,
-                    positionUnderlying_.lowerTick,
-                    positionUnderlying_.upperTick
-                );
+                poolId,
+                positionUnderlying_.poolManager,
+                positionUnderlying_.lowerTick,
+                positionUnderlying_.upperTick
+            );
             positionInfo = positionUnderlying_.poolManager.getPosition(
                 poolId,
                 positionUnderlying_.self,
@@ -229,40 +261,37 @@ library UnderlyingV4 {
             uint256 fee1
         )
     {
-        PoolId poolId = PoolIdLibrary.toId(positionUnderlying_.poolKey);
+        PoolId poolId =
+            PoolIdLibrary.toId(positionUnderlying_.poolKey);
 
         // compute current fees earned
-        (
-            uint256 feeGrowthInside0X128,
-            uint256 feeGrowthInside1X128
-        ) = _getFeeGrowthInside(
-                poolId,
-                positionUnderlying_.poolManager,
-                positionUnderlying_.lowerTick,
-                positionUnderlying_.upperTick
-            );
+        (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128) =
+        _getFeeGrowthInside(
+            poolId,
+            positionUnderlying_.poolManager,
+            positionUnderlying_.lowerTick,
+            positionUnderlying_.upperTick
+        );
         Position.Info memory positionInfo = positionUnderlying_
             .poolManager
             .getPosition(
-                poolId,
-                positionUnderlying_.self,
-                positionUnderlying_.lowerTick,
-                positionUnderlying_.upperTick
-            );
+            poolId,
+            positionUnderlying_.self,
+            positionUnderlying_.lowerTick,
+            positionUnderlying_.upperTick
+        );
         (fee0, fee1) = _getFeesOwned(
-            positionInfo,
-            feeGrowthInside0X128,
-            feeGrowthInside1X128
+            positionInfo, feeGrowthInside0X128, feeGrowthInside1X128
         );
 
         // compute current holdings from liquidity
         (amount0Current, amount1Current) = LiquidityAmounts
             .getAmountsForLiquidity(
-                positionUnderlying_.sqrtPriceX96,
-                TickMath.getSqrtRatioAtTick(positionUnderlying_.lowerTick),
-                TickMath.getSqrtRatioAtTick(positionUnderlying_.upperTick),
-                positionInfo.liquidity
-            );
+            positionUnderlying_.sqrtPriceX96,
+            TickMath.getSqrtRatioAtTick(positionUnderlying_.lowerTick),
+            TickMath.getSqrtRatioAtTick(positionUnderlying_.upperTick),
+            positionInfo.liquidity
+        );
     }
 
     /// @notice Computes the token0 and token1 value for a given amount of liquidity, the current
@@ -273,38 +302,32 @@ library UnderlyingV4 {
         uint160 sqrtRatioBX96,
         int128 liquidity
     ) public pure returns (uint256 amount0, uint256 amount1) {
-        if (sqrtRatioAX96 > sqrtRatioBX96)
-            (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+        if (sqrtRatioAX96 > sqrtRatioBX96) {
+            (sqrtRatioAX96, sqrtRatioBX96) =
+                (sqrtRatioBX96, sqrtRatioAX96);
+        }
 
         if (sqrtRatioX96 < sqrtRatioAX96) {
             amount0 = SafeCast.toUint256(
                 SqrtPriceMath.getAmount0Delta(
-                    sqrtRatioAX96,
-                    sqrtRatioBX96,
-                    liquidity
+                    sqrtRatioAX96, sqrtRatioBX96, liquidity
                 )
             );
         } else if (sqrtRatioX96 < sqrtRatioBX96) {
             amount0 = SafeCast.toUint256(
                 SqrtPriceMath.getAmount0Delta(
-                    sqrtRatioX96,
-                    sqrtRatioBX96,
-                    liquidity
+                    sqrtRatioX96, sqrtRatioBX96, liquidity
                 )
             );
             amount1 = SafeCast.toUint256(
                 SqrtPriceMath.getAmount1Delta(
-                    sqrtRatioAX96,
-                    sqrtRatioX96,
-                    liquidity
+                    sqrtRatioAX96, sqrtRatioX96, liquidity
                 )
             );
         } else {
             amount1 = SafeCast.toUint256(
                 SqrtPriceMath.getAmount1Delta(
-                    sqrtRatioAX96,
-                    sqrtRatioBX96,
-                    liquidity
+                    sqrtRatioAX96, sqrtRatioBX96, liquidity
                 )
             );
         }
@@ -323,14 +346,17 @@ library UnderlyingV4 {
         } else if (current1_ == 0 && current0_ > 0) {
             proportion = FullMath.mulDiv(amount0Max_, PIPS, current0_);
         } else if (current0_ > 0 && current1_ > 0) {
-            uint256 amount0Mint = FullMath.mulDiv(amount0Max_, PIPS, current0_);
-            uint256 amount1Mint = FullMath.mulDiv(amount1Max_, PIPS, current1_);
+            uint256 amount0Mint =
+                FullMath.mulDiv(amount0Max_, PIPS, current0_);
+            uint256 amount1Mint =
+                FullMath.mulDiv(amount1Max_, PIPS, current1_);
             require(
                 amount0Mint > 0 && amount1Mint > 0,
                 "ArrakisVaultV2: mint 0"
             );
 
-            proportion = amount0Mint < amount1Mint ? amount0Mint : amount1Mint;
+            proportion =
+                amount0Mint < amount1Mint ? amount0Mint : amount1Mint;
         } else {
             revert("ArrakisVaultV2: panic");
         }
@@ -354,7 +380,10 @@ library UnderlyingV4 {
     )
         internal
         view
-        returns (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128)
+        returns (
+            uint256 feeGrowthInside0X128,
+            uint256 feeGrowthInside1X128
+        )
     {
         FeeGrowthInside memory feeGrowthInside;
 
@@ -373,7 +402,9 @@ library UnderlyingV4 {
                                     bytes32(
                                         uint256(
                                             keccak256(
-                                                abi.encode(poolId, POOL_SLOT)
+                                                abi.encode(
+                                                    poolId, POOL_SLOT
+                                                )
                                             )
                                         ) + 4
                                     )
@@ -403,7 +434,9 @@ library UnderlyingV4 {
                                     bytes32(
                                         uint256(
                                             keccak256(
-                                                abi.encode(poolId, POOL_SLOT)
+                                                abi.encode(
+                                                    poolId, POOL_SLOT
+                                                )
                                             )
                                         ) + 4
                                     )
@@ -423,9 +456,8 @@ library UnderlyingV4 {
             // #endregion tickInfo Upper tick.
             // #region get slot0.
 
-            (, feeGrowthInside.tickCurrent, ) = poolManager_.getSlot0(
-                poolId_
-            );
+            (, feeGrowthInside.tickCurrent,,) =
+                poolManager_.getSlot0(poolId_);
 
             // #endregion get slot0.
             // #region pool global fees.
@@ -433,7 +465,9 @@ library UnderlyingV4 {
             {
                 bytes memory globalFee = poolManager_.extsload(
                     bytes32(
-                        uint256(keccak256(abi.encode(poolId, POOL_SLOT))) + 1
+                        uint256(
+                            keccak256(abi.encode(poolId, POOL_SLOT))
+                        ) + 1
                     ),
                     2
                 );
@@ -449,28 +483,28 @@ library UnderlyingV4 {
 
         unchecked {
             if (feeGrowthInside.tickCurrent < tickLower_) {
-                feeGrowthInside0X128 =
-                    feeGrowthInside.feeGrowthOutside0X128Lower -
-                    feeGrowthInside.feeGrowthOutside0X128Upper;
-                feeGrowthInside1X128 =
-                    feeGrowthInside.feeGrowthOutside1X128Lower -
-                    feeGrowthInside.feeGrowthOutside1X128Upper;
+                feeGrowthInside0X128 = feeGrowthInside
+                    .feeGrowthOutside0X128Lower
+                    - feeGrowthInside.feeGrowthOutside0X128Upper;
+                feeGrowthInside1X128 = feeGrowthInside
+                    .feeGrowthOutside1X128Lower
+                    - feeGrowthInside.feeGrowthOutside1X128Upper;
             } else if (feeGrowthInside.tickCurrent >= tickUpper_) {
-                feeGrowthInside0X128 =
-                    feeGrowthInside.feeGrowthOutside0X128Upper -
-                    feeGrowthInside.feeGrowthOutside0X128Lower;
-                feeGrowthInside1X128 =
-                    feeGrowthInside.feeGrowthOutside1X128Upper -
-                    feeGrowthInside.feeGrowthOutside1X128Lower;
+                feeGrowthInside0X128 = feeGrowthInside
+                    .feeGrowthOutside0X128Upper
+                    - feeGrowthInside.feeGrowthOutside0X128Lower;
+                feeGrowthInside1X128 = feeGrowthInside
+                    .feeGrowthOutside1X128Upper
+                    - feeGrowthInside.feeGrowthOutside1X128Lower;
             } else {
-                feeGrowthInside0X128 =
-                    feeGrowthInside.feeGrowthGlobal0X128 -
-                    feeGrowthInside.feeGrowthOutside0X128Lower -
-                    feeGrowthInside.feeGrowthOutside0X128Upper;
-                feeGrowthInside1X128 =
-                    feeGrowthInside.feeGrowthGlobal1X128 -
-                    feeGrowthInside.feeGrowthOutside1X128Lower -
-                    feeGrowthInside.feeGrowthOutside1X128Upper;
+                feeGrowthInside0X128 = feeGrowthInside
+                    .feeGrowthGlobal0X128
+                    - feeGrowthInside.feeGrowthOutside0X128Lower
+                    - feeGrowthInside.feeGrowthOutside0X128Upper;
+                feeGrowthInside1X128 = feeGrowthInside
+                    .feeGrowthGlobal1X128
+                    - feeGrowthInside.feeGrowthOutside1X128Lower
+                    - feeGrowthInside.feeGrowthOutside1X128Upper;
             }
         }
     }
@@ -501,11 +535,17 @@ library UnderlyingV4 {
     )
         private
         view
-        returns (uint256 amount0, uint256 amount1, uint256 fee0, uint256 fee1)
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 fee0,
+            uint256 fee1
+        )
     {
         for (uint256 i; i < underlyingPayload_.ranges.length; i++) {
             {
-                (uint256 a0, uint256 a1, uint256 f0, uint256 f1) = underlying(
+                (uint256 a0, uint256 a1, uint256 f0, uint256 f1) =
+                underlying(
                     RangeData({
                         self: underlyingPayload_.self,
                         range: underlyingPayload_.ranges[i],
@@ -537,17 +577,13 @@ library UnderlyingV4 {
             );
         }
 
-        amount0 +=
-            fee0 +
-            IERC20(underlyingPayload_.token0).balanceOf(
+        amount0 += fee0
+            + IERC20(underlyingPayload_.token0).balanceOf(
                 underlyingPayload_.self
-            ) +
-            leftOver0;
-        amount1 +=
-            fee1 +
-            IERC20(underlyingPayload_.token1).balanceOf(
+            ) + leftOver0;
+        amount1 += fee1
+            + IERC20(underlyingPayload_.token1).balanceOf(
                 underlyingPayload_.self
-            ) +
-            leftOver1;
+            ) + leftOver1;
     }
 }

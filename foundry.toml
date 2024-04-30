@@ -5,7 +5,7 @@ libs = ["lib"]
 ffi = true
 fs_permissions = [{ access = "read-write", path = ".forge-snapshots/"}]
 cancun = true
-solc_version = "0.8.22"
+auto_detect_solc = true
 [fmt]
 line_length = 70
 multiline_func_header = "params_first"

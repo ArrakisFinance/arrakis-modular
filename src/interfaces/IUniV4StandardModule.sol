@@ -59,13 +59,14 @@ interface IUniV4StandardModule {
 
     function setPool(PoolKey calldata poolKey_) external;
 
-    function rebalance(
-        LiquidityRange[] calldata liquidityRanges_
-    ) external returns (
+    function rebalance(LiquidityRange[] calldata liquidityRanges_)
+        external
+        returns (
             uint256 amount0Minted,
             uint256 amount1Minted,
             uint256 amount0Burned,
-            uint256 amount1Burned);
+            uint256 amount1Burned
+        );
 
     // #endregion only manager functions.
 }
