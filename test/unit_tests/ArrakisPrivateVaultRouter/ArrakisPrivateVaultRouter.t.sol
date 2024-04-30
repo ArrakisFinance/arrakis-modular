@@ -3299,6 +3299,1742 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
 
     // #endregion test wrapAndSwapAndAddLiquidity.
 
+    // #region test wrapAndAddLiquidityPermit2.
+
+    function testWethAddLiquidityPermit2OnlyPrivateVault() public {
+        // #region create public vault.
+
+        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
+
+        // #endregion create public vault.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 0,
+            vault: address(vault)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.OnlyPrivateVault.selector
+        );
+
+        router.wrapAndAddLiquidityPermit2(params);
+    }
+
+    function testWethAddLiquidityPermit2OnlyDepositor() public {
+        // #region create public vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+
+        // #endregion create public vault.
+        // #region add private vault.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add private vault.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 0,
+            vault: address(vault)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.OnlyDepositor.selector
+        );
+
+        router.wrapAndAddLiquidityPermit2(params);
+    }
+
+    function testWethAddLiquidityPermit2RouterIsDepositor() public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+
+        // #endregion create private vault.
+        // #region add private vault.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add private vault.
+        // #region add as depositors.
+
+        vault.addDepositor(address(this));
+
+        // #endregion add as depositors.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 0,
+            vault: address(vault)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.RouterIsNotDepositor.selector
+        );
+
+        router.wrapAndAddLiquidityPermit2(params);
+    }
+
+    function testWethAddLiquidityPermit2EmptyAmounts() public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositor.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositor.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 2e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 0,
+            vault: address(vault)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.EmptyAmounts.selector
+        );
+
+        router.wrapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+    }
+
+    function testWethAddLiquidityPermit2NativeTokenNotSupported()
+        public
+    {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(USDC, NATIVE_COIN);
+        vault.setInits(0, 1e18);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 1e18,
+            vault: address(vault)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.NativeTokenNotSupported.selector
+        );
+
+        router.wrapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+    }
+
+    function testWethAddLiquidityPermit2NativeTokenNotSupported2()
+        public
+    {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(NATIVE_COIN, USDC);
+        vault.setInits(1e18, 0);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 1e18,
+            amount1: 0,
+            vault: address(vault)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.NativeTokenNotSupported.selector
+        );
+
+        router.wrapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+    }
+
+    function testWethAddLiquidityPermit2NoWethToken() public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(UNI, USDC);
+        vault.setInits(1e18, 0);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 1e18,
+            amount1: 0,
+            vault: address(vault)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.NoWethToken.selector
+        );
+
+        router.wrapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+    }
+
+    function testWethAddLiquidityPermit2LengthMismatch() public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(USDC, WETH);
+        vault.setInits(0, 1e18);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 1e18,
+            vault: address(vault)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](2);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.LengthMismatch.selector
+        );
+
+        router.wrapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+    }
+
+    function testWethAddLiquidityPermit2Permit2WethNotAuthorized()
+        public
+    {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(USDC, WETH);
+        vault.setInits(0, 1e18);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 1e18,
+            vault: address(vault)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
+        permitted[0] = TokenPermissions({token: WETH, amount: 1e18});
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        deal(WETH, address(this), 1e18);
+        IERC20(WETH).approve(address(PERMIT2), 1e18);
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter
+                .Permit2WethNotAuthorized
+                .selector
+        );
+
+        router.wrapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+    }
+
+    function testWethAddLiquidityPermit2() public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(USDC, WETH);
+        vault.setModule(address(vault));
+        vault.setInits(2000e6, 1e18);
+
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 2000e6,
+            amount1: 1e18,
+            vault: address(vault)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
+        permitted[0] = TokenPermissions({token: USDC, amount: 2000e6});
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        deal(USDC, address(this), 2000e6);
+        IERC20(USDC).approve(address(PERMIT2), 2000e6);
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 0);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 0);
+
+        router.wrapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
+    }
+
+    function testWethAddLiquidityPermit2Bis() public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(USDC, WETH);
+        vault.setModule(address(vault));
+        vault.setInits(2000e6, 1e18);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositor.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositor.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18 + 10;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 2000e6,
+            amount1: 1e18,
+            vault: address(vault)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
+        permitted[0] = TokenPermissions({token: USDC, amount: 2000e6});
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        deal(USDC, address(this), 2100e6);
+        IERC20(USDC).approve(address(PERMIT2), 2000e6);
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 0);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 0);
+
+        uint256 balanceBefore = address(this).balance;
+
+        router.wrapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+
+        uint256 balanceAfter = address(this).balance;
+
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
+        assertEq(balanceBefore - balanceAfter, 1e18);
+    }
+
+    function testWethAddLiquidityPermit2Bis2() public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(WETH, USDC);
+        vault.setModule(address(vault));
+        vault.setInits(1e18, 2000e6);
+
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositor.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositor.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18 + 10;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 1e18,
+            amount1: 2000e6,
+            vault: address(vault)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
+        permitted[0] = TokenPermissions({token: USDC, amount: 2000e6});
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        deal(USDC, address(this), 2100e6);
+        IERC20(USDC).approve(address(PERMIT2), 2000e6);
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 0);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 0);
+
+        uint256 balanceBefore = address(this).balance;
+
+        router.wrapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+
+        uint256 balanceAfter = address(this).balance;
+
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
+        assertEq(balanceBefore - balanceAfter, 1e18);
+    }
+
+    // #endregion test wrapAndAddLiquidityPermit2.
+
+    // #region test wrapAndSwapAndAddLiquidityPermit2.
+
+    function testWethSwapAndAddLiquidityPermit2OnlyPrivateVault()
+        public
+    {
+        // #region create public vault.
+
+        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
+
+        // #endregion create public vault.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 0,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: false
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.OnlyPrivateVault.selector
+        );
+
+        router.wrapAndSwapAndAddLiquidityPermit2(params);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2OnlyDepositor()
+        public
+    {
+        // #region create public vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+
+        // #endregion create public vault.
+        // #region add as private vault.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add as private vault.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 0,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: false
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.OnlyDepositor.selector
+        );
+
+        router.wrapAndSwapAndAddLiquidityPermit2(params);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2RouterIsDepositor()
+        public
+    {
+        // #region create public vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+
+        // #endregion create public vault.
+        // #region add as private vault.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add as private vault.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+
+        // #endregion add depositors.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 0,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: false
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.RouterIsNotDepositor.selector
+        );
+
+        router.wrapAndSwapAndAddLiquidityPermit2(params);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2MsgValueZero()
+        public
+    {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 0,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: false
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.MsgValueZero.selector
+        );
+
+        router.wrapAndSwapAndAddLiquidityPermit2(params);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2EmptyAmounts()
+        public
+    {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 0,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: false
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.EmptyAmounts.selector
+        );
+
+        router.wrapAndSwapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2NativeTokenNotSupported(
+    ) public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(USDC, NATIVE_COIN);
+        vault.setModule(address(vault));
+        vault.setInits(0, 1e18);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 1e18,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: false
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.NativeTokenNotSupported.selector
+        );
+
+        router.wrapAndSwapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2NativeTokenNotSupported2(
+    ) public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(NATIVE_COIN, USDC);
+        vault.setModule(address(vault));
+        vault.setInits(1e18, 0);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 1e18,
+            amount1: 0,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: false
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.NativeTokenNotSupported.selector
+        );
+
+        router.wrapAndSwapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2NoWethToken() public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(UNI, USDC);
+        vault.setModule(address(vault));
+        vault.setInits(1e18, 0);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 1e18,
+            amount1: 0,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: false
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.NoWethToken.selector
+        );
+
+        router.wrapAndSwapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2LengthMismatch()
+        public
+    {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(USDC, WETH);
+        vault.setModule(address(vault));
+        vault.setInits(0, 1e18);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 1e18,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: false
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](0);
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter.LengthMismatch.selector
+        );
+
+        router.wrapAndSwapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2Permit2WethNotAuthorized(
+    ) public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(USDC, WETH);
+        vault.setModule(address(vault));
+        vault.setInits(0, 1e18);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 1e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 0,
+            amount1: 1e18,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: false
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
+        permitted[0] = TokenPermissions({token: WETH, amount: 1e18});
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        deal(WETH, address(this), 1e18);
+        IERC20(WETH).approve(address(PERMIT2), 1e18);
+        vm.expectRevert(
+            IArrakisPrivateVaultRouter
+                .Permit2WethNotAuthorized
+                .selector
+        );
+
+        router.wrapAndSwapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2() public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(USDC, WETH);
+        vault.setModule(address(vault));
+        vault.setInits(4000e6, 1e18);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 2e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 2000e6,
+            amount1: 2e18,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap1.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: false
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
+        permitted[0] = TokenPermissions({token: USDC, amount: 2000e6});
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        deal(USDC, address(this), 2000e6);
+        IERC20(USDC).approve(address(PERMIT2), 2000e6);
+
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 0);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 0);
+
+        router.wrapAndSwapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2Bis() public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(USDC, WETH);
+        vault.setModule(address(vault));
+        vault.setInits(4000e6, 1e18);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 2e18 + 10;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 2000e6,
+            amount1: 2e18 + 10,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap1.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: false
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
+        permitted[0] = TokenPermissions({token: USDC, amount: 2000e6});
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        deal(USDC, address(this), 2000e6);
+        IERC20(USDC).approve(address(PERMIT2), 2000e6);
+
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 0);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 0);
+
+        uint256 balanceBefore = address(this).balance;
+
+        router.wrapAndSwapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+
+        uint256 balanceAfter = address(this).balance;
+
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18 + 10);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
+        assertEq(balanceBefore - balanceAfter, 2e18 + 10);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2Bis2() public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(USDC, WETH);
+        vault.setModule(address(vault));
+        vault.setInits(4000e6, 1e18);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 2e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 2000e6 + 10,
+            amount1: 2e18,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap1.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: false
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
+        permitted[0] =
+            TokenPermissions({token: USDC, amount: 2000e6 + 10});
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        deal(USDC, address(this), 2000e6 + 10);
+        IERC20(USDC).approve(address(PERMIT2), 2000e6 + 10);
+
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 0);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 0);
+
+        router.wrapAndSwapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6 + 10);
+        assertEq(IERC20(USDC).balanceOf(address(this)), 0);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2Bis3() public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(WETH, USDC);
+        vault.setModule(address(vault));
+        vault.setInits(1e18, 4000e6);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 2e18;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 2e18,
+            amount1: 2000e6 + 10,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap1Bis.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: true
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
+        permitted[0] =
+            TokenPermissions({token: USDC, amount: 2000e6 + 10});
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        deal(USDC, address(this), 2000e6 + 10);
+        IERC20(USDC).approve(address(PERMIT2), 2000e6 + 10);
+
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 0);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 0);
+
+        router.wrapAndSwapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6 + 10);
+        assertEq(IERC20(USDC).balanceOf(address(this)), 0);
+    }
+
+    function testWethSwapAndAddLiquidityPermit2Bis4() public {
+        // #region create private vault.
+
+        ArrakisPrivateVaultMock vault = new ArrakisPrivateVaultMock();
+        vault.setTokens(WETH, USDC);
+        vault.setModule(address(vault));
+        vault.setInits(1e18, 4000e6);
+
+        // #endregion create private vault.
+        // #region add vault to mock factory.
+
+        factory.addPrivateVault(address(vault));
+
+        // #endregion add vault to mock factory.
+        // #region add depositors.
+
+        vault.addDepositor(address(this));
+        vault.addDepositor(address(router));
+
+        // #endregion add depositors.
+        // #region increase eth balance.
+
+        uint256 wethAmountToWrapAndAdd = 2e18 + 10;
+
+        deal(address(this), wethAmountToWrapAndAdd);
+
+        // #endregion increase eth balance.
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0: 2e18 + 10,
+            amount1: 2000e6,
+            vault: address(vault)
+        });
+
+        SwapData memory swapData = SwapData({
+            swapPayload: abi.encodeWithSelector(this.swap1Bis.selector),
+            amountInSwap: 1e18,
+            amountOutSwap: 2000e6,
+            swapRouter: address(this),
+            zeroForOne: true
+        });
+
+        SwapAndAddData memory swapAndAddData =
+            SwapAndAddData({swapData: swapData, addData: addData});
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
+        permitted[0] = TokenPermissions({token: USDC, amount: 2000e6});
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        SwapAndAddPermit2Data memory params = SwapAndAddPermit2Data({
+            swapAndAddData: swapAndAddData,
+            permit: permit,
+            signature: ""
+        });
+
+        deal(USDC, address(this), 2000e6 + 10);
+        IERC20(USDC).approve(address(PERMIT2), 2000e6 + 10);
+
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 0);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 0);
+
+        uint256 balanceBefore = address(this).balance;
+
+        router.wrapAndSwapAndAddLiquidityPermit2{
+            value: wethAmountToWrapAndAdd
+        }(params);
+
+        uint256 balanceAfter = address(this).balance;
+
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18 + 10);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
+        assertEq(balanceBefore - balanceAfter, 2e18 + 10);
+    }
+
+    // #endregion test wrapAndSwapAndAddLiquidityPermit2.
+
+
     receive() payable external {}
 
     // #region swap mock functions.
