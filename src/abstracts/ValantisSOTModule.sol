@@ -130,6 +130,26 @@ abstract contract ValantisModule is
         maxSlippage = maxSlippage_;
     }
 
+    function initializePosition() external onlyMetaVault {
+        uint256 amount0 = token0.balanceOf(address(this));
+        uint256 amount1 = token1.balanceOf(address(this));
+
+        // #region increase allowance to alm.
+
+        if (amount0 > 0) {
+            token0.safeIncreaseAllowance(address(alm), amount0);
+        }
+        if (amount1 > 0) {
+            token1.safeIncreaseAllowance(address(alm), amount1);
+        }
+
+        // #endregion increase allowance to alm.
+
+        alm.depositLiquidity(amount0, amount1, 0, 0);
+
+        emit LogInitializePosition(amount0, amount1);
+    }
+
     // #region guardian functions.
 
     /// @notice function used to pause the module.

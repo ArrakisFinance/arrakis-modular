@@ -302,6 +302,43 @@ contract ValantisSOTModuleTest is TestWrapper {
 
     // #endregion test initialize.
 
+    // #region test initialize position.
+
+    function testInitializePositionOnlyMetaVault() public {
+        uint256 amount0 = 3000e6;
+
+        deal(USDC, address(module), amount0);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisLPModule.OnlyMetaVault.selector,
+                address(this),
+                metaVault
+            )
+        );
+        module.initializePosition();
+    }
+
+    function testInitializePositionOnlyToken0() public {
+        uint256 amount0 = 3000e6;
+
+        deal(USDC, address(module), amount0);
+
+        vm.prank(address(metaVault));
+        module.initializePosition();
+    }
+
+    function testInitializePositionOnlyToken1() public {
+        uint256 amount1 = 1e18;
+
+        deal(WETH, address(module), amount1);
+
+        vm.prank(address(metaVault));
+        module.initializePosition();
+    }
+
+    // #endregion test initialize position.
+
     // #region test pause.
 
     function testPauserOnlyGuardian() public {

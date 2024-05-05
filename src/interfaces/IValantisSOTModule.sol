@@ -39,6 +39,7 @@ interface IValantisSOTModule {
     );
 
     event LogSetALM(address alm);
+    event LogInitializePosition(uint256 amount0, uint256 amount1);
 
     // #endregion events.
 
@@ -60,6 +61,9 @@ interface IValantisSOTModule {
         uint24 maxSlippage_,
         address metaVault_
     ) external;
+
+    /// @notice initialize position, needed when vault owner active this module.
+    function initializePosition() external;
 
     /// @notice set SOT and initialize manager fees function.
     /// @param alm_ address of the valantis SOT ALM.
