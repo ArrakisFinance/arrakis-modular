@@ -495,7 +495,6 @@ contract ArrakisStandardManagerTest is TestWrapper {
         // #endregion init management.
 
         vm.prank(owner);
-        vm.expectRevert(IArrakisStandardManager.AddressZero.selector);
         manager.setReceiverByToken(address(vault), true, address(0));
     }
 

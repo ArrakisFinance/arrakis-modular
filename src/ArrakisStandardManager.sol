@@ -188,8 +188,6 @@ contract ArrakisStandardManager is
         bool isSetReceiverToken0_,
         address receiver_
     ) external onlyOwner onlyWhitelistedVault(vault_) {
-        if (receiver_ == address(0)) revert AddressZero();
-
         address token = isSetReceiverToken0_
             ? address(IArrakisMetaVault(vault_).token0())
             : address(IArrakisMetaVault(vault_).token1());
