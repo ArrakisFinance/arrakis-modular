@@ -4,7 +4,7 @@ out = "out"
 libs = ["lib"]
 ffi = true
 fs_permissions = [{ access = "read-write", path = ".forge-snapshots/"}]
-cancun = true
+evm_version = "cancun"
 auto_detect_solc = true
 [fmt]
 line_length = 70

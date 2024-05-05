@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.25;
 
 import {IUniV4StandardModule} from
     "../interfaces/IUniV4StandardModule.sol";
@@ -8,7 +8,7 @@ import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
 
-import {PIPS} from "../constants/CArrakis.sol";
+import {PIPS, BASE} from "../constants/CArrakis.sol";
 import {
     UnderlyingPayload,
     Range as PoolRange
@@ -25,8 +25,7 @@ import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ReentrancyGuard} from
     "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Pausable} from
-    "@openzeppelin/contracts/utils/Pausable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {IPoolManager} from
@@ -295,7 +294,7 @@ contract UniV4StandardModule is
             });
         }
 
-        rebalance(liquidityRanges);
+        _internalRebalance(liquidityRanges);
 
         // #endregion get liquidities and remove.
 
@@ -361,7 +360,7 @@ contract UniV4StandardModule is
 
         if (proportion_ == 0) revert ProportionZero();
 
-        if (proportion_ > PIPS) revert();
+        if (proportion_ > BASE) revert();
 
         // #endregion checks.
 
@@ -387,24 +386,7 @@ contract UniV4StandardModule is
             uint256 amount1Burned
         )
     {
-        bytes memory data =
-            abi.encode(Action.REBALANCE, abi.encode(liquidityRanges_));
-
-        bytes memory result = poolManager.lock(data);
-
-        (amount0Minted, amount1Minted, amount0Burned, amount1Burned,,)
-        = abi.decode(
-            result,
-            (uint256, uint256, uint256, uint256, uint256, uint256)
-        );
-
-        emit LogRebalance(
-            liquidityRanges_,
-            amount0Minted,
-            amount1Minted,
-            amount0Burned,
-            amount1Burned
-        );
+        _internalRebalance(liquidityRanges_);
     }
 
     /// @notice function used by metaVault or manager to get manager fees.
@@ -459,9 +441,10 @@ contract UniV4StandardModule is
     /// @notice Called by the pool manager on `msg.sender` when a lock is acquired
     /// @param data_ The data that was passed to the call to lock
     /// @return result data that you want to be returned from the lock call
-    function lockAcquired(
-        bytes calldata data_
-    ) external returns (bytes memory result) {
+    function lockAcquired(bytes calldata data_)
+        external
+        returns (bytes memory result)
+    {
         if (msg.sender != address(poolManager)) {
             revert OnlyPoolManager();
         }
@@ -692,7 +675,7 @@ contract UniV4StandardModule is
 
             /// @dev no need to rounding up because uni v4 should do it during minting.
             uint256 liquidity = FullMath.mulDiv(
-                uint256(info.liquidity), proportion_, PIPS
+                uint256(info.liquidity), proportion_, BASE
             );
 
             if (liquidity > 0) {
@@ -771,10 +754,10 @@ contract UniV4StandardModule is
 
             // rounding up during mint only.
             uint256 leftOver0ToMint = FullMath.mulDivRoundingUp(
-                leftOver0, proportion_, PIPS
+                leftOver0, proportion_, BASE
             );
             uint256 leftOver1ToMint = FullMath.mulDivRoundingUp(
-                leftOver1, proportion_, PIPS
+                leftOver1, proportion_, BASE
             );
 
             if (leftOver0ToMint > 0) {
@@ -797,17 +780,7 @@ contract UniV4StandardModule is
         }
         // #region get how much we should settle with poolManager.
 
-        uint256 amount0 = SafeCast.toUint256(
-            poolManager.currencyDelta(
-                address(this), _poolKey.currency0
-            )
-        );
-
-        uint256 amount1 = SafeCast.toUint256(
-            poolManager.currencyDelta(
-                address(this), _poolKey.currency1
-            )
-        );
+        (uint256 amount0, uint256 amount1) = _checkCurrencyBalances();
 
         // #endregion get how much we should settle with poolManager.
 
@@ -892,7 +865,7 @@ contract UniV4StandardModule is
 
             /// @dev multiply -1 because we will remove liquidity.
             uint256 liquidity = FullMath.mulDiv(
-                uint256(info.liquidity), proportion_, PIPS
+                uint256(info.liquidity), proportion_, BASE
             );
 
             if (liquidity == uint256(info.liquidity)) {
@@ -932,9 +905,9 @@ contract UniV4StandardModule is
 
             // rounding up during mint only
             uint256 leftOver0ToBurn =
-                FullMath.mulDiv(leftOver0, proportion_, PIPS);
+                FullMath.mulDiv(leftOver0, proportion_, BASE);
             uint256 leftOver1ToBurn =
-                FullMath.mulDiv(leftOver1, proportion_, PIPS);
+                FullMath.mulDiv(leftOver1, proportion_, BASE);
 
             if (leftOver0ToBurn > 0) {
                 poolManager.burn(
@@ -954,7 +927,17 @@ contract UniV4StandardModule is
 
         // #endregion get how much left over we have on poolManager and mint.
 
-        (uint256 amount0, uint256 amount1) = _checkCurrencyBalances();
+        uint256 amount0 = SafeCast.toUint256(
+            poolManager.currencyDelta(
+                address(this), _poolKey.currency0
+            )
+        );
+
+        uint256 amount1 = SafeCast.toUint256(
+            poolManager.currencyDelta(
+                address(this), _poolKey.currency1
+            )
+        );
 
         // #region take and send token to receiver.
 
@@ -974,10 +957,10 @@ contract UniV4StandardModule is
                     FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
 
                 fee0ToWithdraw = FullMath.mulDiv(
-                    fee0 - managerFee0, proportion_, PIPS
+                    fee0 - managerFee0, proportion_, BASE
                 );
                 fee1ToWithdraw = FullMath.mulDiv(
-                    fee1 - managerFee1, proportion_, PIPS
+                    fee1 - managerFee1, proportion_, BASE
                 );
 
                 // #endregion manager fees.
@@ -1027,6 +1010,37 @@ contract UniV4StandardModule is
         // #endregion mint extra collected fees.
     }
 
+    function _internalRebalance(
+        LiquidityRange[] memory liquidityRanges_
+    )
+        internal
+        returns (
+            uint256 amount0Minted,
+            uint256 amount1Minted,
+            uint256 amount0Burned,
+            uint256 amount1Burned
+        )
+    {
+        bytes memory data =
+            abi.encode(Action.REBALANCE, abi.encode(liquidityRanges_));
+
+        bytes memory result = poolManager.lock(data);
+
+        (amount0Minted, amount1Minted, amount0Burned, amount1Burned,,)
+        = abi.decode(
+            result,
+            (uint256, uint256, uint256, uint256, uint256, uint256)
+        );
+
+        emit LogRebalance(
+            liquidityRanges_,
+            amount0Minted,
+            amount1Minted,
+            amount0Burned,
+            amount1Burned
+        );
+    }
+
     function _rebalance(LiquidityRange[] memory liquidityRanges_)
         internal
         returns (bytes memory result)
@@ -1040,7 +1054,8 @@ contract UniV4StandardModule is
         uint256 fee0;
         uint256 fee1;
         {
-            PoolRange[] memory poolRanges = _getPoolRanges(length);
+            PoolRange[] memory poolRanges =
+                _getPoolRanges(_ranges.length);
 
             (,, fee0, fee1) = UnderlyingV4.totalUnderlyingWithFees(
                 UnderlyingPayload({
@@ -1099,7 +1114,6 @@ contract UniV4StandardModule is
                 );
             }
         }
-
         // #endregion add liquidities.
 
         // #region collect and send fees to manager.
@@ -1229,17 +1243,7 @@ contract UniV4StandardModule is
             ""
         );
 
-        amount0 = SafeCast.toUint256(
-            poolManager.currencyDelta(
-                address(this), poolKey_.currency0
-            )
-        );
-
-        amount1 = SafeCast.toUint256(
-            poolManager.currencyDelta(
-                address(this), poolKey_.currency1
-            )
-        );
+        (amount0, amount1) = _checkCurrencyBalances();
 
         if (amount0 > 0) {
             poolManager.burn(
@@ -1319,13 +1323,15 @@ contract UniV4StandardModule is
         if (amount0 > 0) {
             poolManager.mint(
                 address(this),
-                CurrencyLibrary.toId(poolKey_.currency0), amount0
+                CurrencyLibrary.toId(poolKey_.currency0),
+                amount0
             );
         }
         if (amount1 > 0) {
             poolManager.mint(
                 address(this),
-                CurrencyLibrary.toId(poolKey_.currency1), amount1
+                CurrencyLibrary.toId(poolKey_.currency1),
+                amount1
             );
         }
 
@@ -1400,6 +1406,7 @@ contract UniV4StandardModule is
         view
         returns (PoolRange[] memory poolRanges)
     {
+        poolRanges = new PoolRange[](length_);
         for (uint256 i; i < length_; i++) {
             Range memory range = _ranges[i];
             poolRanges[i] = PoolRange({
