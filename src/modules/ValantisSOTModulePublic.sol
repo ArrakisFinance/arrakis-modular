@@ -53,8 +53,8 @@ contract ValantisModulePublic is
                 _amt1 = _init1;
             }
 
-            amount0 = FullMath.mulDiv(proportion_, _amt0, BASE);
-            amount1 = FullMath.mulDiv(proportion_, _amt1, BASE);
+            amount0 = FullMath.mulDivRoundingUp(proportion_, _amt0, BASE);
+            amount1 = FullMath.mulDivRoundingUp(proportion_, _amt1, BASE);
         }
 
         // #endregion effects.

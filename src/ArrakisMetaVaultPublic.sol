@@ -53,7 +53,7 @@ contract ArrakisMetaVaultPublic is
         if (shares_ == 0) revert MintZero();
         uint256 supply = totalSupply();
 
-        uint256 proportion = FullMath.mulDiv(
+        uint256 proportion = FullMath.mulDivRoundingUp(
             shares_, BASE, supply > 0 ? supply : 1 ether
         );
 
