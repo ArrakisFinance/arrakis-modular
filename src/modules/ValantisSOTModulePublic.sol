@@ -19,6 +19,8 @@ contract ValantisModulePublic is
 {
     using SafeERC20 for IERC20Metadata;
 
+    bool public notFirstDeposit;
+
     constructor(address guardian_) ValantisModule(guardian_) {}
 
     /// @notice deposit function for public vault.
@@ -48,13 +50,26 @@ contract ValantisModulePublic is
         {
             (uint256 _amt0, uint256 _amt1) = pool.getReserves();
 
-            if (_amt0 == 0 && _amt1 == 0) {
+            if (!notFirstDeposit) {
+                if (_amt0 > 0 || _amt1 > 0) {
+                    // #region send dust on pool to manager.
+
+                    address manager = metaVault.manager();
+
+                    alm.withdrawLiquidity(_amt0, _amt1, manager, 0, 0);
+
+                    // #endregion send dust on pool to manager.
+                }
+
                 _amt0 = _init0;
                 _amt1 = _init1;
+                notFirstDeposit = true;
             }
 
-            amount0 = FullMath.mulDivRoundingUp(proportion_, _amt0, BASE);
-            amount1 = FullMath.mulDivRoundingUp(proportion_, _amt1, BASE);
+            amount0 =
+                FullMath.mulDivRoundingUp(proportion_, _amt0, BASE);
+            amount1 =
+                FullMath.mulDivRoundingUp(proportion_, _amt1, BASE);
         }
 
         // #endregion effects.
@@ -94,5 +109,23 @@ contract ValantisModulePublic is
         // #endregion assertions.
 
         emit LogDeposit(depositor_, proportion_, amount0, amount1);
+    }
+
+    /// @notice function used by metaVault to withdraw tokens from the strategy.
+    /// @param receiver_ address that will receive tokens.
+    /// @param proportion_ number of share needed to be withdrawn.
+    /// @return amount0 amount of token0 withdrawn.
+    /// @return amount1 amount of token1 withdrawn.
+    function withdraw(
+        address receiver_,
+        uint256 proportion_
+    )
+        public
+        override
+        returns (uint256 amount0, uint256 amount1)
+    {
+        if (proportion_ == BASE)
+            notFirstDeposit = false;
+        return super.withdraw(receiver_, proportion_);
     }
 }

@@ -181,7 +181,8 @@ abstract contract ValantisModule is
         address receiver_,
         uint256 proportion_
     )
-        external
+        public
+        virtual
         onlyMetaVault
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
