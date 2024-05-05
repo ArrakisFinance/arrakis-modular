@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity 0.8.19;
 
 import {IArrakisStandardManager} from
     "./interfaces/IArrakisStandardManager.sol";
@@ -27,9 +27,9 @@ import {IERC20Metadata} from
 // #region openzeppelin upgradeable dependencies.
 
 import {ReentrancyGuardUpgradeable} from
-    "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+    "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from
-    "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+    "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 // #endregion openzeppelin upgradeable dependencies.
 
@@ -40,6 +40,8 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 // #region uniswap.
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 // #endregion uniswap.
+
+import {console} from "forge-std/console.sol";
 
 // NOTE admin and owner can't be the same address on transparent proxy.
 contract ArrakisStandardManager is

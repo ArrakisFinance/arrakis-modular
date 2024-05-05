@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 // #region foundry.
 import {console} from "forge-std/console.sol";
@@ -32,7 +32,7 @@ import {
 import {NATIVE_COIN} from "../../../src/constants/CArrakis.sol";
 
 // #region openzeppelin.
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // #endregion openzeppelin.
 
@@ -218,7 +218,7 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
         vm.startPrank(owner);
         router.pause();
 
-        vm.expectRevert(Pausable.EnforcedPause.selector);
+        vm.expectRevert(bytes("Pausable: paused"));
         router.pause();
         vm.stopPrank();
     }
@@ -228,7 +228,7 @@ contract ArrakisPrivateVaultRouterTest is TestWrapper {
     // #region test unpause.
 
     function testUnPauseWhenNotPaused() public {
-        vm.expectRevert(Pausable.ExpectedPause.selector);
+        vm.expectRevert(bytes("Pausable: not paused"));
 
         router.unpause();
     }

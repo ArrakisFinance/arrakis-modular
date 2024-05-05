@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity 0.8.25;
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";

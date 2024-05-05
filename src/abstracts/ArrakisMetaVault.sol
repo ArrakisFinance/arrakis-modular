@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity 0.8.19;
 
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
@@ -7,7 +7,7 @@ import {IModuleRegistry} from "../interfaces/IModuleRegistry.sol";
 import {BASE} from "../constants/CArrakis.sol";
 
 import {ReentrancyGuard} from
-    "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+    "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {EnumerableSet} from
     "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 

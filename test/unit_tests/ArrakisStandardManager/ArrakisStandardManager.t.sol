@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {console} from "forge-std/console.sol";
 
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 
-import {
-    ArrakisStandardManager,
-    IArrakisStandardManager
-} from "../../../src/ArrakisStandardManager.sol";
+import {ArrakisStandardManager} from
+    "../../../src/ArrakisStandardManager.sol";
+import {IArrakisStandardManager} from
+    "../../../src/interfaces/IArrakisStandardManager.sol";
 import {ArrakisMetaVaultFactory} from
     "../../../src/ArrakisMetaVaultFactory.sol";
 import {IArrakisMetaVault} from
@@ -37,7 +37,7 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
 // #region openzeppelin.
 
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -85,6 +85,12 @@ contract ArrakisStandardManagerTest is TestWrapper {
     ArrakisStandardManager public manager;
 
     // #region public properties.
+
+    // #region events.
+
+    event LogStrategyAnnouncement(address vault, string strategy);
+
+    // #endregion events.
 
     function setUp() public {
         // #region create guardian.
@@ -344,8 +350,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
     function testUnPauseNotPaused() public {
         assertEq(manager.paused(), false);
 
-        vm.prank(IGuardian(guardian).pauser());
-        vm.expectRevert(Pausable.ExpectedPause.selector);
+        vm.startPrank(IGuardian(guardian).pauser());
+        vm.expectRevert(bytes("Pausable: not paused"));
         manager.unpause();
     }
 
@@ -3691,9 +3697,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         string memory strategy = "SOT";
 
         vm.expectEmit();
-        emit IArrakisStandardManager.LogStrategyAnnouncement(
-            address(vault), strategy
-        );
+        emit LogStrategyAnnouncement(address(vault), strategy);
 
         vm.prank(stratAnnouncer);
         manager.announceStrategy(address(vault), strategy);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
@@ -203,7 +203,9 @@ contract DeployStepOne is Script {
         // #region deploy the proxy admin.
 
         // NOTE: check if we can remove that for mainnet.
-        address proxyAdmin = address(new ProxyAdmin(arrakisTimeLock_));
+        address proxyAdmin = address(new ProxyAdmin());
+
+        ProxyAdmin(proxyAdmin).transferOwnership(arrakisTimeLock);
 
         console.logString(
             "Arrakis Standard Manager Proxy Admin Address : "

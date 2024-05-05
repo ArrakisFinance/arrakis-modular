@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity 0.8.19;
 
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {ISOTOracle} from "../interfaces/ISOTOracle.sol";

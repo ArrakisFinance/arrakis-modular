@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity 0.8.19;
 
 import {ISelfPay, SetupParams} from "./interfaces/ISelfPay.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
@@ -37,7 +37,7 @@ import {IERC721} from
 import {IERC721Receiver} from
     "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {ReentrancyGuard} from
-    "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+    "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 // #endregion openzeppelin.

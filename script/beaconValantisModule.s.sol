@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
@@ -35,8 +35,11 @@ contract BeaconValantisModule is Script {
         );
         console.logAddress(implementation);
 
-        address upgradeableBeacon = address(
-            new UpgradeableBeacon(implementation, arrakisTimeLock)
+        address upgradeableBeacon =
+            address(new UpgradeableBeacon(implementation));
+
+        UpgradeableBeacon(upgradeableBeacon).transferOwnership(
+            arrakisTimeLock
         );
 
         console.logString("Upgradeable Beacon Valantis Address : ");

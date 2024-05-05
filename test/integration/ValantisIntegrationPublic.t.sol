@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 // #region foundry.
 
@@ -259,10 +259,11 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         valantisImplementation =
             _deployValantisImplementation(guardian);
-        valantisBeacon = address(
-            new UpgradeableBeacon(
-                valantisImplementation, arrakisTimeLock
-            )
+        valantisBeacon =
+            address(new UpgradeableBeacon(valantisImplementation));
+
+        UpgradeableBeacon(valantisBeacon).transferOwnership(
+            arrakisTimeLock
         );
 
         // #endregion create valantis module beacon.

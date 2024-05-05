@@ -24,8 +24,8 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ReentrancyGuard} from
-    "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+    "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {IPoolManager} from
