@@ -114,4 +114,6 @@ contract PrivateRouterSwapExecutor is IPrivateRouterSwapExecutor {
             }
         }
     }
+
+    receive() external payable {}
 }

@@ -114,4 +114,6 @@ contract RouterSwapExecutor is IRouterSwapExecutor {
             }
         }
     }
+
+    receive() external payable {}
 }
