@@ -23,7 +23,7 @@ import {
     SignatureTransferDetails
 } from "./interfaces/IPermit2.sol";
 import {IWETH9} from "./interfaces/IWETH9.sol";
-import {PIPS} from "./constants/CArrakis.sol";
+import {BASE} from "./constants/CArrakis.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {
@@ -1247,17 +1247,17 @@ contract ArrakisPublicVaultRouter is
 
         uint256 proportion0 = amount0 == 0
             ? type(uint256).max
-            : FullMath.mulDiv(maxAmount0_, PIPS, amount0);
+            : FullMath.mulDiv(maxAmount0_, BASE, amount0);
         uint256 proportion1 = amount1 == 0
             ? type(uint256).max
-            : FullMath.mulDiv(maxAmount1_, PIPS, amount1);
+            : FullMath.mulDiv(maxAmount1_, BASE, amount1);
 
         uint256 proportion =
             proportion0 < proportion1 ? proportion0 : proportion1;
 
-        amount0ToDeposit = FullMath.mulDiv(amount0, proportion, PIPS);
-        amount1ToDeposit = FullMath.mulDiv(amount1, proportion, PIPS);
-        shareToMint = FullMath.mulDiv(proportion, supply, PIPS);
+        amount0ToDeposit = FullMath.mulDiv(amount0, proportion, BASE);
+        amount1ToDeposit = FullMath.mulDiv(amount1, proportion, BASE);
+        shareToMint = FullMath.mulDiv(proportion, supply, BASE);
     }
 
     // #endregion internal view functions.
