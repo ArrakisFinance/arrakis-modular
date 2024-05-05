@@ -21,6 +21,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ERC1967Proxy} from
+    "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 // #endregion openzeppelin.
 
 // #region constants.
@@ -123,13 +125,20 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
 
         // #region create valantis module.
 
-        module = new ValantisModulePrivate(address(guardian));
-        module.initialize(
+        address implementation =
+            address(new ValantisModulePrivate(address(guardian)));
+
+        bytes memory data = abi.encodeWithSelector(
+            IValantisSOTModule.initialize.selector,
             address(sovereignPool),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(metaVault)
+        );
+
+        module = ValantisModulePrivate(
+            address(new ERC1967Proxy(implementation, data))
         );
 
         vm.prank(manager);
@@ -258,13 +267,20 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePrivate(address(guardian));
-        module.initialize(
+        address implementation =
+            address(new ValantisModulePrivate(address(guardian)));
+
+        bytes memory data = abi.encodeWithSelector(
+            IValantisSOTModule.initialize.selector,
             address(sovereignPool),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(metaVault)
+        );
+
+        module = ValantisModulePrivate(
+            address(new ERC1967Proxy(implementation, data))
         );
 
         vm.prank(owner);
@@ -299,13 +315,20 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePrivate(address(guardian));
-        module.initialize(
+        address implementation =
+            address(new ValantisModulePrivate(address(guardian)));
+
+        bytes memory data = abi.encodeWithSelector(
+            IValantisSOTModule.initialize.selector,
             address(sovereignPool),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(metaVault)
+        );
+
+        module = ValantisModulePrivate(
+            address(new ERC1967Proxy(implementation, data))
         );
 
         vm.prank(owner);

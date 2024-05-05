@@ -43,6 +43,8 @@ import {SafeCast} from
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UpgradeableBeacon} from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {ERC1967Proxy} from
+    "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 // #endregion openzeppelin.
 
@@ -102,11 +104,17 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create standard manager.
 
-        manager = new ArrakisStandardManager(
-            defaultFeePIPS,
-            NATIVE_COIN,
-            nativeTokenDecimals,
-            address(guardian)
+        address implementation = address(
+            new ArrakisStandardManager(
+                defaultFeePIPS,
+                NATIVE_COIN,
+                nativeTokenDecimals,
+                address(guardian)
+            )
+        );
+
+        manager = ArrakisStandardManager(
+            payable(address(new ERC1967Proxy(implementation, "")))
         );
 
         // #endregion create standard manager.
@@ -193,8 +201,17 @@ contract ArrakisStandardManagerTest is TestWrapper {
     function testInitializeOwnerAddressZero() public {
         // #region create a new manager.
 
-        manager = new ArrakisStandardManager(
-            defaultFeePIPS, NATIVE_COIN, nativeTokenDecimals, guardian
+        address implementation = address(
+            new ArrakisStandardManager(
+                defaultFeePIPS,
+                NATIVE_COIN,
+                nativeTokenDecimals,
+                address(guardian)
+            )
+        );
+
+        manager = ArrakisStandardManager(
+            payable(address(new ERC1967Proxy(implementation, "")))
         );
 
         // #endregion create a new manager.
@@ -207,8 +224,17 @@ contract ArrakisStandardManagerTest is TestWrapper {
     function testInitializeDefaultReceiverAddressZero() public {
         // #region create a new manager.
 
-        manager = new ArrakisStandardManager(
-            defaultFeePIPS, NATIVE_COIN, nativeTokenDecimals, guardian
+        address implementation = address(
+            new ArrakisStandardManager(
+                defaultFeePIPS,
+                NATIVE_COIN,
+                nativeTokenDecimals,
+                address(guardian)
+            )
+        );
+
+        manager = ArrakisStandardManager(
+            payable(address(new ERC1967Proxy(implementation, "")))
         );
 
         // #endregion create a new manager.
@@ -221,8 +247,17 @@ contract ArrakisStandardManagerTest is TestWrapper {
     function testInitializeFactoryAddressZero() public {
         // #region create a new manager.
 
-        manager = new ArrakisStandardManager(
-            defaultFeePIPS, NATIVE_COIN, nativeTokenDecimals, guardian
+        address implementation = address(
+            new ArrakisStandardManager(
+                defaultFeePIPS,
+                NATIVE_COIN,
+                nativeTokenDecimals,
+                address(guardian)
+            )
+        );
+
+        manager = ArrakisStandardManager(
+            payable(address(new ERC1967Proxy(implementation, "")))
         );
 
         // #endregion create a new manager.
@@ -235,8 +270,17 @@ contract ArrakisStandardManagerTest is TestWrapper {
     function testInitialize() public {
         // #region create a new manager.
 
-        manager = new ArrakisStandardManager(
-            defaultFeePIPS, NATIVE_COIN, nativeTokenDecimals, guardian
+        address implementation = address(
+            new ArrakisStandardManager(
+                defaultFeePIPS,
+                NATIVE_COIN,
+                nativeTokenDecimals,
+                address(guardian)
+            )
+        );
+
+        manager = ArrakisStandardManager(
+            payable(address(new ERC1967Proxy(implementation, "")))
         );
 
         // #endregion create a new manager.

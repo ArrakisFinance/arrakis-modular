@@ -64,6 +64,8 @@ import {UpgradeableBeacon} from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {ERC1967Proxy} from
+    "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {
     SOTBase,
@@ -851,15 +853,17 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
     function _deployManager(address guardian_)
         internal
-        returns (address)
+        returns (address manager)
     {
         /// @dev default fee pips is set at 10%
 
-        return address(
+        address implementation = address(
             new ArrakisStandardManager(
                 TEN_PERCENT, NATIVE_COIN, 18, guardian_
             )
         );
+
+        manager = address(new ERC1967Proxy(implementation, ""));
     }
 
     function _deployPublicRegistry(

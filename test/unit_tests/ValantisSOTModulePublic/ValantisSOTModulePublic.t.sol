@@ -19,6 +19,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ERC1967Proxy} from
+    "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 // #endregion openzeppelin.
 
 // #region constants.
@@ -68,6 +70,7 @@ contract ValantisSOTModuleTest is TestWrapper {
     // #endregion constant properties.
 
     ValantisModulePublic public module;
+    address public implementation;
     ArrakisMetaVaultMock public metaVault;
     address public manager;
     SovereignPoolMock public sovereignPool;
@@ -134,13 +137,20 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         // #region create valantis module.
 
-        module = new ValantisModulePublic(address(guardian));
-        module.initialize(
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        bytes memory data = abi.encodeWithSelector(
+            IValantisSOTModule.initialize.selector,
             address(sovereignPool),
             INIT0,
             INIT1,
             MAX_SLIPPAGE,
             address(metaVault)
+        );
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, data))
         );
 
         vm.prank(owner);
@@ -164,7 +174,12 @@ contract ValantisSOTModuleTest is TestWrapper {
     // #region test initialize.
 
     function testInitializeSovereignPoolAddressZero() public {
-        module = new ValantisModulePublic(address(guardian));
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
@@ -174,7 +189,12 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testInitializeSovereignALMAddressZero() public {
-        module = new ValantisModulePublic(address(guardian));
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
 
         module.initialize(
             address(sovereignPool),
@@ -190,7 +210,12 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testInitializeOracleAddressZero() public {
-        module = new ValantisModulePublic(address(guardian));
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
 
         module.initialize(
             address(sovereignPool),
@@ -206,7 +231,12 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testInitializeInitsAreZeros() public {
-        module = new ValantisModulePublic(address(guardian));
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
 
         vm.expectRevert(IArrakisLPModule.InitsAreZeros.selector);
 
@@ -220,7 +250,12 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testInitializeSlippageBiggerThanTenPercent() public {
-        module = new ValantisModulePublic(address(guardian));
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
 
         vm.expectRevert(
             IValantisSOTModule.MaxSlippageGtTenPercent.selector
@@ -247,7 +282,12 @@ contract ValantisSOTModuleTest is TestWrapper {
     }
 
     function testInitializeMetaVaultAddressZero() public {
-        module = new ValantisModulePublic(address(guardian));
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
 
@@ -446,7 +486,12 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePublic(address(guardian));
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
         module.initialize(
             address(sovereignPool),
             INIT0,
@@ -488,7 +533,12 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePublic(address(guardian));
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
         module.initialize(
             address(sovereignPool),
             INIT0,
@@ -904,7 +954,13 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePublic(address(guardian));
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
+
         module.initialize(
             address(sovereignPool),
             INIT0,
@@ -951,7 +1007,12 @@ contract ValantisSOTModuleTest is TestWrapper {
         buggySovereignALM.setToken0AndToken1(USDC, WETH);
         // #region create valantis module.
 
-        module = new ValantisModulePublic(address(guardian));
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
         module.initialize(
             address(sovereignPool),
             INIT0,

@@ -122,6 +122,8 @@ contract ArrakisStandardManager is
         nativeToken = nativeToken_;
         nativeTokenDecimals = nativeTokenDecimals_;
         _guardian = guardian_;
+
+        _disableInitializers();
     }
 
     /// @notice function used to initialize standard manager proxy.

@@ -119,13 +119,10 @@ contract ValantisModulePublic is
     function withdraw(
         address receiver_,
         uint256 proportion_
-    )
-        public
-        override
-        returns (uint256 amount0, uint256 amount1)
-    {
-        if (proportion_ == BASE)
+    ) public override returns (uint256 amount0, uint256 amount1) {
+        if (proportion_ == BASE) {
             notFirstDeposit = false;
+        }
         return super.withdraw(receiver_, proportion_);
     }
 }

@@ -90,6 +90,8 @@ abstract contract ValantisModule is
         if (guardian_ == address(0)) revert AddressZero();
 
         _guardian = guardian_;
+
+        _disableInitializers();
     }
 
     /// @notice initialize function to delegate call onced the beacon proxy is deployed,
