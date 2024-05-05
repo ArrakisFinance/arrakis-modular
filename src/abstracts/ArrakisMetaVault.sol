@@ -128,15 +128,6 @@ abstract contract ArrakisMetaVault is
 
         // #region check if the module is empty.
 
-        /// @dev module implementation should take into account
-        /// that wrongly implemented module can freeze the modularity
-        /// of ArrakisMetaVault if withdrawManagerBalance + withdraw 100%
-        /// don't transfer every tokens (0/1) from module.
-        (uint256 amount0, uint256 amount1) = _module.totalUnderlying();
-        if (amount0 != 0 || amount1 != 0) {
-            revert ModuleNotEmpty(amount0, amount1);
-        }
-
         // #endregion check if the module is empty.
 
         uint256 len = payloads_.length;

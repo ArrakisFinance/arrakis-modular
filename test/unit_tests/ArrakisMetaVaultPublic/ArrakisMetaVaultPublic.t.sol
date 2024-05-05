@@ -433,14 +433,6 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         bytes[] memory payloads = new bytes[](0);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IArrakisMetaVault.ModuleNotEmpty.selector,
-                1000e6,
-                5e17
-            )
-        );
-
         vm.prank(address(manager));
         vault.setModule(newModule, payloads);
     }
