@@ -513,7 +513,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             range: range,
             liquidity: SafeCast.toInt128(
                 SafeCast.toInt256(uint256(liquidity))
-                )
+            )
         });
 
         IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =

@@ -38,8 +38,6 @@ import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 // #endregion solady dependencies.
 
-import {console} from "forge-std/console.sol";
-
 contract ArrakisPrivateVaultRouter is
     IArrakisPrivateVaultRouter,
     ReentrancyGuard,

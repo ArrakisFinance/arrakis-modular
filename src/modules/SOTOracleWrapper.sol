@@ -2,7 +2,8 @@
 pragma solidity 0.8.19;
 
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
-import {ISOTOracle} from "../interfaces/ISOTOracle.sol";
+import {ISOTOracle} from
+    "@valantis-sot/contracts/interfaces/ISOTOracle.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 

@@ -25,8 +25,6 @@ interface IArrakisPublicVaultRouter {
     error ReceivedBelowMinimum();
     error LengthMismatch();
     error NoNativeToken();
-    error Deposit0();
-    error Deposit1();
     error MsgValueZero();
     error NativeTokenNotSupported();
     error MsgValueDTMaxAmount();

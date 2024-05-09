@@ -615,9 +615,9 @@ contract ArrakisPublicVaultRouter is
                 weth.withdraw(amount0Use - amount0);
                 payable(msg.sender).sendValue(amount0Use - amount0);
             } else {
-                IERC20(token0).safeTransfer(
-                    msg.sender, amount0Use - amount0
-                );
+                uint256 balance =
+                    IERC20(token0).balanceOf(address(this));
+                IERC20(token0).safeTransfer(msg.sender, balance);
             }
         }
 
@@ -626,9 +626,9 @@ contract ArrakisPublicVaultRouter is
                 weth.withdraw(amount1Use - amount1);
                 payable(msg.sender).sendValue(amount1Use - amount1);
             } else {
-                IERC20(token1).safeTransfer(
-                    msg.sender, amount1Use - amount1
-                );
+                uint256 balance =
+                    IERC20(token1).balanceOf(address(this));
+                IERC20(token1).safeTransfer(msg.sender, balance);
             }
         }
     }
@@ -817,9 +817,9 @@ contract ArrakisPublicVaultRouter is
                 weth.withdraw(amount0Use - amount0);
                 payable(msg.sender).sendValue(amount0Use - amount0);
             } else {
-                IERC20(token0).safeTransfer(
-                    msg.sender, amount0Use - amount0
-                );
+                uint256 balance =
+                    IERC20(token0).balanceOf(address(this));
+                IERC20(token0).safeTransfer(msg.sender, balance);
             }
         }
 
@@ -828,9 +828,9 @@ contract ArrakisPublicVaultRouter is
                 weth.withdraw(amount1Use - amount1);
                 payable(msg.sender).sendValue(amount1Use - amount1);
             } else {
-                IERC20(token1).safeTransfer(
-                    msg.sender, amount1Use - amount1
-                );
+                uint256 balance =
+                    IERC20(token1).balanceOf(address(this));
+                IERC20(token1).safeTransfer(msg.sender, balance);
             }
         }
     }
@@ -898,36 +898,6 @@ contract ArrakisPublicVaultRouter is
         IArrakisMetaVaultPublic(vault_).mint{value: valueToSend}(
             shares_, receiver_
         );
-
-        // #region assertion check to verify if vault exactly what expected.
-        // NOTE: check rebase edge case?
-        if (
-            (
-                token0_ == nativeToken
-                    && balance0 - amount0_ != address(this).balance
-            )
-                || (
-                    token0_ != nativeToken
-                        && balance0 - amount0_
-                            != IERC20(token0_).balanceOf(address(this))
-                )
-        ) {
-            revert Deposit0();
-        }
-        if (
-            (
-                token1_ == nativeToken
-                    && balance1 - amount1_ != address(this).balance
-            )
-                || (
-                    token1_ != nativeToken
-                        && balance1 - amount1_
-                            != IERC20(token1_).balanceOf(address(this))
-                )
-        ) {
-            revert Deposit1();
-        }
-        // #endregion  assertion check to verify if vault exactly what expected.
     }
 
     function _swapAndAddLiquidity(
@@ -1035,9 +1005,9 @@ contract ArrakisPublicVaultRouter is
             if (token0_ == nativeToken) {
                 payable(msg.sender).sendValue(amount0Use - amount0);
             } else {
-                IERC20(token0_).safeTransfer(
-                    msg.sender, amount0Use - amount0
-                );
+                uint256 balance =
+                    IERC20(token0_).balanceOf(address(this));
+                IERC20(token0_).safeTransfer(msg.sender, balance);
             }
         }
 
@@ -1045,9 +1015,9 @@ contract ArrakisPublicVaultRouter is
             if (token1_ == nativeToken) {
                 payable(msg.sender).sendValue(amount1Use - amount1);
             } else {
-                IERC20(token1_).safeTransfer(
-                    msg.sender, amount1Use - amount1
-                );
+                uint256 balance =
+                    IERC20(token1_).balanceOf(address(this));
+                IERC20(token1_).safeTransfer(msg.sender, balance);
             }
         }
     }

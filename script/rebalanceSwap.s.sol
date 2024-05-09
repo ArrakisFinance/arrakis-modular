@@ -8,6 +8,8 @@ import {IArrakisMetaVault} from
     "../src/interfaces/IArrakisMetaVault.sol";
 import {IValantisSOTModule} from
     "../src/interfaces/IValantisSOTModule.sol";
+import {IValantisSOTModulePublic} from
+    "../src/interfaces/IValantisSOTModulePublic.sol";
 import {IArrakisStandardManager} from
     "../src/interfaces/IArrakisStandardManager.sol";
 
@@ -50,7 +52,7 @@ contract SwapOnPool is Script {
         );
 
         bytes memory payload = abi.encodeWithSelector(
-            IValantisSOTModule.swap.selector,
+            IValantisSOTModulePublic.swap.selector,
             isZeroForOne,
             amountOutMin,
             amountIn,

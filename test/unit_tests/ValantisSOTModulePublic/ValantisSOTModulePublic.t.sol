@@ -10,6 +10,8 @@ import {ValantisModulePublic} from
     "../../../src/modules/ValantisSOTModulePublic.sol";
 import {IValantisSOTModule} from
     "../../../src/interfaces/IValantisSOTModule.sol";
+import {IValantisSOTModulePublic} from
+    "../../../src/interfaces/IValantisSOTModulePublic.sol";
 import {IArrakisLPModule} from
     "../../../src/interfaces/IArrakisLPModule.sol";
 // #endregion Valantis Module.
@@ -517,100 +519,6 @@ contract ValantisSOTModuleTest is TestWrapper {
         );
     }
 
-    function testDepositFailedDeposit0() public {
-        SovereignALMBuggy5Mock buggySovereignALM =
-            new SovereignALMBuggy5Mock();
-        buggySovereignALM.setToken0AndToken1(USDC, WETH);
-        // #region create valantis module.
-
-        implementation =
-            address(new ValantisModulePublic(address(guardian)));
-
-        module = ValantisModulePublic(
-            address(new ERC1967Proxy(implementation, ""))
-        );
-        module.initialize(
-            address(sovereignPool),
-            INIT0,
-            INIT1,
-            MAX_SLIPPAGE,
-            address(metaVault)
-        );
-
-        vm.prank(owner);
-        module.setALMAndManagerFees(
-            address(buggySovereignALM), address(oracle)
-        );
-
-        // #endregion create valantis module.
-
-        address depositor = vm.addr(10);
-        uint256 proportion = BASE / 2;
-
-        uint256 expectedAmount0 = 2000e6 / 2;
-        uint256 expectedAmount1 = 1e18 / 2;
-
-        deal(USDC, depositor, expectedAmount0);
-        deal(WETH, depositor, expectedAmount1);
-
-        vm.prank(depositor);
-        IERC20(USDC).approve(address(module), expectedAmount0);
-        vm.prank(depositor);
-        IERC20(WETH).approve(address(module), expectedAmount1);
-
-        vm.prank(address(metaVault));
-        vm.expectRevert(IValantisSOTModule.Deposit0.selector);
-
-        module.deposit(depositor, proportion);
-    }
-
-    function testDepositFailedDeposit1() public {
-        SovereignALMBuggy6Mock buggySovereignALM =
-            new SovereignALMBuggy6Mock();
-        buggySovereignALM.setToken0AndToken1(USDC, WETH);
-        // #region create valantis module.
-
-        implementation =
-            address(new ValantisModulePublic(address(guardian)));
-
-        module = ValantisModulePublic(
-            address(new ERC1967Proxy(implementation, ""))
-        );
-        module.initialize(
-            address(sovereignPool),
-            INIT0,
-            INIT1,
-            MAX_SLIPPAGE,
-            address(metaVault)
-        );
-
-        vm.prank(owner);
-        module.setALMAndManagerFees(
-            address(buggySovereignALM), address(oracle)
-        );
-
-        // #endregion create valantis module.
-
-        address depositor = vm.addr(10);
-        uint256 proportion = BASE / 2;
-
-        uint256 expectedAmount0 = 2000e6 / 2;
-        uint256 expectedAmount1 = 1e18 / 2;
-
-        deal(USDC, depositor, expectedAmount0);
-        deal(WETH, depositor, expectedAmount1);
-
-        vm.prank(depositor);
-        IERC20(USDC).approve(address(module), expectedAmount0);
-        vm.prank(depositor);
-        IERC20(WETH).approve(address(module), expectedAmount1);
-
-        vm.prank(address(metaVault));
-        vm.expectRevert(IValantisSOTModule.Deposit1.selector);
-
-        module.deposit(depositor, proportion);
-    }
-
     // #endregion test deposit.
 
     // #region test withdraw.
@@ -877,7 +785,9 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         deal(USDC, address(sovereignALM), amountIn / 2);
 
-        vm.expectRevert(IValantisSOTModule.NotEnoughToken0.selector);
+        vm.expectRevert(
+            IValantisSOTModulePublic.NotEnoughToken0.selector
+        );
         vm.prank(manager);
         module.swap(
             zeroForOne,
@@ -900,7 +810,9 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         deal(WETH, address(sovereignALM), amountIn / 2);
 
-        vm.expectRevert(IValantisSOTModule.NotEnoughToken1.selector);
+        vm.expectRevert(
+            IValantisSOTModulePublic.NotEnoughToken1.selector
+        );
         vm.prank(manager);
         module.swap(
             zeroForOne,
@@ -924,7 +836,9 @@ contract ValantisSOTModuleTest is TestWrapper {
         sovereignPool.setReserves(0, amountIn);
         deal(WETH, address(sovereignALM), amountIn);
 
-        vm.expectRevert(IValantisSOTModule.SwapCallFailed.selector);
+        vm.expectRevert(
+            IValantisSOTModulePublic.SwapCallFailed.selector
+        );
         vm.prank(manager);
         module.swap(
             zeroForOne,
@@ -948,7 +862,9 @@ contract ValantisSOTModuleTest is TestWrapper {
         sovereignPool.setReserves(amountIn, 0);
         deal(USDC, address(sovereignALM), amountIn);
 
-        vm.expectRevert(IValantisSOTModule.SlippageTooHigh.selector);
+        vm.expectRevert(
+            IValantisSOTModulePublic.SlippageTooHigh.selector
+        );
         vm.prank(manager);
         module.swap(
             zeroForOne,
@@ -972,111 +888,8 @@ contract ValantisSOTModuleTest is TestWrapper {
         sovereignPool.setReserves(0, amountIn);
         deal(WETH, address(sovereignALM), amountIn);
 
-        vm.expectRevert(IValantisSOTModule.SlippageTooHigh.selector);
-        vm.prank(manager);
-        module.swap(
-            zeroForOne,
-            expectedMinReturn,
-            amountIn,
-            router,
-            expectedSqrtSpotPriceUpperX96,
-            expectedSqrtSpotPriceLowerX96,
-            payload
-        );
-    }
-
-    function testSwapNotDepositedAllToken0() public {
-        SovereignALMBuggy3Mock buggySovereignALM =
-            new SovereignALMBuggy3Mock();
-        buggySovereignALM.setToken0AndToken1(USDC, WETH);
-        // #region create valantis module.
-
-        implementation =
-            address(new ValantisModulePublic(address(guardian)));
-
-        module = ValantisModulePublic(
-            address(new ERC1967Proxy(implementation, ""))
-        );
-
-        module.initialize(
-            address(sovereignPool),
-            INIT0,
-            INIT1,
-            MAX_SLIPPAGE,
-            address(metaVault)
-        );
-
-        vm.prank(owner);
-        module.setALMAndManagerFees(
-            address(buggySovereignALM), address(oracle)
-        );
-
-        // #endregion create valantis module.
-
-        bool zeroForOne = false;
-        uint256 expectedMinReturn = 1250e6;
-        uint256 amountIn = 0.6 ether;
-        address router = address(this);
-        bytes memory payload =
-            abi.encodeWithSelector(this.swap2.selector);
-
-        sovereignPool.setReserves(0, amountIn);
-        deal(WETH, address(buggySovereignALM), amountIn);
-
         vm.expectRevert(
-            IValantisSOTModule.NotDepositedAllToken0.selector
-        );
-        vm.prank(manager);
-        module.swap(
-            zeroForOne,
-            expectedMinReturn,
-            amountIn,
-            router,
-            expectedSqrtSpotPriceUpperX96,
-            expectedSqrtSpotPriceLowerX96,
-            payload
-        );
-    }
-
-    function testSwapNotDepositedAllToken1() public {
-        SovereignALMBuggy4Mock buggySovereignALM =
-            new SovereignALMBuggy4Mock();
-        buggySovereignALM.setToken0AndToken1(USDC, WETH);
-        // #region create valantis module.
-
-        implementation =
-            address(new ValantisModulePublic(address(guardian)));
-
-        module = ValantisModulePublic(
-            address(new ERC1967Proxy(implementation, ""))
-        );
-        module.initialize(
-            address(sovereignPool),
-            INIT0,
-            INIT1,
-            MAX_SLIPPAGE,
-            address(metaVault)
-        );
-
-        vm.prank(owner);
-        module.setALMAndManagerFees(
-            address(buggySovereignALM), address(oracle)
-        );
-
-        // #endregion create valantis module.
-
-        bool zeroForOne = true;
-        uint256 expectedMinReturn = 0.6 ether;
-        uint256 amountIn = 1250e6;
-        address router = address(this);
-        bytes memory payload =
-            abi.encodeWithSelector(this.swap3.selector);
-
-        sovereignPool.setReserves(amountIn, 0);
-        deal(USDC, address(buggySovereignALM), amountIn);
-
-        vm.expectRevert(
-            IValantisSOTModule.NotDepositedAllToken1.selector
+            IValantisSOTModulePublic.SlippageTooHigh.selector
         );
         vm.prank(manager);
         module.swap(
@@ -1183,7 +996,9 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         // #endregion set amm sqrtSpotPriceX96.
 
-        vm.expectRevert(IValantisSOTModule.OverMaxDeviation.selector);
+        vm.expectRevert(
+            IValantisSOTModulePublic.OverMaxDeviation.selector
+        );
         module.validateRebalance(oracle, TEN_PERCENT);
     }
 
@@ -1194,7 +1009,9 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         // #endregion set amm sqrtSpotPriceX96.
 
-        vm.expectRevert(IValantisSOTModule.OverMaxDeviation.selector);
+        vm.expectRevert(
+            IValantisSOTModulePublic.OverMaxDeviation.selector
+        );
         module.validateRebalance(oracle, TEN_PERCENT);
     }
 

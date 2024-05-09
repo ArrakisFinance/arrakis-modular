@@ -1236,7 +1236,7 @@ contract UniV4StandardModule is
             IPoolManager.ModifyLiquidityParams({
                 liquidityDelta: SafeCast.toInt256(
                     uint256(liquidityToAdd_)
-                    ),
+                ),
                 tickLower: tickLower_,
                 tickUpper: tickUpper_
             }),

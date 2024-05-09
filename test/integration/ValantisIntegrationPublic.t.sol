@@ -49,6 +49,8 @@ import {IArrakisStandardManager} from
     "../../src/interfaces/IArrakisStandardManager.sol";
 import {IValantisSOTModule} from
     "../../src/interfaces/IValantisSOTModule.sol";
+import {IValantisSOTModulePublic} from
+    "../../src/interfaces/IValantisSOTModulePublic.sol";
 import {IOracleWrapper} from "../../src/interfaces/IOracleWrapper.sol";
 import {IOwnable} from "../../src/interfaces/IOwnable.sol";
 import {IArrakisLPModule} from
@@ -66,20 +68,19 @@ import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ERC1967Proxy} from
     "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {
     SOTBase,
     Math
-} from "@valantis/contracts-test/base/SOTBase.t.sol";
-import {ERC20} from
-    "../../lib/valantis-sot/lib/valantis-core/lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+} from "@valantis-sot/contracts-test/base/SOTBase.t.sol";
 import {MockSigner} from
-    "@valantis/contracts-test/mocks/MockSigner.sol";
+    "@valantis-sot/contracts-test/mocks/MockSigner.sol";
 import {
     SOT,
     SOTConstructorArgs,
     SolverOrderType
-} from "@valantis/contracts/SOT.sol";
+} from "@valantis-sot/contracts/SOT.sol";
 import {
     SovereignPoolConstructorArgs,
     SovereignPoolSwapParams,
@@ -368,10 +369,11 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
             maxDelay: 9 minutes,
             maxOracleUpdateDurationFeed0: 10 minutes,
             maxOracleUpdateDurationFeed1: 10 minutes,
-            solverMaxDiscountBips: 200, // 2%
+            solverMaxDiscountBipsLower: 200, // 2%
+            solverMaxDiscountBipsUpper: 200, // 2%
             maxOracleDeviationBound: 5000, // 50%
-            minAMMFeeGrowthInPips: 100,
-            maxAMMFeeGrowthInPips: 10_000,
+            minAMMFeeGrowthE6: 100,
+            maxAMMFeeGrowthE6: 10_000,
             minAMMFee: 1 // 0.01%
         });
 
@@ -385,14 +387,14 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
         _addToContractsToApprove(address(alm));
 
         vm.prank(IOwnable(vault).owner());
-        IValantisSOTModule(m).setALMAndManagerFees(
+        IValantisSOTModulePublic(m).setALMAndManagerFees(
             address(alm), oracle
         );
 
         vm.prank(alm.manager());
         alm.setSolverFeeInBips(100, 100);
         vm.prank(alm.manager());
-        alm.setMaxOracleDeviationBips(500);
+        alm.setMaxOracleDeviationBips(500, 500);
 
         vm.prank(address(this));
         alm.setMaxTokenVolumes(100e18, 20_000e18);
@@ -569,23 +571,33 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
                 )
             )
         );
-        sotParams.solverPriceX192Discounted = FullMath.mulDiv(
-            FullMath.mulDiv(
-                FullMath.mulDiv(499_999_999_999_999, 1010, 1000),
-                (1 << 128),
-                (10 ** token0.decimals())
-            ),
-            (1 << 64),
-            1
+        sotParams.sqrtSolverPriceX96Discounted = SafeCast.toUint160(
+            Math.sqrt(
+                FullMath.mulDiv(
+                    FullMath.mulDiv(
+                        FullMath.mulDiv(
+                            499_999_999_999_999, 1010, 1000
+                        ),
+                        (1 << 128),
+                        (10 ** token0.decimals())
+                    ),
+                    (1 << 64),
+                    1
+                )
+            )
         );
-        sotParams.solverPriceX192Base = FullMath.mulDiv(
-            FullMath.mulDiv(
-                499_999_999_999_999,
-                (1 << 128),
-                (10 ** token0.decimals())
-            ),
-            (1 << 64),
-            1
+        sotParams.sqrtSolverPriceX96Base = SafeCast.toUint160(
+            Math.sqrt(
+                FullMath.mulDiv(
+                    FullMath.mulDiv(
+                        499_999_999_999_999,
+                        (1 << 128),
+                        (10 ** token0.decimals())
+                    ),
+                    (1 << 64),
+                    1
+                )
+            )
         );
         sotParams.authorizedRecipient = swapReceiver;
         sotParams.authorizedSender = swapper;
@@ -620,7 +632,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
 
         // #endregion do a swap.
 
-        (,,, uint16 solverFeeBipsToken0, uint16 solverFeeBipsToken1,)
+        (,,,, uint16 solverFeeBipsToken0, uint16 solverFeeBipsToken1,)
         = alm.solverReadSlot();
 
         assert(IArrakisLPModule(m).managerBalance0() > 0);
@@ -749,7 +761,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, SOTBase {
             abi.encodeWithSelector(this.swap.selector);
 
         bytes memory data = abi.encodeWithSelector(
-            IValantisSOTModule.swap.selector,
+            IValantisSOTModulePublic.swap.selector,
             zeroForOne,
             expectedMinReturn,
             amountIn,

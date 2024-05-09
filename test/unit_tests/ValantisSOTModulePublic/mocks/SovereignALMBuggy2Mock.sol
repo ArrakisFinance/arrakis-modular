@@ -35,13 +35,19 @@ contract SovereignALMBuggy2Mock {
         uint256 amount1,
         uint160,
         uint160
-    ) external {
+    )
+        external
+        returns (uint256 amount0Deposited, uint256 amount1Deposited)
+    {
         IERC20(token0).transferFrom(
             msg.sender, address(this), amount0
         );
         IERC20(token1).transferFrom(
             msg.sender, address(this), amount1
         );
+
+        amount0Deposited = amount0;
+        amount1Deposited = amount1;
     }
 
     function withdrawLiquidity(

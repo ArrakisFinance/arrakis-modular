@@ -44,8 +44,6 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-import {console} from "forge-std/console.sol";
-
 contract SelfPay is
     AutomateReady,
     Ownable,
