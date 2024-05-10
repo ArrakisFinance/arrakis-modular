@@ -21,7 +21,6 @@ import {
     SignatureTransferDetails
 } from "./interfaces/IPermit2.sol";
 import {IWETH9} from "./interfaces/IWETH9.sol";
-import {PIPS} from "./constants/CArrakis.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {
@@ -32,11 +31,7 @@ import {ReentrancyGuard} from
     "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 
-import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
-
-// #region solady dependencies.
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
-// #endregion solady dependencies.
 
 contract ArrakisPrivateVaultRouter is
     IArrakisPrivateVaultRouter,

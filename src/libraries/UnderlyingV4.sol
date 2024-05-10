@@ -3,9 +3,7 @@ pragma solidity 0.8.25;
 
 import {
     UnderlyingPayload,
-    ComputeFeesPayload,
     PositionUnderlying,
-    GetFeesPayload,
     RangeData
 } from "../structs/SUniswapV4.sol";
 import {PIPS} from "../constants/CArrakis.sol";
@@ -23,7 +21,6 @@ import {
     PoolIdLibrary,
     PoolId
 } from "@uniswap/v4-core/src/types/PoolId.sol";
-import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {LiquidityAmounts} from
     "@uniswap/v4-periphery/contracts/libraries/LiquidityAmounts.sol";
 

@@ -3,8 +3,6 @@ pragma solidity 0.8.19;
 
 import {IArrakisLPModulePrivate} from
     "../interfaces/IArrakisLPModulePrivate.sol";
-import {IValantisSOTModulePrivate} from
-    "../interfaces/IValantisSOTModulePrivate.sol";
 import {IOwnable} from "../interfaces/IOwnable.sol";
 import {ValantisModule} from "../abstracts/ValantisSOTModule.sol";
 

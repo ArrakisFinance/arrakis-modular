@@ -165,7 +165,7 @@ contract ArrakisMetaVaultFactory is
 
             // NOTE let's create3 timelock or remove create3 for public vault.
             timeLock = address(
-                new TimeLock(1 minutes, proposers, executors, owner_)
+                new TimeLock(2 days, proposers, executors, owner_)
             );
         }
 

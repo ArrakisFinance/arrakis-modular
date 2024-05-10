@@ -163,7 +163,6 @@ contract ValantisModulePublic is
         bytes calldata payload_
     ) external onlyManager whenNotPaused {
         // #region checks/effects.
-
         _checkMinReturn(
             zeroForOne_,
             expectedMinReturn_,
@@ -171,7 +170,6 @@ contract ValantisModulePublic is
             token0.decimals(),
             token1.decimals()
         );
-
         // #endregion checks/effects.
 
         // #region interactions.
