@@ -3552,7 +3552,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         address vault =
             vm.addr(uint256(keccak256(abi.encode("Vault"))));
 
-        string memory strategy = "SOT";
+        string memory strategy = "HOT";
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -3624,7 +3624,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management.
 
-        string memory strategy = "SOT";
+        string memory strategy = "HOT";
 
         vm.expectRevert(
             IArrakisStandardManager.OnlyStratAnnouncer.selector
@@ -3693,7 +3693,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management.
 
-        string memory strategy = "SOT";
+        string memory strategy = "HOT";
 
         vm.expectEmit();
         emit LogStrategyAnnouncement(address(vault), strategy);

@@ -2,10 +2,10 @@
 pragma solidity ^0.8.19;
 
 import {ISovereignPool} from "./ISovereignPool.sol";
-import {ISOT} from "@valantis-sot/contracts/interfaces/ISOT.sol";
+import {IHOT} from "@valantis-hot/contracts/interfaces/IHOT.sol";
 import {IOracleWrapper} from "./IOracleWrapper.sol";
 
-interface IValantisSOTModule {
+interface IValantisHOTModule {
     // #region errors.
 
     /// @notice
@@ -70,11 +70,11 @@ interface IValantisSOTModule {
 
     // #region view functions.
 
-    /// @notice function used to get the valantis sot pool.
+    /// @notice function used to get the valantis hot pool.
     function pool() external view returns (ISovereignPool);
 
-    /// @notice function used to get the valantis sot alm/ liquidity module.
-    function alm() external view returns (ISOT);
+    /// @notice function used to get the valantis hot alm/ liquidity module.
+    function alm() external view returns (IHOT);
 
     /// @notice function used to get the max slippage that
     /// can occur during swap rebalance.

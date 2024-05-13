@@ -1,8 +1,8 @@
 # ValantisModulePrivate
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/modules/ValantisSOTModulePrivate.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/modules/ValantisHOTModulePrivate.sol)
 
 **Inherits:**
-[ValantisModule](/src/abstracts/ValantisSOTModule.sol/abstract.ValantisModule.md), [IArrakisLPModulePrivate](/src/interfaces/IArrakisLPModulePrivate.sol/interface.IArrakisLPModulePrivate.md)
+[ValantisModule](/src/abstracts/ValantisHOTModule.sol/abstract.ValantisModule.md), [IArrakisLPModulePrivate](/src/interfaces/IArrakisLPModulePrivate.sol/interface.IArrakisLPModulePrivate.md)
 
 
 ## Functions

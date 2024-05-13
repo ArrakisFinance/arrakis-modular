@@ -7,11 +7,11 @@ import {TestWrapper} from "../../utils/TestWrapper.sol";
 // #endregion foundry.
 // #region Valantis Module.
 import {ValantisModulePublic} from
-    "../../../src/modules/ValantisSOTModulePublic.sol";
-import {IValantisSOTModule} from
-    "../../../src/interfaces/IValantisSOTModule.sol";
-import {IValantisSOTModulePublic} from
-    "../../../src/interfaces/IValantisSOTModulePublic.sol";
+    "../../../src/modules/ValantisHOTModulePublic.sol";
+import {IValantisHOTModule} from
+    "../../../src/interfaces/IValantisHOTModule.sol";
+import {IValantisHOTModulePublic} from
+    "../../../src/interfaces/IValantisHOTModulePublic.sol";
 import {IArrakisLPModule} from
     "../../../src/interfaces/IArrakisLPModule.sol";
 // #endregion Valantis Module.
@@ -57,7 +57,7 @@ import {GuardianMock} from "./mocks/GuardianMock.sol";
 import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-contract ValantisSOTModuleTest is TestWrapper {
+contract ValantisHOTModuleTest is TestWrapper {
     // #region constant properties.
 
     address public constant WETH =
@@ -143,7 +143,7 @@ contract ValantisSOTModuleTest is TestWrapper {
             address(new ValantisModulePublic(address(guardian)));
 
         bytes memory data = abi.encodeWithSelector(
-            IValantisSOTModule.initialize.selector,
+            IValantisHOTModule.initialize.selector,
             address(sovereignPool),
             INIT0,
             INIT1,
@@ -253,7 +253,7 @@ contract ValantisSOTModuleTest is TestWrapper {
             address(sovereignALM), address(oracle)
         );
 
-        vm.expectRevert(IValantisSOTModule.ALMAlreadySet.selector);
+        vm.expectRevert(IValantisHOTModule.ALMAlreadySet.selector);
         vm.prank(owner);
         module.setALMAndManagerFees(
             address(sovereignALM), address(oracle)
@@ -279,7 +279,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         );
 
         vm.expectRevert(
-            IValantisSOTModule.OnlyMetaVaultOwner.selector
+            IValantisHOTModule.OnlyMetaVaultOwner.selector
         );
         vm.prank(notVaultOwner);
         module.setALMAndManagerFees(
@@ -315,7 +315,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         );
 
         vm.expectRevert(
-            IValantisSOTModule.MaxSlippageGtTenPercent.selector
+            IValantisHOTModule.MaxSlippageGtTenPercent.selector
         );
 
         module.initialize(
@@ -502,7 +502,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(address(metaVault), 1 ether);
 
         vm.prank(address(metaVault));
-        vm.expectRevert(IValantisSOTModule.NoNativeToken.selector);
+        vm.expectRevert(IValantisHOTModule.NoNativeToken.selector);
 
         module.deposit{value: 1 ether}(depositor, proportion);
     }
@@ -836,7 +836,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.prank(address(metaVault));
 
-        vm.expectRevert(IValantisSOTModule.AmountsZeros.selector);
+        vm.expectRevert(IValantisHOTModule.AmountsZeros.selector);
 
         module.withdraw(receiver, BASE);
     }
@@ -914,7 +914,7 @@ contract ValantisSOTModuleTest is TestWrapper {
             abi.encodeWithSelector(this.swap.selector);
 
         vm.expectRevert(
-            IValantisSOTModule.ExpectedMinReturnTooLow.selector
+            IValantisHOTModule.ExpectedMinReturnTooLow.selector
         );
         vm.prank(manager);
         module.swap(
@@ -937,7 +937,7 @@ contract ValantisSOTModuleTest is TestWrapper {
             abi.encodeWithSelector(this.swap.selector);
 
         vm.expectRevert(
-            IValantisSOTModule.ExpectedMinReturnTooLow.selector
+            IValantisHOTModule.ExpectedMinReturnTooLow.selector
         );
         vm.prank(manager);
         module.swap(
@@ -962,7 +962,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(USDC, address(sovereignALM), amountIn / 2);
 
         vm.expectRevert(
-            IValantisSOTModulePublic.NotEnoughToken0.selector
+            IValantisHOTModulePublic.NotEnoughToken0.selector
         );
         vm.prank(manager);
         module.swap(
@@ -987,7 +987,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(WETH, address(sovereignALM), amountIn / 2);
 
         vm.expectRevert(
-            IValantisSOTModulePublic.NotEnoughToken1.selector
+            IValantisHOTModulePublic.NotEnoughToken1.selector
         );
         vm.prank(manager);
         module.swap(
@@ -1013,7 +1013,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(WETH, address(sovereignALM), amountIn);
 
         vm.expectRevert(
-            IValantisSOTModulePublic.SwapCallFailed.selector
+            IValantisHOTModulePublic.SwapCallFailed.selector
         );
         vm.prank(manager);
         module.swap(
@@ -1039,7 +1039,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(USDC, address(sovereignALM), amountIn);
 
         vm.expectRevert(
-            IValantisSOTModulePublic.SlippageTooHigh.selector
+            IValantisHOTModulePublic.SlippageTooHigh.selector
         );
         vm.prank(manager);
         module.swap(
@@ -1065,7 +1065,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(WETH, address(sovereignALM), amountIn);
 
         vm.expectRevert(
-            IValantisSOTModulePublic.SlippageTooHigh.selector
+            IValantisHOTModulePublic.SlippageTooHigh.selector
         );
         vm.prank(manager);
         module.swap(
@@ -1173,7 +1173,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         // #endregion set amm sqrtSpotPriceX96.
 
         vm.expectRevert(
-            IValantisSOTModulePublic.OverMaxDeviation.selector
+            IValantisHOTModulePublic.OverMaxDeviation.selector
         );
         module.validateRebalance(oracle, TEN_PERCENT);
     }
@@ -1186,7 +1186,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         // #endregion set amm sqrtSpotPriceX96.
 
         vm.expectRevert(
-            IValantisSOTModulePublic.OverMaxDeviation.selector
+            IValantisHOTModulePublic.OverMaxDeviation.selector
         );
         module.validateRebalance(oracle, TEN_PERCENT);
     }

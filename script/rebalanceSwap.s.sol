@@ -6,10 +6,10 @@ import {console} from "forge-std/console.sol";
 
 import {IArrakisMetaVault} from
     "../src/interfaces/IArrakisMetaVault.sol";
-import {IValantisSOTModule} from
-    "../src/interfaces/IValantisSOTModule.sol";
-import {IValantisSOTModulePublic} from
-    "../src/interfaces/IValantisSOTModulePublic.sol";
+import {IValantisHOTModule} from
+    "../src/interfaces/IValantisHOTModule.sol";
+import {IValantisHOTModulePublic} from
+    "../src/interfaces/IValantisHOTModulePublic.sol";
 import {IArrakisStandardManager} from
     "../src/interfaces/IArrakisStandardManager.sol";
 
@@ -52,7 +52,7 @@ contract SwapOnPool is Script {
         );
 
         bytes memory payload = abi.encodeWithSelector(
-            IValantisSOTModulePublic.swap.selector,
+            IValantisHOTModulePublic.swap.selector,
             isZeroForOne,
             amountOutMin,
             amountIn,

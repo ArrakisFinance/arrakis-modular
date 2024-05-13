@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {IOracleWrapper} from "./IOracleWrapper.sol";
 
-interface IValantisSOTModulePublic {
+interface IValantisHOTModulePublic {
     // #region errors.
 
     error SlippageTooHigh();
@@ -27,9 +27,9 @@ interface IValantisSOTModulePublic {
 
     // #region functions.
 
-    /// @notice set SOT and initialize manager fees function.
-    /// @param alm_ address of the valantis SOT ALM.
-    /// @param oracle_ address of the oracle used by the valantis SOT module.
+    /// @notice set HOT and initialize manager fees function.
+    /// @param alm_ address of the valantis HOT ALM.
+    /// @param oracle_ address of the oracle used by the valantis HOT module.
     function setALMAndManagerFees(
         address alm_,
         address oracle_

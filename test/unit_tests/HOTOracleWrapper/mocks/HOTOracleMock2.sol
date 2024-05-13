@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
 
-contract SOTOracleMock2 {
+contract HOTOracleMock2 {
     function getSqrtOraclePriceX96()
         external
         view
