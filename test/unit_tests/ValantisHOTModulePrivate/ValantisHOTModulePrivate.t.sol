@@ -7,9 +7,9 @@ import {TestWrapper} from "../../utils/TestWrapper.sol";
 // #endregion foundry.
 // #region Valantis Module.
 import {ValantisModulePrivate} from
-    "../../../src/modules/ValantisSOTModulePrivate.sol";
-import {IValantisSOTModule} from
-    "../../../src/interfaces/IValantisSOTModule.sol";
+    "../../../src/modules/ValantisHOTModulePrivate.sol";
+import {IValantisHOTModule} from
+    "../../../src/interfaces/IValantisHOTModule.sol";
 import {IArrakisLPModule} from
     "../../../src/interfaces/IArrakisLPModule.sol";
 import {IArrakisLPModulePrivate} from
@@ -48,7 +48,7 @@ import {GuardianMock} from "./mocks/GuardianMock.sol";
 import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-contract ValantisSOTModulePrivateTest is TestWrapper {
+contract ValantisHOTModulePrivateTest is TestWrapper {
     // #region constant properties.
 
     address public constant WETH =
@@ -129,7 +129,7 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
             address(new ValantisModulePrivate(address(guardian)));
 
         bytes memory data = abi.encodeWithSelector(
-            IValantisSOTModule.initialize.selector,
+            IValantisHOTModule.initialize.selector,
             address(sovereignPool),
             INIT0,
             INIT1,
@@ -149,6 +149,81 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
 
         // #endregion create valantis module.
     }
+
+    // #region test setALMAndManagerFees.
+
+    function testsetALMAndManagerFeesAddressZero() public {
+        address implementation =
+            address(new ValantisModulePrivate(address(guardian)));
+
+        module = ValantisModulePrivate(
+            address(new ERC1967Proxy(implementation, ""))
+        );
+
+        module.initialize(
+            address(sovereignPool),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(metaVault)
+        );
+
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+
+        vm.prank(owner);
+        module.setALMAndManagerFees(address(0));
+    }
+
+    function testsetALMAndManagerFeesALMAlreadySet() public {
+        address implementation =
+            address(new ValantisModulePrivate(address(guardian)));
+
+        module = ValantisModulePrivate(
+            address(new ERC1967Proxy(implementation, ""))
+        );
+
+        module.initialize(
+            address(sovereignPool),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(metaVault)
+        );
+
+        vm.prank(owner);
+        module.setALMAndManagerFees(address(sovereignALM));
+
+        vm.expectRevert(IValantisHOTModule.ALMAlreadySet.selector);
+        vm.prank(owner);
+        module.setALMAndManagerFees(address(sovereignALM));
+    }
+
+    function testsetALMAndManagerFeesOnlyMetaVaultOwner() public {
+        address notVaultOwner =
+            vm.addr(uint256(keccak256(abi.encode("Not Vault Owner"))));
+        address implementation =
+            address(new ValantisModulePrivate(address(guardian)));
+
+        module = ValantisModulePrivate(
+            address(new ERC1967Proxy(implementation, ""))
+        );
+
+        module.initialize(
+            address(sovereignPool),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(metaVault)
+        );
+
+        vm.expectRevert(
+            IValantisHOTModule.OnlyMetaVaultOwner.selector
+        );
+        vm.prank(notVaultOwner);
+        module.setALMAndManagerFees(address(sovereignALM));
+    }
+
+    // #endregion test setALMAndManagerFees.
 
     // #region test fund.
 
@@ -194,7 +269,7 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         deal(address(metaVault), 1 ether);
 
         vm.prank(address(metaVault));
-        vm.expectRevert(IValantisSOTModule.NoNativeToken.selector);
+        vm.expectRevert(IValantisHOTModule.NoNativeToken.selector);
 
         module.fund{value: 1 ether}(
             depositor, expectedAmount0, expectedAmount1

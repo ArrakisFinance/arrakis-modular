@@ -2,11 +2,11 @@
 pragma solidity 0.8.19;
 
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
-import {IValantisSOTModule} from
-    "../interfaces/IValantisSOTModule.sol";
+import {IValantisHOTModule} from
+    "../interfaces/IValantisHOTModule.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {ISovereignPool} from "../interfaces/ISovereignPool.sol";
-import {ISOT} from "@valantis-sot/contracts/interfaces/ISOT.sol";
+import {IHOT} from "@valantis-hot/contracts/interfaces/IHOT.sol";
 import {BASE, PIPS} from "../constants/CArrakis.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
@@ -26,7 +26,7 @@ import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 /// @dev BeaconProxy be careful for changing implementation with upgrade.
 abstract contract ValantisModule is
     IArrakisLPModule,
-    IValantisSOTModule,
+    IValantisHOTModule,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable
 {
@@ -36,7 +36,7 @@ abstract contract ValantisModule is
 
     IArrakisMetaVault public metaVault;
     ISovereignPool public pool;
-    ISOT public alm;
+    IHOT public alm;
     IERC20Metadata public token0;
     IERC20Metadata public token1;
     /// @dev should we change it to mutable state variable,

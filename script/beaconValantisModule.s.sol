@@ -5,7 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 
 import {ValantisModulePublic} from
-    "../src/modules/ValantisSOTModulePublic.sol";
+    "../src/modules/ValantisHOTModulePublic.sol";
 
 import {UpgradeableBeacon} from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
