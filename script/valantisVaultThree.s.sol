@@ -6,8 +6,8 @@ import {console} from "forge-std/console.sol";
 
 import {IArrakisMetaVault} from
     "../src/interfaces/IArrakisMetaVault.sol";
-import {IValantisHOTModulePublic} from
-    "../src/interfaces/IValantisHOTModulePublic.sol";
+import {IValantisHOTModule} from
+    "../src/interfaces/IValantisHOTModule.sol";
 import {TimeLock} from "../src/TimeLock.sol";
 
 /// @dev ask to valantis team to grant module as poolManager (sovereignPool) and
@@ -46,7 +46,7 @@ contract ValantisVaultThree is Script {
         address module = address(IArrakisMetaVault(vault).module());
 
         bytes memory data = abi.encodeWithSelector(
-            IValantisHOTModulePublic.setALMAndManagerFees.selector,
+            IValantisHOTModule.setALMAndManagerFees.selector,
             alm,
             oracle
         );
