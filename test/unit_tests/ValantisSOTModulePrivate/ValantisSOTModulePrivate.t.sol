@@ -150,6 +150,81 @@ contract ValantisSOTModulePrivateTest is TestWrapper {
         // #endregion create valantis module.
     }
 
+    // #region test setALMAndManagerFees.
+
+    function testsetALMAndManagerFeesAddressZero() public {
+        address implementation =
+            address(new ValantisModulePrivate(address(guardian)));
+
+        module = ValantisModulePrivate(
+            address(new ERC1967Proxy(implementation, ""))
+        );
+
+        module.initialize(
+            address(sovereignPool),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(metaVault)
+        );
+
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+
+        vm.prank(owner);
+        module.setALMAndManagerFees(address(0));
+    }
+
+    function testsetALMAndManagerFeesALMAlreadySet() public {
+        address implementation =
+            address(new ValantisModulePrivate(address(guardian)));
+
+        module = ValantisModulePrivate(
+            address(new ERC1967Proxy(implementation, ""))
+        );
+
+        module.initialize(
+            address(sovereignPool),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(metaVault)
+        );
+
+        vm.prank(owner);
+        module.setALMAndManagerFees(address(sovereignALM));
+
+        vm.expectRevert(IValantisSOTModule.ALMAlreadySet.selector);
+        vm.prank(owner);
+        module.setALMAndManagerFees(address(sovereignALM));
+    }
+
+    function testsetALMAndManagerFeesOnlyMetaVaultOwner() public {
+        address notVaultOwner =
+            vm.addr(uint256(keccak256(abi.encode("Not Vault Owner"))));
+        address implementation =
+            address(new ValantisModulePrivate(address(guardian)));
+
+        module = ValantisModulePrivate(
+            address(new ERC1967Proxy(implementation, ""))
+        );
+
+        module.initialize(
+            address(sovereignPool),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(metaVault)
+        );
+
+        vm.expectRevert(
+            IValantisSOTModule.OnlyMetaVaultOwner.selector
+        );
+        vm.prank(notVaultOwner);
+        module.setALMAndManagerFees(address(sovereignALM));
+    }
+
+    // #endregion test setALMAndManagerFees.
+
     // #region test fund.
 
     function testFundOnlyMetaVault() public {

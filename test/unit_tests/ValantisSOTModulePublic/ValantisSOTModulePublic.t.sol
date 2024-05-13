@@ -232,6 +232,61 @@ contract ValantisSOTModuleTest is TestWrapper {
         module.setALMAndManagerFees(address(sovereignALM), address(0));
     }
 
+    function testsetALMAndManagerFeesALMAlreadySet() public {
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
+
+        module.initialize(
+            address(sovereignPool),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(metaVault)
+        );
+
+        vm.prank(owner);
+        module.setALMAndManagerFees(
+            address(sovereignALM), address(oracle)
+        );
+
+        vm.expectRevert(IValantisSOTModule.ALMAlreadySet.selector);
+        vm.prank(owner);
+        module.setALMAndManagerFees(
+            address(sovereignALM), address(oracle)
+        );
+    }
+
+    function testsetALMAndManagerFeesOnlyMetaVaultOwner() public {
+        address notVaultOwner =
+            vm.addr(uint256(keccak256(abi.encode("Not Vault Owner"))));
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
+
+        module.initialize(
+            address(sovereignPool),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(metaVault)
+        );
+
+        vm.expectRevert(
+            IValantisSOTModule.OnlyMetaVaultOwner.selector
+        );
+        vm.prank(notVaultOwner);
+        module.setALMAndManagerFees(
+            address(sovereignALM), address(oracle)
+        );
+    }
+
     function testInitializeInitsAreZeros() public {
         implementation =
             address(new ValantisModulePublic(address(guardian)));
@@ -488,6 +543,127 @@ contract ValantisSOTModuleTest is TestWrapper {
         vm.expectRevert(IArrakisLPModule.ProportionZero.selector);
 
         module.deposit(depositor, proportion);
+    }
+
+    function testDepositInitsWithExtraTokenOnALM() public {
+        address depositor = vm.addr(10);
+        uint256 proportion = BASE / 2;
+
+        uint256 expectedAmount0 = 2000e6 / 2;
+        uint256 expectedAmount1 = 1e18 / 2;
+
+        deal(USDC, depositor, expectedAmount0);
+        deal(WETH, depositor, expectedAmount1);
+
+        deal(USDC, address(sovereignALM), expectedAmount0 / 2);
+        deal(WETH, address(sovereignALM), expectedAmount1 / 2);
+
+        sovereignPool.setReserves(
+            expectedAmount0 / 2, expectedAmount1 / 2
+        );
+
+        vm.prank(depositor);
+        IERC20(USDC).approve(address(module), expectedAmount0);
+        vm.prank(depositor);
+        IERC20(WETH).approve(address(module), expectedAmount1);
+
+        vm.prank(address(metaVault));
+
+        module.deposit(depositor, proportion);
+
+        assertEq(
+            IERC20(USDC).balanceOf(address(sovereignALM)),
+            expectedAmount0
+        );
+        assertEq(
+            IERC20(WETH).balanceOf(address(sovereignALM)),
+            expectedAmount1
+        );
+
+        assertEq(
+            IERC20(USDC).balanceOf(address(manager)),
+            expectedAmount0 / 2
+        );
+        assertEq(
+            IERC20(WETH).balanceOf(address(manager)),
+            expectedAmount1 / 2
+        );
+    }
+
+    function testDepositInitsWithExtraTokenOnALMTwo() public {
+        address depositor = vm.addr(10);
+        uint256 proportion = BASE / 2;
+
+        uint256 expectedAmount0 = 2000e6 / 2;
+        uint256 expectedAmount1 = 1e18 / 2;
+
+        deal(USDC, depositor, expectedAmount0);
+        deal(WETH, depositor, expectedAmount1);
+
+        deal(USDC, address(sovereignALM), expectedAmount0 / 2);
+
+        sovereignPool.setReserves(expectedAmount0 / 2, 0);
+
+        vm.prank(depositor);
+        IERC20(USDC).approve(address(module), expectedAmount0);
+        vm.prank(depositor);
+        IERC20(WETH).approve(address(module), expectedAmount1);
+
+        vm.prank(address(metaVault));
+
+        module.deposit(depositor, proportion);
+
+        assertEq(
+            IERC20(USDC).balanceOf(address(sovereignALM)),
+            expectedAmount0
+        );
+        assertEq(
+            IERC20(WETH).balanceOf(address(sovereignALM)),
+            expectedAmount1
+        );
+
+        assertEq(
+            IERC20(USDC).balanceOf(address(manager)),
+            expectedAmount0 / 2
+        );
+    }
+
+    function testDepositInitsWithExtraTokenOnALMThree() public {
+        address depositor = vm.addr(10);
+        uint256 proportion = BASE / 2;
+
+        uint256 expectedAmount0 = 2000e6 / 2;
+        uint256 expectedAmount1 = 1e18 / 2;
+
+        deal(USDC, depositor, expectedAmount0);
+        deal(WETH, depositor, expectedAmount1);
+
+        deal(WETH, address(sovereignALM), expectedAmount1 / 2);
+
+        sovereignPool.setReserves(0, expectedAmount1 / 2);
+
+        vm.prank(depositor);
+        IERC20(USDC).approve(address(module), expectedAmount0);
+        vm.prank(depositor);
+        IERC20(WETH).approve(address(module), expectedAmount1);
+
+        vm.prank(address(metaVault));
+
+        module.deposit(depositor, proportion);
+
+        assertEq(
+            IERC20(USDC).balanceOf(address(sovereignALM)),
+            expectedAmount0
+        );
+        assertEq(
+            IERC20(WETH).balanceOf(address(sovereignALM)),
+            expectedAmount1
+        );
+
+        assertEq(
+            IERC20(WETH).balanceOf(address(manager)),
+            expectedAmount1 / 2
+        );
     }
 
     function testDeposit() public {

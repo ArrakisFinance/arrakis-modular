@@ -49,6 +49,17 @@ contract SOTOracleWrapperTest is TestWrapper {
         oracleWrapper = new SOTOracleWrapper(oracle, 6, 0);
     }
 
+    function testConstructor() public {
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+
+        oracleWrapper = new SOTOracleWrapper(oracle, 6, 18);
+
+        assertEq(oracleWrapper.decimals0(), 6);
+        assertEq(oracleWrapper.decimals1(), 18);
+        assertEq(address(oracleWrapper.oracle()), oracle);
+    }
+
     // #endregion test constructor.
 
     // #region test getPrice0 and getPrice1.
