@@ -1,5 +1,5 @@
-# IValantisSOTModule
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/IValantisSOTModule.sol)
+# IValantisHOTModule
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/IValantisHOTModule.sol)
 
 
 ## Functions
@@ -58,7 +58,7 @@ function setPriceBounds(
 
 ### pool
 
-function used to get the valantis sot pool.
+function used to get the valantis hot pool.
 
 
 ```solidity
@@ -67,11 +67,11 @@ function pool() external view returns (ISovereignPool);
 
 ### alm
 
-function used to get the valantis sot alm/ liquidity module.
+function used to get the valantis hot alm/ liquidity module.
 
 
 ```solidity
-function alm() external view returns (ISOT);
+function alm() external view returns (IHOT);
 ```
 
 ### oracle

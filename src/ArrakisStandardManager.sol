@@ -41,8 +41,6 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 // #endregion uniswap.
 
-import {console} from "forge-std/console.sol";
-
 // NOTE admin and owner can't be the same address on transparent proxy.
 contract ArrakisStandardManager is
     IArrakisStandardManager,

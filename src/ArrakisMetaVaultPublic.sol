@@ -33,8 +33,10 @@ contract ArrakisMetaVaultPublic is
         string memory name_,
         string memory symbol_,
         address moduleRegistry_,
-        address manager_
-    ) ArrakisMetaVault(moduleRegistry_, manager_) {
+        address manager_,
+        address token0_,
+        address token1_
+    ) ArrakisMetaVault(moduleRegistry_, manager_, token0_, token1_) {
         if (owner_ == address(0)) revert AddressZero("Owner");
         _initializeOwner(owner_);
         _name = name_;

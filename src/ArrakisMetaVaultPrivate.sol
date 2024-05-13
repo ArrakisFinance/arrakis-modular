@@ -37,8 +37,10 @@ contract ArrakisMetaVaultPrivate is
     constructor(
         address moduleRegistry_,
         address manager_,
+        address token0_,
+        address token1_,
         address nft_
-    ) ArrakisMetaVault(moduleRegistry_, manager_) {
+    ) ArrakisMetaVault(moduleRegistry_, manager_, token0_, token1_) {
         if (nft_ == address(0)) revert AddressZero("NFT");
         nft = nft_;
     }
