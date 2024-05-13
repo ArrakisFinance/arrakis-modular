@@ -3,4 +3,4 @@
 # Contents
 - [ArrakisMetaVault](ArrakisMetaVault.sol/abstract.ArrakisMetaVault.md)
 - [ModuleRegistry](ModuleRegistry.sol/abstract.ModuleRegistry.md)
-- [ValantisModule](ValantisSOTModule.sol/abstract.ValantisModule.md)
+- [ValantisModule](ValantisHOTModule.sol/abstract.ValantisModule.md)

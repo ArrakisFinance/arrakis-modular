@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 /// @notice expose a deposit function for that can
 /// deposit a specific share of token0 and token1.

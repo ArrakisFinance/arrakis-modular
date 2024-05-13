@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 uint256 constant MINIMUM_LIQUIDITY = 10 ** 3;
 uint256 constant BASE = 1e18;

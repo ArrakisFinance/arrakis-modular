@@ -1,5 +1,5 @@
-# ISOTOracle
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/ISOTOracle.sol)
+# IHOTOracle
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/IHOTOracle.sol)
 
 
 ## Functions

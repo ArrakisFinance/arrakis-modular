@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {console} from "forge-std/console.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -19,7 +19,7 @@ import {IArrakisMetaVault} from
 import {PALMVaultNFT} from "../../../src/PALMVaultNFT.sol";
 import {TimeLock} from "../../../src/TimeLock.sol";
 
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {IERC20Metadata} from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {UpgradeableBeacon} from
@@ -80,15 +80,14 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         // #region create a upgradeable beacon.
 
         address beaconAdmin =
-            vm.addr(uint256(keccak256(abi.encode("Beacon Address"))));
+            vm.addr(uint256(keccak256(abi.encode("Beacon Admin"))));
         BeaconImplementation implementation =
             new BeaconImplementation();
 
-        beacon = address(
-            new UpgradeableBeacon(
-                address(implementation), beaconAdmin
-            )
-        );
+        beacon =
+            address(new UpgradeableBeacon(address(implementation)));
+
+        UpgradeableBeacon(beacon).transferOwnership(beaconAdmin);
 
         // #endregion create a upgradeable beacon.
 
@@ -224,7 +223,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         assertEq(factory.paused(), true);
         // #endregion pause factory.
 
-        vm.expectRevert(Pausable.EnforcedPause.selector);
+        vm.expectRevert(bytes("Pausable: paused"));
 
         factory.pause();
     }
@@ -242,7 +241,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     function testUnPauseNotPaused() public {
         assertEq(factory.paused(), false);
 
-        vm.expectRevert(Pausable.ExpectedPause.selector);
+        vm.expectRevert(bytes("Pausable: not paused"));
         factory.unpause();
     }
 
@@ -420,7 +419,11 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         );
 
         assertEq(Ownable(address(vault)).owner(), timeLock);
-        assertTrue(TimeLock(payable(timeLock)).hasRole(0x00, owner));
+        assertTrue(
+            TimeLock(payable(timeLock)).hasRole(
+                keccak256("TIMELOCK_ADMIN_ROLE"), owner
+            )
+        );
         assertTrue(
             TimeLock(payable(timeLock)).hasRole(
                 keccak256("PROPOSER_ROLE"), owner
@@ -504,7 +507,11 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         );
 
         assertEq(Ownable(address(vault)).owner(), timeLock);
-        assertTrue(TimeLock(payable(timeLock)).hasRole(0x00, owner));
+        assertTrue(
+            TimeLock(payable(timeLock)).hasRole(
+                keccak256("TIMELOCK_ADMIN_ROLE"), owner
+            )
+        );
         assertTrue(
             TimeLock(payable(timeLock)).hasRole(
                 keccak256("PROPOSER_ROLE"), owner

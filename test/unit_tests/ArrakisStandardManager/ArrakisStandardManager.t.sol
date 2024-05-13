@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {console} from "forge-std/console.sol";
 
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 
-import {
-    ArrakisStandardManager,
-    IArrakisStandardManager
-} from "../../../src/ArrakisStandardManager.sol";
+import {ArrakisStandardManager} from
+    "../../../src/ArrakisStandardManager.sol";
+import {IArrakisStandardManager} from
+    "../../../src/interfaces/IArrakisStandardManager.sol";
 import {ArrakisMetaVaultFactory} from
     "../../../src/ArrakisMetaVaultFactory.sol";
 import {IArrakisMetaVault} from
@@ -37,12 +37,14 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
 // #region openzeppelin.
 
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UpgradeableBeacon} from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {ERC1967Proxy} from
+    "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 // #endregion openzeppelin.
 
@@ -84,6 +86,12 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
     // #region public properties.
 
+    // #region events.
+
+    event LogStrategyAnnouncement(address vault, string strategy);
+
+    // #endregion events.
+
     function setUp() public {
         // #region create guardian.
 
@@ -102,11 +110,17 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #region create standard manager.
 
-        manager = new ArrakisStandardManager(
-            defaultFeePIPS,
-            NATIVE_COIN,
-            nativeTokenDecimals,
-            address(guardian)
+        address implementation = address(
+            new ArrakisStandardManager(
+                defaultFeePIPS,
+                NATIVE_COIN,
+                nativeTokenDecimals,
+                address(guardian)
+            )
+        );
+
+        manager = ArrakisStandardManager(
+            payable(address(new ERC1967Proxy(implementation, "")))
         );
 
         // #endregion create standard manager.
@@ -193,8 +207,17 @@ contract ArrakisStandardManagerTest is TestWrapper {
     function testInitializeOwnerAddressZero() public {
         // #region create a new manager.
 
-        manager = new ArrakisStandardManager(
-            defaultFeePIPS, NATIVE_COIN, nativeTokenDecimals, guardian
+        address implementation = address(
+            new ArrakisStandardManager(
+                defaultFeePIPS,
+                NATIVE_COIN,
+                nativeTokenDecimals,
+                address(guardian)
+            )
+        );
+
+        manager = ArrakisStandardManager(
+            payable(address(new ERC1967Proxy(implementation, "")))
         );
 
         // #endregion create a new manager.
@@ -207,8 +230,17 @@ contract ArrakisStandardManagerTest is TestWrapper {
     function testInitializeDefaultReceiverAddressZero() public {
         // #region create a new manager.
 
-        manager = new ArrakisStandardManager(
-            defaultFeePIPS, NATIVE_COIN, nativeTokenDecimals, guardian
+        address implementation = address(
+            new ArrakisStandardManager(
+                defaultFeePIPS,
+                NATIVE_COIN,
+                nativeTokenDecimals,
+                address(guardian)
+            )
+        );
+
+        manager = ArrakisStandardManager(
+            payable(address(new ERC1967Proxy(implementation, "")))
         );
 
         // #endregion create a new manager.
@@ -221,8 +253,17 @@ contract ArrakisStandardManagerTest is TestWrapper {
     function testInitializeFactoryAddressZero() public {
         // #region create a new manager.
 
-        manager = new ArrakisStandardManager(
-            defaultFeePIPS, NATIVE_COIN, nativeTokenDecimals, guardian
+        address implementation = address(
+            new ArrakisStandardManager(
+                defaultFeePIPS,
+                NATIVE_COIN,
+                nativeTokenDecimals,
+                address(guardian)
+            )
+        );
+
+        manager = ArrakisStandardManager(
+            payable(address(new ERC1967Proxy(implementation, "")))
         );
 
         // #endregion create a new manager.
@@ -235,8 +276,17 @@ contract ArrakisStandardManagerTest is TestWrapper {
     function testInitialize() public {
         // #region create a new manager.
 
-        manager = new ArrakisStandardManager(
-            defaultFeePIPS, NATIVE_COIN, nativeTokenDecimals, guardian
+        address implementation = address(
+            new ArrakisStandardManager(
+                defaultFeePIPS,
+                NATIVE_COIN,
+                nativeTokenDecimals,
+                address(guardian)
+            )
+        );
+
+        manager = ArrakisStandardManager(
+            payable(address(new ERC1967Proxy(implementation, "")))
         );
 
         // #endregion create a new manager.
@@ -300,8 +350,8 @@ contract ArrakisStandardManagerTest is TestWrapper {
     function testUnPauseNotPaused() public {
         assertEq(manager.paused(), false);
 
-        vm.prank(IGuardian(guardian).pauser());
-        vm.expectRevert(Pausable.ExpectedPause.selector);
+        vm.startPrank(IGuardian(guardian).pauser());
+        vm.expectRevert(bytes("Pausable: not paused"));
         manager.unpause();
     }
 
@@ -445,7 +495,6 @@ contract ArrakisStandardManagerTest is TestWrapper {
         // #endregion init management.
 
         vm.prank(owner);
-        vm.expectRevert(IArrakisStandardManager.AddressZero.selector);
         manager.setReceiverByToken(address(vault), true, address(0));
     }
 
@@ -3503,7 +3552,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
         address vault =
             vm.addr(uint256(keccak256(abi.encode("Vault"))));
 
-        string memory strategy = "SOT";
+        string memory strategy = "HOT";
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -3575,7 +3624,7 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management.
 
-        string memory strategy = "SOT";
+        string memory strategy = "HOT";
 
         vm.expectRevert(
             IArrakisStandardManager.OnlyStratAnnouncer.selector
@@ -3644,12 +3693,10 @@ contract ArrakisStandardManagerTest is TestWrapper {
 
         // #endregion init management.
 
-        string memory strategy = "SOT";
+        string memory strategy = "HOT";
 
         vm.expectEmit();
-        emit IArrakisStandardManager.LogStrategyAnnouncement(
-            address(vault), strategy
-        );
+        emit LogStrategyAnnouncement(address(vault), strategy);
 
         vm.prank(stratAnnouncer);
         manager.announceStrategy(address(vault), strategy);

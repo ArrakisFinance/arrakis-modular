@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 
 import {IArrakisMetaVault} from
     "../src/interfaces/IArrakisMetaVault.sol";
-import {IValantisSOTModule} from
-    "../src/interfaces/IValantisSOTModule.sol";
+import {IValantisHOTModule} from
+    "../src/interfaces/IValantisHOTModule.sol";
+import {IValantisHOTModulePublic} from
+    "../src/interfaces/IValantisHOTModulePublic.sol";
 import {IArrakisStandardManager} from
     "../src/interfaces/IArrakisStandardManager.sol";
 
@@ -50,7 +52,7 @@ contract SwapOnPool is Script {
         );
 
         bytes memory payload = abi.encodeWithSelector(
-            IValantisSOTModule.swap.selector,
+            IValantisHOTModulePublic.swap.selector,
             isZeroForOne,
             amountOutMin,
             amountIn,
