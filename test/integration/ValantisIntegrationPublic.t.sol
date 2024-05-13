@@ -49,8 +49,6 @@ import {IArrakisStandardManager} from
     "../../src/interfaces/IArrakisStandardManager.sol";
 import {IValantisHOTModule} from
     "../../src/interfaces/IValantisHOTModule.sol";
-import {IValantisHOTModulePublic} from
-    "../../src/interfaces/IValantisHOTModulePublic.sol";
 import {IOracleWrapper} from "../../src/interfaces/IOracleWrapper.sol";
 import {IOwnable} from "../../src/interfaces/IOwnable.sol";
 import {IArrakisLPModule} from
@@ -387,7 +385,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, HOTBase {
         _addToContractsToApprove(address(alm));
 
         vm.prank(IOwnable(vault).owner());
-        IValantisHOTModulePublic(m).setALMAndManagerFees(
+        IValantisHOTModule(m).setALMAndManagerFees(
             address(alm), oracle
         );
 
@@ -761,7 +759,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, HOTBase {
             abi.encodeWithSelector(this.swap.selector);
 
         bytes memory data = abi.encodeWithSelector(
-            IValantisHOTModulePublic.swap.selector,
+            IValantisHOTModule.swap.selector,
             zeroForOne,
             expectedMinReturn,
             amountIn,
