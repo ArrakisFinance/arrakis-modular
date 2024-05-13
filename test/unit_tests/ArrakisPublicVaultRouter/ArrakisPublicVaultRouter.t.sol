@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 // #region foundry.
 import {console} from "forge-std/console.sol";
@@ -32,7 +32,7 @@ import {
 } from "../../../src/structs/SPermit2.sol";
 
 // #region openzeppelin.
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // #endregion openzeppelin.
 
@@ -196,7 +196,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         vm.startPrank(owner);
         router.pause();
 
-        vm.expectRevert(Pausable.EnforcedPause.selector);
+        vm.expectRevert(bytes("Pausable: paused"));
         router.pause();
         vm.stopPrank();
     }
@@ -206,7 +206,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
     // #region test unpause.
 
     function testUnPauseWhenPaused() public {
-        vm.expectRevert(Pausable.ExpectedPause.selector);
+        vm.expectRevert(bytes("Pausable: not paused"));
 
         router.unpause();
     }
@@ -489,76 +489,6 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
         router.addLiquidity(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
-    }
-
-    function testAddLiquidityDeposit1() public {
-        // #region create public vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(USDC, WETH);
-        vault.mintLPToken(address(1), 1 ether);
-        vault.setAmountToTake(0, 1e18 - 2 wei);
-        vault.setModule(address(vault));
-        deal(WETH, address(vault), 1e18);
-        vault.setInits(0, 1e18);
-
-        // #endregion create public vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        AddLiquidityData memory params = AddLiquidityData({
-            amount0Max: 0,
-            amount1Max: 1e18,
-            amount0Min: 0,
-            amount1Min: 1e18,
-            amountSharesMin: 0,
-            vault: address(vault),
-            receiver: address(0)
-        });
-
-        deal(WETH, address(this), 1e18);
-        IERC20(WETH).approve(address(router), 1e18);
-        vm.expectRevert(IArrakisPublicVaultRouter.Deposit1.selector);
-
-        router.addLiquidity(params);
-    }
-
-    function testAddLiquidityDeposit0() public {
-        // #region create public vault.
-
-        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
-        vault.setTokens(USDC, WETH);
-        vault.mintLPToken(address(1), 1 ether);
-        vault.setAmountToTake(2000e6 - 2 wei, 0);
-        vault.setModule(address(vault));
-        deal(USDC, address(vault), 2000e6);
-        vault.setInits(2000e6, 0);
-
-        // #endregion create public vault.
-        // #region add vault to mock factory.
-
-        factory.addPublicVault(address(vault));
-
-        // #endregion add vault to mock factory.
-
-        AddLiquidityData memory params = AddLiquidityData({
-            amount0Max: 2000e6,
-            amount1Max: 0,
-            amount0Min: 2000e6,
-            amount1Min: 0,
-            amountSharesMin: 0,
-            vault: address(vault),
-            receiver: address(0)
-        });
-
-        deal(USDC, address(this), 2000e6);
-        IERC20(USDC).approve(address(router), 2000e6);
-        vm.expectRevert(IArrakisPublicVaultRouter.Deposit0.selector);
-
-        router.addLiquidity(params);
     }
 
     function testAddLiquidityEthAsToken1() public {

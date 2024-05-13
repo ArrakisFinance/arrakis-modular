@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {console} from "forge-std/console.sol";
 
@@ -59,7 +59,7 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         nft = new PALMVaultNFT();
 
         vault = new ArrakisMetaVaultPrivate(
-            moduleRegistry, manager, address(nft)
+            moduleRegistry, manager, USDC, WETH, address(nft)
         );
 
         // #region mint nft.
@@ -69,8 +69,6 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         // #endregion mint nft.
 
         // #region initialize vault.
-
-        vault.initializeTokens(USDC, WETH);
 
         vault.initialize(address(module));
 
@@ -87,7 +85,7 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
         );
 
         vault = new ArrakisMetaVaultPrivate(
-            moduleRegistry, manager, address(0)
+            moduleRegistry, manager, USDC, WETH, address(0)
         );
     }
 

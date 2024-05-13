@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {IArrakisLPModule} from "./IArrakisLPModule.sol";
 
@@ -13,9 +13,6 @@ interface IArrakisMetaVault {
     /// be zero is equal to address zero.
     // TODO remove the argument.
     error AddressZero(string property);
-
-    /// @dev triggered when tokens are already initialized
-    error AddressNotZero();
 
     /// @dev triggered when the caller is different than
     /// the manager.
@@ -110,14 +107,6 @@ interface IArrakisMetaVault {
     event LogBlackListedModules(address[] modules);
 
     // #endregion events.
-
-    /// @notice function used to initialize tokens.
-    /// @param token0_ address of the first token of the token pair.
-    /// @param token1_ address of the second token of the token pair.
-    function initializeTokens(
-        address token0_,
-        address token1_
-    ) external;
 
     /// @notice function used to initialize default module.
     /// @param module_ address of the default module.

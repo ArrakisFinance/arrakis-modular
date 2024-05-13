@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
@@ -18,7 +18,7 @@ address constant vault = 0x8cE9786dc4bbB558C1F219f10b1F2f70A6Ced7eC;
 address payable constant manager =
     payable(0xb6F7f65a5cc81B5dA5E9aB58FB37Cb174f4Fb3ca);
 address constant timeLock = 0x119e26B6D72376Ac741d5546eA295d1A0160E26c;
-address constant sotOracleWrapper =
+address constant hotOracleWrapper =
     0xCD3B683C6514e94A48d7993544C199341fcdD14E;
 
 contract ValantisVaultFive is Script {
@@ -44,7 +44,7 @@ contract ValantisVaultFive is Script {
 
         SetupParams memory params = SetupParams({
             vault: vault,
-            oracle: IOracleWrapper(sotOracleWrapper),
+            oracle: IOracleWrapper(hotOracleWrapper),
             maxDeviation: maxDeviation,
             cooldownPeriod: cooldownPeriod,
             executor: executor,

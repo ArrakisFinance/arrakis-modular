@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity 0.8.19;
 
 import {
     IArrakisPublicVaultRouter,
@@ -23,7 +23,7 @@ import {
     SignatureTransferDetails
 } from "./interfaces/IPermit2.sol";
 import {IWETH9} from "./interfaces/IWETH9.sol";
-import {PIPS} from "./constants/CArrakis.sol";
+import {BASE} from "./constants/CArrakis.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {
@@ -31,8 +31,8 @@ import {
     IERC20
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from
-    "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+    "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
@@ -615,9 +615,9 @@ contract ArrakisPublicVaultRouter is
                 weth.withdraw(amount0Use - amount0);
                 payable(msg.sender).sendValue(amount0Use - amount0);
             } else {
-                IERC20(token0).safeTransfer(
-                    msg.sender, amount0Use - amount0
-                );
+                uint256 balance =
+                    IERC20(token0).balanceOf(address(this));
+                IERC20(token0).safeTransfer(msg.sender, balance);
             }
         }
 
@@ -626,9 +626,9 @@ contract ArrakisPublicVaultRouter is
                 weth.withdraw(amount1Use - amount1);
                 payable(msg.sender).sendValue(amount1Use - amount1);
             } else {
-                IERC20(token1).safeTransfer(
-                    msg.sender, amount1Use - amount1
-                );
+                uint256 balance =
+                    IERC20(token1).balanceOf(address(this));
+                IERC20(token1).safeTransfer(msg.sender, balance);
             }
         }
     }
@@ -817,9 +817,9 @@ contract ArrakisPublicVaultRouter is
                 weth.withdraw(amount0Use - amount0);
                 payable(msg.sender).sendValue(amount0Use - amount0);
             } else {
-                IERC20(token0).safeTransfer(
-                    msg.sender, amount0Use - amount0
-                );
+                uint256 balance =
+                    IERC20(token0).balanceOf(address(this));
+                IERC20(token0).safeTransfer(msg.sender, balance);
             }
         }
 
@@ -828,9 +828,9 @@ contract ArrakisPublicVaultRouter is
                 weth.withdraw(amount1Use - amount1);
                 payable(msg.sender).sendValue(amount1Use - amount1);
             } else {
-                IERC20(token1).safeTransfer(
-                    msg.sender, amount1Use - amount1
-                );
+                uint256 balance =
+                    IERC20(token1).balanceOf(address(this));
+                IERC20(token1).safeTransfer(msg.sender, balance);
             }
         }
     }
@@ -898,36 +898,6 @@ contract ArrakisPublicVaultRouter is
         IArrakisMetaVaultPublic(vault_).mint{value: valueToSend}(
             shares_, receiver_
         );
-
-        // #region assertion check to verify if vault exactly what expected.
-        // NOTE: check rebase edge case?
-        if (
-            (
-                token0_ == nativeToken
-                    && balance0 - amount0_ != address(this).balance
-            )
-                || (
-                    token0_ != nativeToken
-                        && balance0 - amount0_
-                            != IERC20(token0_).balanceOf(address(this))
-                )
-        ) {
-            revert Deposit0();
-        }
-        if (
-            (
-                token1_ == nativeToken
-                    && balance1 - amount1_ != address(this).balance
-            )
-                || (
-                    token1_ != nativeToken
-                        && balance1 - amount1_
-                            != IERC20(token1_).balanceOf(address(this))
-                )
-        ) {
-            revert Deposit1();
-        }
-        // #endregion  assertion check to verify if vault exactly what expected.
     }
 
     function _swapAndAddLiquidity(
@@ -1035,9 +1005,9 @@ contract ArrakisPublicVaultRouter is
             if (token0_ == nativeToken) {
                 payable(msg.sender).sendValue(amount0Use - amount0);
             } else {
-                IERC20(token0_).safeTransfer(
-                    msg.sender, amount0Use - amount0
-                );
+                uint256 balance =
+                    IERC20(token0_).balanceOf(address(this));
+                IERC20(token0_).safeTransfer(msg.sender, balance);
             }
         }
 
@@ -1045,9 +1015,9 @@ contract ArrakisPublicVaultRouter is
             if (token1_ == nativeToken) {
                 payable(msg.sender).sendValue(amount1Use - amount1);
             } else {
-                IERC20(token1_).safeTransfer(
-                    msg.sender, amount1Use - amount1
-                );
+                uint256 balance =
+                    IERC20(token1_).balanceOf(address(this));
+                IERC20(token1_).safeTransfer(msg.sender, balance);
             }
         }
     }
@@ -1247,17 +1217,17 @@ contract ArrakisPublicVaultRouter is
 
         uint256 proportion0 = amount0 == 0
             ? type(uint256).max
-            : FullMath.mulDiv(maxAmount0_, PIPS, amount0);
+            : FullMath.mulDiv(maxAmount0_, BASE, amount0);
         uint256 proportion1 = amount1 == 0
             ? type(uint256).max
-            : FullMath.mulDiv(maxAmount1_, PIPS, amount1);
+            : FullMath.mulDiv(maxAmount1_, BASE, amount1);
 
         uint256 proportion =
             proportion0 < proportion1 ? proportion0 : proportion1;
 
-        amount0ToDeposit = FullMath.mulDiv(amount0, proportion, PIPS);
-        amount1ToDeposit = FullMath.mulDiv(amount1, proportion, PIPS);
-        shareToMint = FullMath.mulDiv(proportion, supply, PIPS);
+        amount0ToDeposit = FullMath.mulDiv(amount0, proportion, BASE);
+        amount1ToDeposit = FullMath.mulDiv(amount1, proportion, BASE);
+        shareToMint = FullMath.mulDiv(proportion, supply, BASE);
     }
 
     // #endregion internal view functions.

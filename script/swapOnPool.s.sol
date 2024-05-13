@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
@@ -14,12 +14,12 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 // #region valantis contracts.
 import {ISovereignPool} from
-    "../lib/valantis-sot/lib/valantis-core/src/pools/interfaces/ISovereignPool.sol";
+    "../lib/valantis-hot/lib/valantis-core/src/pools/interfaces/ISovereignPool.sol";
 import {
     SovereignPoolSwapParams,
     SovereignPoolSwapContextData
 } from
-    "../lib/valantis-sot/lib/valantis-core/src/pools/structs/SovereignPoolStructs.sol";
+    "../lib/valantis-hot/lib/valantis-core/src/pools/structs/SovereignPoolStructs.sol";
 // #endregion valantis contracts.
 
 // For Gnosis chain.
