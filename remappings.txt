@@ -1,5 +1,3 @@
-@uniswap/v4-core=./lib/v4-periphery/lib/v4-core
-@uniswap/v4-periphery/=./lib/v4-periphery/
 @openzeppelin/contracts/=./lib/openzeppelin-contracts/contracts/
 @openzeppelin/contracts-upgradeable/=./lib/openzeppelin-contracts-upgradeable/contracts/
 @solady/contracts/=./lib/solady/src/
@@ -9,4 +7,3 @@ forge-std/=./lib/forge-std/src/
 @valantis-hot/contracts/=./lib/valantis-hot/src/
 @valantis-core/contracts/=./lib/valantis-hot/lib/valantis-core/src
 @valantis-hot/contracts-test/=./lib/valantis-hot/test/
-@gelato/automate/contracts/=./lib/automate/contracts/

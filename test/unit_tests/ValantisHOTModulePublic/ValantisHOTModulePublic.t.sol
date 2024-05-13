@@ -10,8 +10,6 @@ import {ValantisModulePublic} from
     "../../../src/modules/ValantisHOTModulePublic.sol";
 import {IValantisHOTModule} from
     "../../../src/interfaces/IValantisHOTModule.sol";
-import {IValantisHOTModulePublic} from
-    "../../../src/interfaces/IValantisHOTModulePublic.sol";
 import {IArrakisLPModule} from
     "../../../src/interfaces/IArrakisLPModule.sol";
 // #endregion Valantis Module.
@@ -961,9 +959,7 @@ contract ValantisHOTModuleTest is TestWrapper {
 
         deal(USDC, address(sovereignALM), amountIn / 2);
 
-        vm.expectRevert(
-            IValantisHOTModulePublic.NotEnoughToken0.selector
-        );
+        vm.expectRevert(IValantisHOTModule.NotEnoughToken0.selector);
         vm.prank(manager);
         module.swap(
             zeroForOne,
@@ -986,9 +982,7 @@ contract ValantisHOTModuleTest is TestWrapper {
 
         deal(WETH, address(sovereignALM), amountIn / 2);
 
-        vm.expectRevert(
-            IValantisHOTModulePublic.NotEnoughToken1.selector
-        );
+        vm.expectRevert(IValantisHOTModule.NotEnoughToken1.selector);
         vm.prank(manager);
         module.swap(
             zeroForOne,
@@ -1012,9 +1006,7 @@ contract ValantisHOTModuleTest is TestWrapper {
         sovereignPool.setReserves(0, amountIn);
         deal(WETH, address(sovereignALM), amountIn);
 
-        vm.expectRevert(
-            IValantisHOTModulePublic.SwapCallFailed.selector
-        );
+        vm.expectRevert(IValantisHOTModule.SwapCallFailed.selector);
         vm.prank(manager);
         module.swap(
             zeroForOne,
@@ -1038,9 +1030,7 @@ contract ValantisHOTModuleTest is TestWrapper {
         sovereignPool.setReserves(amountIn, 0);
         deal(USDC, address(sovereignALM), amountIn);
 
-        vm.expectRevert(
-            IValantisHOTModulePublic.SlippageTooHigh.selector
-        );
+        vm.expectRevert(IValantisHOTModule.SlippageTooHigh.selector);
         vm.prank(manager);
         module.swap(
             zeroForOne,
@@ -1064,9 +1054,7 @@ contract ValantisHOTModuleTest is TestWrapper {
         sovereignPool.setReserves(0, amountIn);
         deal(WETH, address(sovereignALM), amountIn);
 
-        vm.expectRevert(
-            IValantisHOTModulePublic.SlippageTooHigh.selector
-        );
+        vm.expectRevert(IValantisHOTModule.SlippageTooHigh.selector);
         vm.prank(manager);
         module.swap(
             zeroForOne,
@@ -1172,9 +1160,7 @@ contract ValantisHOTModuleTest is TestWrapper {
 
         // #endregion set amm sqrtSpotPriceX96.
 
-        vm.expectRevert(
-            IValantisHOTModulePublic.OverMaxDeviation.selector
-        );
+        vm.expectRevert(IValantisHOTModule.OverMaxDeviation.selector);
         module.validateRebalance(oracle, TEN_PERCENT);
     }
 
@@ -1185,9 +1171,7 @@ contract ValantisHOTModuleTest is TestWrapper {
 
         // #endregion set amm sqrtSpotPriceX96.
 
-        vm.expectRevert(
-            IValantisHOTModulePublic.OverMaxDeviation.selector
-        );
+        vm.expectRevert(IValantisHOTModule.OverMaxDeviation.selector);
         module.validateRebalance(oracle, TEN_PERCENT);
     }
 
