@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {SetupParams} from "../structs/SManager.sol";
+import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 
 interface IArrakisStandardManager {
     // #region errors.
@@ -246,6 +247,38 @@ interface IArrakisStandardManager {
     /// @notice function used to get the default receiver of tokens earned in managed vault.
     /// @return defaultReceiver address of the default receiver.
     function defaultReceiver() external view returns (address);
+
+    /// @notice function used to get the receiver of a specific token.
+    /// @param token_ address of the ERC20 token that we want the receiver of
+    /// @return receiver address of the receiver of 'token_'
+    function receiversByToken(address token_)
+        external
+        view
+        returns (address receiver);
+
+    /// @notice function used to get vault management config.
+    /// @param vault_ address of the metaVault.
+    /// @return lastRebalance timestamp when the last rebalance happen.
+    /// @return cooldownPeriod minimum duration between two rebalance.
+    /// @return oracle oracle used to check against price manipulation.
+    /// @return maxDeviation maximum deviation from oracle price allowed.
+    /// @return executor address that can trigger a rebalance.
+    /// @return stratAnnouncer address that will announce a strategy to follow.
+    /// @return maxSlippagePIPS maximum slippage authorized.
+    /// @return managerFeePIPS fees that manager take.
+    function vaultInfo(address vault_)
+        external
+        view
+        returns (
+            uint256 lastRebalance,
+            uint256 cooldownPeriod,
+            IOracleWrapper oracle,
+            uint24 maxDeviation,
+            address executor,
+            address stratAnnouncer,
+            uint24 maxSlippagePIPS,
+            uint24 managerFeePIPS
+        );
 
     // #endregion  view functions.
 }

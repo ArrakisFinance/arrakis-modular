@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
@@ -14,19 +14,18 @@ import {TimeLock} from "../src/TimeLock.sol";
 
 // For Gnosis chain.
 
-address constant vault = 0x89Ea626ECAC279a535ec7bA6ab1Fe0ab6a4eB440;
+address constant vault = 0x8cE9786dc4bbB558C1F219f10b1F2f70A6Ced7eC;
 address payable constant manager =
-    payable(0x9E09D9943B40685e8B78f6DC43069652dd6E6efD);
-address constant timeLock = 0xD41479D3f6c42cF6F532DF0F64Ca132342661f07;
-address constant sotOracleWrapper =
-    0x4409d89Ab5332B6FB71b5d74d3eE94171A889041;
+    payable(0xb6F7f65a5cc81B5dA5E9aB58FB37Cb174f4Fb3ca);
+address constant timeLock = 0x119e26B6D72376Ac741d5546eA295d1A0160E26c;
+address constant hotOracleWrapper =
+    0xCD3B683C6514e94A48d7993544C199341fcdD14E;
 
 contract ValantisVaultFive is Script {
     function setUp() public {}
 
     function run() public {
         uint256 privateKey = vm.envUint("PK_TEST");
-
         address account = vm.addr(privateKey);
 
         console.log(account);
@@ -45,7 +44,7 @@ contract ValantisVaultFive is Script {
 
         SetupParams memory params = SetupParams({
             vault: vault,
-            oracle: IOracleWrapper(sotOracleWrapper),
+            oracle: IOracleWrapper(hotOracleWrapper),
             maxDeviation: maxDeviation,
             cooldownPeriod: cooldownPeriod,
             executor: executor,

@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 
 import {IArrakisMetaVault} from
     "../src/interfaces/IArrakisMetaVault.sol";
-import {IValantisSOTModule} from
-    "../src/interfaces/IValantisSOTModule.sol";
+import {IValantisHOTModulePublic} from
+    "../src/interfaces/IValantisHOTModulePublic.sol";
 import {TimeLock} from "../src/TimeLock.sol";
 
 /// @dev ask to valantis team to grant module as poolManager (sovereignPool) and
-/// liquidityProvider (sot alm) before running this script.
+/// liquidityProvider (hot alm) before running this script.
 
 // Uncomment for sepolia
 
@@ -26,10 +26,10 @@ import {TimeLock} from "../src/TimeLock.sol";
 
 // For Gnosis chain.
 
-address constant vault = 0x89Ea626ECAC279a535ec7bA6ab1Fe0ab6a4eB440;
-address constant timeLock = 0xD41479D3f6c42cF6F532DF0F64Ca132342661f07;
-address constant alm = 0xb6Cf5502e64d79d96f09138b8F808412502d03cc;
-address constant oracle = address(0);
+address constant vault = 0x8cE9786dc4bbB558C1F219f10b1F2f70A6Ced7eC;
+address constant timeLock = 0x119e26B6D72376Ac741d5546eA295d1A0160E26c;
+address constant alm = 0x614b8B047cAfEc2Fcfc788dd4aFE9e32fe924Cd0;
+address constant oracle = 0xCD3B683C6514e94A48d7993544C199341fcdD14E;
 
 contract ValantisVaultTwo is Script {
     function setUp() public {}
@@ -46,7 +46,7 @@ contract ValantisVaultTwo is Script {
         address module = address(IArrakisMetaVault(vault).module());
 
         bytes memory data = abi.encodeWithSelector(
-            IValantisSOTModule.setALMAndManagerFees.selector,
+            IValantisHOTModulePublic.setALMAndManagerFees.selector,
             alm,
             oracle
         );
@@ -60,7 +60,7 @@ contract ValantisVaultTwo is Script {
         // module = address(IArrakisMetaVault(vaultWeth).module());
 
         // data = abi.encodeWithSelector(
-        //     IValantisSOTModule.setALMAndManagerFees.selector, almWeth
+        //     IValantisHOTModulePublic.setALMAndManagerFees.selector, almWeth
         // );
 
         // TimeLock(payable(timeLockWeth)).schedule(

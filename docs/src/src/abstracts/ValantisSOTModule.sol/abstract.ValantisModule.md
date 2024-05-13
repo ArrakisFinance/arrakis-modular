@@ -1,8 +1,8 @@
 # ValantisModule
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/abstracts/ValantisSOTModule.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/abstracts/ValantisHOTModule.sol)
 
 **Inherits:**
-[IArrakisLPModule](/src/interfaces/IArrakisLPModule.sol/interface.IArrakisLPModule.md), [IValantisSOTModule](/src/interfaces/IValantisSOTModule.sol/interface.IValantisSOTModule.md), PausableUpgradeable, ReentrancyGuardUpgradeable
+[IArrakisLPModule](/src/interfaces/IArrakisLPModule.sol/interface.IArrakisLPModule.md), [IValantisHOTModule](/src/interfaces/IValantisHOTModule.sol/interface.IValantisHOTModule.md), PausableUpgradeable, ReentrancyGuardUpgradeable
 
 *BeaconProxy be careful for changing implementation with upgrade.*
 
@@ -25,7 +25,7 @@ ISovereignPool public pool;
 ### alm
 
 ```solidity
-ISOT public alm;
+IHOT public alm;
 ```
 
 

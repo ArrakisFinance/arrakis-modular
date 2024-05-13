@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity 0.8.19;
 
 import {ICreationCode} from "./interfaces/ICreationCode.sol";
 import {ArrakisMetaVaultPrivate} from "./ArrakisMetaVaultPrivate.sol";

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 
 import {ValantisModulePublic} from
-    "../src/modules/ValantisSOTModulePublic.sol";
+    "../src/modules/ValantisHOTModulePublic.sol";
 
 import {UpgradeableBeacon} from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
@@ -14,8 +14,8 @@ import {UpgradeableBeacon} from
 /// by calling whitelistBeacon of ModulePublicRegistry with the created UpgradeableBeacon.
 
 address constant arrakisTimeLock =
-    0x7726Ae33b359CAbaD7287CE5859018DC034c160D;
-address constant guardian = 0x744c477Dc5658Ca8afe87A94771594Ac8c8302A5;
+    0x97e2f0355169485A02B4e4b6c1dA2eb7BB328D7b;
+address constant guardian = 0x7BF13492D11eE0f129201247Cc3aCd59206D7503;
 
 contract BeaconValantisModule is Script {
     function setUp() public {}
@@ -35,8 +35,11 @@ contract BeaconValantisModule is Script {
         );
         console.logAddress(implementation);
 
-        address upgradeableBeacon = address(
-            new UpgradeableBeacon(implementation, arrakisTimeLock)
+        address upgradeableBeacon =
+            address(new UpgradeableBeacon(implementation));
+
+        UpgradeableBeacon(upgradeableBeacon).transferOwnership(
+            arrakisTimeLock
         );
 
         console.logString("Upgradeable Beacon Valantis Address : ");

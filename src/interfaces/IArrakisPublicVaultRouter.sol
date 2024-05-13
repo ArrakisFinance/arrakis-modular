@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {
     AddLiquidityData,
@@ -25,8 +25,6 @@ interface IArrakisPublicVaultRouter {
     error ReceivedBelowMinimum();
     error LengthMismatch();
     error NoNativeToken();
-    error Deposit0();
-    error Deposit1();
     error MsgValueZero();
     error NativeTokenNotSupported();
     error MsgValueDTMaxAmount();

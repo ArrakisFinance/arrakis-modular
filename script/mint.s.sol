@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
@@ -16,10 +16,10 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 // For Gnosis chain.
 
-address constant vault = 0x89Ea626ECAC279a535ec7bA6ab1Fe0ab6a4eB440;
-address constant router = 0x64905533304B0eC6d7675D6C783C2865c3532842;
-uint256 constant maxAmount0 = 3200e6;
-uint256 constant maxAmount1 = 1e18;
+address constant vault = 0x8cE9786dc4bbB558C1F219f10b1F2f70A6Ced7eC;
+address constant router = 0x0210771fE1D7aDC2a4F747e3553A5710132d2b36;
+uint256 constant maxAmount1 = 490_000;
+uint256 constant maxAmount0 = 160_000_000_000_000;
 address constant receiver = 0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
 contract Mint is Script {
@@ -50,6 +50,10 @@ contract Mint is Script {
 
         console.logString("Valantis Public Vault mint");
         console.logAddress(vault);
+
+        console.logUint(amount0);
+        console.logUint(amount1);
+        console.logUint(shares);
 
         vm.stopBroadcast();
     }

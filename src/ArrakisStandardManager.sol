@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity 0.8.19;
 
 import {IArrakisStandardManager} from
     "./interfaces/IArrakisStandardManager.sol";
@@ -27,9 +27,9 @@ import {IERC20Metadata} from
 // #region openzeppelin upgradeable dependencies.
 
 import {ReentrancyGuardUpgradeable} from
-    "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+    "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from
-    "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+    "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 // #endregion openzeppelin upgradeable dependencies.
 
@@ -122,6 +122,8 @@ contract ArrakisStandardManager is
         nativeToken = nativeToken_;
         nativeTokenDecimals = nativeTokenDecimals_;
         _guardian = guardian_;
+
+        _disableInitializers();
     }
 
     /// @notice function used to initialize standard manager proxy.
@@ -184,8 +186,6 @@ contract ArrakisStandardManager is
         bool isSetReceiverToken0_,
         address receiver_
     ) external onlyOwner onlyWhitelistedVault(vault_) {
-        if (receiver_ == address(0)) revert AddressZero();
-
         address token = isSetReceiverToken0_
             ? address(IArrakisMetaVault(vault_).token0())
             : address(IArrakisMetaVault(vault_).token1());

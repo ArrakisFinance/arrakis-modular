@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity 0.8.19;
 
 import {IArrakisMetaVaultPublic} from
     "./interfaces/IArrakisMetaVaultPublic.sol";
@@ -33,8 +33,10 @@ contract ArrakisMetaVaultPublic is
         string memory name_,
         string memory symbol_,
         address moduleRegistry_,
-        address manager_
-    ) ArrakisMetaVault(moduleRegistry_, manager_) {
+        address manager_,
+        address token0_,
+        address token1_
+    ) ArrakisMetaVault(moduleRegistry_, manager_, token0_, token1_) {
         if (owner_ == address(0)) revert AddressZero("Owner");
         _initializeOwner(owner_);
         _name = name_;
@@ -53,7 +55,7 @@ contract ArrakisMetaVaultPublic is
         if (shares_ == 0) revert MintZero();
         uint256 supply = totalSupply();
 
-        uint256 proportion = FullMath.mulDiv(
+        uint256 proportion = FullMath.mulDivRoundingUp(
             shares_, BASE, supply > 0 ? supply : 1 ether
         );
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 
-import {IValantisSOTModule} from
-    "../src/interfaces/IValantisSOTModule.sol";
+import {IValantisHOTModule} from
+    "../src/interfaces/IValantisHOTModule.sol";
 import {IArrakisStandardManager} from
     "../src/interfaces/IArrakisStandardManager.sol";
 
@@ -31,7 +31,7 @@ contract RebalancePriceBound is Script {
         vm.startBroadcast(privateKey);
 
         bytes memory payload = abi.encodeWithSelector(
-            IValantisSOTModule.setPriceBounds.selector,
+            IValantisHOTModule.setPriceBounds.selector,
             sqrtPriceLowX96,
             sqrtPriceHighX96,
             expectedSqrtSpotPriceLowerX96,

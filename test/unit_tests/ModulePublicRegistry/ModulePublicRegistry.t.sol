@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {console} from "forge-std/console.sol";
 
@@ -163,9 +163,10 @@ contract ModulePublicRegistryTest is TestWrapper {
         BeaconImplementation implementation =
             new BeaconImplementation();
 
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(implementation), beaconAdmin
-        );
+        UpgradeableBeacon beacon =
+            new UpgradeableBeacon(address(implementation));
+
+        beacon.transferOwnership(beaconAdmin);
 
         // #endregion create a upgradeable beacon.
 
@@ -190,7 +191,9 @@ contract ModulePublicRegistryTest is TestWrapper {
             new BeaconImplementation();
 
         UpgradeableBeacon beacon =
-            new UpgradeableBeacon(address(implementation), admin);
+            new UpgradeableBeacon(address(implementation));
+
+        beacon.transferOwnership(admin);
 
         // #endregion create a upgradeable beacon.
 
@@ -223,7 +226,9 @@ contract ModulePublicRegistryTest is TestWrapper {
             new BeaconImplementation();
 
         UpgradeableBeacon beacon =
-            new UpgradeableBeacon(address(implementation), admin);
+            new UpgradeableBeacon(address(implementation));
+
+        beacon.transferOwnership(admin);
 
         // #endregion create a upgradeable beacon.
 
@@ -246,7 +251,9 @@ contract ModulePublicRegistryTest is TestWrapper {
             new BeaconImplementation();
 
         UpgradeableBeacon beacon =
-            new UpgradeableBeacon(address(implementation), admin);
+            new UpgradeableBeacon(address(implementation));
+
+        beacon.transferOwnership(admin);
 
         // #endregion create a upgradeable beacon.
         // #region burning the ownership of upgradeable beacon.
@@ -295,7 +302,9 @@ contract ModulePublicRegistryTest is TestWrapper {
             new BeaconImplementation();
 
         UpgradeableBeacon beacon =
-            new UpgradeableBeacon(address(implementation), admin);
+            new UpgradeableBeacon(address(implementation));
+
+        beacon.transferOwnership(admin);
 
         // #endregion create a upgradeable beacon.
 
@@ -322,7 +331,9 @@ contract ModulePublicRegistryTest is TestWrapper {
             new BeaconImplementation();
 
         UpgradeableBeacon beacon =
-            new UpgradeableBeacon(address(implementation), admin);
+            new UpgradeableBeacon(address(implementation));
+
+        beacon.transferOwnership(admin);
 
         // #endregion create a upgradeable beacon.
 
@@ -378,7 +389,9 @@ contract ModulePublicRegistryTest is TestWrapper {
             new BeaconImplementation();
 
         UpgradeableBeacon beacon =
-            new UpgradeableBeacon(address(implementation), admin);
+            new UpgradeableBeacon(address(implementation));
+
+        beacon.transferOwnership(admin);
 
         // #endregion create a upgradeable beacon.
         // #region whitelist beacon.
@@ -417,7 +430,9 @@ contract ModulePublicRegistryTest is TestWrapper {
             new BeaconImplementation();
 
         UpgradeableBeacon beacon =
-            new UpgradeableBeacon(address(implementation), admin);
+            new UpgradeableBeacon(address(implementation));
+
+        beacon.transferOwnership(admin);
 
         // #endregion create a upgradeable beacon.
 
@@ -452,7 +467,9 @@ contract ModulePublicRegistryTest is TestWrapper {
             new BeaconImplementation();
 
         UpgradeableBeacon beacon =
-            new UpgradeableBeacon(address(implementation), admin);
+            new UpgradeableBeacon(address(implementation));
+
+        beacon.transferOwnership(admin);
 
         // #endregion create a upgradeable beacon.
 
@@ -493,7 +510,9 @@ contract ModulePublicRegistryTest is TestWrapper {
             new BeaconImplementation();
 
         UpgradeableBeacon beacon =
-            new UpgradeableBeacon(address(implementation), admin);
+            new UpgradeableBeacon(address(implementation));
+
+        beacon.transferOwnership(admin);
 
         // #endregion create a upgradeable beacon.
         // #region whitelist beacon.
@@ -548,7 +567,9 @@ contract ModulePublicRegistryTest is TestWrapper {
             new BeaconImplementation();
 
         UpgradeableBeacon beacon =
-            new UpgradeableBeacon(address(implementation), admin);
+            new UpgradeableBeacon(address(implementation));
+
+        beacon.transferOwnership(admin);
 
         // #endregion create a upgradeable beacon.
         // #region whitelist beacon.
@@ -598,7 +619,9 @@ contract ModulePublicRegistryTest is TestWrapper {
             new BeaconImplementation();
 
         UpgradeableBeacon beacon =
-            new UpgradeableBeacon(address(implementation), admin);
+            new UpgradeableBeacon(address(implementation));
+
+        beacon.transferOwnership(admin);
 
         // #endregion create a upgradeable beacon.
         // #region whitelist beacon.
@@ -637,7 +660,9 @@ contract ModulePublicRegistryTest is TestWrapper {
             new BeaconImplementation();
 
         UpgradeableBeacon beacon =
-            new UpgradeableBeacon(address(implementation), admin);
+            new UpgradeableBeacon(address(implementation));
+
+        beacon.transferOwnership(admin);
 
         // #endregion create a upgradeable beacon.
 
