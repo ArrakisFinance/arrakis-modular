@@ -6,8 +6,8 @@ import {console} from "forge-std/console.sol";
 
 import {ArrakisMetaVaultFactory} from
     "../src/ArrakisMetaVaultFactory.sol";
-import {IValantisSOTModule} from
-    "../src/interfaces/IValantisSOTModule.sol";
+import {IValantisHOTModule} from
+    "../src/interfaces/IValantisHOTModule.sol";
 import {IOracleWrapper} from "../src/interfaces/IOracleWrapper.sol";
 import {PIPS} from "../src/constants/CArrakis.sol";
 
@@ -50,7 +50,7 @@ contract ValantisVaultOne is Script {
         vm.startBroadcast(privateKey);
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IValantisSOTModule.initialize.selector,
+            IValantisHOTModule.initialize.selector,
             pool,
             init0,
             init1,

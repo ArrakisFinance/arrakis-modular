@@ -1,5 +1,5 @@
-# SOTOracleWrapper
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/modules/SOTOracleWrapper.sol)
+# HOTOracleWrapper
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/modules/HOTOracleWrapper.sol)
 
 **Inherits:**
 [IOracleWrapper](/src/interfaces/IOracleWrapper.sol/interface.IOracleWrapper.md)
@@ -9,7 +9,7 @@
 ### oracle
 
 ```solidity
-ISOTOracle public immutable oracle;
+IHOTOracle public immutable oracle;
 ```
 
 
