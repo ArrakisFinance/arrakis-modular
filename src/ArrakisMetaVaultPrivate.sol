@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity 0.8.19;
 
 import {IArrakisMetaVaultPrivate} from
     "./interfaces/IArrakisMetaVaultPrivate.sol";
@@ -37,8 +37,10 @@ contract ArrakisMetaVaultPrivate is
     constructor(
         address moduleRegistry_,
         address manager_,
+        address token0_,
+        address token1_,
         address nft_
-    ) ArrakisMetaVault(moduleRegistry_, manager_) {
+    ) ArrakisMetaVault(moduleRegistry_, manager_, token0_, token1_) {
         if (nft_ == address(0)) revert AddressZero("NFT");
         nft = nft_;
     }
