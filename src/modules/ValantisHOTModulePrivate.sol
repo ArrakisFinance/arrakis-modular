@@ -4,14 +4,14 @@ pragma solidity 0.8.19;
 import {IArrakisLPModulePrivate} from
     "../interfaces/IArrakisLPModulePrivate.sol";
 import {IOwnable} from "../interfaces/IOwnable.sol";
-import {ValantisModule} from "../abstracts/ValantisSOTModule.sol";
+import {ValantisModule} from "../abstracts/ValantisHOTModule.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {ISOT} from "@valantis-sot/contracts/interfaces/ISOT.sol";
+import {IHOT} from "@valantis-hot/contracts/interfaces/IHOT.sol";
 
 contract ValantisModulePrivate is
     ValantisModule,
@@ -21,8 +21,8 @@ contract ValantisModulePrivate is
 
     constructor(address guardian_) ValantisModule(guardian_) {}
 
-    /// @notice set SOT, oracle (wrapper of SOT) and init manager fees function.
-    /// @param alm_ address of the valantis SOT ALM.
+    /// @notice set HOT, oracle (wrapper of HOT) and init manager fees function.
+    /// @param alm_ address of the valantis HOT ALM.
     function setALMAndManagerFees(address alm_) external {
         if (address(alm) != address(0)) {
             revert ALMAlreadySet();
@@ -32,7 +32,7 @@ contract ValantisModulePrivate is
         }
         if (alm_ == address(0)) revert AddressZero();
 
-        alm = ISOT(alm_);
+        alm = IHOT(alm_);
         pool.setPoolManagerFeeBips(_managerFeePIPS / 1e2);
 
         emit LogSetManagerFeePIPS(0, _managerFeePIPS);

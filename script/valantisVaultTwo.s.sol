@@ -6,12 +6,12 @@ import {console} from "forge-std/console.sol";
 
 import {IArrakisMetaVault} from
     "../src/interfaces/IArrakisMetaVault.sol";
-import {IValantisSOTModulePublic} from
-    "../src/interfaces/IValantisSOTModulePublic.sol";
+import {IValantisHOTModulePublic} from
+    "../src/interfaces/IValantisHOTModulePublic.sol";
 import {TimeLock} from "../src/TimeLock.sol";
 
 /// @dev ask to valantis team to grant module as poolManager (sovereignPool) and
-/// liquidityProvider (sot alm) before running this script.
+/// liquidityProvider (hot alm) before running this script.
 
 // Uncomment for sepolia
 
@@ -46,7 +46,7 @@ contract ValantisVaultTwo is Script {
         address module = address(IArrakisMetaVault(vault).module());
 
         bytes memory data = abi.encodeWithSelector(
-            IValantisSOTModulePublic.setALMAndManagerFees.selector,
+            IValantisHOTModulePublic.setALMAndManagerFees.selector,
             alm,
             oracle
         );
@@ -60,7 +60,7 @@ contract ValantisVaultTwo is Script {
         // module = address(IArrakisMetaVault(vaultWeth).module());
 
         // data = abi.encodeWithSelector(
-        //     IValantisSOTModulePublic.setALMAndManagerFees.selector, almWeth
+        //     IValantisHOTModulePublic.setALMAndManagerFees.selector, almWeth
         // );
 
         // TimeLock(payable(timeLockWeth)).schedule(

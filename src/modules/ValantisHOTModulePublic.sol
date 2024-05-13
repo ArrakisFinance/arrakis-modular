@@ -3,11 +3,11 @@ pragma solidity 0.8.19;
 
 import {IArrakisLPModulePublic} from
     "../interfaces/IArrakisLPModulePublic.sol";
-import {IValantisSOTModulePublic} from
-    "../interfaces/IValantisSOTModulePublic.sol";
+import {IValantisHOTModulePublic} from
+    "../interfaces/IValantisHOTModulePublic.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IOwnable} from "../interfaces/IOwnable.sol";
-import {ValantisModule} from "../abstracts/ValantisSOTModule.sol";
+import {ValantisModule} from "../abstracts/ValantisHOTModule.sol";
 import {BASE, PIPS} from "../constants/CArrakis.sol";
 
 import {SafeERC20} from
@@ -17,11 +17,11 @@ import {IERC20Metadata} from
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-import {ISOT} from "@valantis-sot/contracts/interfaces/ISOT.sol";
+import {IHOT} from "@valantis-hot/contracts/interfaces/IHOT.sol";
 
 contract ValantisModulePublic is
     ValantisModule,
-    IValantisSOTModulePublic,
+    IValantisHOTModulePublic,
     IArrakisLPModulePublic
 {
     using SafeERC20 for IERC20Metadata;
@@ -33,9 +33,9 @@ contract ValantisModulePublic is
 
     // #region only vault owner.
 
-    /// @notice set SOT, oracle (wrapper of SOT) and init manager fees function.
-    /// @param alm_ address of the valantis SOT ALM.
-    /// @param oracle_ address of the oracle used by the valantis SOT module.
+    /// @notice set HOT, oracle (wrapper of HOT) and init manager fees function.
+    /// @param alm_ address of the valantis HOT ALM.
+    /// @param oracle_ address of the oracle used by the valantis HOT module.
     function setALMAndManagerFees(
         address alm_,
         address oracle_
@@ -49,7 +49,7 @@ contract ValantisModulePublic is
         if (alm_ == address(0)) revert AddressZero();
         if (oracle_ == address(0)) revert AddressZero();
 
-        alm = ISOT(alm_);
+        alm = IHOT(alm_);
         oracle = IOracleWrapper(oracle_);
         pool.setPoolManagerFeeBips(_managerFeePIPS / 1e2);
 

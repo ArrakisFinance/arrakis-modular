@@ -7,11 +7,11 @@ import {TestWrapper} from "../../utils/TestWrapper.sol";
 // #endregion foundry.
 // #region Valantis Module.
 import {ValantisModulePublic} from
-    "../../../src/modules/ValantisSOTModulePublic.sol";
-import {IValantisSOTModule} from
-    "../../../src/interfaces/IValantisSOTModule.sol";
-import {IValantisSOTModulePublic} from
-    "../../../src/interfaces/IValantisSOTModulePublic.sol";
+    "../../../src/modules/ValantisHOTModulePublic.sol";
+import {IValantisHOTModule} from
+    "../../../src/interfaces/IValantisHOTModule.sol";
+import {IValantisHOTModulePublic} from
+    "../../../src/interfaces/IValantisHOTModulePublic.sol";
 import {IArrakisLPModule} from
     "../../../src/interfaces/IArrakisLPModule.sol";
 // #endregion Valantis Module.
@@ -57,7 +57,7 @@ import {GuardianMock} from "./mocks/GuardianMock.sol";
 import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-contract ValantisSOTModuleTest is TestWrapper {
+contract ValantisHOTModuleTest is TestWrapper {
     // #region constant properties.
 
     address public constant WETH =
@@ -143,7 +143,7 @@ contract ValantisSOTModuleTest is TestWrapper {
             address(new ValantisModulePublic(address(guardian)));
 
         bytes memory data = abi.encodeWithSelector(
-            IValantisSOTModule.initialize.selector,
+            IValantisHOTModule.initialize.selector,
             address(sovereignPool),
             INIT0,
             INIT1,
@@ -232,6 +232,61 @@ contract ValantisSOTModuleTest is TestWrapper {
         module.setALMAndManagerFees(address(sovereignALM), address(0));
     }
 
+    function testsetALMAndManagerFeesALMAlreadySet() public {
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
+
+        module.initialize(
+            address(sovereignPool),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(metaVault)
+        );
+
+        vm.prank(owner);
+        module.setALMAndManagerFees(
+            address(sovereignALM), address(oracle)
+        );
+
+        vm.expectRevert(IValantisHOTModule.ALMAlreadySet.selector);
+        vm.prank(owner);
+        module.setALMAndManagerFees(
+            address(sovereignALM), address(oracle)
+        );
+    }
+
+    function testsetALMAndManagerFeesOnlyMetaVaultOwner() public {
+        address notVaultOwner =
+            vm.addr(uint256(keccak256(abi.encode("Not Vault Owner"))));
+        implementation =
+            address(new ValantisModulePublic(address(guardian)));
+
+        module = ValantisModulePublic(
+            address(new ERC1967Proxy(implementation, ""))
+        );
+
+        module.initialize(
+            address(sovereignPool),
+            INIT0,
+            INIT1,
+            MAX_SLIPPAGE,
+            address(metaVault)
+        );
+
+        vm.expectRevert(
+            IValantisHOTModule.OnlyMetaVaultOwner.selector
+        );
+        vm.prank(notVaultOwner);
+        module.setALMAndManagerFees(
+            address(sovereignALM), address(oracle)
+        );
+    }
+
     function testInitializeInitsAreZeros() public {
         implementation =
             address(new ValantisModulePublic(address(guardian)));
@@ -260,7 +315,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         );
 
         vm.expectRevert(
-            IValantisSOTModule.MaxSlippageGtTenPercent.selector
+            IValantisHOTModule.MaxSlippageGtTenPercent.selector
         );
 
         module.initialize(
@@ -447,7 +502,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(address(metaVault), 1 ether);
 
         vm.prank(address(metaVault));
-        vm.expectRevert(IValantisSOTModule.NoNativeToken.selector);
+        vm.expectRevert(IValantisHOTModule.NoNativeToken.selector);
 
         module.deposit{value: 1 ether}(depositor, proportion);
     }
@@ -488,6 +543,127 @@ contract ValantisSOTModuleTest is TestWrapper {
         vm.expectRevert(IArrakisLPModule.ProportionZero.selector);
 
         module.deposit(depositor, proportion);
+    }
+
+    function testDepositInitsWithExtraTokenOnALM() public {
+        address depositor = vm.addr(10);
+        uint256 proportion = BASE / 2;
+
+        uint256 expectedAmount0 = 2000e6 / 2;
+        uint256 expectedAmount1 = 1e18 / 2;
+
+        deal(USDC, depositor, expectedAmount0);
+        deal(WETH, depositor, expectedAmount1);
+
+        deal(USDC, address(sovereignALM), expectedAmount0 / 2);
+        deal(WETH, address(sovereignALM), expectedAmount1 / 2);
+
+        sovereignPool.setReserves(
+            expectedAmount0 / 2, expectedAmount1 / 2
+        );
+
+        vm.prank(depositor);
+        IERC20(USDC).approve(address(module), expectedAmount0);
+        vm.prank(depositor);
+        IERC20(WETH).approve(address(module), expectedAmount1);
+
+        vm.prank(address(metaVault));
+
+        module.deposit(depositor, proportion);
+
+        assertEq(
+            IERC20(USDC).balanceOf(address(sovereignALM)),
+            expectedAmount0
+        );
+        assertEq(
+            IERC20(WETH).balanceOf(address(sovereignALM)),
+            expectedAmount1
+        );
+
+        assertEq(
+            IERC20(USDC).balanceOf(address(manager)),
+            expectedAmount0 / 2
+        );
+        assertEq(
+            IERC20(WETH).balanceOf(address(manager)),
+            expectedAmount1 / 2
+        );
+    }
+
+    function testDepositInitsWithExtraTokenOnALMTwo() public {
+        address depositor = vm.addr(10);
+        uint256 proportion = BASE / 2;
+
+        uint256 expectedAmount0 = 2000e6 / 2;
+        uint256 expectedAmount1 = 1e18 / 2;
+
+        deal(USDC, depositor, expectedAmount0);
+        deal(WETH, depositor, expectedAmount1);
+
+        deal(USDC, address(sovereignALM), expectedAmount0 / 2);
+
+        sovereignPool.setReserves(expectedAmount0 / 2, 0);
+
+        vm.prank(depositor);
+        IERC20(USDC).approve(address(module), expectedAmount0);
+        vm.prank(depositor);
+        IERC20(WETH).approve(address(module), expectedAmount1);
+
+        vm.prank(address(metaVault));
+
+        module.deposit(depositor, proportion);
+
+        assertEq(
+            IERC20(USDC).balanceOf(address(sovereignALM)),
+            expectedAmount0
+        );
+        assertEq(
+            IERC20(WETH).balanceOf(address(sovereignALM)),
+            expectedAmount1
+        );
+
+        assertEq(
+            IERC20(USDC).balanceOf(address(manager)),
+            expectedAmount0 / 2
+        );
+    }
+
+    function testDepositInitsWithExtraTokenOnALMThree() public {
+        address depositor = vm.addr(10);
+        uint256 proportion = BASE / 2;
+
+        uint256 expectedAmount0 = 2000e6 / 2;
+        uint256 expectedAmount1 = 1e18 / 2;
+
+        deal(USDC, depositor, expectedAmount0);
+        deal(WETH, depositor, expectedAmount1);
+
+        deal(WETH, address(sovereignALM), expectedAmount1 / 2);
+
+        sovereignPool.setReserves(0, expectedAmount1 / 2);
+
+        vm.prank(depositor);
+        IERC20(USDC).approve(address(module), expectedAmount0);
+        vm.prank(depositor);
+        IERC20(WETH).approve(address(module), expectedAmount1);
+
+        vm.prank(address(metaVault));
+
+        module.deposit(depositor, proportion);
+
+        assertEq(
+            IERC20(USDC).balanceOf(address(sovereignALM)),
+            expectedAmount0
+        );
+        assertEq(
+            IERC20(WETH).balanceOf(address(sovereignALM)),
+            expectedAmount1
+        );
+
+        assertEq(
+            IERC20(WETH).balanceOf(address(manager)),
+            expectedAmount1 / 2
+        );
     }
 
     function testDeposit() public {
@@ -660,7 +836,7 @@ contract ValantisSOTModuleTest is TestWrapper {
 
         vm.prank(address(metaVault));
 
-        vm.expectRevert(IValantisSOTModule.AmountsZeros.selector);
+        vm.expectRevert(IValantisHOTModule.AmountsZeros.selector);
 
         module.withdraw(receiver, BASE);
     }
@@ -738,7 +914,7 @@ contract ValantisSOTModuleTest is TestWrapper {
             abi.encodeWithSelector(this.swap.selector);
 
         vm.expectRevert(
-            IValantisSOTModule.ExpectedMinReturnTooLow.selector
+            IValantisHOTModule.ExpectedMinReturnTooLow.selector
         );
         vm.prank(manager);
         module.swap(
@@ -761,7 +937,7 @@ contract ValantisSOTModuleTest is TestWrapper {
             abi.encodeWithSelector(this.swap.selector);
 
         vm.expectRevert(
-            IValantisSOTModule.ExpectedMinReturnTooLow.selector
+            IValantisHOTModule.ExpectedMinReturnTooLow.selector
         );
         vm.prank(manager);
         module.swap(
@@ -786,7 +962,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(USDC, address(sovereignALM), amountIn / 2);
 
         vm.expectRevert(
-            IValantisSOTModulePublic.NotEnoughToken0.selector
+            IValantisHOTModulePublic.NotEnoughToken0.selector
         );
         vm.prank(manager);
         module.swap(
@@ -811,7 +987,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(WETH, address(sovereignALM), amountIn / 2);
 
         vm.expectRevert(
-            IValantisSOTModulePublic.NotEnoughToken1.selector
+            IValantisHOTModulePublic.NotEnoughToken1.selector
         );
         vm.prank(manager);
         module.swap(
@@ -837,7 +1013,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(WETH, address(sovereignALM), amountIn);
 
         vm.expectRevert(
-            IValantisSOTModulePublic.SwapCallFailed.selector
+            IValantisHOTModulePublic.SwapCallFailed.selector
         );
         vm.prank(manager);
         module.swap(
@@ -863,7 +1039,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(USDC, address(sovereignALM), amountIn);
 
         vm.expectRevert(
-            IValantisSOTModulePublic.SlippageTooHigh.selector
+            IValantisHOTModulePublic.SlippageTooHigh.selector
         );
         vm.prank(manager);
         module.swap(
@@ -889,7 +1065,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         deal(WETH, address(sovereignALM), amountIn);
 
         vm.expectRevert(
-            IValantisSOTModulePublic.SlippageTooHigh.selector
+            IValantisHOTModulePublic.SlippageTooHigh.selector
         );
         vm.prank(manager);
         module.swap(
@@ -997,7 +1173,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         // #endregion set amm sqrtSpotPriceX96.
 
         vm.expectRevert(
-            IValantisSOTModulePublic.OverMaxDeviation.selector
+            IValantisHOTModulePublic.OverMaxDeviation.selector
         );
         module.validateRebalance(oracle, TEN_PERCENT);
     }
@@ -1010,7 +1186,7 @@ contract ValantisSOTModuleTest is TestWrapper {
         // #endregion set amm sqrtSpotPriceX96.
 
         vm.expectRevert(
-            IValantisSOTModulePublic.OverMaxDeviation.selector
+            IValantisHOTModulePublic.OverMaxDeviation.selector
         );
         module.validateRebalance(oracle, TEN_PERCENT);
     }

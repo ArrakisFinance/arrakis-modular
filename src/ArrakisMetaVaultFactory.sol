@@ -133,25 +133,6 @@ contract ArrakisMetaVaultFactory is
 
         // #endregion check only deployer can create public vault.
 
-        string memory name = "Arrakis Modular Vault";
-        string memory symbol = "AMV";
-
-        try this.getTokenName(token0_, token1_) returns (
-            string memory result
-        ) {
-            name = result;
-        } catch {} // solhint-disable-line no-empty-blocks
-
-        try this.getTokenSymbol(token0_, token1_) returns (
-            string memory result
-        ) {
-            symbol = result;
-        } catch {} // solhint-disable-line no-empty-blocks
-
-        // #region compute salt = salt + msg.sender.
-
-        // #endregion compute salt = salt + msg.sender.
-
         // #region create timeLock.
 
         address timeLock;
@@ -172,27 +153,22 @@ contract ArrakisMetaVaultFactory is
         // #endregion create timeLock.
 
         {
-            bytes32 salt = keccak256(abi.encode(msg.sender, salt_));
-
             // #region get the creation code for TokenMetaVault.
             bytes memory creationCode = abi.encodePacked(
                 ICreationCode(creationCodePublicVault).getCreationCode(
                 ),
-                abi.encode(
-                    timeLock,
-                    name,
-                    symbol,
-                    moduleRegistryPublic,
-                    manager
+                _getPublicVaultConstructorPayload(
+                    timeLock, token0_, token1_
                 )
             );
+
+            bytes32 salt = keccak256(abi.encode(msg.sender, salt_));
 
             // #endregion get the creation code for TokenMetaVault.
             vault = Create3.create3(salt, creationCode);
         }
 
         _publicVaults.add(vault);
-        IArrakisMetaVault(vault).initializeTokens(token0_, token1_);
 
         // #region create a module.
         address module;
@@ -254,7 +230,13 @@ contract ArrakisMetaVaultFactory is
 
         bytes memory creationCode = abi.encodePacked(
             ICreationCode(creationCodePrivateVault).getCreationCode(),
-            abi.encode(moduleRegistryPrivate, manager, address(nft))
+            abi.encode(
+                moduleRegistryPrivate,
+                manager,
+                token0_,
+                token1_,
+                address(nft)
+            )
         );
 
         // #endregion get the creation code for TokenMetaVault.
@@ -262,7 +244,6 @@ contract ArrakisMetaVaultFactory is
         vault = Create3.create3(salt, creationCode);
         nft.mint(owner_, uint256(uint160(vault)));
         _privateVaults.add(vault);
-        IArrakisMetaVault(vault).initializeTokens(token0_, token1_);
 
         // #region create a module.
 
@@ -486,6 +467,37 @@ contract ArrakisMetaVaultFactory is
         if (!IManager(manager).isManaged(vault_)) {
             revert VaultNotManaged();
         }
+    }
+
+    function _getPublicVaultConstructorPayload(
+        address timeLock_,
+        address token0_,
+        address token1_
+    ) internal view returns (bytes memory) {
+        string memory name = "Arrakis Modular Vault";
+        string memory symbol = "AMV";
+
+        try this.getTokenName(token0_, token1_) returns (
+            string memory result
+        ) {
+            name = result;
+        } catch {} // solhint-disable-line no-empty-blocks
+
+        try this.getTokenSymbol(token0_, token1_) returns (
+            string memory result
+        ) {
+            symbol = result;
+        } catch {} // solhint-disable-line no-empty-blocks
+
+        return abi.encode(
+            timeLock_,
+            name,
+            symbol,
+            moduleRegistryPublic,
+            manager,
+            token0_,
+            token1_
+        );
     }
 
     function _append(
