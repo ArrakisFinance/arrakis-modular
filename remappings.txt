@@ -6,7 +6,7 @@
 @create3/contracts/=./lib/create3/contracts/
 @v3-lib-0.8/contracts=./lib/v3-lib-0.8/contracts/
 forge-std/=./lib/forge-std/src/
-@valantis-sot/contracts/=./lib/valantis-sot/src/
-@valantis-core/contracts/=./lib/valantis-sot/lib/valantis-core/src
-@valantis-sot/contracts-test/=./lib/valantis-sot/test/
+@valantis-hot/contracts/=./lib/valantis-hot/src/
+@valantis-core/contracts/=./lib/valantis-hot/lib/valantis-core/src
+@valantis-hot/contracts-test/=./lib/valantis-hot/test/
 @gelato/automate/contracts/=./lib/automate/contracts/

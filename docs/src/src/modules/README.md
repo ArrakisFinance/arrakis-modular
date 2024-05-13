@@ -1,6 +1,6 @@
 
 
 # Contents
-- [SOTOracleWrapper](SOTOracleWrapper.sol/contract.SOTOracleWrapper.md)
-- [ValantisModulePrivate](ValantisSOTModulePrivate.sol/contract.ValantisModulePrivate.md)
-- [ValantisModulePublic](ValantisSOTModulePublic.sol/contract.ValantisModulePublic.md)
+- [HOTOracleWrapper](HOTOracleWrapper.sol/contract.HOTOracleWrapper.md)
+- [ValantisModulePrivate](ValantisHOTModulePrivate.sol/contract.ValantisModulePrivate.md)
+- [ValantisModulePublic](ValantisHOTModulePublic.sol/contract.ValantisModulePublic.md)

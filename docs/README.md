@@ -13,7 +13,7 @@ git clone git@github.com:ArrakisFinance/arrakis-modular.git
 # otherwise
 git clone https://github.com/ArrakisFinance/arrakis-modular.git
 ```
-2. As the Valantis librari is private, you'll have to manually paste `valantis-sot` inside `lib/`.
+2. As the Valantis librari is private, you'll have to manually paste `valantis-hot` inside `lib/`.
 3. Install the required submodules and compile the contracts by running:
 ```
 forge build
@@ -127,10 +127,10 @@ This contract assumes the role of an emergency pauser, capable of halting system
 
 Arrakis Modular's first integration will be with Valantis, a new DEX that aims to introduce innovative design concepts to the AMM space.
 
-### [ValantisSOTModule.sol](../src/abstracts/ValantisSOTModule.sol)
+### [ValantisHOTModule.sol](../src/abstracts/ValantisHOTModule.sol)
 
 This module will be the first implementation for an `ArrakisMetaVault`, integrating with the Arrakis Modular system in a production environment and interfacing with a specific Sovereign Pool type from the new Valantis DEX.
 
 As outlined earlier, this contract will implement the `IArrakisLPModule` to conform to the standardized interface required by Arrakis modules.
 
-This abstract contract also has its private ([ValantisSOTModulePrivate.sol](../src/modules/ValantisSOTModulePrivate.sol)) and public ([ValantisSOTModulePublic.sol](../src/modules/ValantisSOTModulePublic.sol)) implementations.
+This abstract contract also has its private ([ValantisHOTModulePrivate.sol](../src/modules/ValantisHOTModulePrivate.sol)) and public ([ValantisHOTModulePublic.sol](../src/modules/ValantisHOTModulePublic.sol)) implementations.

@@ -2,15 +2,15 @@
 pragma solidity 0.8.19;
 
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
-import {ISOTOracle} from
-    "@valantis-sot/contracts/interfaces/ISOTOracle.sol";
+import {IHOTOracle} from
+    "@valantis-hot/contracts/interfaces/IHOTOracle.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-contract SOTOracleWrapper is IOracleWrapper {
+contract HOTOracleWrapper is IOracleWrapper {
     // #region immutable public variable.
 
-    ISOTOracle public immutable oracle;
+    IHOTOracle public immutable oracle;
     uint8 public immutable decimals0;
     uint8 public immutable decimals1;
 
@@ -27,7 +27,7 @@ contract SOTOracleWrapper is IOracleWrapper {
             revert DecimalsToken1Zero();
         }
 
-        oracle = ISOTOracle(oracle_);
+        oracle = IHOTOracle(oracle_);
         decimals0 = decimals0_;
         decimals1 = decimals1_;
     }
