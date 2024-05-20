@@ -1,8 +1,8 @@
-# PALMVaultNFT
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/PALMVaultNFT.sol)
+# PrivateVaultNFT
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/PrivateVaultNFT.sol)
 
 **Inherits:**
-Ownable, ERC721, [IPALMVaultNFT](/src/interfaces/IPALMVaultNFT.sol/interface.IPALMVaultNFT.md)
+Ownable, ERC721, [IPrivateVaultNFT](/src/interfaces/IPrivateVaultNFT.sol/interface.IPrivateVaultNFT.md)
 
 
 ## Functions
@@ -10,7 +10,7 @@ Ownable, ERC721, [IPALMVaultNFT](/src/interfaces/IPALMVaultNFT.sol/interface.IPA
 
 
 ```solidity
-constructor() ERC721("Arrakis Modular PALM Vaults", "PALM");
+constructor() ERC721("Arrakis Modular Private Vaults", "RAKIS-PV-NFT");
 ```
 
 ### mint

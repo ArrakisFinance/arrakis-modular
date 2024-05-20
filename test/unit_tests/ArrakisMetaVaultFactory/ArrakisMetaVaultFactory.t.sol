@@ -16,7 +16,7 @@ import {CreationCodePrivateVault} from
     "../../../src/CreationCodePrivateVault.sol";
 import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
-import {PALMVaultNFT} from "../../../src/PALMVaultNFT.sol";
+import {PrivateVaultNFT} from "../../../src/PrivateVaultNFT.sol";
 import {TimeLock} from "../../../src/TimeLock.sol";
 
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
@@ -51,7 +51,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     // #endregion constant properties.
 
     ArrakisMetaVaultFactory public factory;
-    PALMVaultNFT public nft;
+    PrivateVaultNFT public nft;
     address public owner;
 
     address public beaconAdmin;

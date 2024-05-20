@@ -60,8 +60,8 @@ contract ArrakisMetaVaultFactoryTest is Test {
     {}
 
     // - [ ] deployPrivateVault
-    //     - [ ] deploys a new vault where the PALM NFT is the owner
-    //     - [ ] mints a new PALM NFT for the owner
+    //     - [ ] deploys a new vault where the Private Vault NFT is the owner
+    //     - [ ] mints a new Private Vault NFT for the owner
     //     - [ ] deploys a new module from the private registry
     //     - [ ] adds vault to private vaults set
     //     - [ ] initializes the vault
