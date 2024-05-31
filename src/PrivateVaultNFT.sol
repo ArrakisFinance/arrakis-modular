@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {NFTSVG} from "src/libraries/NFTSVG.sol";
+import '@solady/contracts/utils/Base64.sol';
 import {IPrivateVaultNFT} from "./interfaces/IPrivateVaultNFT.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 
@@ -41,5 +42,4 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
             })
         );
     }
-    
 }
