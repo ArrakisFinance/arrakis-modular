@@ -25,7 +25,7 @@ address public immutable moduleRegistryPrivate;
 ### nft
 
 ```solidity
-PALMVaultNFT public immutable nft;
+PrivateVaultNFT public immutable nft;
 ```
 
 

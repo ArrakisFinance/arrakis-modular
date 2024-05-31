@@ -14,7 +14,7 @@ import {IManager} from "./interfaces/IManager.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IModuleRegistry} from "./interfaces/IModuleRegistry.sol";
 import {TimeLock} from "./TimeLock.sol";
-import {PALMVaultNFT} from "./PALMVaultNFT.sol";
+import {PrivateVaultNFT} from "./PrivateVaultNFT.sol";
 
 import {Create3} from "@create3/contracts/Create3.sol";
 
@@ -34,7 +34,7 @@ contract ArrakisMetaVaultFactory is
     address public immutable moduleRegistryPrivate;
     address public immutable creationCodePublicVault;
     address public immutable creationCodePrivateVault;
-    PALMVaultNFT public immutable nft;
+    PrivateVaultNFT public immutable nft;
 
     // #endregion immutable properties.
 
@@ -71,7 +71,7 @@ contract ArrakisMetaVaultFactory is
         moduleRegistryPrivate = moduleRegistryPrivate_;
         creationCodePublicVault = creationCodePublicVault_;
         creationCodePrivateVault = creationCodePrivateVault_;
-        nft = new PALMVaultNFT();
+        nft = new PrivateVaultNFT();
     }
 
     // #region pausable functions.

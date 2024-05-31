@@ -19,7 +19,7 @@
 - [IModuleRegistry](IModuleRegistry.sol/interface.IModuleRegistry.md)
 - [IOracleWrapper](IOracleWrapper.sol/interface.IOracleWrapper.md)
 - [IOwnable](IOwnable.sol/interface.IOwnable.md)
-- [IPALMVaultNFT](IPALMVaultNFT.sol/interface.IPALMVaultNFT.md)
+- [IPrivateVaultNFT](IPrivateVaultNFT.sol/interface.IPrivateVaultNFT.md)
 - [IPermit2](IPermit2.sol/interface.IPermit2.md)
 - [IRouterSwapExecutor](IRouterSwapExecutor.sol/interface.IRouterSwapExecutor.md)
 - [IHOT](IHOT.sol/interface.IHOT.md)

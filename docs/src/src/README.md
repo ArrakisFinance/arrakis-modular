@@ -15,6 +15,6 @@
 - [Guardian](Guardian.sol/contract.Guardian.md)
 - [ModulePrivateRegistry](ModulePrivateRegistry.sol/contract.ModulePrivateRegistry.md)
 - [ModulePublicRegistry](ModulePublicRegistry.sol/contract.ModulePublicRegistry.md)
-- [PALMVaultNFT](PALMVaultNFT.sol/contract.PALMVaultNFT.md)
+- [PrivateVaultNFT](PrivateVaultNFT.sol/contract.PrivateVaultNFT.md)
 - [RouterSwapExecutor](RouterSwapExecutor.sol/contract.RouterSwapExecutor.md)
 - [TimeLock](TimeLock.sol/contract.TimeLock.md)
