@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {
+    ERC20,
+    IERC20
+} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {IOwnable} from "../../../../src/interfaces/IOwnable.sol";
 import {IArrakisLPModule} from
@@ -9,7 +12,7 @@ import {IArrakisLPModule} from
 
 import {LpModuleMock} from "./LpModuleMock.sol";
 
-contract ArrakisMetaVaultMock is IOwnable {
+contract ArrakisMetaVaultMock is IOwnable, ERC20 {
     address public _owner;
 
     IArrakisLPModule public module;
@@ -17,6 +20,12 @@ contract ArrakisMetaVaultMock is IOwnable {
 
     IERC20 public token0;
     IERC20 public token1;
+
+    constructor() ERC20("Meta Vault", "MVT") {}
+
+    function mint(uint256 amount_, address receiver_) external {
+        _mint(receiver_, amount_);
+    }
 
     function setTokenOAndToken1(
         address token0_,

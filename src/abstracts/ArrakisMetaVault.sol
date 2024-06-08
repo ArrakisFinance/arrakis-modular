@@ -127,6 +127,12 @@ abstract contract ArrakisMetaVault is
 
         uint256 len = payloads_.length;
         for (uint256 i = 0; i < len; i++) {
+            bytes4 selector = bytes4(payloads_[i][:4]);
+
+            if (IArrakisLPModule.withdraw.selector == selector) {
+                revert WithdrawNotAllowed();
+            }
+
             (bool success,) = module_.call(payloads_[i]);
             if (!success) revert CallFailed();
         }

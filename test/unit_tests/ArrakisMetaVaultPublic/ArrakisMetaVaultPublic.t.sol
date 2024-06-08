@@ -11,6 +11,8 @@ import {IArrakisMetaVaultPublic} from
     "../../../src/interfaces/IArrakisMetaVaultPublic.sol";
 import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
+import {IArrakisLPModule} from
+    "../../../src/interfaces/IArrakisLPModule.sol";
 import {
     MINIMUM_LIQUIDITY,
     BASE
@@ -574,6 +576,49 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         vault.setModule(newModule, payloads);
 
         assertEq(LpModuleMock(newModule).someValue(), 10);
+    }
+
+    function testSetModuleCallWithdraw() public {
+        // #region initialize.
+
+        vault.initialize(address(module));
+
+        address actualModule = address(vault.module());
+
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
+
+        assert(whitelistedModules.length == 1);
+        assertEq(whitelistedModules[0], address(module));
+        assertEq(actualModule, address(module));
+
+        // #endregion initialize.
+
+        address[] memory beacons = new address[](1);
+        bytes[] memory datas = new bytes[](1);
+
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+
+        beacons[0] = beacon;
+
+        // #region whitelist module.
+
+        vm.prank(owner);
+        vault.whitelistModules(beacons, datas);
+
+        address newModule = (vault.whitelistedModules())[1];
+
+        // #endregion whitelist module.
+
+        bytes[] memory payloads = new bytes[](1);
+        payloads[0] = abi.encodeWithSelector(
+            IArrakisLPModule.withdraw.selector, address(this), BASE
+        );
+
+        vm.prank(address(manager));
+        vm.expectRevert(IArrakisMetaVault.WithdrawNotAllowed.selector);
+        vault.setModule(newModule, payloads);
     }
 
     // #endregion test setModule functions.

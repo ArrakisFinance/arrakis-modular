@@ -70,6 +70,9 @@ interface IArrakisMetaVault {
     /// @dev triggered when function is called by someone else than the owner.
     error OnlyOwner();
 
+    /// @dev triggered when setModule action try to remove funds.
+    error WithdrawNotAllowed();
+
     // #endregion errors.
 
     // #region events.
