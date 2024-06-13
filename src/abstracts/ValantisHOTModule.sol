@@ -425,11 +425,7 @@ abstract contract ValantisModule is
     {
         (fees0,) = pool.getPoolManagerFees();
     }
-<<<<<<< feat/waiting-review-changes
 
-=======
-    
->>>>>>> main
     /// @notice function used to get manager token1 balance.
     /// @dev amount of fees in token1 that manager have not taken yet.
     /// @return fees1 amount of token1 that manager earned.
