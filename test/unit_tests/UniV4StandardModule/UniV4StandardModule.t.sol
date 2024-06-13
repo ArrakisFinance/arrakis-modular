@@ -93,7 +93,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         sqrtPriceX96 = 1_465_133_142_213_943_882_042_816_409_358_200;
 
-        poolManager.lock(abi.encode(2));
+        poolManager.unlock(abi.encode(2));
 
         // #endregion create a pool.
 
@@ -120,7 +120,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
     // #region uniswap v4 callback function.
 
-    function lockAcquired(bytes calldata data)
+    function unlockCallback(bytes calldata data)
         public
         returns (bytes memory)
     {
@@ -263,7 +263,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             hooks: IHooks(address(0))
         });
 
-        poolManager.lock(abi.encode(2));
+        poolManager.unlock(abi.encode(2));
 
         vm.prank(manager);
         module.setPool(poolKey);
@@ -492,7 +492,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
@@ -502,8 +502,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtRatioAtTick(tickLower),
-            TickMath.getSqrtRatioAtTick(tickUpper),
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
             init0,
             init1
         );

@@ -26,9 +26,7 @@ import {ERC1967Proxy} from
 // #endregion openzeppelin.
 
 // #region constants.
-import {
-    TEN_PERCENT
-} from "../../../src/constants/CArrakis.sol";
+import {TEN_PERCENT} from "../../../src/constants/CArrakis.sol";
 // #endregion constants.
 
 // #region mocks.

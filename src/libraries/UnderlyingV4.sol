@@ -7,6 +7,8 @@ import {
     RangeData
 } from "../structs/SUniswapV4.sol";
 import {PIPS} from "../constants/CArrakis.sol";
+import {PoolGetterExt} from "./PoolGetterExt.sol";
+import {PoolManagerGetter} from "./PoolManagerGetter.sol";
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
@@ -23,12 +25,16 @@ import {
 } from "@uniswap/v4-core/src/types/PoolId.sol";
 import {LiquidityAmounts} from
     "@uniswap/v4-periphery/contracts/libraries/LiquidityAmounts.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 library UnderlyingV4 {
+    using PoolGetterExt for IPoolManager;
+    using PoolManagerGetter for IPoolManager;
+
     // solhint-disable-next-line function-max-lines
     function totalUnderlyingForMint(
         UnderlyingPayload memory underlyingPayload_,
@@ -141,7 +147,7 @@ library UnderlyingV4 {
             uint256 fee1
         )
     {
-        (uint160 sqrtPriceX96,,,) = underlying_.poolManager.getSlot0(
+        uint160 sqrtPriceX96 = underlying_.poolManager.sqrtPriceX96(
             PoolIdLibrary.toId(underlying_.range.poolKey)
         );
         PositionUnderlying memory positionUnderlying =
@@ -170,7 +176,7 @@ library UnderlyingV4 {
             uint256 fee1
         )
     {
-        (uint160 sqrtPriceX96,,,) = underlying_.poolManager.getSlot0(
+        uint160 sqrtPriceX96 = underlying_.poolManager.sqrtPriceX96(
             PoolIdLibrary.toId(underlying_.range.poolKey)
         );
         PositionUnderlying memory positionUnderlying =
@@ -215,7 +221,7 @@ library UnderlyingV4 {
                 positionUnderlying_.lowerTick,
                 positionUnderlying_.upperTick
             );
-            positionInfo = positionUnderlying_.poolManager.getPosition(
+            positionInfo = positionUnderlying_.poolManager.position(
                 poolId,
                 positionUnderlying_.self,
                 positionUnderlying_.lowerTick,
@@ -231,8 +237,8 @@ library UnderlyingV4 {
         // compute current holdings from liquidity
         (amount0Current, amount1Current) = getAmountsForDelta(
             positionUnderlying_.sqrtPriceX96,
-            TickMath.getSqrtRatioAtTick(positionUnderlying_.lowerTick),
-            TickMath.getSqrtRatioAtTick(positionUnderlying_.upperTick),
+            TickMath.getSqrtPriceAtTick(positionUnderlying_.lowerTick),
+            TickMath.getSqrtPriceAtTick(positionUnderlying_.upperTick),
             SafeCast.toInt128(
                 SafeCast.toInt256(
                     FullMath.mulDiv(
@@ -271,7 +277,7 @@ library UnderlyingV4 {
         );
         Position.Info memory positionInfo = positionUnderlying_
             .poolManager
-            .getPosition(
+            .position(
             poolId,
             positionUnderlying_.self,
             positionUnderlying_.lowerTick,
@@ -285,8 +291,8 @@ library UnderlyingV4 {
         (amount0Current, amount1Current) = LiquidityAmounts
             .getAmountsForLiquidity(
             positionUnderlying_.sqrtPriceX96,
-            TickMath.getSqrtRatioAtTick(positionUnderlying_.lowerTick),
-            TickMath.getSqrtRatioAtTick(positionUnderlying_.upperTick),
+            TickMath.getSqrtPriceAtTick(positionUnderlying_.lowerTick),
+            TickMath.getSqrtPriceAtTick(positionUnderlying_.upperTick),
             positionInfo.liquidity
         );
     }
@@ -385,7 +391,7 @@ library UnderlyingV4 {
         FeeGrowthInside memory feeGrowthInside;
 
         {
-            uint256 POOL_SLOT = 6;
+            uint256 POOL_SLOT = 10;
             bytes32 poolId = PoolId.unwrap(poolId_);
 
             // #region tickInfo Lower tick.
@@ -453,8 +459,7 @@ library UnderlyingV4 {
             // #endregion tickInfo Upper tick.
             // #region get slot0.
 
-            (, feeGrowthInside.tickCurrent,,) =
-                poolManager_.getSlot0(poolId_);
+            feeGrowthInside.tickCurrent = poolManager_.tick(poolId_);
 
             // #endregion get slot0.
             // #region pool global fees.
