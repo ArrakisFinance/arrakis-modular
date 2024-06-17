@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-uint256 constant MINIMUM_LIQUIDITY = 10 ** 3;
+uint128 constant MINIMUM_LIQUIDITY = 10 ** 3;
 uint256 constant BASE = 1e18;
 uint24 constant PIPS = 1_000_000;
 uint24 constant TEN_PERCENT = 100_000;

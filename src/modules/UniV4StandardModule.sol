@@ -103,16 +103,6 @@ contract UniV4StandardModule is
 
     // #endregion internal properties.
 
-    // #region enums.
-
-    enum Action {
-        DEPOSIT,
-        WITHDRAW,
-        REBALANCE
-    }
-
-    // #endregion enums.
-
     // #region modifiers.
 
     modifier onlyManager() {
@@ -170,14 +160,8 @@ contract UniV4StandardModule is
 
         if (
             poolKey.hooks.hasPermission(
-                Hooks.BEFORE_ADD_LIQUIDITY_FLAG
+                Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG
             )
-                || poolKey.hooks.hasPermission(
-                    Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG
-                )
-                || poolKey.hooks.hasPermission(
-                    Hooks.AFTER_ADD_LIQUIDITY_FLAG
-                )
                 || poolKey.hooks.hasPermission(
                     Hooks.AFTER_REMOVE_LIQUIDITY_FLAG
                 )
@@ -333,9 +317,8 @@ contract UniV4StandardModule is
 
         // #endregion checks.
 
-        bytes memory data = abi.encode(
-            Action.DEPOSIT, abi.encode(depositor_, proportion_)
-        );
+        bytes memory data =
+            abi.encode(0, abi.encode(depositor_, proportion_));
 
         bytes memory result = poolManager.unlock(data);
 
@@ -368,9 +351,8 @@ contract UniV4StandardModule is
 
         // #endregion checks.
 
-        bytes memory data = abi.encode(
-            Action.WITHDRAW, abi.encode(receiver_, proportion_)
-        );
+        bytes memory data =
+            abi.encode(1, abi.encode(receiver_, proportion_));
 
         bytes memory result = poolManager.unlock(data);
 
@@ -418,8 +400,7 @@ contract UniV4StandardModule is
                 })
             });
         }
-        bytes memory data =
-            abi.encode(Action.REBALANCE, abi.encode(liquidityRanges));
+        bytes memory data = abi.encode(2, abi.encode(liquidityRanges));
 
         bytes memory result = poolManager.unlock(data);
 
@@ -447,6 +428,7 @@ contract UniV4StandardModule is
     /// @return result data that you want to be returned from the lock call
     function unlockCallback(bytes calldata data_)
         external
+        virtual
         returns (bytes memory result)
     {
         if (msg.sender != address(poolManager)) {
@@ -1030,7 +1012,7 @@ contract UniV4StandardModule is
         )
     {
         bytes memory data =
-            abi.encode(Action.REBALANCE, abi.encode(liquidityRanges_));
+            abi.encode(2, abi.encode(liquidityRanges_));
 
         bytes memory result = poolManager.unlock(data);
 
