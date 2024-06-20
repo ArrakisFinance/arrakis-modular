@@ -126,15 +126,32 @@ abstract contract ArrakisMetaVault is
         // #endregion check if the module is empty.
 
         uint256 len = payloads_.length;
-        for (uint256 i = 0; i < len; i++) {
-            bytes4 selector = bytes4(payloads_[i][:4]);
+
+        // #region first call.
+
+        if (len == 0) {
+            revert PositionNotInitialized();
+        }
+
+        bytes4 selector = bytes4(payloads_[0][:4]);
+
+        if (selector != IArrakisLPModule.initializePosition.selector)
+        {
+            revert NotPositionInitializationCall();
+        }
+
+        _call(module_, payloads_[0]);
+
+        // #endregion first call.
+
+        for (uint256 i = 1; i < len; i++) {
+            selector = bytes4(payloads_[i][:4]);
 
             if (IArrakisLPModule.withdraw.selector == selector) {
                 revert WithdrawNotAllowed();
             }
 
-            (bool success,) = module_.call(payloads_[i]);
-            if (!success) revert CallFailed();
+            _call(module_, payloads_[i]);
         }
         emit LogSetModule(module_, payloads_);
     }
@@ -247,6 +264,11 @@ abstract contract ArrakisMetaVault is
         (amount0, amount1) = module_.withdrawManagerBalance();
 
         emit LogWithdrawManagerBalance(amount0, amount1);
+    }
+
+    function _call(address module_, bytes memory data_) internal {
+        (bool success,) = module_.call(data_);
+        if (!success) revert CallFailed();
     }
 
     function _onlyOwnerCheck() internal view virtual;

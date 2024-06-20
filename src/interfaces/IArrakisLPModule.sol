@@ -88,6 +88,12 @@ interface IArrakisLPModule {
     /// @dev only callable by guardian
     function unpause() external;
 
+    /// @notice function used to initialize the module
+    /// when a module switch happen
+    /// @param data_ bytes that contain information to initialize
+    /// the position.
+    function initializePosition(bytes calldata data_) external;
+
     /// @notice function used by metaVault to withdraw tokens from the strategy.
     /// @param receiver_ address that will receive tokens.
     /// @param proportion_ number of share needed to be withdrawn.

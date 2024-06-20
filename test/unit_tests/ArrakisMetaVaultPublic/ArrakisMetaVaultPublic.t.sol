@@ -397,6 +397,94 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         vault.setModule(newModule, payloads);
     }
 
+    function testSetModulePositionNotInitialized() public {
+        // #region initialize.
+
+        vault.initialize(address(module));
+
+        address actualModule = address(vault.module());
+
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
+
+        assert(whitelistedModules.length == 1);
+        assertEq(whitelistedModules[0], address(module));
+        assertEq(actualModule, address(module));
+
+        // #endregion initialize.
+
+        address[] memory beacons = new address[](1);
+        bytes[] memory datas = new bytes[](1);
+
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+
+        beacons[0] = beacon;
+
+        // #region whitelist module.
+
+        vm.prank(owner);
+        vault.whitelistModules(beacons, datas);
+
+        address newModule = (vault.whitelistedModules())[1];
+
+        // #endregion whitelist module.
+
+        bytes[] memory payloads = new bytes[](0);
+
+        vm.prank(address(manager));
+        vm.expectRevert(
+            IArrakisMetaVault.PositionNotInitialized.selector
+        );
+        vault.setModule(newModule, payloads);
+    }
+
+    function testSetModuleNotPositionInitializationCall() public {
+        // #region initialize.
+
+        vault.initialize(address(module));
+
+        address actualModule = address(vault.module());
+
+        address[] memory whitelistedModules =
+            vault.whitelistedModules();
+
+        assert(whitelistedModules.length == 1);
+        assertEq(whitelistedModules[0], address(module));
+        assertEq(actualModule, address(module));
+
+        // #endregion initialize.
+
+        address[] memory beacons = new address[](1);
+        bytes[] memory datas = new bytes[](1);
+
+        address beacon =
+            vm.addr(uint256(keccak256(abi.encode("Beacon"))));
+
+        beacons[0] = beacon;
+
+        // #region whitelist module.
+
+        vm.prank(owner);
+        vault.whitelistModules(beacons, datas);
+
+        address newModule = (vault.whitelistedModules())[1];
+
+        // #endregion whitelist module.
+
+        bytes[] memory payloads = new bytes[](1);
+
+        payloads[0] = abi.encodeWithSelector(
+            LpModuleMock.setInits.selector, 0, 0
+        );
+
+        vm.prank(address(manager));
+        vm.expectRevert(
+            IArrakisMetaVault.NotPositionInitializationCall.selector
+        );
+        vault.setModule(newModule, payloads);
+    }
+
     function testSetModuleBuggyModule() public {
         // #region initialize.
 
@@ -442,7 +530,11 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion mock current module.
 
-        bytes[] memory payloads = new bytes[](0);
+        bytes[] memory payloads = new bytes[](1);
+
+        payloads[0] = abi.encodeWithSelector(
+            IArrakisLPModule.initializePosition.selector, ""
+        );
 
         vm.prank(address(manager));
         vault.setModule(newModule, payloads);
@@ -483,9 +575,12 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion whitelist module.
 
-        bytes[] memory payloads = new bytes[](1);
+        bytes[] memory payloads = new bytes[](2);
 
         payloads[0] = abi.encodeWithSelector(
+            IArrakisLPModule.initializePosition.selector, ""
+        );
+        payloads[1] = abi.encodeWithSelector(
             LpModuleMock.smallCall.selector, 10
         );
 
@@ -527,7 +622,11 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion whitelist module.
 
-        bytes[] memory payloads = new bytes[](0);
+        bytes[] memory payloads = new bytes[](1);
+
+        payloads[0] = abi.encodeWithSelector(
+            IArrakisLPModule.initializePosition.selector, ""
+        );
 
         vm.prank(address(manager));
         vault.setModule(newModule, payloads);
@@ -566,9 +665,12 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion whitelist module.
 
-        bytes[] memory payloads = new bytes[](1);
+        bytes[] memory payloads = new bytes[](2);
 
         payloads[0] = abi.encodeWithSelector(
+            IArrakisLPModule.initializePosition.selector, ""
+        );
+        payloads[1] = abi.encodeWithSelector(
             LpModuleMock.smallCall.selector, 10
         );
 
@@ -611,8 +713,11 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
 
         // #endregion whitelist module.
 
-        bytes[] memory payloads = new bytes[](1);
+        bytes[] memory payloads = new bytes[](2);
         payloads[0] = abi.encodeWithSelector(
+            IArrakisLPModule.initializePosition.selector, ""
+        );
+        payloads[1] = abi.encodeWithSelector(
             IArrakisLPModule.withdraw.selector, address(this), BASE
         );
 
