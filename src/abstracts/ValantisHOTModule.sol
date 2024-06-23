@@ -382,6 +382,12 @@ abstract contract ValantisModule is
 
         // #endregion interactions.
 
+        if (zeroForOne_) {
+            _token0.forceApprove(router_, 0);
+        } else {
+            _token1.forceApprove(router_, 0);
+        }
+
         // #region assertions.
 
         balances.balance0 =
