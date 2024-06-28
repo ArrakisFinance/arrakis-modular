@@ -24,6 +24,7 @@ interface IValantisHOTModule {
     error NotEnoughToken1();
     error SwapCallFailed();
     error OverMaxDeviation();
+    error WrongRouter();
 
     // #endregion errors.
 
@@ -58,9 +59,6 @@ interface IValantisHOTModule {
         uint24 maxSlippage_,
         address metaVault_
     ) external;
-
-    /// @notice initialize position, needed when vault owner active this module.
-    function initializePosition() external;
 
     /// @notice set HOT and initialize manager fees function.
     /// @param alm_ address of the valantis HOT ALM.

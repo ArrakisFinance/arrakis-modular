@@ -9,6 +9,8 @@ import {NATIVE_COIN} from "../../../../src/constants/CArrakis.sol";
 import {IOracleWrapper} from
     "../../../../src/interfaces/IOracleWrapper.sol";
 
+import {ArrakisMetaVaultMock} from "./ArrakisMetaVaultMock.sol";
+
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 contract LpModuleMock {
@@ -33,6 +35,14 @@ contract LpModuleMock {
     ) external {
         token0 = IERC20(token0_);
         token1 = IERC20(token1_);
+    }
+
+    function mint(
+        address vault_,
+        uint256 amount_,
+        address receiver_
+    ) external {
+        ArrakisMetaVaultMock(vault_).mint(amount_, receiver_);
     }
 
     function setManagerFeePIPS(uint256 managerFeePIPS_) external {

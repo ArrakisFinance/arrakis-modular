@@ -25,6 +25,8 @@ contract LpModuleMock {
 
     // #endregion testing.
 
+    function initializePosition(bytes calldata data_) external {}
+
     function deposit(
         address depositor_,
         uint256 proportion_

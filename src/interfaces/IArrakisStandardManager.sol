@@ -53,6 +53,7 @@ interface IArrakisStandardManager {
     error VaultNotDeployed();
     error SetManagerFeeCallNotAllowed();
     error OnlyStratAnnouncer();
+    error PublicVaultTotalSupplyChanged();
 
     // #endregion errors.
 

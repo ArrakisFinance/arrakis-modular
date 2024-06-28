@@ -54,7 +54,7 @@ contract RouterSwapExecutor is IRouterSwapExecutor {
             if (token0 != nativeToken) {
                 balanceBefore =
                     IERC20(token0).balanceOf(address(this));
-                IERC20(token0).safeIncreaseAllowance(
+                IERC20(token0).forceApprove(
                     params_.swapData.swapRouter,
                     params_.swapData.amountInSwap
                 );
@@ -66,7 +66,7 @@ contract RouterSwapExecutor is IRouterSwapExecutor {
             if (token1 != nativeToken) {
                 balanceBefore =
                     IERC20(token1).balanceOf(address(this));
-                IERC20(token1).safeIncreaseAllowance(
+                IERC20(token1).forceApprove(
                     params_.swapData.swapRouter,
                     params_.swapData.amountInSwap
                 );

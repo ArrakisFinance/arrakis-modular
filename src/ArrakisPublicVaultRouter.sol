@@ -1225,8 +1225,10 @@ contract ArrakisPublicVaultRouter is
         uint256 proportion =
             proportion0 < proportion1 ? proportion0 : proportion1;
 
-        amount0ToDeposit = FullMath.mulDiv(amount0, proportion, BASE);
-        amount1ToDeposit = FullMath.mulDiv(amount1, proportion, BASE);
+        amount0ToDeposit =
+            FullMath.mulDivRoundingUp(amount0, proportion, BASE);
+        amount1ToDeposit =
+            FullMath.mulDivRoundingUp(amount1, proportion, BASE);
         shareToMint = FullMath.mulDiv(proportion, supply, BASE);
     }
 
