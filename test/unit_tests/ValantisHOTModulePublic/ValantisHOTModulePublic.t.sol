@@ -371,7 +371,7 @@ contract ValantisHOTModuleTest is TestWrapper {
                 metaVault
             )
         );
-        module.initializePosition();
+        module.initializePosition("");
     }
 
     function testInitializePositionOnlyToken0() public {
@@ -380,7 +380,7 @@ contract ValantisHOTModuleTest is TestWrapper {
         deal(USDC, address(module), amount0);
 
         vm.prank(address(metaVault));
-        module.initializePosition();
+        module.initializePosition("");
     }
 
     function testInitializePositionOnlyToken1() public {
@@ -389,7 +389,7 @@ contract ValantisHOTModuleTest is TestWrapper {
         deal(WETH, address(module), amount1);
 
         vm.prank(address(metaVault));
-        module.initializePosition();
+        module.initializePosition("");
     }
 
     // #endregion test initialize position.
@@ -984,6 +984,81 @@ contract ValantisHOTModuleTest is TestWrapper {
 
         vm.expectRevert(IValantisHOTModule.NotEnoughToken1.selector);
         vm.prank(manager);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
+    }
+
+    function testSwapWrongRouter1() public {
+        bool zeroForOne = true;
+        uint256 expectedMinReturn = 0.6 ether;
+        uint256 amountIn = 1250e6;
+        address router = address(sovereignPool);
+        bytes memory payload = abi.encodeWithSelector(
+            SovereignPoolMock.setPoolManagerFeeBips.selector, 10_000
+        );
+
+        sovereignPool.setReserves(amountIn, 0);
+        deal(USDC, address(sovereignALM), amountIn);
+
+        vm.prank(manager);
+        vm.expectRevert(IValantisHOTModule.WrongRouter.selector);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
+    }
+
+    function testSwapWrongRouter2() public {
+        bool zeroForOne = true;
+        uint256 expectedMinReturn = 0.6 ether;
+        uint256 amountIn = 1250e6;
+        address router = address(metaVault);
+        bytes memory payload = abi.encodeWithSelector(
+            ArrakisMetaVaultMock.setManager.selector, address(this)
+        );
+
+        sovereignPool.setReserves(amountIn, 0);
+        deal(USDC, address(sovereignALM), amountIn);
+
+        vm.prank(manager);
+        vm.expectRevert(IValantisHOTModule.WrongRouter.selector);
+        module.swap(
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
+    }
+
+    function testSwapWrongRouter3() public {
+        bool zeroForOne = true;
+        uint256 expectedMinReturn = 0.6 ether;
+        uint256 amountIn = 1250e6;
+        address router = address(sovereignALM);
+        bytes memory payload = abi.encodeWithSelector(
+            SovereignALMMock.setSqrtSpotPriceX96.selector, 0
+        );
+
+        sovereignPool.setReserves(amountIn, 0);
+        deal(USDC, address(sovereignALM), amountIn);
+
+        vm.prank(manager);
+        vm.expectRevert(IValantisHOTModule.WrongRouter.selector);
         module.swap(
             zeroForOne,
             expectedMinReturn,

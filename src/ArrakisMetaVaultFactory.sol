@@ -338,7 +338,7 @@ contract ArrakisMetaVaultFactory is
     ) public view returns (string memory) {
         string memory symbol0 = IERC20Metadata(token0_).symbol();
         string memory symbol1 = IERC20Metadata(token1_).symbol();
-        return string(abi.encodePacked("AM/", symbol0, "/", symbol1));
+        return _append("AM/", symbol0, "/", symbol1);
     }
 
     /// @notice get a list of public vaults created by this factory

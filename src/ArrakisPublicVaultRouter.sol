@@ -878,21 +878,15 @@ contract ArrakisPublicVaultRouter is
         address module = address(IArrakisMetaVault(vault_).module());
 
         uint256 valueToSend;
-        uint256 balance0;
-        uint256 balance1;
         if (token0_ != nativeToken) {
             IERC20(token0_).safeIncreaseAllowance(module, amount0_);
-            balance0 = IERC20(token0_).balanceOf(address(this));
         } else {
             valueToSend = amount0_;
-            balance0 = address(this).balance;
         }
         if (token1_ != nativeToken) {
             IERC20(token1_).safeIncreaseAllowance(module, amount1_);
-            balance1 = IERC20(token1_).balanceOf(address(this));
         } else {
             valueToSend = amount1_;
-            balance1 = address(this).balance;
         }
 
         IArrakisMetaVaultPublic(vault_).mint{value: valueToSend}(
@@ -1204,15 +1198,14 @@ contract ArrakisPublicVaultRouter is
             uint256 amount1ToDeposit
         )
     {
-        // TODO check rounding !!!!
         (uint256 amount0, uint256 amount1) =
             IArrakisMetaVault(vault_).totalUnderlying();
 
         uint256 supply = IERC20(vault_).totalSupply();
 
-        if (amount0 == 0 && amount1 == 0) {
+        if (supply == 0) {
             (amount0, amount1) = IArrakisMetaVault(vault_).getInits();
-            supply = 1 ether;
+            supply = BASE;
         }
 
         uint256 proportion0 = amount0 == 0
@@ -1225,8 +1218,10 @@ contract ArrakisPublicVaultRouter is
         uint256 proportion =
             proportion0 < proportion1 ? proportion0 : proportion1;
 
-        amount0ToDeposit = FullMath.mulDiv(amount0, proportion, BASE);
-        amount1ToDeposit = FullMath.mulDiv(amount1, proportion, BASE);
+        amount0ToDeposit =
+            FullMath.mulDivRoundingUp(amount0, proportion, BASE);
+        amount1ToDeposit =
+            FullMath.mulDivRoundingUp(amount1, proportion, BASE);
         shareToMint = FullMath.mulDiv(proportion, supply, BASE);
     }
 

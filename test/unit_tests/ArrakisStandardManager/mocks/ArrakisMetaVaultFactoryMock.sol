@@ -11,4 +11,8 @@ contract ArrakisMetaVaultFactoryMock {
     function setManager(address manager_) external {
         manager = manager_;
     }
+
+    function isPublicVault(address vault) external returns (bool) {
+        return true;
+    }
 }

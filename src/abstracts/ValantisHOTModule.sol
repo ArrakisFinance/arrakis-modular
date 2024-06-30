@@ -7,10 +7,11 @@ import {IValantisHOTModule} from
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {ISovereignPool} from "../interfaces/ISovereignPool.sol";
 import {IHOT} from "@valantis-hot/contracts/interfaces/IHOT.sol";
-import {BASE, PIPS} from "../constants/CArrakis.sol";
+import {BASE, PIPS, TEN_PERCENT} from "../constants/CArrakis.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IOwnable} from "../interfaces/IOwnable.sol";
+import {SwapBalances} from "../structs/SValantis.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -114,7 +115,7 @@ abstract contract ValantisModule is
         if (metaVault_ == address(0)) revert AddressZero();
         if (pool_ == address(0)) revert AddressZero();
         if (init0_ == 0 && init1_ == 0) revert InitsAreZeros();
-        if (maxSlippage_ > PIPS / 10) {
+        if (maxSlippage_ > TEN_PERCENT) {
             revert MaxSlippageGtTenPercent();
         }
 
@@ -128,26 +129,21 @@ abstract contract ValantisModule is
         _init1 = init1_;
 
         maxSlippage = maxSlippage_;
+
+        __Pausable_init();
+        __ReentrancyGuard_init();
     }
 
-    function initializePosition() external onlyMetaVault {
-        uint256 amount0 = token0.balanceOf(address(this));
-        uint256 amount1 = token1.balanceOf(address(this));
-
-        // #region increase allowance to alm.
-
-        if (amount0 > 0) {
-            token0.safeIncreaseAllowance(address(alm), amount0);
-        }
-        if (amount1 > 0) {
-            token1.safeIncreaseAllowance(address(alm), amount1);
-        }
-
-        // #endregion increase allowance to alm.
-
-        alm.depositLiquidity(amount0, amount1, 0, 0);
-
-        emit LogInitializePosition(amount0, amount1);
+    /// @notice function used to initialize the module
+    /// when a module switch happen
+    /// @param data_ bytes that contain information to initialize
+    /// the position.
+    function initializePosition(bytes calldata data_)
+        external
+        virtual
+        onlyMetaVault
+    {
+        _initializePosition();
     }
 
     // #region guardian functions.
@@ -271,14 +267,11 @@ abstract contract ValantisModule is
     function setManagerFeePIPS(uint256 newFeePIPS_)
         external
         whenNotPaused
+        onlyManager
     {
         uint256 _oldFee = _managerFeePIPS;
 
         // #region checks.
-
-        if (msg.sender != metaVault.manager()) {
-            revert OnlyManager(msg.sender, metaVault.manager());
-        }
 
         if (newFeePIPS_ > PIPS) revert NewFeesGtPIPS(newFeePIPS_);
 
@@ -332,27 +325,28 @@ abstract contract ValantisModule is
         uint160 expectedSqrtSpotPriceLowerX96_,
         bytes calldata payload_
     ) external onlyManager whenNotPaused {
+        IHOT _alm = alm;
+        ISovereignPool _pool = pool;
+        IERC20Metadata _token0 = token0;
+        IERC20Metadata _token1 = token1;
         // #region checks/effects.
         _checkMinReturn(
             zeroForOne_,
             expectedMinReturn_,
             amountIn_,
-            token0.decimals(),
-            token1.decimals()
+            _token0.decimals(),
+            _token1.decimals()
         );
         // #endregion checks/effects.
 
         // #region interactions.
 
-        uint256 _actual0;
-        uint256 _actual1;
-        uint256 _initBalance0;
-        uint256 _initBalance1;
+        SwapBalances memory balances;
 
         {
-            _initBalance0 = token0.balanceOf(address(this));
-            _initBalance1 = token1.balanceOf(address(this));
-            (uint256 _amt0, uint256 _amt1) = pool.getReserves();
+            balances.initBalance0 = _token0.balanceOf(address(this));
+            balances.initBalance1 = _token1.balanceOf(address(this));
+            (uint256 _amt0, uint256 _amt1) = _pool.getReserves();
 
             if (zeroForOne_) {
                 if (_amt0 < amountIn_) revert NotEnoughToken0();
@@ -360,16 +354,25 @@ abstract contract ValantisModule is
                 revert NotEnoughToken1();
             }
 
-            alm.withdrawLiquidity(_amt0, _amt1, address(this), 0, 0);
+            _alm.withdrawLiquidity(_amt0, _amt1, address(this), 0, 0);
 
-            _actual0 = token0.balanceOf(address(this)) - _initBalance0;
-            _actual1 = token1.balanceOf(address(this)) - _initBalance1;
+            balances.actual0 = _token0.balanceOf(address(this))
+                - balances.initBalance0;
+            balances.actual1 = _token1.balanceOf(address(this))
+                - balances.initBalance1;
         }
 
         if (zeroForOne_) {
-            token0.safeIncreaseAllowance(router_, amountIn_);
+            _token0.safeIncreaseAllowance(router_, amountIn_);
         } else {
-            token1.safeIncreaseAllowance(router_, amountIn_);
+            _token1.safeIncreaseAllowance(router_, amountIn_);
+        }
+
+        if (
+            router_ == address(_pool) || router_ == address(_alm)
+                || router_ == address(metaVault)
+        ) {
+            revert WrongRouter();
         }
 
         {
@@ -379,19 +382,31 @@ abstract contract ValantisModule is
 
         // #endregion interactions.
 
+        if (zeroForOne_) {
+            _token0.forceApprove(router_, 0);
+        } else {
+            _token1.forceApprove(router_, 0);
+        }
+
         // #region assertions.
 
-        uint256 balance0 =
-            token0.balanceOf(address(this)) - _initBalance0;
-        uint256 balance1 =
-            token1.balanceOf(address(this)) - _initBalance1;
+        balances.balance0 =
+            _token0.balanceOf(address(this)) - balances.initBalance0;
+        balances.balance1 =
+            _token1.balanceOf(address(this)) - balances.initBalance1;
 
         if (zeroForOne_) {
-            if (_actual1 + expectedMinReturn_ > balance1) {
+            if (
+                balances.actual1 + expectedMinReturn_
+                    > balances.balance1
+            ) {
                 revert SlippageTooHigh();
             }
         } else {
-            if (_actual0 + expectedMinReturn_ > balance0) {
+            if (
+                balances.actual0 + expectedMinReturn_
+                    > balances.balance0
+            ) {
                 revert SlippageTooHigh();
             }
         }
@@ -400,19 +415,30 @@ abstract contract ValantisModule is
 
         // #region deposit.
 
-        token0.safeIncreaseAllowance(address(alm), balance0);
-        token1.safeIncreaseAllowance(address(alm), balance1);
+        {
+            _token0.safeIncreaseAllowance(
+                address(_alm), balances.balance0
+            );
+            _token1.safeIncreaseAllowance(
+                address(_alm), balances.balance1
+            );
+        }
 
-        alm.depositLiquidity(
-            balance0,
-            balance1,
+        _alm.depositLiquidity(
+            balances.balance0,
+            balances.balance1,
             expectedSqrtSpotPriceLowerX96_,
             expectedSqrtSpotPriceUpperX96_
         );
 
         // #endregion deposit.
 
-        emit LogSwap(_actual0, _actual1, balance0, balance1);
+        emit LogSwap(
+            balances.actual0,
+            balances.actual1,
+            balances.balance0,
+            balances.balance1
+        );
     }
 
     /// @notice function used to get manager token0 balance.
@@ -533,6 +559,24 @@ abstract contract ValantisModule is
     // #endregion view functions.
 
     // #region internal functions.
+
+    function _initializePosition() internal {
+        uint256 amount0 = token0.balanceOf(address(this));
+        uint256 amount1 = token1.balanceOf(address(this));
+
+        // #region increase allowance to alm.
+        if (amount0 > 0) {
+            token0.safeIncreaseAllowance(address(alm), amount0);
+        }
+        if (amount1 > 0) {
+            token1.safeIncreaseAllowance(address(alm), amount1);
+        }
+        // #endregion increase allowance to alm.
+
+        alm.depositLiquidity(amount0, amount1, 0, 0);
+
+        emit LogInitializePosition(amount0, amount1);
+    }
 
     function _checkMinReturn(
         bool zeroForOne_,

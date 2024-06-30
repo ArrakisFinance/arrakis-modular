@@ -107,4 +107,13 @@ contract ValantisModulePublic is
         }
         return super.withdraw(receiver_, proportion_);
     }
+
+    function initializePosition(bytes calldata data_)
+        external
+        override
+        onlyMetaVault
+    {
+        notFirstDeposit = true;
+        _initializePosition();
+    }
 }

@@ -11,6 +11,8 @@ import {IArrakisLPModule} from "./interfaces/IArrakisLPModule.sol";
 import {IOwnable} from "./interfaces/IOwnable.sol";
 import {VaultInfo, FeeIncrease} from "./structs/SManager.sol";
 import {IGuardian} from "./interfaces/IGuardian.sol";
+import {IArrakisMetaVaultFactory} from
+    "./interfaces/IArrakisMetaVaultFactory.sol";
 
 // #region openzeppelin dependencies.
 import {EnumerableSet} from
@@ -344,10 +346,13 @@ contract ArrakisStandardManager is
 
         (uint256 amount0, uint256 amount1) =
             IArrakisMetaVault(vault_).totalUnderlying();
-        address token0 = IArrakisMetaVault(vault_).token0();
-        uint8 token0Decimals = token0 == nativeToken
-            ? nativeTokenDecimals
-            : IERC20Metadata(token0).decimals();
+        uint8 token0Decimals;
+        {
+            address token0 = IArrakisMetaVault(vault_).token0();
+            token0Decimals = token0 == nativeToken
+                ? nativeTokenDecimals
+                : IERC20Metadata(token0).decimals();
+        }
 
         module.validateRebalance(info.oracle, info.maxDeviation);
 
@@ -359,23 +364,35 @@ contract ArrakisStandardManager is
 
         // #endregion get current value of the vault.
 
-        uint256 _length = payloads_.length;
+        uint256 totalSupply;
+        bool isPublicVault =
+            IArrakisMetaVaultFactory(factory).isPublicVault(vault_);
 
-        for (uint256 i; i < _length; i++) {
-            // #region check if the function called isn't the setManagerFeePIPS.
+        if (isPublicVault) {
+            totalSupply = IERC20Metadata(vault_).totalSupply();
+        }
 
-            bytes4 selector = bytes4(payloads_[i][:4]);
+        {
+            uint256 _length = payloads_.length;
 
-            if (
-                IArrakisLPModule.setManagerFeePIPS.selector
-                    == selector
-            ) revert SetManagerFeeCallNotAllowed();
+            for (uint256 i; i < _length; i++) {
+                // #region check if the function called isn't the setManagerFeePIPS.
 
-            // #endregion check if the function called isn't the setManagerFeePIPS.
+                {
+                    bytes4 selector = bytes4(payloads_[i][:4]);
 
-            (bool success,) = address(module).call(payloads_[i]);
+                    if (
+                        IArrakisLPModule.setManagerFeePIPS.selector
+                            == selector
+                    ) revert SetManagerFeeCallNotAllowed();
+                }
 
-            if (!success) revert CallFailed(payloads_[i]);
+                // #endregion check if the function called isn't the setManagerFeePIPS.
+
+                (bool success,) = address(module).call(payloads_[i]);
+
+                if (!success) revert CallFailed(payloads_[i]);
+            }
         }
 
         // #region assertions.
@@ -410,6 +427,15 @@ contract ArrakisStandardManager is
 
             if (currentSlippage > info.maxSlippagePIPS) {
                 revert OverMaxSlippage();
+            }
+        }
+
+        /// @dev only public vault should have this check.
+        if (isPublicVault) {
+            uint256 newTotalSupply =
+                IERC20Metadata(vault_).totalSupply();
+            if (totalSupply != newTotalSupply) {
+                revert PublicVaultTotalSupplyChanged();
             }
         }
 
@@ -645,7 +671,6 @@ contract ArrakisStandardManager is
         }
 
         // check slippage is lower than 10%
-        // TODO: let maybe remove that check?
         if (params_.maxSlippagePIPS > TEN_PERCENT) {
             revert SlippageTooHigh();
         }
