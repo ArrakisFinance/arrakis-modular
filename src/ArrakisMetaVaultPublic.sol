@@ -56,7 +56,7 @@ contract ArrakisMetaVaultPublic is
         uint256 supply = totalSupply();
 
         uint256 proportion = FullMath.mulDivRoundingUp(
-            shares_, BASE, supply > 0 ? supply : 1 ether
+            shares_, BASE, supply > 0 ? supply : BASE
         );
 
         if (receiver_ == address(0)) revert AddressZero("Receiver");
