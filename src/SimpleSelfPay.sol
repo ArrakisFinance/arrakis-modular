@@ -46,8 +46,8 @@ contract SimpleSelfPay is
     ) AutomateReady(automate_, taskCreator_) {
         if (
             vault_ == address(0) || manager_ == address(0)
-                || executor_ == address(0) || automate_ == address(0)
-                || taskCreator_ == address(0) || receiver_ == address(0)
+                || executor_ == address(0) || taskCreator_ == address(0)
+                || receiver_ == address(0)
         ) revert AddressZero();
 
         (, address feeToken) = _getFeeDetails();
@@ -61,11 +61,15 @@ contract SimpleSelfPay is
     }
 
     function sendBackETH(uint256 amount_) external {
+        address payable _receiver = receiver;
+
+        if (msg.sender != receiver) {
+            revert OnlyReceiver();
+        }
+
         if (address(this).balance < amount_) {
             revert NotEnoughToSendBack();
         }
-
-        address payable _receiver = receiver;
 
         _receiver.sendValue(amount_);
 

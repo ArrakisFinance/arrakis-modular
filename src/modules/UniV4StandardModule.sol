@@ -15,8 +15,6 @@ import {
 } from "../structs/SUniswapV4.sol";
 
 import {UnderlyingV4} from "../libraries/UnderlyingV4.sol";
-import {PoolGetterExt} from "../libraries/PoolGetterExt.sol";
-import {PoolManagerGetter} from "../libraries/PoolManagerGetter.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -50,6 +48,10 @@ import {
 } from "@uniswap/v4-core/src/types/PoolId.sol";
 import {IUnlockCallback} from
     "@uniswap/v4-core/src/interfaces/callback/IUnlockCallback.sol";
+import {StateLibrary} from
+    "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {TransientStateLibrary} from
+    "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
 
 /// @notice this module can only set uni v4 pool that have generic hook,
 /// that don't require specific action to become liquidity provider.
@@ -65,8 +67,8 @@ contract UniV4StandardModule is
     using CurrencyLibrary for Currency;
     using Hooks for IHooks;
     using Address for address payable;
-    using PoolGetterExt for IPoolManager;
-    using PoolManagerGetter for IPoolManager;
+    using StateLibrary for IPoolManager;
+    using TransientStateLibrary for IPoolManager;
 
     // #region immutable properties.
 
@@ -169,8 +171,8 @@ contract UniV4StandardModule is
 
         /// @dev check if the pool is initialized.
         PoolId poolId = poolKey_.toId();
-        uint160 sqrtPriceX96 =
-            IPoolManager(poolManager_).sqrtPriceX96(poolId);
+        (uint160 sqrtPriceX96,,,) =
+            IPoolManager(poolManager_).getSlot0(poolId);
 
         if (sqrtPriceX96 == 0) revert SqrtPriceZero();
 
@@ -211,7 +213,6 @@ contract UniV4StandardModule is
         onlyManager
         nonReentrant
     {
-        // TODO move the asset from the current pool to the new pool.
         address _token0 = address(token0);
         address _token1 = address(token1);
         if (Currency.unwrap(poolKey_.currency0) != _token0) {
@@ -248,7 +249,7 @@ contract UniV4StandardModule is
 
         /// @dev check if the pool is initialized.
         PoolId poolId = poolKey_.toId();
-        uint160 sqrtPriceX96 = poolManager.sqrtPriceX96(poolId);
+        (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(poolId);
 
         if (sqrtPriceX96 == 0) revert SqrtPriceZero();
 
@@ -264,12 +265,17 @@ contract UniV4StandardModule is
 
         for (uint256 i; i < length; i++) {
             Range memory range = _ranges[i];
-            uint128 liquidityToRemove = poolManager.getLiquidity(
-                currentPoolId,
-                address(this),
-                range.tickLower,
-                range.tickUpper
+            /// @dev salt will be emty string on the module.
+            bytes32 positionKey = keccak256(
+                abi.encodePacked(
+                    address(this),
+                    range.tickLower,
+                    range.tickUpper,
+                    ""
+                )
             );
+            (uint128 liquidityToRemove,,) = poolManager
+                .getPositionInfo(currentPoolId, positionKey);
 
             liquidityRanges[i] = LiquidityRange({
                 liquidity: -SafeCast.toInt128(
@@ -308,7 +314,6 @@ contract UniV4StandardModule is
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
-        // TODO deal with native token.
         // #region checks.
 
         if (depositor_ == address(0)) revert AddressZero();
@@ -565,7 +570,7 @@ contract UniV4StandardModule is
         // #region compute pool price.
 
         PoolId poolId = poolKey.toId();
-        uint160 sqrtPriceX96 = poolManager.sqrtPriceX96(poolId);
+        (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(poolId);
 
         uint256 poolPrice;
 
@@ -652,11 +657,12 @@ contract UniV4StandardModule is
         for (uint256 i; i < length; i++) {
             Range memory range = _ranges[i];
 
-            Position.Info memory info = poolManager.position(
+            Position.Info memory info = poolManager.getPosition(
                 poolId,
                 address(this),
                 range.tickLower,
-                range.tickUpper
+                range.tickUpper,
+                ""
             );
 
             /// @dev no need to rounding up because uni v4 should do it during minting.
@@ -845,11 +851,12 @@ contract UniV4StandardModule is
         for (uint256 i; i < length; i++) {
             Range memory range = _ranges[i];
 
-            Position.Info memory info = poolManager.position(
+            Position.Info memory info = poolManager.getPosition(
                 poolId,
                 address(this),
                 range.tickLower,
-                range.tickUpper
+                range.tickUpper,
+                ""
             );
 
             /// @dev multiply -1 because we will remove liquidity.
@@ -1270,8 +1277,8 @@ contract UniV4StandardModule is
 
         // #region get liqudity.
 
-        Position.Info memory info = poolManager.position(
-            poolId_, address(this), tickLower_, tickUpper_
+        Position.Info memory info = poolManager.getPosition(
+            poolId_, address(this), tickLower_, tickUpper_, ""
         );
 
         // #endregion get liquidity.

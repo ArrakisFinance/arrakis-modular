@@ -8,6 +8,7 @@ interface ISimpleSelfPay {
     error CantBeSelfPay();
     error NotEnoughToSendBack();
     error OnlyExecutor();
+    error OnlyReceiver();
 
     // #endregion errors.
 

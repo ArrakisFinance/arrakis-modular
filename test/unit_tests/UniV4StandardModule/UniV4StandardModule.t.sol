@@ -13,6 +13,8 @@ import {IUniV4StandardModule} from
     "../../../src/interfaces/IUniV4StandardModule.sol";
 import {IArrakisLPModule} from
     "../../../src/interfaces/IArrakisLPModule.sol";
+import {IOracleWrapper} from
+    "../../../src/interfaces/IOracleWrapper.sol";
 import {BASE} from "../../../src/constants/CArrakis.sol";
 // #endregion Uniswap Module.
 
@@ -31,6 +33,7 @@ import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {LiquidityAmounts} from
     "@uniswap/v4-periphery/contracts/libraries/LiquidityAmounts.sol";
 // #endregion uniswap.
@@ -38,6 +41,7 @@ import {LiquidityAmounts} from
 // #region mock contracts.
 import {ArrakisMetaVaultMock} from "./mocks/ArrakisMetaVault.sol";
 import {GuardianMock} from "./mocks/Guardian.sol";
+import {OracleMock} from "./mocks/OracleWrapperMock.sol";
 // #endregion mock contracts.
 
 contract UniV4StandardModuleTest is TestWrapper {
@@ -538,4 +542,376 @@ contract UniV4StandardModuleTest is TestWrapper {
     }
 
     // #endregion test rebalance.
+
+    // #region test guardian.
+
+    function testGuardian() public {
+        address actualPauser = module.guardian();
+
+        assertEq(actualPauser, pauser);
+    }
+
+    // #endregion test guardian.
+
+    // #region test getRanges.
+
+    function testGetRanges() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        // #region deposit.
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        IERC20Metadata(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+
+        // #endregion deposit.
+
+        assertEq(IERC20Metadata(USDC).balanceOf(depositor), 0);
+        assertEq(IERC20Metadata(WETH).balanceOf(depositor), 0);
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            init0,
+            init1
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion do rebalance.
+
+        IUniV4StandardModule.Range[] memory ranges =
+            module.getRanges();
+
+        assertEq(ranges[0].tickLower, tickLower);
+        assertEq(ranges[0].tickUpper, tickUpper);
+    }
+
+    // #endregion test getRanges.
+
+    // #region test getInits.
+
+    function testGetInits() public {
+        (uint256 init0, uint256 init1) = module.getInits();
+
+        assertEq(init0, 3000e6);
+        assertEq(init1, 1e18);
+    }
+
+    // #endregion test getInits.
+
+    // #region test totalUnderlying.
+
+    function testTotalUnderlying() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        // #region deposit.
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        IERC20Metadata(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+
+        // #endregion deposit.
+
+        assertEq(IERC20Metadata(USDC).balanceOf(depositor), 0);
+        assertEq(IERC20Metadata(WETH).balanceOf(depositor), 0);
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            init0,
+            init1
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion do rebalance.
+
+        (uint256 amount0, uint256 amount1) = module.totalUnderlying();
+
+        assert(
+            amount0 > init0
+                ? amount0 - init0 <= 1
+                : init0 - amount0 <= 1
+        );
+        assert(
+            amount1 > init1
+                ? amount1 - init1 <= 1
+                : init1 - amount1 <= 1
+        );
+    }
+
+    // #endregion test totalUnderlying.
+
+    // #region test totalUnderlyingAtPrice.
+
+    function testTotalUnderlyingAtPrice() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        // #region deposit.
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        IERC20Metadata(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+
+        // #endregion deposit.
+
+        assertEq(IERC20Metadata(USDC).balanceOf(depositor), 0);
+        assertEq(IERC20Metadata(WETH).balanceOf(depositor), 0);
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            init0,
+            init1
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion do rebalance.
+
+        // #region compute new price.
+
+        int24 newTick = tick + 10;
+
+        uint160 newSqrtPrice = TickMath.getSqrtPriceAtTick(newTick);
+
+        // #endregion compute new price.
+
+        (uint256 amount0, uint256 amount1) =
+            module.totalUnderlyingAtPrice(newSqrtPrice);
+
+        assert(amount0 < init0);
+        assert(amount1 > init1);
+    }
+
+    // #endregion test totalUnderlyingAtPrice.
+
+    // #region test validateRebalance.
+
+    function testValidateRebalanceOverMaxDeviation() public {
+        // #region compute oracle price.
+        uint256 oraclePrice;
+
+        uint8 decimals0 = IERC20Metadata(USDC).decimals();
+
+        if (sqrtPriceX96 <= type(uint128).max) {
+            oraclePrice = FullMath.mulDiv(
+                uint256(sqrtPriceX96) * uint256(sqrtPriceX96),
+                10 ** decimals0,
+                1 << 192
+            );
+        } else {
+            oraclePrice = FullMath.mulDiv(
+                FullMath.mulDiv(
+                    uint256(sqrtPriceX96),
+                    uint256(sqrtPriceX96),
+                    1 << 64
+                ),
+                10 ** decimals0,
+                1 << 128
+            );
+        }
+
+        oraclePrice = FullMath.mulDiv(oraclePrice, 99, 100);
+
+        OracleMock oracle = new OracleMock();
+
+        oracle.setPrice0(oraclePrice);
+
+        uint24 maxDeviation = 5000;
+
+        vm.expectRevert(
+            IUniV4StandardModule.OverMaxDeviation.selector
+        );
+        module.validateRebalance(
+            IOracleWrapper(address(oracle)), maxDeviation
+        );
+
+        // #endregion compute oracle price.
+    }
+
+    function testValidateRebalance() public {
+        poolKey = PoolKey({
+            currency0: Currency.wrap(USDC),
+            currency1: Currency.wrap(WETH),
+            fee: 10_000,
+            tickSpacing: 20,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = uint160(type(uint128).max) + 1;
+
+        poolManager.unlock(abi.encode(2));
+
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        module = new UniV4StandardModule(
+            address(poolManager),
+            poolKey,
+            metaVault,
+            USDC,
+            WETH,
+            init0,
+            init1,
+            guardian
+        );
+
+        // #region compute oracle price.
+        uint256 oraclePrice;
+
+        uint8 decimals0 = IERC20Metadata(USDC).decimals();
+
+        if (sqrtPriceX96 <= type(uint128).max) {
+            oraclePrice = FullMath.mulDiv(
+                uint256(sqrtPriceX96) * uint256(sqrtPriceX96),
+                10 ** decimals0,
+                1 << 192
+            );
+        } else {
+            oraclePrice = FullMath.mulDiv(
+                FullMath.mulDiv(
+                    uint256(sqrtPriceX96),
+                    uint256(sqrtPriceX96),
+                    1 << 64
+                ),
+                10 ** decimals0,
+                1 << 128
+            );
+        }
+
+        oraclePrice = FullMath.mulDiv(oraclePrice, 99, 100);
+
+        OracleMock oracle = new OracleMock();
+
+        oracle.setPrice0(oraclePrice);
+
+        uint24 maxDeviation = 10_010;
+
+        vm.expectRevert(
+            IUniV4StandardModule.OverMaxDeviation.selector
+        );
+        module.validateRebalance(
+            IOracleWrapper(address(oracle)), maxDeviation
+        );
+
+        // #endregion compute oracle price.
+    }
+
+    // #endregion test validateRebalance.
 }

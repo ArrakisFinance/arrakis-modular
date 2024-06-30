@@ -7,8 +7,6 @@ import {
     RangeData
 } from "../structs/SUniswapV4.sol";
 import {PIPS} from "../constants/CArrakis.sol";
-import {PoolGetterExt} from "./PoolGetterExt.sol";
-import {PoolManagerGetter} from "./PoolManagerGetter.sol";
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
@@ -25,15 +23,23 @@ import {
 } from "@uniswap/v4-core/src/types/PoolId.sol";
 import {LiquidityAmounts} from
     "@uniswap/v4-periphery/contracts/libraries/LiquidityAmounts.sol";
-import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {
+    Currency,
+    CurrencyLibrary
+} from "@uniswap/v4-core/src/types/Currency.sol";
+import {StateLibrary} from
+    "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {TransientStateLibrary} from
+    "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
 
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 library UnderlyingV4 {
-    using PoolGetterExt for IPoolManager;
-    using PoolManagerGetter for IPoolManager;
+    using StateLibrary for IPoolManager;
+    using TransientStateLibrary for IPoolManager;
+    using CurrencyLibrary for Currency;
 
     // solhint-disable-next-line function-max-lines
     function totalUnderlyingForMint(
@@ -64,17 +70,13 @@ library UnderlyingV4 {
         uint256 leftOver0;
         uint256 leftOver1;
         if (underlyingPayload_.ranges.length > 0) {
-            leftOver0 = SafeCast.toUint256(
-                underlyingPayload_.poolManager.currencyDelta(
-                    address(this),
-                    underlyingPayload_.ranges[0].poolKey.currency0
-                )
+            leftOver0 = underlyingPayload_.poolManager.balanceOf(
+                address(this),
+                underlyingPayload_.ranges[0].poolKey.currency0.toId()
             );
-            leftOver1 = SafeCast.toUint256(
-                underlyingPayload_.poolManager.currencyDelta(
-                    address(this),
-                    underlyingPayload_.ranges[0].poolKey.currency1
-                )
+            leftOver1 = underlyingPayload_.poolManager.balanceOf(
+                address(this),
+                underlyingPayload_.ranges[0].poolKey.currency1.toId()
             );
         }
 
@@ -147,7 +149,7 @@ library UnderlyingV4 {
             uint256 fee1
         )
     {
-        uint160 sqrtPriceX96 = underlying_.poolManager.sqrtPriceX96(
+        (uint160 sqrtPriceX96,,,) = underlying_.poolManager.getSlot0(
             PoolIdLibrary.toId(underlying_.range.poolKey)
         );
         PositionUnderlying memory positionUnderlying =
@@ -176,7 +178,7 @@ library UnderlyingV4 {
             uint256 fee1
         )
     {
-        uint160 sqrtPriceX96 = underlying_.poolManager.sqrtPriceX96(
+        (uint160 sqrtPriceX96,,,) = underlying_.poolManager.getSlot0(
             PoolIdLibrary.toId(underlying_.range.poolKey)
         );
         PositionUnderlying memory positionUnderlying =
@@ -221,11 +223,12 @@ library UnderlyingV4 {
                 positionUnderlying_.lowerTick,
                 positionUnderlying_.upperTick
             );
-            positionInfo = positionUnderlying_.poolManager.position(
+            positionInfo = positionUnderlying_.poolManager.getPosition(
                 poolId,
                 positionUnderlying_.self,
                 positionUnderlying_.lowerTick,
-                positionUnderlying_.upperTick
+                positionUnderlying_.upperTick,
+                ""
             );
             (fee0, fee1) = _getFeesOwned(
                 positionInfo,
@@ -277,11 +280,12 @@ library UnderlyingV4 {
         );
         Position.Info memory positionInfo = positionUnderlying_
             .poolManager
-            .position(
+            .getPosition(
             poolId,
             positionUnderlying_.self,
             positionUnderlying_.lowerTick,
-            positionUnderlying_.upperTick
+            positionUnderlying_.upperTick,
+            ""
         );
         (fee0, fee1) = _getFeesOwned(
             positionInfo, feeGrowthInside0X128, feeGrowthInside1X128
@@ -459,7 +463,8 @@ library UnderlyingV4 {
             // #endregion tickInfo Upper tick.
             // #region get slot0.
 
-            feeGrowthInside.tickCurrent = poolManager_.tick(poolId_);
+            (, feeGrowthInside.tickCurrent,,) =
+                poolManager_.getSlot0(poolId_);
 
             // #endregion get slot0.
             // #region pool global fees.
@@ -565,17 +570,13 @@ library UnderlyingV4 {
         uint256 leftOver0;
         uint256 leftOver1;
         if (underlyingPayload_.ranges.length > 0) {
-            leftOver0 = SafeCast.toUint256(
-                underlyingPayload_.poolManager.currencyDelta(
-                    address(this),
-                    underlyingPayload_.ranges[0].poolKey.currency0
-                )
+            leftOver0 = underlyingPayload_.poolManager.balanceOf(
+                address(this),
+                underlyingPayload_.ranges[0].poolKey.currency0.toId()
             );
-            leftOver1 = SafeCast.toUint256(
-                underlyingPayload_.poolManager.currencyDelta(
-                    address(this),
-                    underlyingPayload_.ranges[0].poolKey.currency1
-                )
+            leftOver1 = underlyingPayload_.poolManager.balanceOf(
+                address(this),
+                underlyingPayload_.ranges[0].poolKey.currency1.toId()
             );
         }
 
