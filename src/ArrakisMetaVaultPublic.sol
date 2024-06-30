@@ -62,8 +62,8 @@ contract ArrakisMetaVaultPublic is
         if (receiver_ == address(0)) revert AddressZero("Receiver");
 
         if (supply == 0) {
-            _mint(address(0), MINIMUM_LIQUIDITY);
-            shares_ = shares_ - MINIMUM_LIQUIDITY;
+            _mint(address(0), uint256(MINIMUM_LIQUIDITY));
+            shares_ = shares_ - uint256(MINIMUM_LIQUIDITY);
         }
 
         _mint(receiver_, shares_);
