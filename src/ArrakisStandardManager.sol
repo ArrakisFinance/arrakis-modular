@@ -671,7 +671,6 @@ contract ArrakisStandardManager is
         }
 
         // check slippage is lower than 10%
-        // TODO: let maybe remove that check?
         if (params_.maxSlippagePIPS > TEN_PERCENT) {
             revert SlippageTooHigh();
         }

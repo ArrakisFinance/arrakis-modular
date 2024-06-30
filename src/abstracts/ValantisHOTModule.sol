@@ -7,7 +7,7 @@ import {IValantisHOTModule} from
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {ISovereignPool} from "../interfaces/ISovereignPool.sol";
 import {IHOT} from "@valantis-hot/contracts/interfaces/IHOT.sol";
-import {BASE, PIPS} from "../constants/CArrakis.sol";
+import {BASE, PIPS, TEN_PERCENT} from "../constants/CArrakis.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IOwnable} from "../interfaces/IOwnable.sol";
@@ -115,7 +115,7 @@ abstract contract ValantisModule is
         if (metaVault_ == address(0)) revert AddressZero();
         if (pool_ == address(0)) revert AddressZero();
         if (init0_ == 0 && init1_ == 0) revert InitsAreZeros();
-        if (maxSlippage_ > PIPS / 10) {
+        if (maxSlippage_ > TEN_PERCENT) {
             revert MaxSlippageGtTenPercent();
         }
 
@@ -129,6 +129,9 @@ abstract contract ValantisModule is
         _init1 = init1_;
 
         maxSlippage = maxSlippage_;
+
+        __Pausable_init();
+        __ReentrancyGuard_init();
     }
 
     /// @notice function used to initialize the module
@@ -264,14 +267,11 @@ abstract contract ValantisModule is
     function setManagerFeePIPS(uint256 newFeePIPS_)
         external
         whenNotPaused
+        onlyManager
     {
         uint256 _oldFee = _managerFeePIPS;
 
         // #region checks.
-
-        if (msg.sender != metaVault.manager()) {
-            revert OnlyManager(msg.sender, metaVault.manager());
-        }
 
         if (newFeePIPS_ > PIPS) revert NewFeesGtPIPS(newFeePIPS_);
 

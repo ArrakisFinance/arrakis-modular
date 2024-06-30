@@ -11,7 +11,6 @@ interface IArrakisMetaVault {
 
     /// @dev triggered when an address that should not
     /// be zero is equal to address zero.
-    // TODO remove the argument.
     error AddressZero(string property);
 
     /// @dev triggered when the caller is different than

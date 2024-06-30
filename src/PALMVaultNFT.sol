@@ -16,6 +16,6 @@ contract PALMVaultNFT is Ownable, ERC721, IPALMVaultNFT {
     /// @param to_ address where to send the NFT.
     /// @param tokenId_ id of the NFT to mint.
     function mint(address to_, uint256 tokenId_) external onlyOwner {
-        _mint(to_, tokenId_);
+        _safeMint(to_, tokenId_);
     }
 }
