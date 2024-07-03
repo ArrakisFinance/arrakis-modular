@@ -6,6 +6,7 @@ interface IPermissionHook {
 
     error AddressZero();
     error OnlyModule();
+    error NotImplemented();
 
     // #endregion errors.
 

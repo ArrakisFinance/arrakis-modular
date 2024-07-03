@@ -25,6 +25,7 @@ interface IUniV4StandardModule {
     error SamePool();
     error NoModifyLiquidityHooks();
     error OverMaxDeviation();
+    error CallBackNotSupported();
 
     // #endregion errors.
 

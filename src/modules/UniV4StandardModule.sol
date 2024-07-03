@@ -53,6 +53,8 @@ import {StateLibrary} from
 import {TransientStateLibrary} from
     "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
 
+import {console} from "forge-std/console.sol";
+
 /// @notice this module can only set uni v4 pool that have generic hook,
 /// that don't require specific action to become liquidity provider.
 contract UniV4StandardModule is
@@ -161,10 +163,10 @@ contract UniV4StandardModule is
         }
 
         if (
-            poolKey.hooks.hasPermission(
+            poolKey_.hooks.hasPermission(
                 Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG
             )
-                || poolKey.hooks.hasPermission(
+                || poolKey_.hooks.hasPermission(
                     Hooks.AFTER_REMOVE_LIQUIDITY_FLAG
                 )
         ) revert NoModifyLiquidityHooks();
@@ -206,6 +208,8 @@ contract UniV4StandardModule is
 
     // #endregion guardian functions.
 
+    function initializePosition(bytes calldata data_) external {}
+
     // #region only manager functions.
 
     function setPool(PoolKey calldata poolKey_)
@@ -233,16 +237,10 @@ contract UniV4StandardModule is
         ) revert SamePool();
 
         if (
-            poolKey.hooks.hasPermission(
-                Hooks.BEFORE_ADD_LIQUIDITY_FLAG
+            poolKey_.hooks.hasPermission(
+                Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG
             )
-                || poolKey.hooks.hasPermission(
-                    Hooks.AFTER_ADD_LIQUIDITY_FLAG
-                )
-                || poolKey.hooks.hasPermission(
-                    Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG
-                )
-                || poolKey.hooks.hasPermission(
+                || poolKey_.hooks.hasPermission(
                     Hooks.AFTER_REMOVE_LIQUIDITY_FLAG
                 )
         ) revert NoModifyLiquidityHooks();
@@ -352,7 +350,7 @@ contract UniV4StandardModule is
 
         if (proportion_ == 0) revert ProportionZero();
 
-        if (proportion_ > BASE) revert();
+        if (proportion_ > BASE) revert ProportionGtBASE();
 
         // #endregion checks.
 
@@ -385,7 +383,6 @@ contract UniV4StandardModule is
     /// @return amount1 amount of token1 sent to manager.
     function withdrawManagerBalance()
         external
-        onlyManager
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
@@ -434,7 +431,7 @@ contract UniV4StandardModule is
     function unlockCallback(bytes calldata data_)
         external
         virtual
-        returns (bytes memory result)
+        returns (bytes memory)
     {
         if (msg.sender != address(poolManager)) {
             revert OnlyPoolManager();
@@ -448,18 +445,20 @@ contract UniV4StandardModule is
         if (action == 0) {
             (address depositor, uint256 proportion) =
                 abi.decode(data, (address, uint256));
-            result = _deposit(depositor, proportion);
+            return _deposit(depositor, proportion);
         }
         if (action == 1) {
             (address receiver, uint256 proportion) =
                 abi.decode(data, (address, uint256));
-            result = _withdraw(receiver, proportion);
+            return _withdraw(receiver, proportion);
         }
         if (action == 2) {
             LiquidityRange[] memory liquidityRanges =
                 abi.decode(data, (LiquidityRange[]));
-            result = _rebalance(liquidityRanges);
+            return _rebalance(liquidityRanges);
         }
+
+        revert CallBackNotSupported();
     }
 
     // receive() external payable {
@@ -608,7 +607,7 @@ contract UniV4StandardModule is
                     ? poolPrice - oraclePrice
                     : oraclePrice - poolPrice,
                 10 ** token1Decimals,
-                oraclePrice
+                poolPrice
             ),
             PIPS,
             10 ** token1Decimals
@@ -692,6 +691,11 @@ contract UniV4StandardModule is
                 FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
             uint256 managerFee1 =
                 FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
+
+            console.log("Manager Fee 0: %d", managerFee0);
+            console.log("Fee 0: %d", fee0);
+            console.log("Manager Fee 1: %d", managerFee1);
+            console.log("Fee 1: %d", fee1);
 
             if (managerFee0 > 0) {
                 poolManager.take(

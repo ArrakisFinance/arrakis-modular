@@ -7,12 +7,11 @@ import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
-import {
-    BalanceDelta,
-    BalanceDeltaLibrary
-} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {BalanceDelta} from
+    "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {BeforeSwapDelta} from
     "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 
 contract PermissionHook is IHooks, IPermissionHook {
     address public immutable module;
@@ -37,7 +36,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         uint160 sqrtPriceX96,
         bytes calldata hookData
     ) external returns (bytes4) {
-        return IHooks.beforeInitialize.selector;
+        revert NotImplemented();
     }
 
     /// @notice The hook called after the state of a pool is initialized
@@ -54,7 +53,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         int24 tick,
         bytes calldata hookData
     ) external returns (bytes4) {
-        return IHooks.afterInitialize.selector;
+        revert NotImplemented();
     }
 
     /// @notice The hook called before liquidity is added
@@ -90,10 +89,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         BalanceDelta delta,
         bytes calldata hookData
     ) external returns (bytes4, BalanceDelta) {
-        return (
-            IHooks.afterAddLiquidity.selector,
-            BalanceDeltaLibrary.ZERO_DELTA
-        );
+        revert NotImplemented();
     }
 
     /// @notice The hook called before liquidity is removed
@@ -129,10 +125,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         BalanceDelta delta,
         bytes calldata hookData
     ) external returns (bytes4, BalanceDelta) {
-        return (
-            IHooks.afterRemoveLiquidity.selector,
-            BalanceDeltaLibrary.ZERO_DELTA
-        );
+        revert NotImplemented();
     }
 
     /// @notice The hook called before a swap
@@ -149,8 +142,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         IPoolManager.SwapParams calldata params,
         bytes calldata hookData
     ) external returns (bytes4, BeforeSwapDelta, uint24) {
-        return
-            (IHooks.beforeSwap.selector, BeforeSwapDelta.wrap(0), 0);
+        revert NotImplemented();
     }
 
     /// @notice The hook called after a swap
@@ -168,7 +160,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         BalanceDelta delta,
         bytes calldata hookData
     ) external returns (bytes4, int128) {
-        return (IHooks.afterSwap.selector, 0);
+        revert NotImplemented();
     }
 
     /// @notice The hook called before donate
@@ -185,7 +177,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         uint256 amount1,
         bytes calldata hookData
     ) external returns (bytes4) {
-        return IHooks.beforeDonate.selector;
+        revert NotImplemented();
     }
 
     /// @notice The hook called after donate
@@ -202,6 +194,6 @@ contract PermissionHook is IHooks, IPermissionHook {
         uint256 amount1,
         bytes calldata hookData
     ) external returns (bytes4) {
-        return IHooks.afterDonate.selector;
+        revert NotImplemented();
     }
 }
