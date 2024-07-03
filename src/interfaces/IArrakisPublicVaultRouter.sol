@@ -58,7 +58,7 @@ interface IArrakisPublicVaultRouter {
     /// @dev only callable by owner
     function unpause() external;
 
-    /// @notice addLiquidity adds liquidity to meta vault of iPnterest (mints L tokens)
+    /// @notice addLiquidity adds liquidity to meta vault of interest (mints L tokens)
     /// @param params_ AddLiquidityData struct containing data for adding liquidity
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
@@ -142,7 +142,7 @@ interface IArrakisPublicVaultRouter {
         RemoveLiquidityPermit2Data memory params_
     ) external returns (uint256 amount0, uint256 amount1);
 
-    /// @notice wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of iPnterest (mints L tokens)
+    /// @notice wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of interest (mints L tokens)
     /// @param params_ AddLiquidityData struct containing data for adding liquidity
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`

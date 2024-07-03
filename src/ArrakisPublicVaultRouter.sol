@@ -93,13 +93,13 @@ contract ArrakisPublicVaultRouter is
 
     /// @notice function used to pause the router.
     /// @dev only callable by owner
-    function pause() external whenNotPaused onlyOwner {
+    function pause() external onlyOwner {
         _pause();
     }
 
     /// @notice function used to unpause the router.
     /// @dev only callable by owner
-    function unpause() external whenPaused onlyOwner {
+    function unpause() external onlyOwner {
         _unpause();
     }
 
@@ -114,7 +114,7 @@ contract ArrakisPublicVaultRouter is
 
     // #endregion owner functions.
 
-    /// @notice addLiquidity adds liquidity to meta vault of iPnterest (mints L tokens)
+    /// @notice addLiquidity adds liquidity to meta vault of interest (mints L tokens)
     /// @param params_ AddLiquidityData struct containing data for adding liquidity
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
@@ -420,7 +420,7 @@ contract ArrakisPublicVaultRouter is
         (amount0, amount1) = _removeLiquidity(params_.removeData);
     }
 
-    /// @notice wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of iPnterest (mints L tokens)
+    /// @notice wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of interest (mints L tokens)
     /// @param params_ AddLiquidityData struct containing data for adding liquidity
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
@@ -610,25 +610,31 @@ contract ArrakisPublicVaultRouter is
             ? params_.addData.amount1Max + amount1Diff
             : params_.addData.amount1Max - amount1Diff;
 
-        if (amount0Use > amount0) {
-            if (token0 == address(weth)) {
-                weth.withdraw(amount0Use - amount0);
-                payable(msg.sender).sendValue(amount0Use - amount0);
-            } else {
-                uint256 balance =
-                    IERC20(token0).balanceOf(address(this));
-                IERC20(token0).safeTransfer(msg.sender, balance);
+        unchecked {
+            if (amount0Use > amount0) {
+                if (token0 == address(weth)) {
+                    weth.withdraw(amount0Use - amount0);
+                    payable(msg.sender).sendValue(
+                        amount0Use - amount0
+                    );
+                } else {
+                    uint256 balance =
+                        IERC20(token0).balanceOf(address(this));
+                    IERC20(token0).safeTransfer(msg.sender, balance);
+                }
             }
-        }
 
-        if (amount1Use > amount1) {
-            if (token1 == address(weth)) {
-                weth.withdraw(amount1Use - amount1);
-                payable(msg.sender).sendValue(amount1Use - amount1);
-            } else {
-                uint256 balance =
-                    IERC20(token1).balanceOf(address(this));
-                IERC20(token1).safeTransfer(msg.sender, balance);
+            if (amount1Use > amount1) {
+                if (token1 == address(weth)) {
+                    weth.withdraw(amount1Use - amount1);
+                    payable(msg.sender).sendValue(
+                        amount1Use - amount1
+                    );
+                } else {
+                    uint256 balance =
+                        IERC20(token1).balanceOf(address(this));
+                    IERC20(token1).safeTransfer(msg.sender, balance);
+                }
             }
         }
     }
@@ -711,12 +717,15 @@ contract ArrakisPublicVaultRouter is
             token1
         );
 
-        if (token0 == address(weth) && msg.value > amount0) {
-            weth.withdraw(msg.value - amount0);
-            payable(msg.sender).sendValue(msg.value - amount0);
-        } else if (token1 == address(weth) && msg.value > amount1) {
-            weth.withdraw(msg.value - amount1);
-            payable(msg.sender).sendValue(msg.value - amount1);
+        unchecked {
+            if (token0 == address(weth) && msg.value > amount0) {
+                weth.withdraw(msg.value - amount0);
+                payable(msg.sender).sendValue(msg.value - amount0);
+            } else if (token1 == address(weth) && msg.value > amount1)
+            {
+                weth.withdraw(msg.value - amount1);
+                payable(msg.sender).sendValue(msg.value - amount1);
+            }
         }
     }
 

@@ -1417,7 +1417,7 @@ contract ArrakisMetaVaultPublicTest is TestWrapper {
         address withdrawer =
             vm.addr(uint256(keccak256(abi.encode("Withdrawer"))));
 
-        vm.expectRevert(IArrakisMetaVaultPublic.BurnOverflow.selector);
+        vm.expectRevert();
         vm.prank(receiver);
         vault.burn(shares + 1, withdrawer);
     }

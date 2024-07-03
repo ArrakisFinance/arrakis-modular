@@ -28,7 +28,10 @@ import {LpModuleMock} from "./mocks/LpModuleMock.sol";
 
 // #endregion mocks.
 
-contract ArrakisMetaVaultPrivateTest is TestWrapper, IERC721Receiver {
+contract ArrakisMetaVaultPrivateTest is
+    TestWrapper,
+    IERC721Receiver
+{
     // #region constant properties.
 
     address public constant WETH =

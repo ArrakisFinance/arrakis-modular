@@ -27,7 +27,7 @@ abstract contract ModuleRegistry is
 
     IArrakisMetaVaultFactory public factory;
     /// @dev should be a timelock contract.
-    address public admin;
+    address public immutable admin;
 
     // #endregion public properties.
 

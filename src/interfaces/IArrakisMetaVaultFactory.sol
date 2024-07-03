@@ -159,7 +159,7 @@ interface IArrakisMetaVaultFactory {
         external;
 
     /// @notice function used to grant the role to deploy to a list of addresses.
-    /// @param deployers_ list of addresses that owner want to grant permission to deploy.
+    /// @param deployers_ list of addresses that owner want to revoke permission to deploy.
     function blacklistDeployer(address[] calldata deployers_)
         external;
 

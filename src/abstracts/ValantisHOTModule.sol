@@ -150,13 +150,13 @@ abstract contract ValantisModule is
 
     /// @notice function used to pause the module.
     /// @dev only callable by guardian
-    function pause() external whenNotPaused onlyGuardian {
+    function pause() external onlyGuardian {
         _pause();
     }
 
     /// @notice function used to unpause the module.
     /// @dev only callable by guardian
-    function unpause() external whenPaused onlyGuardian {
+    function unpause() external onlyGuardian {
         _unpause();
     }
 
@@ -192,7 +192,7 @@ abstract contract ValantisModule is
 
     /// @notice function used by metaVault to withdraw tokens from the strategy.
     /// @param receiver_ address that will receive tokens.
-    /// @param proportion_ number of share needed to be withdrawn.
+    /// @param proportion_ the proportion of the total position that need to be withdrawn.
     /// @return amount0 amount of token0 withdrawn.
     /// @return amount1 amount of token1 withdrawn.
     function withdraw(
@@ -312,7 +312,7 @@ abstract contract ValantisModule is
     /// @param zeroForOne_ boolean if true token0->token1, if false token1->token0.
     /// @param expectedMinReturn_ minimum amount of tokenOut expected.
     /// @param amountIn_ amount of tokenIn used during swap.
-    /// @param router_ address of routerSwapExecutor.
+    /// @param router_ address of smart contract that will execute swap.
     /// @param expectedSqrtSpotPriceUpperX96_ upper bound of current price.
     /// @param expectedSqrtSpotPriceLowerX96_ lower bound of current price.
     /// @param payload_ data payload used for swapping.
@@ -530,7 +530,7 @@ abstract contract ValantisModule is
     function totalUnderlying()
         external
         view
-        returns (uint256 amount0, uint256 amount1)
+        returns (uint256, uint256)
     {
         return pool.getReserves();
     }
@@ -543,7 +543,7 @@ abstract contract ValantisModule is
     function totalUnderlyingAtPrice(uint160 priceX96_)
         external
         view
-        returns (uint256 amount0, uint256 amount1)
+        returns (uint256, uint256)
     {
         return alm.getReservesAtPrice(priceX96_);
     }
