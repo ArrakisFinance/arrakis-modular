@@ -156,13 +156,13 @@ contract ArrakisStandardManager is
 
     /// @notice function used to pause the manager.
     /// @dev only callable by guardian
-    function pause() external whenNotPaused onlyGuardian {
+    function pause() external onlyGuardian {
         _pause();
     }
 
     /// @notice function used to unpause the manager.
     /// @dev only callable by guardian
-    function unpause() external whenPaused onlyGuardian {
+    function unpause() external onlyGuardian {
         _unpause();
     }
 

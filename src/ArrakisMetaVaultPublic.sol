@@ -84,7 +84,6 @@ contract ArrakisMetaVaultPublic is
     ) external returns (uint256 amount0, uint256 amount1) {
         if (shares_ == 0) revert BurnZero();
         uint256 supply = totalSupply();
-        if (shares_ > supply) revert BurnOverflow();
 
         uint256 proportion = FullMath.mulDiv(shares_, BASE, supply);
 

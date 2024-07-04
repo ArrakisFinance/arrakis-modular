@@ -26,13 +26,13 @@ abstract contract ArrakisMetaVault is
     address public immutable moduleRegistry;
     address public immutable token0;
     address public immutable token1;
+    address public immutable manager;
 
     // #endregion immutable properties.
 
     // #region public properties.
 
     IArrakisLPModule public module;
-    address public manager;
 
     // #endregion public properties.
 

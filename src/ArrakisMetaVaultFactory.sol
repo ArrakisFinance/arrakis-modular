@@ -78,13 +78,13 @@ contract ArrakisMetaVaultFactory is
 
     /// @notice function used to pause the factory.
     /// @dev only callable by owner.
-    function pause() external whenNotPaused onlyOwner {
+    function pause() external onlyOwner {
         _pause();
     }
 
     /// @notice function used to unpause the factory.
     /// @dev only callable by owner.
-    function unpause() external whenPaused onlyOwner {
+    function unpause() external onlyOwner {
         _unpause();
     }
 
@@ -293,7 +293,7 @@ contract ArrakisMetaVaultFactory is
     }
 
     /// @notice function used to grant the role to deploy to a list of addresses.
-    /// @param deployers_ list of addresses that owner want to grant permission to deploy.
+    /// @param deployers_ list of addresses that owner want to revoke permission to deploy.
     function blacklistDeployer(address[] calldata deployers_)
         external
         onlyOwner

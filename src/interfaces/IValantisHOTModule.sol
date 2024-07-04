@@ -87,7 +87,7 @@ interface IValantisHOTModule {
     /// @param zeroForOne_ boolean if true token0->token1, if false token1->token0.
     /// @param expectedMinReturn_ minimum amount of tokenOut expected.
     /// @param amountIn_ amount of tokenIn used during swap.
-    /// @param router_ address of routerSwapExecutor.
+    /// @param router_  address of smart contract that will execute swap.
     /// @param expectedSqrtSpotPriceUpperX96_ upper bound of current price.
     /// @param expectedSqrtSpotPriceLowerX96_ lower bound of current price.
     /// @param payload_ data payload used for swapping.
