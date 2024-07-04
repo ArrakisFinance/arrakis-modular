@@ -1227,11 +1227,16 @@ contract ArrakisPublicVaultRouter is
         uint256 proportion =
             proportion0 < proportion1 ? proportion0 : proportion1;
 
+        shareToMint = FullMath.mulDiv(proportion, supply, BASE);
+
+        proportion = FullMath.mulDivRoundingUp(
+            shareToMint, BASE, supply
+        );
+
         amount0ToDeposit =
             FullMath.mulDivRoundingUp(amount0, proportion, BASE);
         amount1ToDeposit =
             FullMath.mulDivRoundingUp(amount1, proportion, BASE);
-        shareToMint = FullMath.mulDiv(proportion, supply, BASE);
     }
 
     // #endregion internal view functions.
