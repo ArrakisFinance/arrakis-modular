@@ -42,8 +42,8 @@ contract ValantisModulePrivate is
 
         // #region increase allowance to alm.
 
-        token0.safeIncreaseAllowance(address(alm), amount0_);
-        token1.safeIncreaseAllowance(address(alm), amount1_);
+        token0.forceApprove(address(alm), amount0_);
+        token1.forceApprove(address(alm), amount1_);
 
         // #endregion increase allowance to alm.
 
