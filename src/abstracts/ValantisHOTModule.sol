@@ -363,9 +363,9 @@ abstract contract ValantisModule is
         }
 
         if (zeroForOne_) {
-            _token0.safeIncreaseAllowance(router_, amountIn_);
+            _token0.forceApprove(router_, amountIn_);
         } else {
-            _token1.safeIncreaseAllowance(router_, amountIn_);
+            _token1.forceApprove(router_, amountIn_);
         }
 
         if (
@@ -416,10 +416,10 @@ abstract contract ValantisModule is
         // #region deposit.
 
         {
-            _token0.safeIncreaseAllowance(
+            _token0.forceApprove(
                 address(_alm), balances.balance0
             );
-            _token1.safeIncreaseAllowance(
+            _token1.forceApprove(
                 address(_alm), balances.balance1
             );
         }
@@ -566,10 +566,10 @@ abstract contract ValantisModule is
 
         // #region increase allowance to alm.
         if (amount0 > 0) {
-            token0.safeIncreaseAllowance(address(alm), amount0);
+            token0.forceApprove(address(alm), amount0);
         }
         if (amount1 > 0) {
-            token1.safeIncreaseAllowance(address(alm), amount1);
+            token1.forceApprove(address(alm), amount1);
         }
         // #endregion increase allowance to alm.
 

@@ -81,8 +81,8 @@ contract ValantisModulePublic is
 
         // #region increase allowance to alm.
 
-        token0.safeIncreaseAllowance(address(alm), amount0);
-        token1.safeIncreaseAllowance(address(alm), amount1);
+        token0.forceApprove(address(alm), amount0);
+        token1.forceApprove(address(alm), amount1);
 
         // #endregion increase allowance to alm.
 

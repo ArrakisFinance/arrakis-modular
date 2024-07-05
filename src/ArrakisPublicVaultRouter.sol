@@ -888,12 +888,12 @@ contract ArrakisPublicVaultRouter is
 
         uint256 valueToSend;
         if (token0_ != nativeToken) {
-            IERC20(token0_).safeIncreaseAllowance(module, amount0_);
+            IERC20(token0_).forceApprove(module, amount0_);
         } else {
             valueToSend = amount0_;
         }
         if (token1_ != nativeToken) {
-            IERC20(token1_).safeIncreaseAllowance(module, amount1_);
+            IERC20(token1_).forceApprove(module, amount1_);
         } else {
             valueToSend = amount1_;
         }
