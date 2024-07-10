@@ -8,7 +8,7 @@ import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
 
-import {PIPS, BASE} from "../constants/CArrakis.sol";
+import {PIPS, BASE, NATIVE_COIN} from "../constants/CArrakis.sol";
 import {
     UnderlyingPayload,
     Range as PoolRange
@@ -53,8 +53,6 @@ import {StateLibrary} from
 import {TransientStateLibrary} from
     "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
 
-import {console} from "forge-std/console.sol";
-
 /// @notice this module can only set uni v4 pool that have generic hook,
 /// that don't require specific action to become liquidity provider.
 contract UniV4StandardModule is
@@ -78,6 +76,7 @@ contract UniV4StandardModule is
     IArrakisMetaVault public immutable metaVault;
     IERC20Metadata public immutable token0;
     IERC20Metadata public immutable token1;
+    bool public immutable isInversed;
 
     // #endregion immutable properties
 
@@ -141,7 +140,8 @@ contract UniV4StandardModule is
         address token1_,
         uint256 init0_,
         uint256 init1_,
-        address guardian_
+        address guardian_,
+        bool isInversed_
     ) {
         // #region checks.
 
@@ -151,16 +151,8 @@ contract UniV4StandardModule is
         if (token1_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
         if (token0_ >= token1_) revert Token0GteToken1();
-        if (Currency.unwrap(poolKey_.currency0) != token0_) {
-            revert Currency0DtToken0(
-                Currency.unwrap(poolKey_.currency0), token0_
-            );
-        }
-        if (Currency.unwrap(poolKey_.currency1) != token1_) {
-            revert Currency1DtToken1(
-                Currency.unwrap(poolKey_.currency1), token1_
-            );
-        }
+
+        _checkTokens(poolKey_, token0_, token1_, isInversed_);
 
         if (
             poolKey_.hooks.hasPermission(
@@ -187,9 +179,15 @@ contract UniV4StandardModule is
         token1 = IERC20Metadata(token1_);
 
         _guardian = guardian_;
+        isInversed = isInversed_;
 
-        _init0 = init0_;
-        _init1 = init1_;
+        if (isInversed_) {
+            _init1 = init0_;
+            _init0 = init1_;
+        } else {
+            _init0 = init0_;
+            _init1 = init1_;
+        }
     }
 
     // #region guardian functions.
@@ -212,23 +210,14 @@ contract UniV4StandardModule is
 
     // #region only manager functions.
 
-    function setPool(PoolKey calldata poolKey_)
-        external
-        onlyManager
-        nonReentrant
-    {
+    function setPool(
+        PoolKey calldata poolKey_,
+        LiquidityRange[] calldata liquidityRanges_
+    ) external onlyManager nonReentrant {
         address _token0 = address(token0);
         address _token1 = address(token1);
-        if (Currency.unwrap(poolKey_.currency0) != _token0) {
-            revert Currency0DtToken0(
-                Currency.unwrap(poolKey_.currency0), _token0
-            );
-        }
-        if (Currency.unwrap(poolKey_.currency1) != _token1) {
-            revert Currency1DtToken1(
-                Currency.unwrap(poolKey_.currency1), _token1
-            );
-        }
+
+        _checkTokens(poolKey_, _token0, _token1, isInversed);
 
         if (
             poolKey_.fee == poolKey.fee
@@ -291,6 +280,20 @@ contract UniV4StandardModule is
         // #endregion get liquidities and remove.
 
         // #endregion remove any remaining liquidity on the previous pool.
+
+        // #region set PoolKey.
+
+        poolKey = poolKey_;
+
+        // #endregion set PoolKey.
+
+        // #region add liquidity on the new pool.
+
+        if (liquidityRanges_.length > 0) {
+            _internalRebalance(liquidityRanges_);
+        }
+
+        // #endregion add liquidity on the new pool.
 
         emit LogSetPool(poolKey, poolKey = poolKey_);
     }
@@ -491,6 +494,9 @@ contract UniV4StandardModule is
         view
         returns (uint256 init0, uint256 init1)
     {
+        if (isInversed) {
+            return (_init1, _init0);
+        }
         return (_init0, _init1);
     }
 
@@ -505,15 +511,27 @@ contract UniV4StandardModule is
     {
         PoolRange[] memory poolRanges = _getPoolRanges(_ranges.length);
 
-        (amount0, amount1,,) = UnderlyingV4.totalUnderlyingWithFees(
+        (address _token0, address _token1) = _getTokens();
+
+        uint256 fees0;
+        uint256 fees1;
+
+        (amount0, amount1, fees0, fees1) = UnderlyingV4.totalUnderlyingWithFees(
             UnderlyingPayload({
                 ranges: poolRanges,
                 poolManager: poolManager,
-                token0: address(token0),
-                token1: address(token1),
+                token0: _token0,
+                token1: _token1,
                 self: address(this)
             })
         );
+
+        amount0 = amount0 - FullMath.mulDiv(fees0, managerFeePIPS, PIPS);
+        amount1 = amount1 - FullMath.mulDiv(fees1, managerFeePIPS, PIPS);
+
+        if (isInversed) {
+            (amount0, amount1) = (amount1, amount0);
+        }
     }
 
     /// @notice function used to get the amounts of token0 and token1 sitting
@@ -539,17 +557,23 @@ contract UniV4StandardModule is
             });
         }
 
+        (address _token0, address _token1) = _getTokens();
+
         (amount0, amount1,,) = UnderlyingV4
             .totalUnderlyingAtPriceWithFees(
             UnderlyingPayload({
                 ranges: poolRanges,
                 poolManager: poolManager,
-                token0: address(token0),
-                token1: address(token1),
+                token0: _token0,
+                token1: _token1,
                 self: address(this)
             }),
             priceX96_
         );
+
+        if (isInversed) {
+            (amount0, amount1) = (amount1, amount0);
+        }
     }
 
     /// @notice function used to validate if module state is not manipulated
@@ -563,8 +587,14 @@ contract UniV4StandardModule is
     ) external view {
         // check if pool current price is not too far from oracle price.
 
-        uint8 token0Decimals = token0.decimals();
-        uint8 token1Decimals = token1.decimals();
+        (address _token0, address _token1) = _getTokens();
+
+        uint8 token0Decimals = _token0 == address(0)
+            ? 18
+            : IERC20Metadata(_token0).decimals();
+        uint8 token1Decimals = _token1 == address(0)
+            ? 18
+            : IERC20Metadata(_token1).decimals();
 
         // #region compute pool price.
 
@@ -595,7 +625,8 @@ contract UniV4StandardModule is
 
         // #region get oracle price.
 
-        uint256 oraclePrice = oracle_.getPrice0();
+        uint256 oraclePrice =
+            isInversed ? oracle_.getPrice1() : oracle_.getPrice0();
 
         // #endregion get oracle price.
 
@@ -631,6 +662,8 @@ contract UniV4StandardModule is
         uint256 length = _ranges.length;
         address manager = metaVault.manager();
 
+        (address _token0, address _token1) = _getTokens();
+
         // #region get liquidity for each positions and mint.
 
         // #region fees computations.
@@ -644,8 +677,8 @@ contract UniV4StandardModule is
                 UnderlyingPayload({
                     ranges: poolRanges,
                     poolManager: poolManager,
-                    token0: address(token0),
-                    token1: address(token1),
+                    token0: _token0,
+                    token1: _token1,
                     self: address(this)
                 })
             );
@@ -691,11 +724,6 @@ contract UniV4StandardModule is
                 FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
             uint256 managerFee1 =
                 FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
-
-            console.log("Manager Fee 0: %d", managerFee0);
-            console.log("Fee 0: %d", fee0);
-            console.log("Manager Fee 1: %d", managerFee1);
-            console.log("Fee 1: %d", fee1);
 
             if (managerFee0 > 0) {
                 poolManager.take(
@@ -791,7 +819,7 @@ contract UniV4StandardModule is
                     payable(depositor_).sendValue(ethLeftBalance);
                 }
             } else {
-                token0.safeTransferFrom(
+                IERC20Metadata(_token0).safeTransferFrom(
                     depositor_, address(poolManager), amount0
                 );
                 poolManager.settle(_poolKey.currency0);
@@ -799,27 +827,22 @@ contract UniV4StandardModule is
         }
 
         if (amount1 > 0) {
+            /// @dev currency1 cannot be native coin because address(0).
             poolManager.sync(_poolKey.currency1);
-            if (_poolKey.currency1.isNative()) {
-                /// @dev no need to use Address lib for PoolManager.
-                poolManager.settle{value: amount1}(_poolKey.currency1);
-            }
-            uint256 ethLeftBalance = address(this).balance;
-            if (ethLeftBalance > 0) {
-                payable(depositor_).sendValue(ethLeftBalance);
-            } else {
-                token1.safeTransferFrom(
-                    depositor_, address(poolManager), amount1
-                );
-                poolManager.settle(_poolKey.currency1);
-            }
+
+            IERC20Metadata(_token1).safeTransferFrom(
+                depositor_, address(poolManager), amount1
+            );
+            poolManager.settle(_poolKey.currency1);
         }
 
         // #region settle.
 
         // #endregion settle.
 
-        return abi.encode(amount0, amount1);
+        return isInversed
+            ? abi.encode(amount1, amount0)
+            : abi.encode(amount0, amount1);
     }
 
     function _withdraw(
@@ -837,12 +860,14 @@ contract UniV4StandardModule is
         {
             PoolRange[] memory poolRanges = _getPoolRanges(length);
 
+            (address _token0, address _token1) = _getTokens();
+
             (,, fee0, fee1) = UnderlyingV4.totalUnderlyingWithFees(
                 UnderlyingPayload({
                     ranges: poolRanges,
                     poolManager: poolManager,
-                    token0: address(token0),
-                    token1: address(token1),
+                    token0: _token0,
+                    token1: _token1,
                     self: address(this)
                 })
             );
@@ -989,7 +1014,9 @@ contract UniV4StandardModule is
 
         // #endregion take and send token to receiver.
 
-        result = abi.encode(amount0, amount1);
+        result = isInversed
+            ? abi.encode(amount1, amount0)
+            : abi.encode(amount0, amount1);
 
         // #region mint extra collected fees.
 
@@ -1058,12 +1085,14 @@ contract UniV4StandardModule is
             PoolRange[] memory poolRanges =
                 _getPoolRanges(_ranges.length);
 
+            (address _token0, address _token1) = _getTokens();
+
             (,, fee0, fee1) = UnderlyingV4.totalUnderlyingWithFees(
                 UnderlyingPayload({
                     ranges: poolRanges,
                     poolManager: poolManager,
-                    token0: address(token0),
-                    token1: address(token1),
+                    token0: _token0,
+                    token1: _token1,
                     self: address(this)
                 })
             );
@@ -1145,20 +1174,38 @@ contract UniV4StandardModule is
         {
             // #region get how much left over we have on poolManager and mint.
 
-            (uint256 amt0, uint256 amt1) = _checkCurrencyBalances();
+            int256 amt0 = poolManager.currencyDelta(
+                address(this), poolKey.currency0
+            );
+
+            int256 amt1 = poolManager.currencyDelta(
+                address(this), poolKey.currency1
+            );
 
             if (amt0 > 0) {
                 poolManager.mint(
                     address(this),
                     CurrencyLibrary.toId(poolKey.currency0),
-                    amt0
+                    SafeCast.toUint256(amt0)
+                );
+            } else if (amt0 < 0) {
+                poolManager.burn(
+                    address(this),
+                    CurrencyLibrary.toId(poolKey.currency0),
+                    SafeCast.toUint256(-amt0)
                 );
             }
             if (amt1 > 0) {
                 poolManager.mint(
                     address(this),
                     CurrencyLibrary.toId(poolKey.currency1),
-                    amt1
+                    SafeCast.toUint256(amt1)
+                );
+            } else if (amt1 < 0) {
+                poolManager.burn(
+                    address(this),
+                    CurrencyLibrary.toId(poolKey.currency1),
+                    SafeCast.toUint256(-amt1)
                 );
             }
 
@@ -1167,14 +1214,23 @@ contract UniV4StandardModule is
 
         // #endregion collect and sent fees to manager.
 
-        return abi.encode(
-            amount0Minted,
-            amount1Minted,
-            amount0Burned,
-            amount1Burned,
-            managerFee0,
-            managerFee1
-        );
+        return isInversed
+            ? abi.encode(
+                amount1Minted,
+                amount0Minted,
+                amount1Burned,
+                amount0Burned,
+                managerFee1,
+                managerFee0
+            )
+            : abi.encode(
+                amount0Minted,
+                amount1Minted,
+                amount0Burned,
+                amount1Burned,
+                managerFee0,
+                managerFee1
+            );
     }
 
     function _collectFee(
@@ -1264,6 +1320,10 @@ contract UniV4StandardModule is
         }
 
         // #endregion interactions.
+
+        if (isInversed) {
+            (amount0, amount1) = (amount1, amount0);
+        }
     }
 
     function _removeLiquidity(
@@ -1322,7 +1382,17 @@ contract UniV4StandardModule is
             ""
         );
 
-        (amount0, amount1) = _checkCurrencyBalances();
+        amount0 = SafeCast.toUint256(
+            poolManager.currencyDelta(
+                address(this), poolKey.currency0
+            )
+        );
+
+        amount1 = SafeCast.toUint256(
+            poolManager.currencyDelta(
+                address(this), poolKey.currency1
+            )
+        );
 
         if (amount0 > 0) {
             poolManager.mint(
@@ -1340,6 +1410,10 @@ contract UniV4StandardModule is
         }
 
         // #endregion interactions.
+
+        if (isInversed) {
+            (amount0, amount1) = (amount1, amount0);
+        }
     }
 
     // #region view functions.
@@ -1433,6 +1507,82 @@ contract UniV4StandardModule is
         }
         if (tickUpper_ > TickMath.MAX_TICK) {
             revert TickUpperOutOfBounds(tickUpper_);
+        }
+    }
+
+    function _getTokens()
+        internal
+        view
+        returns (address token0, address token1)
+    {
+        PoolKey memory _poolKey = poolKey;
+
+        token0 = Currency.unwrap(_poolKey.currency0);
+        token1 = Currency.unwrap(_poolKey.currency1);
+    }
+
+    function _checkTokens(
+        PoolKey memory poolKey_,
+        address token0_,
+        address token1_,
+        bool isInversed_
+    ) internal pure {
+        if (isInversed_) {
+            if (token0_ == NATIVE_COIN) {
+                if (Currency.unwrap(poolKey_.currency1) != address(0))
+                {
+                    revert Currency0DtToken0(
+                        Currency.unwrap(poolKey_.currency1), token0_
+                    );
+                }
+            } else if (Currency.unwrap(poolKey_.currency1) != token0_)
+            {
+                revert Currency0DtToken0(
+                    Currency.unwrap(poolKey_.currency1), token0_
+                );
+            }
+
+            if (token1_ == NATIVE_COIN) {
+                if (Currency.unwrap(poolKey_.currency0) != address(0))
+                {
+                    revert Currency1DtToken1(
+                        Currency.unwrap(poolKey_.currency0), token1_
+                    );
+                }
+            } else if (Currency.unwrap(poolKey_.currency0) != token1_)
+            {
+                revert Currency1DtToken1(
+                    Currency.unwrap(poolKey_.currency0), token1_
+                );
+            }
+        } else {
+            if (token0_ == NATIVE_COIN) {
+                if (Currency.unwrap(poolKey_.currency0) != address(0))
+                {
+                    revert Currency0DtToken0(
+                        Currency.unwrap(poolKey_.currency0), token0_
+                    );
+                }
+            } else if (Currency.unwrap(poolKey_.currency0) != token0_)
+            {
+                revert Currency0DtToken0(
+                    Currency.unwrap(poolKey_.currency0), token0_
+                );
+            }
+
+            if (token1_ == NATIVE_COIN) {
+                if (Currency.unwrap(poolKey_.currency1) != address(0))
+                {
+                    revert Currency1DtToken1(
+                        Currency.unwrap(poolKey_.currency1), token1_
+                    );
+                }
+            } else if (Currency.unwrap(poolKey_.currency1) != token1_)
+            {
+                revert Currency1DtToken1(
+                    Currency.unwrap(poolKey_.currency1), token1_
+                );
+            }
         }
     }
 

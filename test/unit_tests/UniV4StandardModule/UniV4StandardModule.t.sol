@@ -15,7 +15,11 @@ import {IArrakisLPModule} from
     "../../../src/interfaces/IArrakisLPModule.sol";
 import {IOracleWrapper} from
     "../../../src/interfaces/IOracleWrapper.sol";
-import {BASE, PIPS} from "../../../src/constants/CArrakis.sol";
+import {
+    BASE,
+    PIPS,
+    NATIVE_COIN
+} from "../../../src/constants/CArrakis.sol";
 // #endregion Uniswap Module.
 
 // #region openzeppelin.
@@ -31,7 +35,10 @@ import {SafeCast} from
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {PoolManager} from "@uniswap/v4-core/src/PoolManager.sol";
-import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {
+    Currency,
+    CurrencyLibrary
+} from "@uniswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
@@ -128,8 +135,12 @@ contract UniV4StandardModuleTest is TestWrapper {
             WETH,
             init0,
             init1,
-            guardian
+            guardian,
+            false
         );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
 
         // #endregion create uni v4 module.
     }
@@ -148,6 +159,10 @@ contract UniV4StandardModuleTest is TestWrapper {
         }
         if (typeOfLockAcquired == 2) {
             poolManager.initialize(poolKey, sqrtPriceX96, "");
+        }
+
+        if (typeOfLockAcquired == 3) {
+            _lockAcquiredSwapBis();
         }
     }
 
@@ -230,7 +245,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             WETH,
             init0,
             init1,
-            guardian
+            guardian,
+            false
         );
     }
 
@@ -247,7 +263,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             WETH,
             init0,
             init1,
-            guardian
+            guardian,
+            false
         );
     }
 
@@ -264,7 +281,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             WETH,
             init0,
             init1,
-            guardian
+            guardian,
+            false
         );
     }
 
@@ -281,7 +299,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             address(0),
             init0,
             init1,
-            guardian
+            guardian,
+            false
         );
     }
 
@@ -298,7 +317,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             WETH,
             init0,
             init1,
-            address(0)
+            address(0),
+            false
         );
     }
 
@@ -315,7 +335,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             USDC,
             init0,
             init1,
-            guardian
+            guardian,
+            false
         );
     }
 
@@ -352,7 +373,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             WETH,
             init0,
             init1,
-            guardian
+            guardian,
+            false
         );
     }
 
@@ -389,7 +411,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             WETH,
             init0,
             init1,
-            guardian
+            guardian,
+            false
         );
     }
 
@@ -430,7 +453,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             USDT,
             init0,
             init1,
-            guardian
+            guardian,
+            false
         );
     }
 
@@ -471,7 +495,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             USDT,
             init0,
             init1,
-            guardian
+            guardian,
+            false
         );
     }
 
@@ -502,7 +527,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             USDT,
             init0,
             init1,
-            guardian
+            guardian,
+            false
         );
     }
 
@@ -519,7 +545,10 @@ contract UniV4StandardModuleTest is TestWrapper {
             )
         );
 
-        module.setPool(poolKey);
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
+            new IUniV4StandardModule.LiquidityRange[](0);
+
+        module.setPool(poolKey, liquidityRange);
     }
 
     function testSetPoolCurrency0DtToken0() public {
@@ -536,8 +565,11 @@ contract UniV4StandardModuleTest is TestWrapper {
             )
         );
 
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
+            new IUniV4StandardModule.LiquidityRange[](0);
+
         vm.prank(manager);
-        module.setPool(poolKey);
+        module.setPool(poolKey, liquidityRange);
     }
 
     function testSetPoolCurrency1DtToken1() public {
@@ -554,15 +586,21 @@ contract UniV4StandardModuleTest is TestWrapper {
             )
         );
 
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
+            new IUniV4StandardModule.LiquidityRange[](0);
+
         vm.prank(manager);
-        module.setPool(poolKey);
+        module.setPool(poolKey, liquidityRange);
     }
 
     function testSetPoolSamePool() public {
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
+            new IUniV4StandardModule.LiquidityRange[](0);
+
         vm.expectRevert(IUniV4StandardModule.SamePool.selector);
 
         vm.prank(manager);
-        module.setPool(poolKey);
+        module.setPool(poolKey, liquidityRange);
     }
 
     function testSetPoolNoModifyLiquidityHooks() public {
@@ -584,11 +622,14 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         poolManager.unlock(abi.encode(2));
 
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
+            new IUniV4StandardModule.LiquidityRange[](0);
+
         vm.expectRevert(
             IUniV4StandardModule.NoModifyLiquidityHooks.selector
         );
         vm.prank(manager);
-        module.setPool(poolKey);
+        module.setPool(poolKey, liquidityRange);
     }
 
     function testSetPoolSqrtPriceZero() public {
@@ -600,9 +641,12 @@ contract UniV4StandardModuleTest is TestWrapper {
             hooks: IHooks(address(0))
         });
 
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
+            new IUniV4StandardModule.LiquidityRange[](0);
+
         vm.expectRevert(IUniV4StandardModule.SqrtPriceZero.selector);
         vm.prank(manager);
-        module.setPool(poolKey);
+        module.setPool(poolKey, liquidityRange);
     }
 
     function testSetPool() public {
@@ -616,8 +660,11 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         poolManager.unlock(abi.encode(2));
 
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
+            new IUniV4StandardModule.LiquidityRange[](0);
+
         vm.prank(manager);
-        module.setPool(poolKey);
+        module.setPool(poolKey, liquidityRange);
     }
 
     function testSetPoolRemoveRange() public {
@@ -693,8 +740,11 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         poolManager.unlock(abi.encode(2));
 
+        IUniV4StandardModule.LiquidityRange[] memory l =
+            new IUniV4StandardModule.LiquidityRange[](0);
+
         vm.prank(manager);
-        module.setPool(poolKey);
+        module.setPool(poolKey, l);
     }
 
     // #endregion test set pool.
@@ -935,8 +985,6 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
-        address receiver =
-            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
         // #region deposit.
 
@@ -1020,6 +1068,403 @@ contract UniV4StandardModuleTest is TestWrapper {
         module.deposit(secondDepositor, BASE);
 
         // #endregion second deposit.
+    }
+
+    function testDepositActiveRangeAndSwapBis() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        // #region deposit.
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        IERC20Metadata(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+
+        // #endregion deposit.
+
+        assertEq(IERC20Metadata(USDC).balanceOf(depositor), 0);
+        assertEq(IERC20Metadata(WETH).balanceOf(depositor), 0);
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            init0,
+            init1
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion do rebalance.
+
+        // #region do swap.
+
+        poolManager.unlock(abi.encode(3));
+
+        // #endregion do swap.
+
+        // #region second deposit.
+
+        address secondDepositor =
+            vm.addr(uint256(keccak256(abi.encode("Second deposit"))));
+
+        (uint256 amount0, uint256 amount1) = module.totalUnderlying();
+
+        amount0 = amount0 + 1;
+        amount1 = amount1 + 1;
+
+        deal(USDC, secondDepositor, amount0);
+        deal(WETH, secondDepositor, amount1);
+
+        vm.startPrank(secondDepositor);
+        IERC20Metadata(USDC).approve(address(module), amount0);
+        IERC20Metadata(WETH).approve(address(module), amount1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(secondDepositor, BASE);
+
+        // #endregion second deposit.
+    }
+
+    function testDepositActiveRangeAndSwapBothSide() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        // #region deposit.
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        IERC20Metadata(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+
+        // #endregion deposit.
+
+        assertEq(IERC20Metadata(USDC).balanceOf(depositor), 0);
+        assertEq(IERC20Metadata(WETH).balanceOf(depositor), 0);
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            init0,
+            init1
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion do rebalance.
+
+        // #region do swap.
+
+        poolManager.unlock(abi.encode(1));
+        poolManager.unlock(abi.encode(3));
+
+        // #endregion do swap.
+
+        // #region second deposit.
+
+        address secondDepositor =
+            vm.addr(uint256(keccak256(abi.encode("Second deposit"))));
+
+        (uint256 amount0, uint256 amount1) = module.totalUnderlying();
+
+        amount0 = amount0 + 1;
+        amount1 = amount1 + 1;
+
+        deal(USDC, secondDepositor, amount0);
+        deal(WETH, secondDepositor, amount1);
+
+        vm.startPrank(secondDepositor);
+        IERC20Metadata(USDC).approve(address(module), amount0);
+        IERC20Metadata(WETH).approve(address(module), amount1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(secondDepositor, BASE);
+
+        // #endregion second deposit.
+    }
+
+    function testDepositNative() public {
+        Currency currency0 = CurrencyLibrary.NATIVE;
+        Currency currency1 = Currency.wrap(USDC);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
+
+        poolManager.unlock(abi.encode(2));
+
+        // #region create uni v4 module.
+
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        module = new UniV4StandardModule(
+            address(poolManager),
+            poolKey,
+            metaVault,
+            USDC,
+            NATIVE_COIN,
+            init0,
+            init1,
+            guardian,
+            true
+        );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
+
+        // #endregion create uni v4 module.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(USDC, depositor, init0);
+        deal(metaVault, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit{value: 1 ether}(depositor, BASE);
+    }
+
+    function testDepositNativeActiveRange() public {
+        Currency currency0 = CurrencyLibrary.NATIVE;
+        Currency currency1 = Currency.wrap(USDC);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
+
+        poolManager.unlock(abi.encode(2));
+
+        // #region create uni v4 module.
+
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        module = new UniV4StandardModule(
+            address(poolManager),
+            poolKey,
+            metaVault,
+            USDC,
+            NATIVE_COIN,
+            init0,
+            init1,
+            guardian,
+            true
+        );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
+
+        // #endregion create uni v4 module.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(USDC, depositor, init0);
+        deal(metaVault, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit{value: 1 ether}(depositor, BASE);
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            init1,
+            init0
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion do rebalance.
+
+        // #region second deposit.
+
+        address secondDepositor =
+            vm.addr(uint256(keccak256(abi.encode("Second deposit"))));
+
+        (uint256 amount0, uint256 amount1) = module.totalUnderlying();
+
+        amount0 = amount0 + 1;
+        amount1 = amount1 + 1;
+
+        deal(USDC, secondDepositor, amount0);
+        deal(metaVault, amount1);
+
+        vm.startPrank(secondDepositor);
+        IERC20Metadata(USDC).approve(address(module), amount0);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit{value: amount1}(secondDepositor, BASE);
+
+        // #endregion second deposit.
+    }
+
+    function testDepositNativeOverSentEther() public {
+        Currency currency0 = CurrencyLibrary.NATIVE;
+        Currency currency1 = Currency.wrap(USDC);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
+
+        poolManager.unlock(abi.encode(2));
+
+        // #region create uni v4 module.
+
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        module = new UniV4StandardModule(
+            address(poolManager),
+            poolKey,
+            metaVault,
+            USDC,
+            NATIVE_COIN,
+            init0,
+            init1,
+            guardian,
+            true
+        );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
+
+        // #endregion create uni v4 module.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(USDC, depositor, init0);
+        deal(metaVault, 2 ether);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit{value: 2 ether}(depositor, BASE);
     }
 
     // #endregion test deposit.
@@ -1396,6 +1841,128 @@ contract UniV4StandardModuleTest is TestWrapper {
         // #endregion withdraw.
     }
 
+    function testRebalanceSwapAndRebalance() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        // #region deposit.
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        IERC20Metadata(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+
+        // #endregion deposit.
+
+        assertEq(IERC20Metadata(USDC).balanceOf(depositor), 0);
+        assertEq(IERC20Metadata(WETH).balanceOf(depositor), 0);
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            init0,
+            init1
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion do rebalance.
+
+        // #region do swap 1 and 2.
+
+        poolManager.unlock(abi.encode(1));
+        poolManager.unlock(abi.encode(3));
+
+        // #endregion do swap 1 and 2.
+
+        // #region change ranges.
+
+        tickLower = (tick / 10) * 10 - (5 * 10);
+        tickUpper = (tick / 10) * 10 + (5 * 10);
+
+        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](2);
+
+        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                -(SafeCast.toInt256(uint256(liquidity)))
+            )
+        });
+
+        range = IUniV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
+
+        (uint256 amount0, uint256 amount1) = module.totalUnderlying();
+
+        liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            amount0 / 2,
+            amount1 / 2
+        );
+
+        liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                (SafeCast.toInt256(uint256(liquidity)))
+            )
+        });
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion change ranges.
+
+        // #region withdraw.
+
+        vm.prank(metaVault);
+        module.withdraw(receiver, BASE);
+
+        assertEq(IERC20Metadata(USDC).balanceOf(receiver), amount0 - 1);
+        assertEq(IERC20Metadata(WETH).balanceOf(receiver), amount1 - 1);
+
+        // #endregion withdraw.
+    }
+
     // #endregion test rebalance.
 
     // #region test guardian.
@@ -1726,7 +2293,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             WETH,
             init0,
             init1,
-            guardian
+            guardian,
+            false
         );
 
         // #region compute oracle price.
@@ -1775,7 +2343,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         IPoolManager.SwapParams memory params = IPoolManager
             .SwapParams({
             zeroForOne: false,
-            amountSpecified: (1 ether) / 1000,
+            amountSpecified: 1_000_774_893,
             sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE / 2
         });
         poolManager.swap(poolKey, params, "");
@@ -1796,9 +2364,6 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 currency1Balance =
             SafeCast.toUint256(-currency1BalanceRaw);
 
-        console.log("Get token0 : %d", currency0Balance);
-        console.log("Get token1 : %d", currency1Balance);
-
         if (currency0Balance > 0) {
             poolManager.take(
                 poolKey.currency0, address(this), currency0Balance
@@ -1812,6 +2377,49 @@ contract UniV4StandardModuleTest is TestWrapper {
                 address(poolManager), currency1Balance
             );
             poolManager.settle(poolKey.currency1);
+        }
+
+        // #endregion settle currency.
+    }
+
+    function _lockAcquiredSwapBis() internal {
+        IPoolManager.SwapParams memory params = IPoolManager
+            .SwapParams({
+            zeroForOne: true,
+            amountSpecified: (1 ether) / 1000,
+            sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE * 2
+        });
+        poolManager.swap(poolKey, params, "");
+
+        // #region settle currency.
+
+        int256 currency0BalanceRaw = IPoolManager(
+            address(poolManager)
+        ).currencyDelta(address(this), poolKey.currency0);
+
+        uint256 currency0Balance =
+            SafeCast.toUint256(-currency0BalanceRaw);
+
+        int256 currency1BalanceRaw = IPoolManager(
+            address(poolManager)
+        ).currencyDelta(address(this), poolKey.currency1);
+
+        uint256 currency1Balance =
+            SafeCast.toUint256(currency1BalanceRaw);
+
+        if (currency1Balance > 0) {
+            poolManager.take(
+                poolKey.currency1, address(this), currency1Balance
+            );
+        }
+
+        if (currency0Balance > 0) {
+            poolManager.sync(poolKey.currency0);
+            deal(USDC, address(this), currency0Balance);
+            IERC20Metadata(USDC).transfer(
+                address(poolManager), currency0Balance
+            );
+            poolManager.settle(poolKey.currency0);
         }
 
         // #endregion settle currency.

@@ -58,7 +58,10 @@ interface IUniV4StandardModule {
 
     // #region only manager functions.
 
-    function setPool(PoolKey calldata poolKey_) external;
+    function setPool(
+        PoolKey calldata poolKey_,
+        LiquidityRange[] calldata liquidityRanges_
+    ) external;
 
     function rebalance(LiquidityRange[] calldata liquidityRanges_)
         external

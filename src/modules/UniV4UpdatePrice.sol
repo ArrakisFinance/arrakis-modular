@@ -46,7 +46,8 @@ contract UniV4UpdatePrice is
         address token1_,
         uint256 init0_,
         uint256 init1_,
-        address guardian_
+        address guardian_,
+        bool isInversed_
     )
         UniV4StandardModule(
             poolManager_,
@@ -56,7 +57,8 @@ contract UniV4UpdatePrice is
             token1_,
             init0_,
             init1_,
-            guardian_
+            guardian_,
+            isInversed_
         )
     {}
 

@@ -34,7 +34,6 @@ import {TransientStateLibrary} from
 
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 library UnderlyingV4 {
     using StateLibrary for IPoolManager;
@@ -81,24 +80,10 @@ library UnderlyingV4 {
         }
 
         amount0 += FullMath.mulDivRoundingUp(
-            proportion_,
-            fee0
-                + IERC20(underlyingPayload_.token0).balanceOf(
-                    underlyingPayload_.self
-                )
-                + IERC20(underlyingPayload_.token0).balanceOf(metaVault_)
-                + leftOver0,
-            PIPS
+            proportion_, fee0 + leftOver0, PIPS
         );
         amount1 += FullMath.mulDivRoundingUp(
-            proportion_,
-            fee1
-                + IERC20(underlyingPayload_.token1).balanceOf(
-                    underlyingPayload_.self
-                )
-                + IERC20(underlyingPayload_.token1).balanceOf(metaVault_)
-                + leftOver1,
-            PIPS
+            proportion_, fee1 + leftOver1, PIPS
         );
     }
 
@@ -217,9 +202,8 @@ library UnderlyingV4 {
             (
                 uint256 feeGrowthInside0X128,
                 uint256 feeGrowthInside1X128
-            ) = _getFeeGrowthInside(
+            ) = positionUnderlying_.poolManager.getFeeGrowthInside(
                 poolId,
-                positionUnderlying_.poolManager,
                 positionUnderlying_.lowerTick,
                 positionUnderlying_.upperTick
             );
@@ -272,9 +256,8 @@ library UnderlyingV4 {
 
         // compute current fees earned
         (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128) =
-        _getFeeGrowthInside(
+        positionUnderlying_.poolManager.getFeeGrowthInside(
             poolId,
-            positionUnderlying_.poolManager,
             positionUnderlying_.lowerTick,
             positionUnderlying_.upperTick
         );
@@ -369,158 +352,11 @@ library UnderlyingV4 {
         }
     }
 
-    struct FeeGrowthInside {
-        uint256 feeGrowthOutside0X128Lower;
-        uint256 feeGrowthOutside1X128Lower;
-        uint256 feeGrowthOutside0X128Upper;
-        uint256 feeGrowthOutside1X128Upper;
-        uint256 feeGrowthGlobal0X128;
-        uint256 feeGrowthGlobal1X128;
-        int24 tickCurrent;
-    }
-
-    function _getFeeGrowthInside(
-        PoolId poolId_,
-        IPoolManager poolManager_,
-        int24 tickLower_,
-        int24 tickUpper_
-    )
-        internal
-        view
-        returns (
-            uint256 feeGrowthInside0X128,
-            uint256 feeGrowthInside1X128
-        )
-    {
-        FeeGrowthInside memory feeGrowthInside;
-
-        {
-            uint256 POOL_SLOT = 10;
-            bytes32 poolId = PoolId.unwrap(poolId_);
-
-            // #region tickInfo Lower tick.
-            {
-                bytes memory tILower = poolManager_.extsload(
-                    bytes32(
-                        uint256(
-                            keccak256(
-                                abi.encode(
-                                    tickLower_,
-                                    bytes32(
-                                        uint256(
-                                            keccak256(
-                                                abi.encode(
-                                                    poolId, POOL_SLOT
-                                                )
-                                            )
-                                        ) + 4
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    3
-                );
-
-                (
-                    ,
-                    feeGrowthInside.feeGrowthOutside0X128Lower,
-                    feeGrowthInside.feeGrowthOutside1X128Lower
-                ) = abi.decode(tILower, (uint256, uint256, uint256));
-            }
-            // #endregion tickInfo Lower tick.
-
-            // #region tickInfo Upper tick.
-            {
-                bytes memory tIUpper = poolManager_.extsload(
-                    bytes32(
-                        uint256(
-                            keccak256(
-                                abi.encode(
-                                    tickUpper_,
-                                    bytes32(
-                                        uint256(
-                                            keccak256(
-                                                abi.encode(
-                                                    poolId, POOL_SLOT
-                                                )
-                                            )
-                                        ) + 4
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    3
-                );
-
-                (
-                    ,
-                    feeGrowthInside.feeGrowthOutside0X128Upper,
-                    feeGrowthInside.feeGrowthOutside1X128Upper
-                ) = abi.decode(tIUpper, (uint256, uint256, uint256));
-            }
-            // #endregion tickInfo Upper tick.
-            // #region get slot0.
-
-            (, feeGrowthInside.tickCurrent,,) =
-                poolManager_.getSlot0(poolId_);
-
-            // #endregion get slot0.
-            // #region pool global fees.
-
-            {
-                bytes memory globalFee = poolManager_.extsload(
-                    bytes32(
-                        uint256(
-                            keccak256(abi.encode(poolId, POOL_SLOT))
-                        ) + 1
-                    ),
-                    2
-                );
-
-                (
-                    feeGrowthInside.feeGrowthGlobal0X128,
-                    feeGrowthInside.feeGrowthGlobal1X128
-                ) = abi.decode(globalFee, (uint256, uint256));
-            }
-
-            // #endregion pool global fees.
-        }
-
-        unchecked {
-            if (feeGrowthInside.tickCurrent < tickLower_) {
-                feeGrowthInside0X128 = feeGrowthInside
-                    .feeGrowthOutside0X128Lower
-                    - feeGrowthInside.feeGrowthOutside0X128Upper;
-                feeGrowthInside1X128 = feeGrowthInside
-                    .feeGrowthOutside1X128Lower
-                    - feeGrowthInside.feeGrowthOutside1X128Upper;
-            } else if (feeGrowthInside.tickCurrent >= tickUpper_) {
-                feeGrowthInside0X128 = feeGrowthInside
-                    .feeGrowthOutside0X128Upper
-                    - feeGrowthInside.feeGrowthOutside0X128Lower;
-                feeGrowthInside1X128 = feeGrowthInside
-                    .feeGrowthOutside1X128Upper
-                    - feeGrowthInside.feeGrowthOutside1X128Lower;
-            } else {
-                feeGrowthInside0X128 = feeGrowthInside
-                    .feeGrowthGlobal0X128
-                    - feeGrowthInside.feeGrowthOutside0X128Lower
-                    - feeGrowthInside.feeGrowthOutside0X128Upper;
-                feeGrowthInside1X128 = feeGrowthInside
-                    .feeGrowthGlobal1X128
-                    - feeGrowthInside.feeGrowthOutside1X128Lower
-                    - feeGrowthInside.feeGrowthOutside1X128Upper;
-            }
-        }
-    }
-
     function _getFeesOwned(
         Position.Info memory self,
         uint256 feeGrowthInside0X128,
         uint256 feeGrowthInside1X128
-    ) internal pure returns (uint256 feesOwed0, uint256 feesOwed1) {
+    ) internal view returns (uint256 feesOwed0, uint256 feesOwed1) {
         unchecked {
             feesOwed0 = FullMath.mulDiv(
                 feeGrowthInside0X128 - self.feeGrowthInside0LastX128,
@@ -580,13 +416,7 @@ library UnderlyingV4 {
             );
         }
 
-        amount0 += fee0
-            + IERC20(underlyingPayload_.token0).balanceOf(
-                underlyingPayload_.self
-            ) + leftOver0;
-        amount1 += fee1
-            + IERC20(underlyingPayload_.token1).balanceOf(
-                underlyingPayload_.self
-            ) + leftOver1;
+        amount0 += fee0 + leftOver0;
+        amount1 += fee1 + leftOver1;
     }
 }
