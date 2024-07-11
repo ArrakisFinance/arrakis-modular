@@ -154,14 +154,7 @@ contract UniV4StandardModule is
 
         _checkTokens(poolKey_, token0_, token1_, isInversed_);
 
-        if (
-            poolKey_.hooks.hasPermission(
-                Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG
-            )
-                || poolKey_.hooks.hasPermission(
-                    Hooks.AFTER_REMOVE_LIQUIDITY_FLAG
-                )
-        ) revert NoModifyLiquidityHooks();
+        _checkPermissions(poolKey_);
 
         /// @dev check if the pool is initialized.
         PoolId poolId = poolKey_.toId();
@@ -516,7 +509,8 @@ contract UniV4StandardModule is
         uint256 fees0;
         uint256 fees1;
 
-        (amount0, amount1, fees0, fees1) = UnderlyingV4.totalUnderlyingWithFees(
+        (amount0, amount1, fees0, fees1) = UnderlyingV4
+            .totalUnderlyingWithFees(
             UnderlyingPayload({
                 ranges: poolRanges,
                 poolManager: poolManager,
@@ -526,8 +520,10 @@ contract UniV4StandardModule is
             })
         );
 
-        amount0 = amount0 - FullMath.mulDiv(fees0, managerFeePIPS, PIPS);
-        amount1 = amount1 - FullMath.mulDiv(fees1, managerFeePIPS, PIPS);
+        amount0 =
+            amount0 - FullMath.mulDiv(fees0, managerFeePIPS, PIPS);
+        amount1 =
+            amount1 - FullMath.mulDiv(fees1, managerFeePIPS, PIPS);
 
         if (isInversed) {
             (amount0, amount1) = (amount1, amount0);
@@ -1584,6 +1580,20 @@ contract UniV4StandardModule is
                 );
             }
         }
+    }
+
+    function _checkPermissions(PoolKey memory poolKey_)
+        internal
+        virtual
+    {
+        if (
+            poolKey_.hooks.hasPermission(
+                Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG
+            )
+                || poolKey_.hooks.hasPermission(
+                    Hooks.AFTER_REMOVE_LIQUIDITY_FLAG
+                )
+        ) revert NoModifyLiquidityHooks();
     }
 
     // #region view functions.

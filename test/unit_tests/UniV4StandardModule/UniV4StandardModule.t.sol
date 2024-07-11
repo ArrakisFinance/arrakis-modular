@@ -1957,8 +1957,12 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.prank(metaVault);
         module.withdraw(receiver, BASE);
 
-        assertEq(IERC20Metadata(USDC).balanceOf(receiver), amount0 - 1);
-        assertEq(IERC20Metadata(WETH).balanceOf(receiver), amount1 - 1);
+        assertEq(
+            IERC20Metadata(USDC).balanceOf(receiver), amount0 - 1
+        );
+        assertEq(
+            IERC20Metadata(WETH).balanceOf(receiver), amount1 - 1
+        );
 
         // #endregion withdraw.
     }

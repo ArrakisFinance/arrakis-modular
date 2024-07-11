@@ -5,6 +5,7 @@ interface IUniV4UpdatePrice {
     // #region errors.
 
     error LiquidityToAddIsNegative();
+    error NoPermission();
 
     // #endregion errors.
 

@@ -66,18 +66,14 @@ library UnderlyingV4 {
             }
         }
 
-        uint256 leftOver0;
-        uint256 leftOver1;
-        if (underlyingPayload_.ranges.length > 0) {
-            leftOver0 = underlyingPayload_.poolManager.balanceOf(
-                address(this),
-                underlyingPayload_.ranges[0].poolKey.currency0.toId()
-            );
-            leftOver1 = underlyingPayload_.poolManager.balanceOf(
-                address(this),
-                underlyingPayload_.ranges[0].poolKey.currency1.toId()
-            );
-        }
+        uint256 leftOver0 = underlyingPayload_.poolManager.balanceOf(
+            address(this),
+            underlyingPayload_.ranges[0].poolKey.currency0.toId()
+        );
+        uint256 leftOver1 = underlyingPayload_.poolManager.balanceOf(
+            address(this),
+            underlyingPayload_.ranges[0].poolKey.currency1.toId()
+        );
 
         amount0 += FullMath.mulDivRoundingUp(
             proportion_, fee0 + leftOver0, PIPS
@@ -101,6 +97,37 @@ library UnderlyingV4 {
         )
     {
         return _totalUnderlyingWithFees(underlyingPayload_, 0);
+    }
+
+    function totalAmountsAndFees(
+        UnderlyingPayload memory underlyingPayload_
+    )
+        public
+        view
+        returns (
+            uint256 amount0,
+            uint256 amount1,
+            uint256 fee0,
+            uint256 fee1
+        )
+    {
+        for (uint256 i; i < underlyingPayload_.ranges.length; i++) {
+            {
+                (uint256 a0, uint256 a1, uint256 f0, uint256 f1) =
+                underlying(
+                    RangeData({
+                        self: underlyingPayload_.self,
+                        range: underlyingPayload_.ranges[i],
+                        poolManager: underlyingPayload_.poolManager
+                    }),
+                    0
+                );
+                amount0 += a0;
+                amount1 += a1;
+                fee0 += f0;
+                fee1 += f1;
+            }
+        }
     }
 
     function totalUnderlyingAtPriceWithFees(
@@ -403,18 +430,14 @@ library UnderlyingV4 {
             }
         }
 
-        uint256 leftOver0;
-        uint256 leftOver1;
-        if (underlyingPayload_.ranges.length > 0) {
-            leftOver0 = underlyingPayload_.poolManager.balanceOf(
-                address(this),
-                underlyingPayload_.ranges[0].poolKey.currency0.toId()
-            );
-            leftOver1 = underlyingPayload_.poolManager.balanceOf(
-                address(this),
-                underlyingPayload_.ranges[0].poolKey.currency1.toId()
-            );
-        }
+        uint256 leftOver0 = underlyingPayload_.poolManager.balanceOf(
+            address(this),
+            underlyingPayload_.ranges[0].poolKey.currency0.toId()
+        );
+        uint256 leftOver1 = underlyingPayload_.poolManager.balanceOf(
+            address(this),
+            underlyingPayload_.ranges[0].poolKey.currency1.toId()
+        );
 
         amount0 += fee0 + leftOver0;
         amount1 += fee1 + leftOver1;

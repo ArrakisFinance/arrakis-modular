@@ -26,6 +26,8 @@ import {StateLibrary} from
 import {
     Slot0, Slot0Library
 } from "@uniswap/v4-core/src/types/Slot0.sol";
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 
 import {LiquidityAmounts} from
     "@uniswap/v4-periphery/contracts/libraries/LiquidityAmounts.sol";
@@ -37,6 +39,7 @@ contract UniV4UpdatePrice is
     using StateLibrary for IPoolManager;
     using Slot0Library for Slot0;
     using PoolIdLibrary for PoolKey;
+    using Hooks for IHooks;
 
     constructor(
         address poolManager_,
@@ -366,6 +369,28 @@ contract UniV4UpdatePrice is
             managerFee0,
             managerFee1
         );
+    }
+
+    function _checkPermissions(PoolKey memory poolKey_)
+        internal
+        virtual
+        override
+    {
+        if (
+            poolKey_.hooks.hasPermission(Hooks.BEFORE_INITIALIZE_FLAG)
+                || poolKey_.hooks.hasPermission(
+                    Hooks.AFTER_INITIALIZE_FLAG
+                )
+                || poolKey_.hooks.hasPermission(
+                    Hooks.AFTER_ADD_LIQUIDITY_FLAG
+                )
+                || poolKey_.hooks.hasPermission(
+                    Hooks.AFTER_REMOVE_LIQUIDITY_FLAG
+                ) || poolKey_.hooks.hasPermission(Hooks.BEFORE_SWAP_FLAG)
+                || poolKey_.hooks.hasPermission(Hooks.AFTER_SWAP_FLAG)
+                || poolKey_.hooks.hasPermission(Hooks.BEFORE_DONATE_FLAG)
+                || poolKey_.hooks.hasPermission(Hooks.AFTER_DONATE_FLAG)
+        ) revert NoPermission();
     }
 
     // #endregion internal functions.
