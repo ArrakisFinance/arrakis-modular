@@ -15,6 +15,7 @@ import {IArrakisLPModule} from
     "../../../src/interfaces/IArrakisLPModule.sol";
 import {IOracleWrapper} from
     "../../../src/interfaces/IOracleWrapper.sol";
+import {IOwnable} from "../../../src/interfaces/IOwnable.sol";
 import {
     BASE,
     PIPS,
@@ -65,9 +66,12 @@ contract UniV4StandardModuleTest is TestWrapper {
 
     // #region constants.
 
-    address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
-    address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant USDC =
+        0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant USDT =
+        0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address public constant WETH =
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // #endregion constants.
 
@@ -78,16 +82,18 @@ contract UniV4StandardModuleTest is TestWrapper {
     address public pauser;
     address public metaVault;
     address public guardian;
+    address public owner;
 
     UniV4StandardModule public module;
 
     function setUp() public {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
+        owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
 
         // #region meta vault creation.
 
-        metaVault = address(new ArrakisMetaVaultMock(manager));
+        metaVault = address(new ArrakisMetaVaultMock(manager, owner));
 
         // #endregion meta vault creation.
 
@@ -129,7 +135,6 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             USDC,
             WETH,
@@ -143,6 +148,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         module.setManagerFeePIPS(10_000);
 
         // #endregion create uni v4 module.
+
+        vm.prank(IOwnable(address(metaVault)).owner());
+        module.initializePoolKey(poolKey);
     }
 
     // #region uniswap v4 callback function.
@@ -239,7 +247,6 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         module = new UniV4StandardModule(
             address(0),
-            poolKey,
             metaVault,
             USDC,
             WETH,
@@ -257,7 +264,6 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             address(0),
             USDC,
             WETH,
@@ -275,7 +281,6 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             address(0),
             WETH,
@@ -293,7 +298,6 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             USDC,
             address(0),
@@ -311,7 +315,6 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             USDC,
             WETH,
@@ -329,7 +332,6 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.expectRevert(IUniV4StandardModule.Token0GteToken1.selector);
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             WETH,
             USDC,
@@ -357,17 +359,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         poolManager.unlock(abi.encode(2));
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IUniV4StandardModule.Currency0DtToken0.selector,
-                WETH,
-                USDC
-            )
-        );
-
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             USDC,
             WETH,
@@ -376,6 +369,16 @@ contract UniV4StandardModuleTest is TestWrapper {
             guardian,
             false
         );
+
+        vm.prank(IOwnable(address(metaVault)).owner());
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IUniV4StandardModule.Currency0DtToken0.selector,
+                WETH,
+                USDC
+            )
+        );
+        module.initializePoolKey(poolKey);
     }
 
     function testConstructorCurrency1DtToken1() public {
@@ -395,17 +398,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         poolManager.unlock(abi.encode(2));
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IUniV4StandardModule.Currency1DtToken1.selector,
-                USDT,
-                WETH
-            )
-        );
-
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             USDC,
             WETH,
@@ -414,6 +408,16 @@ contract UniV4StandardModuleTest is TestWrapper {
             guardian,
             false
         );
+
+        vm.prank(IOwnable(address(metaVault)).owner());
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IUniV4StandardModule.Currency1DtToken1.selector,
+                USDT,
+                WETH
+            )
+        );
+        module.initializePoolKey(poolKey);
     }
 
     function testConstructorNoModifyLiquidityHooksBefore() public {
@@ -441,13 +445,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         poolManager.unlock(abi.encode(2));
 
-        vm.expectRevert(
-            IUniV4StandardModule.NoModifyLiquidityHooks.selector
-        );
-
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             USDC,
             USDT,
@@ -456,6 +455,12 @@ contract UniV4StandardModuleTest is TestWrapper {
             guardian,
             false
         );
+
+        vm.prank(IOwnable(address(metaVault)).owner());
+        vm.expectRevert(
+            IUniV4StandardModule.NoModifyLiquidityHooks.selector
+        );
+        module.initializePoolKey(poolKey);
     }
 
     function testConstructorNoModifyLiquidityHooksAfter() public {
@@ -483,13 +488,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         poolManager.unlock(abi.encode(2));
 
-        vm.expectRevert(
-            IUniV4StandardModule.NoModifyLiquidityHooks.selector
-        );
-
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             USDC,
             USDT,
@@ -498,6 +498,12 @@ contract UniV4StandardModuleTest is TestWrapper {
             guardian,
             false
         );
+
+        vm.prank(IOwnable(address(metaVault)).owner());
+        vm.expectRevert(
+            IUniV4StandardModule.NoModifyLiquidityHooks.selector
+        );
+        module.initializePoolKey(poolKey);
     }
 
     function testConstructorSqrtPriceZero() public {
@@ -517,11 +523,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // poolManager.unlock(abi.encode(2));
 
-        vm.expectRevert(IUniV4StandardModule.SqrtPriceZero.selector);
-
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             USDC,
             USDT,
@@ -530,6 +533,10 @@ contract UniV4StandardModuleTest is TestWrapper {
             guardian,
             false
         );
+
+        vm.prank(IOwnable(address(metaVault)).owner());
+        vm.expectRevert(IUniV4StandardModule.SqrtPriceZero.selector);
+        module.initializePoolKey(poolKey);
     }
 
     // #endregion test constructor.
@@ -1276,7 +1283,6 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             USDC,
             NATIVE_COIN,
@@ -1285,6 +1291,9 @@ contract UniV4StandardModuleTest is TestWrapper {
             guardian,
             true
         );
+
+        vm.prank(IOwnable(address(metaVault)).owner());
+        module.initializePoolKey(poolKey);
 
         vm.prank(address(manager));
         module.setManagerFeePIPS(10_000);
@@ -1328,7 +1337,6 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             USDC,
             NATIVE_COIN,
@@ -1337,6 +1345,9 @@ contract UniV4StandardModuleTest is TestWrapper {
             guardian,
             true
         );
+
+        vm.prank(IOwnable(address(metaVault)).owner());
+        module.initializePoolKey(poolKey);
 
         vm.prank(address(manager));
         module.setManagerFeePIPS(10_000);
@@ -1438,7 +1449,6 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             USDC,
             NATIVE_COIN,
@@ -1447,6 +1457,9 @@ contract UniV4StandardModuleTest is TestWrapper {
             guardian,
             true
         );
+
+        vm.prank(IOwnable(address(metaVault)).owner());
+        module.initializePoolKey(poolKey);
 
         vm.prank(address(manager));
         module.setManagerFeePIPS(10_000);
@@ -2291,7 +2304,6 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         module = new UniV4StandardModule(
             address(poolManager),
-            poolKey,
             metaVault,
             USDC,
             WETH,
@@ -2300,6 +2312,9 @@ contract UniV4StandardModuleTest is TestWrapper {
             guardian,
             false
         );
+
+        vm.prank(IOwnable(address(metaVault)).owner());
+        module.initializePoolKey(poolKey);
 
         // #region compute oracle price.
         uint256 oraclePrice;

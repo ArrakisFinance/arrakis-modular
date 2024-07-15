@@ -43,7 +43,6 @@ contract UniV4UpdatePrice is
 
     constructor(
         address poolManager_,
-        PoolKey memory poolKey_,
         address metaVault_,
         address token0_,
         address token1_,
@@ -54,7 +53,6 @@ contract UniV4UpdatePrice is
     )
         UniV4StandardModule(
             poolManager_,
-            poolKey_,
             metaVault_,
             token0_,
             token1_,
@@ -70,7 +68,7 @@ contract UniV4UpdatePrice is
     function movePrice(
         IPoolManager.SwapParams calldata params_,
         LiquidityRange[] calldata liquidityRanges_
-    ) external returns (bytes memory result) {
+    ) external onlyManager returns (bytes memory result) {
         bytes memory data =
             abi.encode(3, abi.encode(params_, liquidityRanges_));
 
@@ -137,7 +135,23 @@ contract UniV4UpdatePrice is
                 data, (IPoolManager.SwapParams, LiquidityRange[])
             );
 
-            result = _movePrice(params, liquidityRanges);
+            (
+                uint256 amount0Minted,
+                uint256 amount1Minted,
+                uint256 amount0Burned,
+                uint256 amount1Burned,
+                uint256 managerFee0,
+                uint256 managerFee1
+            ) = _movePrice(params, liquidityRanges);
+
+            result = abi.encode(
+                amount0Minted,
+                amount1Minted,
+                amount0Burned,
+                amount1Burned,
+                managerFee0,
+                managerFee1
+            );
         }
     }
 
@@ -174,22 +188,19 @@ contract UniV4UpdatePrice is
     function _movePrice(
         IPoolManager.SwapParams memory params_,
         LiquidityRange[] memory liquidityRanges_
-    ) internal returns (bytes memory result) {
+    )
+        internal
+        returns (
+            uint256 amount0Minted,
+            uint256 amount1Minted,
+            uint256 amount0Burned,
+            uint256 amount1Burned,
+            uint256 managerFee0,
+            uint256 managerFee1
+        )
+    {
         PoolKey memory _poolKey = poolKey;
         PoolId poolId = _poolKey.toId();
-
-        uint256 amount0Minted;
-        uint256 amount1Minted;
-        uint256 amount0Burned;
-        uint256 amount1Burned;
-        uint256 managerFee0;
-        uint256 managerFee1;
-
-        // #region get current price.
-
-        (uint160 oldSqrtPrice,,,) = poolManager.getSlot0(poolId);
-
-        // #endregion get current price.
 
         // #region fees computations.
 
@@ -256,27 +267,34 @@ contract UniV4UpdatePrice is
 
         // #endregion remove all liquidities.
         // #region put a bit of liquidity on full range.
+
+        int24 tickL = TickMath.MIN_TICK
+            - TickMath.MIN_TICK % _poolKey.tickSpacing;
+        int24 tickU = TickMath.MAX_TICK
+            - TickMath.MAX_TICK % _poolKey.tickSpacing;
+
         _addLiquidity(
-            _poolKey,
-            poolId,
-            MINIMUM_LIQUIDITY,
-            TickMath.MIN_TICK,
-            TickMath.MAX_TICK
+            _poolKey, poolId, MINIMUM_LIQUIDITY, tickL, tickU
         );
+
         // #endregion put a bit of liquidity on full range.
         // #region do swap for moving the price.
 
-        poolManager.swap(_poolKey, params_, "");
+        {
+            (uint160 oldSqrtPrice,,,) = poolManager.getSlot0(poolId);
+
+            poolManager.swap(_poolKey, params_, "");
+
+            (uint160 newSqrtPrice,,,) = poolManager.getSlot0(poolId);
+
+            emit LogMovePrice(oldSqrtPrice, newSqrtPrice);
+        }
 
         // #endregion do swap for moving the price.
         // #region remove full range liquidity.
 
         _removeLiquidity(
-            _poolKey,
-            poolId,
-            MINIMUM_LIQUIDITY,
-            TickMath.MIN_TICK,
-            TickMath.MAX_TICK
+            _poolKey, poolId, MINIMUM_LIQUIDITY, tickL, tickU
         );
 
         // #endregion remove full range liquidity.
@@ -355,20 +373,7 @@ contract UniV4UpdatePrice is
             // #endregion get how much left over we have on poolManager and mint.
         }
 
-        (uint160 newSqrtPrice,,,) = poolManager.getSlot0(poolId);
-
-        emit LogMovePrice(oldSqrtPrice, newSqrtPrice);
-
         // #endregion mint left over if needed.
-
-        result = abi.encode(
-            amount0Minted,
-            amount1Minted,
-            amount0Burned,
-            amount1Burned,
-            managerFee0,
-            managerFee1
-        );
     }
 
     function _checkPermissions(PoolKey memory poolKey_)

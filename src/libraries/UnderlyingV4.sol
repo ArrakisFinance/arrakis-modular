@@ -7,6 +7,7 @@ import {
     RangeData
 } from "../structs/SUniswapV4.sol";
 import {PIPS} from "../constants/CArrakis.sol";
+import {IUniV4ModuleBase} from "../interfaces/IUniV4ModuleBase.sol";
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
@@ -68,11 +69,15 @@ library UnderlyingV4 {
 
         uint256 leftOver0 = underlyingPayload_.poolManager.balanceOf(
             address(this),
-            underlyingPayload_.ranges[0].poolKey.currency0.toId()
+            IUniV4ModuleBase(underlyingPayload_.self).poolKey()
+                .currency0
+                .toId()
         );
         uint256 leftOver1 = underlyingPayload_.poolManager.balanceOf(
             address(this),
-            underlyingPayload_.ranges[0].poolKey.currency1.toId()
+            IUniV4ModuleBase(underlyingPayload_.self).poolKey()
+                .currency1
+                .toId()
         );
 
         amount0 += FullMath.mulDivRoundingUp(
@@ -432,11 +437,15 @@ library UnderlyingV4 {
 
         uint256 leftOver0 = underlyingPayload_.poolManager.balanceOf(
             address(this),
-            underlyingPayload_.ranges[0].poolKey.currency0.toId()
+            IUniV4ModuleBase(underlyingPayload_.self).poolKey()
+                .currency0
+                .toId()
         );
         uint256 leftOver1 = underlyingPayload_.poolManager.balanceOf(
             address(this),
-            underlyingPayload_.ranges[0].poolKey.currency1.toId()
+            IUniV4ModuleBase(underlyingPayload_.self).poolKey()
+                .currency1
+                .toId()
         );
 
         amount0 += fee0 + leftOver0;

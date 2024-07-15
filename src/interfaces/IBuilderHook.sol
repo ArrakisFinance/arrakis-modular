@@ -51,9 +51,10 @@ interface IBuilderHook {
     function blacklistCollaterals(address[] calldata collaterals_)
         external;
 
-    function getTokens(address token_, address receiver_)
-        external
-        returns (uint256 amount);
+    function getTokens(
+        address token_,
+        address receiver_
+    ) external returns (uint256 amount);
 
     // #region view functions.
 

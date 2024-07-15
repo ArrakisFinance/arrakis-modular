@@ -7,6 +7,7 @@ import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
+import {IOwnable} from "../interfaces/IOwnable.sol";
 
 import {PIPS, BASE, NATIVE_COIN} from "../constants/CArrakis.sol";
 import {
@@ -134,7 +135,6 @@ contract UniV4StandardModule is
 
     constructor(
         address poolManager_,
-        PoolKey memory poolKey_,
         address metaVault_,
         address token0_,
         address token1_,
@@ -144,29 +144,15 @@ contract UniV4StandardModule is
         bool isInversed_
     ) {
         // #region checks.
-
         if (poolManager_ == address(0)) revert AddressZero();
         if (metaVault_ == address(0)) revert AddressZero();
         if (token0_ == address(0)) revert AddressZero();
         if (token1_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
         if (token0_ >= token1_) revert Token0GteToken1();
-
-        _checkTokens(poolKey_, token0_, token1_, isInversed_);
-
-        _checkPermissions(poolKey_);
-
-        /// @dev check if the pool is initialized.
-        PoolId poolId = poolKey_.toId();
-        (uint160 sqrtPriceX96,,,) =
-            IPoolManager(poolManager_).getSlot0(poolId);
-
-        if (sqrtPriceX96 == 0) revert SqrtPriceZero();
-
         // #endregion checks.
 
         poolManager = IPoolManager(poolManager_);
-        poolKey = poolKey_;
         metaVault = IArrakisMetaVault(metaVault_);
         token0 = IERC20Metadata(token0_);
         token1 = IERC20Metadata(token1_);
@@ -200,6 +186,31 @@ contract UniV4StandardModule is
     // #endregion guardian functions.
 
     function initializePosition(bytes calldata data_) external {}
+
+    function initializePoolKey(PoolKey calldata poolKey_) external {
+        if (poolKey.tickSpacing != 0) {
+            revert PoolKeyAlreadySet();
+        }
+        if (msg.sender != IOwnable(address(metaVault)).owner()) {
+            revert OnlyMetaVaultOwner();
+        }
+
+        address _token0 = address(token0);
+        address _token1 = address(token1);
+        bool _isInversed = isInversed;
+
+        _checkTokens(poolKey_, _token0, _token1, _isInversed);
+
+        _checkPermissions(poolKey_);
+
+        /// @dev check if the pool is initialized.
+        PoolId poolId = poolKey_.toId();
+        (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(poolId);
+
+        if (sqrtPriceX96 == 0) revert SqrtPriceZero();
+
+        poolKey = poolKey_;
+    }
 
     // #region only manager functions.
 

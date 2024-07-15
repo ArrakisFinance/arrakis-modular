@@ -254,8 +254,7 @@ contract BuilderHook is
             payable(receiver_).sendValue(deal_.collateralAmount);
         } else {
             IERC20(deal_.collateralToken).safeTransfer(
-                receiver_,
-                deal_.collateralAmount
+                receiver_, deal_.collateralAmount
             );
         }
 

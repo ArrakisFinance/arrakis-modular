@@ -26,6 +26,8 @@ interface IUniV4StandardModule {
     error NoModifyLiquidityHooks();
     error OverMaxDeviation();
     error CallBackNotSupported();
+    error OnlyMetaVaultOwner();
+    error PoolKeyAlreadySet();
 
     // #endregion errors.
 
@@ -55,6 +57,12 @@ interface IUniV4StandardModule {
     );
 
     // #endregion events.
+
+    // #region only meta vault owner functions.
+
+    function initializePoolKey(PoolKey calldata poolKey_) external;
+
+    // #endregion only meta vault owner functions.
 
     // #region only manager functions.
 
