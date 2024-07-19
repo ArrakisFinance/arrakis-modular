@@ -4,7 +4,6 @@ pragma solidity 0.8.19;
 import {IArrakisMetaVault} from "./IArrakisMetaVault.sol";
 
 interface IRouterSwapResolver {
-
     // #region errors.
 
     error AddressZero();
