@@ -31,7 +31,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         PoolKey calldata,
         uint160,
         bytes calldata
-    ) external returns (bytes4) {
+    ) external virtual returns (bytes4) {
         revert NotImplemented();
     }
 
@@ -43,7 +43,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         uint160,
         int24,
         bytes calldata
-    ) external returns (bytes4) {
+    ) external virtual returns (bytes4) {
         revert NotImplemented();
     }
 
@@ -54,7 +54,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         PoolKey calldata,
         IPoolManager.ModifyLiquidityParams calldata,
         bytes calldata
-    ) external returns (bytes4) {
+    ) external virtual returns (bytes4) {
         if (sender != module) {
             revert OnlyModule();
         }
@@ -70,7 +70,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         IPoolManager.ModifyLiquidityParams calldata,
         BalanceDelta,
         bytes calldata
-    ) external returns (bytes4, BalanceDelta) {
+    ) external virtual returns (bytes4, BalanceDelta) {
         revert NotImplemented();
     }
 
@@ -81,7 +81,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         PoolKey calldata,
         IPoolManager.ModifyLiquidityParams calldata,
         bytes calldata
-    ) external returns (bytes4) {
+    ) external virtual returns (bytes4) {
         if (sender != module) {
             revert OnlyModule();
         }
@@ -97,7 +97,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         IPoolManager.ModifyLiquidityParams calldata,
         BalanceDelta,
         bytes calldata
-    ) external returns (bytes4, BalanceDelta) {
+    ) external virtual returns (bytes4, BalanceDelta) {
         revert NotImplemented();
     }
 
@@ -132,7 +132,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         uint256,
         uint256,
         bytes calldata
-    ) external returns (bytes4) {
+    ) external virtual returns (bytes4) {
         revert NotImplemented();
     }
 
@@ -144,7 +144,7 @@ contract PermissionHook is IHooks, IPermissionHook {
         uint256,
         uint256,
         bytes calldata
-    ) external returns (bytes4) {
+    ) external virtual returns (bytes4) {
         revert NotImplemented();
     }
 }

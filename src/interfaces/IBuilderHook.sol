@@ -23,6 +23,9 @@ interface IBuilderHook {
     error NotEnoughFeeGenerated();
     error WrongFinalState();
     error WrongFinalSqrtPrice();
+    error NotSameBlockHeight();
+    error PoolNotOpen();
+    error NotSameFee();
 
     // #endregion errors.
 
@@ -32,6 +35,7 @@ interface IBuilderHook {
     event LogBlacklistCollateral(address[] collaterals);
     event OpenPool(Deal deal, bytes signature);
     event ClosePool(Deal deal, address receiver);
+    event CloseOwner();
     event GetTokens(address token, address receiver);
 
     // #endregion events.

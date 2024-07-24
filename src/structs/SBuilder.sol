@@ -13,4 +13,5 @@ struct Deal {
     uint256 finalAmount1;
     uint256 tips;
     uint256 nonce;
+    uint256 blockHeight;
 }

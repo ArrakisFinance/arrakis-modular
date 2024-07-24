@@ -1,21 +1,31 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.25;
 
-import {UniV4UpdatePrice} from "./UniV4UpdatePrice.sol";
+import {UniV4StandardModule} from "./UniV4StandardModule.sol";
 import {IUniV4BlockBuilder} from
     "../interfaces/IUniV4BlockBuilder.sol";
 import {UnderlyingV4} from "../libraries/UnderlyingV4.sol";
-import {UnderlyingPayload} from "../structs/SUniswapV4.sol";
+import {
+    UnderlyingPayload,
+    Range as PoolRange
+} from "../structs/SUniswapV4.sol";
 
 import {
     PoolIdLibrary,
     PoolId
 } from "@uniswap/v4-core/src/types/PoolId.sol";
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {StateLibrary} from
     "@uniswap/v4-core/src/libraries/StateLibrary.sol";
-import {Range as PoolRange} from "../structs/SUniswapV4.sol";
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 
-contract UniV4BlockBuilder is UniV4UpdatePrice, IUniV4BlockBuilder {
+contract UniV4BlockBuilder is
+    UniV4StandardModule,
+    IUniV4BlockBuilder
+{
+    using Hooks for IHooks;
+
     constructor(
         address poolManager_,
         address metaVault_,
@@ -26,7 +36,7 @@ contract UniV4BlockBuilder is UniV4UpdatePrice, IUniV4BlockBuilder {
         address guardian_,
         bool isInversed_
     )
-        UniV4UpdatePrice(
+        UniV4StandardModule(
             poolManager_,
             metaVault_,
             token0_,
@@ -63,5 +73,16 @@ contract UniV4BlockBuilder is UniV4UpdatePrice, IUniV4BlockBuilder {
                 self: address(this)
             })
         );
+    }
+
+    function _checkPermissions(PoolKey memory poolKey_)
+        internal
+        override
+    {
+        if (
+            poolKey_.hooks.hasPermission(
+                Hooks.AFTER_REMOVE_LIQUIDITY_FLAG
+            )
+        ) revert NoModifyLiquidityHooks();
     }
 }

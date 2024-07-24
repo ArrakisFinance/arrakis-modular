@@ -28,6 +28,7 @@ import {BeforeSwapDelta} from
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {StateLibrary} from
     "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 
 import {EnumerableSet} from
     "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -40,13 +41,19 @@ import {
     IERC20
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {Initializable} from
+    "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
+import {console} from "forge-std/console.sol";
+
+// solhint-disable-next-line max-states-count
 contract BuilderHook is
     IBuilderHook,
     EIP712,
     Ownable,
+    Initializable,
     PermissionHook
 {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -92,20 +99,22 @@ contract BuilderHook is
         _;
     }
 
+    modifier onlyCurrentBlock(Deal memory deal_) {
+        if (deal_.blockHeight != block.number) {
+            revert NotSameBlockHeight();
+        }
+        _;
+    }
+
     // #endregion modifier.
 
     constructor(
-        address owner_,
         address module_,
         address signer_,
         address poolManager_,
-        PoolKey memory poolKey_,
         uint24 fee_
     ) PermissionHook(module_) EIP712("Builder Hook", "version 1") {
-        if (
-            owner_ == address(0) || signer == address(0)
-                || poolManager_ == address(0)
-        ) {
+        if (signer_ == address(0) || poolManager_ == address(0)) {
             revert AddressZero();
         }
 
@@ -113,24 +122,24 @@ contract BuilderHook is
             revert FeeZero();
         }
 
-        _initializeOwner(owner_);
-
-        PoolId poolId = poolKey_.toId();
-        (uint160 sqrtPriceX96,,,) =
-            IPoolManager(poolManager_).getSlot0(poolId);
-
-        if (sqrtPriceX96 == 0) revert SqrtPriceZero();
-
         signer = signer_;
         poolManager = IPoolManager(poolManager_);
-        _poolKey = poolKey_;
         fee = fee_;
     }
 
+    function initialize(address owner_) external initializer {
+        if (owner_ == address(0)) {
+            revert AddressZero();
+        }
+
+        _initializeOwner(owner_);
+    }
+
+    // solhint-disable-next-line function-max-lines, code-complexity
     function openPool(
         Deal calldata deal_,
         bytes calldata signature_
-    ) external payable {
+    ) external payable onlyCurrentBlock(deal_) {
         // #region onlyCaller.
 
         if (deal_.caller != msg.sender) {
@@ -141,7 +150,7 @@ contract BuilderHook is
 
         // #region check that the pool is closed.
 
-        if (deal_.nonce > nonce) {
+        if (deal_.nonce <= nonce) {
             revert CannotReOpenThePool();
         }
 
@@ -159,7 +168,7 @@ contract BuilderHook is
 
         bytes32 dealHash = deal_.hashDeal();
 
-        if (!signer.isValidSignatureNow(dealHash, signature_)) {
+        if (!signer.isValidSignatureNow(_hashTypedDataV4(dealHash), signature_)) {
             revert NotValidSignature();
         }
 
@@ -201,10 +210,11 @@ contract BuilderHook is
         emit OpenPool(deal_, signature_);
     }
 
+    // solhint-disable-next-line function-max-lines, code-complexity
     function closePool(
         Deal calldata deal_,
         address receiver_
-    ) external {
+    ) external onlyCurrentBlock(deal_) {
         // #region onlyCaller.
 
         if (deal_.caller != msg.sender) {
@@ -260,7 +270,27 @@ contract BuilderHook is
 
         // #endregion send back token to receiver.
 
+        // #region free storage.
+
+        payloadHash = bytes32(0);
+        fees0 = 0;
+        fees1 = 0;
+
+        // #endregion free storage.
+
         emit ClosePool(deal_, receiver_);
+    }
+
+    function ownerClosePool() external onlyOwner {
+        // #region free storage.
+
+        payloadHash = bytes32(0);
+        fees0 = 0;
+        fees1 = 0;
+
+        // #endregion free storage.
+
+        emit CloseOwner();
     }
 
     function whitelistCollaterals(address[] calldata collaterals_)
@@ -327,26 +357,61 @@ contract BuilderHook is
 
     // #region hooks.
 
+    function afterInitialize(
+        address,
+        PoolKey calldata key,
+        uint160,
+        int24,
+        bytes calldata
+    ) external override returns (bytes4) {
+        if (
+            Currency.unwrap(_poolKey.currency0) != address(0)
+                || Currency.unwrap(_poolKey.currency1) != address(0)
+        ) {
+            revert OnlyPool();
+        }
+
+        PoolId poolId = key.toId();
+        (uint160 sqrtPriceX96,,,) =
+            IPoolManager(poolManager).getSlot0(poolId);
+
+        if (sqrtPriceX96 == 0) revert SqrtPriceZero();
+
+        // #region check if poolKey fee is equal to builder hook fee.
+
+        if (key.fee != fee) {
+            revert NotSameFee();
+        }
+
+        // #endregion check if poolKey fee is equal to builder hook fee.
+
+        _poolKey = key;
+        return IHooks.afterInitialize.selector;
+    }
+
     /// @notice The hook called before a swap
     /// @param sender The initial msg.sender for the swap call
-    /// @param key The key for the pool
-    /// @param params The parameters for the swap
     /// @param hookData Arbitrary data handed into the PoolManager by the swapper to be be passed on to the hook
     /// @return bytes4 The function selector for the hook
     /// @return BeforeSwapDelta The hook's delta in specified and unspecified currencies. Positive: the hook is owed/took currency, negative: the hook owes/sent currency
     /// @return uint24 Optionally override the lp fee, only used if three conditions are met: 1) the Pool has a dynamic fee, 2) the value's leading bit is set to 1 (24th bit, 0x800000), 3) the value is less than or equal to the maximum fee (1 million)
+    // solhint-disable-next-line function-max-lines, code-complexity
     function beforeSwap(
         address sender,
-        PoolKey calldata key,
-        IPoolManager.SwapParams calldata params,
+        PoolKey calldata,
+        IPoolManager.SwapParams calldata,
         bytes calldata hookData
     )
         external
         override
         onlyPoolManager
-        onlyPool(key)
         returns (bytes4, BeforeSwapDelta, uint24)
     {
+        /// @dev pool not open by block builder.
+        if (payloadHash == bytes32(0)) {
+            revert PoolNotOpen();
+        }
+
         if (hookData.length == 0) {
             return (
                 IHooks.beforeSwap.selector,
@@ -373,6 +438,14 @@ contract BuilderHook is
             );
         }
 
+        // #region check that signed block number is current block.
+
+        if (deal.blockHeight != block.number) {
+            revert NotSameBlockHeight();
+        }
+
+        // #endregion check that signed block number is current block.
+
         poolManager.updateDynamicLPFee(_poolKey, 0);
         isFeeFreeSwapHappened[dealHash] = true;
 
@@ -385,25 +458,16 @@ contract BuilderHook is
 
     /// @notice The hook called after a swap
     /// @param sender The initial msg.sender for the swap call
-    /// @param key The key for the pool
-    /// @param params The parameters for the swap
-    /// @param delta The amount owed to the caller (positive) or owed to the pool (negative)
     /// @param hookData Arbitrary data handed into the PoolManager by the swapper to be be passed on to the hook
     /// @return bytes4 The function selector for the hook
     /// @return int128 The hook's delta in unspecified currency. Positive: the hook is owed/took currency, negative: the hook owes/sent currency
     function afterSwap(
         address sender,
-        PoolKey calldata key,
-        IPoolManager.SwapParams calldata params,
-        BalanceDelta delta,
+        PoolKey calldata,
+        IPoolManager.SwapParams calldata,
+        BalanceDelta,
         bytes calldata hookData
-    )
-        external
-        override
-        onlyPoolManager
-        onlyPool(key)
-        returns (bytes4, int128)
-    {
+    ) external override onlyPoolManager returns (bytes4, int128) {
         if (hookData.length == 0) {
             return (IHooks.afterSwap.selector, 0);
         }

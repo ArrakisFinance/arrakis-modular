@@ -27,6 +27,8 @@ import {IERC20Metadata} from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {Initializable} from
+    "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 // #endregion openzeppelin.
 
 // #region uniswap v4.
@@ -69,8 +71,6 @@ contract UniV4UpdatePriceTest is TestWrapper {
 
     address public constant USDC =
         0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address public constant USDT =
-        0xdAC17F958D2ee523a2206206994597C13D831ec7;
     address public constant WETH =
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
@@ -332,7 +332,10 @@ contract UniV4UpdatePriceTest is TestWrapper {
             // #region withdraw.
 
             console.log("New Price : %d", newPrice);
-            console.log("Expected New Price : %d", TickMath.getSqrtPriceAtTick(tick));
+            console.log(
+                "Expected New Price : %d",
+                TickMath.getSqrtPriceAtTick(tick)
+            );
 
             assertEq(newPrice, TickMath.getSqrtPriceAtTick(tick));
         }
