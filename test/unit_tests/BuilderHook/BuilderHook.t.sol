@@ -15,7 +15,11 @@ import {IUniV4StandardModule} from
 import {IBuilderHook} from "../../../src/interfaces/IBuilderHook.sol";
 import {IPermissionHook} from
     "../../../src/interfaces/IPermissionHook.sol";
-import {PIPS} from "../../../src/constants/CArrakis.sol";
+import {
+    PIPS,
+    NATIVE_COIN,
+    BASE
+} from "../../../src/constants/CArrakis.sol";
 import {IOwnable} from "../../../src/interfaces/IOwnable.sol";
 import {Deal} from "../../../src/structs/SBuilder.sol";
 import {DEAL_EIP712HASH} from "../../../src/constants/CBuilder.sol";
@@ -44,16 +48,22 @@ import {
     PoolIdLibrary,
     PoolId
 } from "@uniswap/v4-core/src/types/PoolId.sol";
+import {LPFeeLibrary} from
+    "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
 // #endregion uniswap v4.
 
 import {SignatureChecker} from
     "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 // #region mock contracts.
 
 import {GuardianMock} from "./mocks/Guardian.sol";
 import {ArrakisMetaVaultMock} from "./mocks/ArrakisMetaVault.sol";
+import {SimpleSwapper} from "./mocks/SimpleSwapper.sol";
 
 // #endregion mock contracts.
 
@@ -63,6 +73,7 @@ contract BuilderHookTest is TestWrapper {
     using PoolIdLibrary for PoolKey;
     using BuilderDeal for Deal;
     using SignatureChecker for address;
+    using Address for address payable;
 
     // #region constants.
     address public constant USDC =
@@ -84,6 +95,7 @@ contract BuilderHookTest is TestWrapper {
 
     UniV4BlockBuilder public module;
     BuilderHook public hook;
+    SimpleSwapper public simpleSwapper;
 
     function setUp() public {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
@@ -107,6 +119,12 @@ contract BuilderHookTest is TestWrapper {
         poolManager = new PoolManager(0);
 
         // #endregion do a poolManager deployment.
+
+        // #region create simple swapper.
+
+        simpleSwapper = new SimpleSwapper(address(poolManager));
+
+        // #endregion create simple swapper.
 
         // #region create a uni V4 standard module.
         uint256 init0 = 3000e6;
@@ -157,7 +175,7 @@ contract BuilderHookTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
-            fee: fee,
+            fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,
             /// @dev 1% swap fee.
             tickSpacing: 10,
             hooks: IHooks(address(hook))
@@ -242,7 +260,6 @@ contract BuilderHookTest is TestWrapper {
         uint256 finalAmount0 = 0;
         uint256 finalAmount1 = 0;
         uint256 tips = 0;
-        uint256 nonce = 1;
         uint256 blockHeight = block.number;
 
         // #region create a deal.
@@ -258,7 +275,6 @@ contract BuilderHookTest is TestWrapper {
             finalAmount0: finalAmount0,
             finalAmount1: finalAmount1,
             tips: tips,
-            nonce: nonce,
             blockHeight: blockHeight
         });
 
@@ -288,7 +304,6 @@ contract BuilderHookTest is TestWrapper {
         uint256 finalAmount0 = 0;
         uint256 finalAmount1 = 0;
         uint256 tips = 0;
-        uint256 nonce = 1;
         uint256 blockHeight = block.number - 1;
 
         // #region create a deal.
@@ -304,7 +319,6 @@ contract BuilderHookTest is TestWrapper {
             finalAmount0: finalAmount0,
             finalAmount1: finalAmount1,
             tips: tips,
-            nonce: nonce,
             blockHeight: blockHeight
         });
 
@@ -321,6 +335,72 @@ contract BuilderHookTest is TestWrapper {
     }
 
     function testOpenPoolCannotReOpenThePool() public {
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 0;
+            uint256 finalAmount1 = 0;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        vm.expectRevert(IBuilderHook.CannotReOpenThePool.selector);
+        vm.prank(caller);
+        hook.openPool(d, signature);
+    }
+
+    function testOpenPoolNotSameBlockHeight() public {
         address caller =
             vm.addr(uint256(keccak256(abi.encode("Caller"))));
         address collateralToken = WETH;
@@ -334,8 +414,7 @@ contract BuilderHookTest is TestWrapper {
         uint256 finalAmount0 = 0;
         uint256 finalAmount1 = 0;
         uint256 tips = 0;
-        uint256 nonce = 0;
-        uint256 blockHeight = block.number;
+        uint256 blockHeight = block.number - 1;
 
         // #region create a deal.
 
@@ -350,7 +429,6 @@ contract BuilderHookTest is TestWrapper {
             finalAmount0: finalAmount0,
             finalAmount1: finalAmount1,
             tips: tips,
-            nonce: nonce,
             blockHeight: blockHeight
         });
 
@@ -362,7 +440,7 @@ contract BuilderHookTest is TestWrapper {
 
         // #endregion create a signature.
 
-        vm.expectRevert(IBuilderHook.CannotReOpenThePool.selector);
+        vm.expectRevert(IBuilderHook.NotSameBlockHeight.selector);
         vm.prank(caller);
         hook.openPool(deal, signature);
     }
@@ -381,7 +459,6 @@ contract BuilderHookTest is TestWrapper {
         uint256 finalAmount0 = 0;
         uint256 finalAmount1 = 0;
         uint256 tips = 0;
-        uint256 nonce = 1;
         uint256 blockHeight = block.number;
 
         // #region create a deal.
@@ -397,7 +474,6 @@ contract BuilderHookTest is TestWrapper {
             finalAmount0: finalAmount0,
             finalAmount1: finalAmount1,
             tips: tips,
-            nonce: nonce,
             blockHeight: blockHeight
         });
 
@@ -421,8 +497,7 @@ contract BuilderHookTest is TestWrapper {
         address caller;
 
         {
-            caller =
-                vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
             address collateralToken = WETH;
             uint256 collateralAmount = 1 ether;
             address feeFreeSwapper = vm.addr(
@@ -434,7 +509,6 @@ contract BuilderHookTest is TestWrapper {
             uint256 finalAmount0 = 0;
             uint256 finalAmount1 = 0;
             uint256 tips = 0;
-            uint256 nonce = 1;
             uint256 blockHeight = block.number;
 
             // #region create a deal.
@@ -450,7 +524,6 @@ contract BuilderHookTest is TestWrapper {
                 finalAmount0: finalAmount0,
                 finalAmount1: finalAmount1,
                 tips: tips,
-                nonce: nonce,
                 blockHeight: blockHeight
             });
 
@@ -480,14 +553,13 @@ contract BuilderHookTest is TestWrapper {
         hook.openPool(deal, signature);
     }
 
-    function testOpenPool() public {
+    function testOpenPoolNotEnoughNativeCoinSent() public {
         Deal memory d;
         address caller;
 
         {
-            caller =
-                vm.addr(uint256(keccak256(abi.encode("Caller"))));
-            address collateralToken = WETH;
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = NATIVE_COIN;
             uint256 collateralAmount = 1 ether;
             address feeFreeSwapper = vm.addr(
                 uint256(keccak256(abi.encode("Fee Free Swapper")))
@@ -498,7 +570,6 @@ contract BuilderHookTest is TestWrapper {
             uint256 finalAmount0 = 0;
             uint256 finalAmount1 = 0;
             uint256 tips = 0;
-            uint256 nonce = 1;
             uint256 blockHeight = block.number;
 
             // #region create a deal.
@@ -514,7 +585,67 @@ contract BuilderHookTest is TestWrapper {
                 finalAmount0: finalAmount0,
                 finalAmount1: finalAmount1,
                 tips: tips,
-                nonce: nonce,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = NATIVE_COIN;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(caller, 1e18);
+
+        vm.prank(caller);
+        vm.expectRevert(IBuilderHook.NotEnoughNativeCoinSent.selector);
+        hook.openPool(d, signature);
+    }
+
+    function testOpenPool() public {
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 0;
+            uint256 finalAmount1 = 0;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
                 blockHeight: blockHeight
             });
 
@@ -545,7 +676,2040 @@ contract BuilderHookTest is TestWrapper {
         hook.openPool(d, signature);
     }
 
+    function testOpenPoolNativeCoin() public {
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = NATIVE_COIN;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 0;
+            uint256 finalAmount1 = 0;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = NATIVE_COIN;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(caller, 1e18);
+        bytes memory da = abi.encodeWithSelector(BuilderHook.openPool.selector, d, signature);
+
+        vm.prank(caller);
+        payable(address(hook)).functionCallWithValue(da, 1 ether);
+    }
+
     // #endregion test openPool.
+
+    // #region test closePool.
+
+    function testClosePoolNotSameBlockHeight() public {
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 0;
+            uint256 finalAmount1 = 0;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region close the pool.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        d.blockHeight = block.number + 1;
+
+        vm.prank(caller);
+        vm.expectRevert(IBuilderHook.NotSameBlockHeight.selector);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+    }
+
+    function testClosePoolOnlyCaller() public {
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 0;
+            uint256 finalAmount1 = 0;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region close the pool.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.expectRevert(IBuilderHook.OnlyCaller.selector);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+    }
+
+    function testClosePoolNotRightDeal() public {
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 0;
+            uint256 finalAmount1 = 0;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region close the pool.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        d.feeGeneration0 = d.feeGeneration0 + 1;
+
+        vm.expectRevert(IBuilderHook.NotRightDeal.selector);
+        vm.prank(caller);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+    }
+
+    function testClosePoolNotEnoughFeeGenerated0() public {
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 1;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 0;
+            uint256 finalAmount1 = 0;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region close the pool.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.expectRevert(IBuilderHook.NotEnoughFeeGenerated.selector);
+        vm.prank(caller);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+    }
+
+    function testClosePoolNotEnoughFeeGenerated1() public {
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 1;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 0;
+            uint256 finalAmount1 = 0;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region close the pool.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.expectRevert(IBuilderHook.NotEnoughFeeGenerated.selector);
+        vm.prank(caller);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+    }
+
+    function testClosePoolNotEnoughFeeGenerated0And1() public {
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 1;
+            uint256 feeGeneration1 = 1;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 0;
+            uint256 finalAmount1 = 0;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region close the pool.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.expectRevert(IBuilderHook.NotEnoughFeeGenerated.selector);
+        vm.prank(caller);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+    }
+
+    function testClosePoolWrongFinalState0() public {
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 1;
+            uint256 finalAmount1 = 0;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region close the pool.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.expectRevert(IBuilderHook.WrongFinalState.selector);
+        vm.prank(caller);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+    }
+
+    function testClosePoolWrongFinalState1() public {
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 0;
+            uint256 finalAmount1 = 1;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region close the pool.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.expectRevert(IBuilderHook.WrongFinalState.selector);
+        vm.prank(caller);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+    }
+
+    function testClosePoolWrongFinalState0And1() public {
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 1;
+            uint256 finalAmount1 = 1;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region close the pool.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.expectRevert(IBuilderHook.WrongFinalState.selector);
+        vm.prank(caller);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+    }
+
+    function testClosePoolWrongFinalSqrtPrice() public {
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96 + 1;
+            uint256 finalAmount0 = 0;
+            uint256 finalAmount1 = 0;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region close the pool.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.expectRevert(IBuilderHook.WrongFinalSqrtPrice.selector);
+        vm.prank(caller);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+    }
+
+    function testClosePool() public {
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 0;
+            uint256 finalAmount1 = 0;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region close the pool.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.prank(caller);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+    }
+
+    function testClosePoolNativeCoin() public {
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = NATIVE_COIN;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 = sqrtPriceX96;
+            uint256 finalAmount0 = 0;
+            uint256 finalAmount1 = 0;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = NATIVE_COIN;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(caller, 1e18);
+
+        vm.prank(caller);
+        hook.openPool{value: 1 ether}(d, signature);
+
+        // #endregion open the pool.
+
+        // #region close the pool.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.prank(caller);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+    }
+
+    // #endregion test closePool.
+
+    // #region test whitelist collaterals.
+
+    function testWhitelistCollateralsAddressZero() public {
+        address[] memory collaterals = new address[](1);
+
+        vm.prank(owner);
+        vm.expectRevert(IPermissionHook.AddressZero.selector);
+        hook.whitelistCollaterals(collaterals);
+    }
+
+    function testWhitelistCollateralsAlreadyWhitelistedCollateral()
+        public
+    {
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        vm.prank(owner);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBuilderHook.AlreadyWhitelistedCollateral.selector,
+                WETH
+            )
+        );
+        hook.whitelistCollaterals(collaterals);
+    }
+
+    // #endregion test whitelist collaterals.
+
+    // #region test blacklist collaterals.
+
+    function testBlacklistCollateralsNotAlreadyACollateral() public {
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBuilderHook.NotAlreadyACollateral.selector, WETH
+            )
+        );
+        hook.blacklistCollaterals(collaterals);
+    }
+
+    function testBlacklistCollaterals() public {
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        vm.prank(owner);
+        hook.blacklistCollaterals(collaterals);
+    }
+
+    // #endregion test blacklist collaterals.
+
+    // #region test getTokens.
+
+    function testGetTokensNativeCoin() public {
+        deal(address(hook), 1 ether);
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.prank(owner);
+        hook.getTokens(NATIVE_COIN, receiver);
+    }
+
+    function testGetTokensWETH() public {
+        deal(WETH, address(hook), 1 ether);
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.prank(owner);
+        hook.getTokens(WETH, receiver);
+    }
+
+    function testGetTokensTokenAddressZero() public {
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.prank(owner);
+        vm.expectRevert(IPermissionHook.AddressZero.selector);
+        hook.getTokens(address(0), receiver);
+    }
+
+    function testGetTokensReceiverAddressZero() public {
+        deal(WETH, address(hook), 1 ether);
+
+        address receiver = address(0);
+
+        vm.prank(owner);
+        vm.expectRevert(IPermissionHook.AddressZero.selector);
+        hook.getTokens(WETH, receiver);
+    }
+
+    // #endregion test getTokens.
+
+    // #region test swap.
+
+    function testSwapNoFree() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        // #region deposit funds.
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20(USDC).approve(address(module), init0);
+        IERC20(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+
+        // #region assertions.
+
+        assertEq(IERC20(USDC).balanceOf(depositor), 0);
+        assertEq(IERC20(WETH).balanceOf(depositor), 0);
+
+        // #endregion assertions.
+
+        // #endregion deposit funds.
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            init0,
+            init1
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion do rebalance.
+
+        // #region open pool and do swap.
+
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = vm.addr(
+                uint256(keccak256(abi.encode("Fee Free Swapper")))
+            );
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 =
+                1_356_903_004_987_622_777_985_699_151_499_184;
+            uint256 finalAmount0 = 1_999_225_106;
+            uint256 finalAmount1 = 1_277_829_913_980_718_268;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region do swap fee free swap.
+
+        simpleSwapper.setPoolKey(poolKey);
+        simpleSwapper.doSwapOne();
+
+        // {
+        //     (uint256 amount0, uint256 amount1, uint256 fees0, uint256 fees1) =
+        //         module.getAmountsAndFees();
+
+        //     console.logUint(amount0);
+        //     console.logUint(amount1);
+
+        //     console.logUint(fees0);
+        //     console.logUint(fees1);
+        // }
+
+        // {
+        //     PoolId poolId = poolKey.toId();
+        //     (uint160 sqrt,,,) =
+        //         IPoolManager(address(poolManager)).getSlot0(poolId);
+
+        //     console.log("New sqrt price : %d", sqrt);
+        // }
+
+        // #endregion do swap fee free swap.
+
+        // #region close the pool.
+
+        vm.prank(caller);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+
+        // #endregion open pool and do swap.
+    }
+
+    function testSwapFree() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        // #region deposit funds.
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20(USDC).approve(address(module), init0);
+        IERC20(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+
+        // #region assertions.
+
+        assertEq(IERC20(USDC).balanceOf(depositor), 0);
+        assertEq(IERC20(WETH).balanceOf(depositor), 0);
+
+        // #endregion assertions.
+
+        // #endregion deposit funds.
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            init0,
+            init1
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion do rebalance.
+
+        // #region open pool and do swap.
+
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = address(simpleSwapper);
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 =
+                1_356_903_004_987_622_777_985_699_151_499_184;
+            uint256 finalAmount0 = 1_999_225_106;
+            uint256 finalAmount1 = 1_277_829_913_980_718_268;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region do swap fee free swap.
+
+        simpleSwapper.setSwapData(abi.encode(d));
+        simpleSwapper.setPoolKey(poolKey);
+        simpleSwapper.doSwapOne();
+
+        // {
+        //     (uint256 amount0, uint256 amount1,,) =
+        //         module.getAmountsAndFees();
+
+        //     console.logUint(amount0);
+        //     console.logUint(amount1);
+        // }
+
+        // {
+        //     PoolId poolId = poolKey.toId();
+        //     (uint160 sqrt,,,) =
+        //         IPoolManager(address(poolManager)).getSlot0(poolId);
+
+        //     console.log("New sqrt price : %d", sqrt);
+        // }
+
+        // #endregion do swap fee free swap.
+
+        // #region close the pool.
+
+        vm.prank(caller);
+        hook.closePool(d, receiver);
+
+        // #endregion close the pool.
+
+        // #endregion open pool and do swap.
+    }
+
+    function testSwapPoolNotOpen() public {
+        simpleSwapper.setPoolKey(poolKey);
+        vm.expectRevert(IBuilderHook.PoolNotOpen.selector);
+        simpleSwapper.doSwapOne();
+    }
+
+    function testSwapNotRightDeal() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        // #region deposit funds.
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20(USDC).approve(address(module), init0);
+        IERC20(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+
+        // #region assertions.
+
+        assertEq(IERC20(USDC).balanceOf(depositor), 0);
+        assertEq(IERC20(WETH).balanceOf(depositor), 0);
+
+        // #endregion assertions.
+
+        // #endregion deposit funds.
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            init0,
+            init1
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion do rebalance.
+
+        // #region open pool and do swap.
+
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = address(simpleSwapper);
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 =
+                1_356_903_004_987_622_777_985_699_151_499_184;
+            uint256 finalAmount0 = 1_999_225_106;
+            uint256 finalAmount1 = 1_277_829_913_980_718_268;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region do swap fee free swap.
+
+        d.feeGeneration0 = d.feeGeneration0 + 1;
+
+        simpleSwapper.setSwapData(abi.encode(d));
+        simpleSwapper.setPoolKey(poolKey);
+        vm.expectRevert(IBuilderHook.NotRightDeal.selector);
+        simpleSwapper.doSwapOne();
+
+        // #endregion do swap fee free swap.
+
+        // #endregion open pool and do swap.
+    }
+
+    function testSwapFeeFreeSwapHappened() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        // #region deposit funds.
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20(USDC).approve(address(module), init0);
+        IERC20(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+
+        // #region assertions.
+
+        assertEq(IERC20(USDC).balanceOf(depositor), 0);
+        assertEq(IERC20(WETH).balanceOf(depositor), 0);
+
+        // #endregion assertions.
+
+        // #endregion deposit funds.
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            init0,
+            init1
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion do rebalance.
+
+        // #region open pool and do swap.
+
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = address(simpleSwapper);
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 =
+                1_356_903_004_987_622_777_985_699_151_499_184;
+            uint256 finalAmount0 = 1_999_225_106;
+            uint256 finalAmount1 = 1_277_829_913_980_718_268;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region do swap fee free swap.
+
+        simpleSwapper.setSwapData(abi.encode(d));
+        simpleSwapper.setPoolKey(poolKey);
+        simpleSwapper.doSwapOne();
+
+        vm.expectRevert(IBuilderHook.FeeFreeSwapHappened.selector);
+        simpleSwapper.doSwapOne();
+
+        // #endregion do swap fee free swap.
+
+        // #endregion open pool and do swap.
+    }
+
+    function testSwapNotFeeFreeSwapper() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        // #region deposit funds.
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20(USDC).approve(address(module), init0);
+        IERC20(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+
+        // #region assertions.
+
+        assertEq(IERC20(USDC).balanceOf(depositor), 0);
+        assertEq(IERC20(WETH).balanceOf(depositor), 0);
+
+        // #endregion assertions.
+
+        // #endregion deposit funds.
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            init0,
+            init1
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion do rebalance.
+
+        // #region open pool and do swap.
+
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper =
+                vm.addr(uint256(keccak256(abi.encode(""))));
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 =
+                1_356_903_004_987_622_777_985_699_151_499_184;
+            uint256 finalAmount0 = 1_999_225_106;
+            uint256 finalAmount1 = 1_277_829_913_980_718_268;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region do swap fee free swap.
+
+        simpleSwapper.setSwapData(abi.encode(d));
+        simpleSwapper.setPoolKey(poolKey);
+        vm.expectRevert(IBuilderHook.NotFeeFreeSwapper.selector);
+        simpleSwapper.doSwapOne();
+
+        // #endregion do swap fee free swap.
+
+        // #endregion open pool and do swap.
+    }
+
+    function testSwapNotSameBlockHeight() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        // #region deposit funds.
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20(USDC).approve(address(module), init0);
+        IERC20(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+
+        // #region assertions.
+
+        assertEq(IERC20(USDC).balanceOf(depositor), 0);
+        assertEq(IERC20(WETH).balanceOf(depositor), 0);
+
+        // #endregion assertions.
+
+        // #endregion deposit funds.
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            init0,
+            init1
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges);
+
+        // #endregion do rebalance.
+
+        // #region open pool and do swap.
+
+        // #region open the pool.
+
+        Deal memory d;
+        address caller;
+
+        {
+            caller = vm.addr(uint256(keccak256(abi.encode("Caller"))));
+            address collateralToken = WETH;
+            uint256 collateralAmount = 1 ether;
+            address feeFreeSwapper = address(simpleSwapper);
+            uint256 feeGeneration0 = 0;
+            uint256 feeGeneration1 = 0;
+            uint160 finalSqrtPriceX96 =
+                1_356_903_004_987_622_777_985_699_151_499_184;
+            uint256 finalAmount0 = 1_999_225_106;
+            uint256 finalAmount1 = 1_277_829_913_980_718_268;
+            uint256 tips = 0;
+            uint256 blockHeight = block.number;
+
+            // #region create a deal.
+
+            d = Deal({
+                caller: caller,
+                collateralToken: collateralToken,
+                collateralAmount: collateralAmount,
+                feeFreeSwapper: feeFreeSwapper,
+                feeGeneration0: feeGeneration0,
+                feeGeneration1: feeGeneration1,
+                finalSqrtPriceX96: finalSqrtPriceX96,
+                finalAmount0: finalAmount0,
+                finalAmount1: finalAmount1,
+                tips: tips,
+                blockHeight: blockHeight
+            });
+
+            // #endregion create a deal.
+        }
+
+        // #region whitelist collateral.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion whitelist collateral.
+
+        // #region create a signature.
+
+        bytes memory signature = getEOASignedDeal(d, signer);
+
+        // #endregion create a signature.
+
+        deal(WETH, caller, 1e18);
+        vm.prank(caller);
+        IERC20(WETH).approve(address(hook), 1 ether);
+
+        vm.prank(caller);
+        hook.openPool(d, signature);
+
+        // #endregion open the pool.
+
+        // #region do swap fee free swap.
+
+        vm.roll(d.blockHeight + 1);
+
+        simpleSwapper.setSwapData(abi.encode(d));
+        simpleSwapper.setPoolKey(poolKey);
+        vm.expectRevert(IBuilderHook.NotSameBlockHeight.selector);
+        simpleSwapper.doSwapOne();
+
+        // #endregion do swap fee free swap.
+
+        // #endregion open pool and do swap.
+    }
+
+    // #endregion test swap.
+
+    // #region test collaterals.
+
+    function testCollaterals() public {
+        // #region add collaterals.
+
+        address[] memory collaterals = new address[](1);
+        collaterals[0] = WETH;
+
+        vm.prank(owner);
+        hook.whitelistCollaterals(collaterals);
+
+        // #endregion add collaterals.
+
+        address[] memory currentCollaterals = hook.collaterals();
+
+        assert(currentCollaterals.length == collaterals.length);
+        assertEq(currentCollaterals[0], WETH);
+    }
+
+    // #endregion test collaterals.
 
     // #region mock functions.
 

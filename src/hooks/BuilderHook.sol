@@ -74,7 +74,7 @@ contract BuilderHook is
     // #region public properties.
 
     bytes32 public payloadHash;
-    uint256 public nonce;
+    uint256 public blockHeight;
     uint256 public fees0;
     uint256 public fees1;
     mapping(bytes32 => bool) public isFeeFreeSwapHappened;
@@ -86,15 +86,6 @@ contract BuilderHook is
     modifier onlyPoolManager() {
         if (msg.sender != address(poolManager)) {
             revert OnlyPoolManager();
-        }
-        _;
-    }
-
-    modifier onlyPool(PoolKey memory poolKey_) {
-        bytes32 poolId_ = PoolId.unwrap(poolKey_.toId());
-        bytes32 _poolId = PoolId.unwrap(_poolKey.toId());
-        if (_poolId != poolId_) {
-            revert OnlyPool();
         }
         _;
     }
@@ -150,8 +141,12 @@ contract BuilderHook is
 
         // #region check that the pool is closed.
 
-        if (deal_.nonce <= nonce) {
+        if (deal_.blockHeight <= blockHeight) {
             revert CannotReOpenThePool();
+        }
+
+        if (deal_.blockHeight != block.number) {
+            revert NotSameBlockHeight();
         }
 
         // #endregion check that the pool is closed.
@@ -168,7 +163,11 @@ contract BuilderHook is
 
         bytes32 dealHash = deal_.hashDeal();
 
-        if (!signer.isValidSignatureNow(_hashTypedDataV4(dealHash), signature_)) {
+        if (
+            !signer.isValidSignatureNow(
+                _hashTypedDataV4(dealHash), signature_
+            )
+        ) {
             revert NotValidSignature();
         }
 
@@ -184,7 +183,7 @@ contract BuilderHook is
                     && msg.value < amountToTransfer
             ) {
                 revert NotEnoughNativeCoinSent();
-            } else {
+            } else if (deal_.collateralToken != NATIVE_COIN) {
                 IERC20(deal_.collateralToken).safeTransferFrom(
                     msg.sender, address(this), amountToTransfer
                 );
@@ -203,7 +202,7 @@ contract BuilderHook is
         // #region store the hash for closing the pool.
 
         payloadHash = dealHash;
-        nonce = deal_.nonce;
+        blockHeight = block.number;
 
         // #endregion store the hash for closing the pool.
 
@@ -281,18 +280,6 @@ contract BuilderHook is
         emit ClosePool(deal_, receiver_);
     }
 
-    function ownerClosePool() external onlyOwner {
-        // #region free storage.
-
-        payloadHash = bytes32(0);
-        fees0 = 0;
-        fees1 = 0;
-
-        // #endregion free storage.
-
-        emit CloseOwner();
-    }
-
     function whitelistCollaterals(address[] calldata collaterals_)
         external
         onlyOwner
@@ -338,7 +325,7 @@ contract BuilderHook is
     ) external onlyOwner returns (uint256 amount) {
         // #region check if token is address(0).
 
-        if (token_ == address(0)) {
+        if (token_ == address(0) || receiver_ == address(0)) {
             revert AddressZero();
         }
 
@@ -379,9 +366,7 @@ contract BuilderHook is
 
         // #region check if poolKey fee is equal to builder hook fee.
 
-        if (key.fee != fee) {
-            revert NotSameFee();
-        }
+        poolManager.updateDynamicLPFee(key, fee);
 
         // #endregion check if poolKey fee is equal to builder hook fee.
 
@@ -475,11 +460,6 @@ contract BuilderHook is
 
         if (sender != deal.feeFreeSwapper) {
             revert NotFeeFreeSwapper();
-        }
-
-        bytes32 dealHash = deal.hashDeal();
-        if (dealHash != payloadHash) {
-            revert NotRightDeal();
         }
 
         poolManager.updateDynamicLPFee(_poolKey, fee);
