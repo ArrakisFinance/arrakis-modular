@@ -7,8 +7,6 @@ import {IPrivateVaultNFT} from "./interfaces/IPrivateVaultNFT.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 
 import {ERC20} from "@solady/contracts/tokens/ERC20.sol";
-// TODO use solady ERC721
-// import {ERC721} from "@solady/contracts/tokens/ERC20.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
