@@ -15,6 +15,8 @@ import {PIPS} from "../../../src/constants/CArrakis.sol";
 import {PrivateVaultNFT} from "../../../src/PrivateVaultNFT.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC721Receiver} from
+    "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -26,7 +28,10 @@ import {LpModuleMock} from "./mocks/LpModuleMock.sol";
 
 // #endregion mocks.
 
-contract ArrakisMetaVaultPrivateTest is TestWrapper {
+contract ArrakisMetaVaultPrivateTest is
+    TestWrapper,
+    IERC721Receiver
+{
     // #region constant properties.
 
     address public constant WETH =
@@ -421,6 +426,15 @@ contract ArrakisMetaVaultPrivateTest is TestWrapper {
     }
 
     // #endregion test blacklist depositors.
+
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    ) external returns (bytes4) {
+        return IERC721Receiver.onERC721Received.selector;
+    }
 
     // #region test owner.
 

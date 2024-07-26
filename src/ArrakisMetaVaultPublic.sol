@@ -56,7 +56,7 @@ contract ArrakisMetaVaultPublic is
         uint256 supply = totalSupply();
 
         uint256 proportion = FullMath.mulDivRoundingUp(
-            shares_, BASE, supply > 0 ? supply : 1 ether
+            shares_, BASE, supply > 0 ? supply : BASE
         );
 
         if (receiver_ == address(0)) revert AddressZero("Receiver");
@@ -84,7 +84,6 @@ contract ArrakisMetaVaultPublic is
     ) external returns (uint256 amount0, uint256 amount1) {
         if (shares_ == 0) revert BurnZero();
         uint256 supply = totalSupply();
-        if (shares_ > supply) revert BurnOverflow();
 
         uint256 proportion = FullMath.mulDiv(shares_, BASE, supply);
 

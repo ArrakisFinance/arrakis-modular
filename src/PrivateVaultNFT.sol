@@ -21,7 +21,7 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
     /// @param to_ address where to send the NFT.
     /// @param tokenId_ id of the NFT to mint.
     function mint(address to_, uint256 tokenId_) external onlyOwner {
-        _mint(to_, tokenId_);
+        _safeMint(to_, tokenId_);
     }
 
     function tokenURI(uint256 tokenId_) public view override returns (string memory) {

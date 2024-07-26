@@ -81,8 +81,8 @@ contract ValantisModulePublic is
 
         // #region increase allowance to alm.
 
-        token0.safeIncreaseAllowance(address(alm), amount0);
-        token1.safeIncreaseAllowance(address(alm), amount1);
+        token0.forceApprove(address(alm), amount0);
+        token1.forceApprove(address(alm), amount1);
 
         // #endregion increase allowance to alm.
 
@@ -106,5 +106,14 @@ contract ValantisModulePublic is
             notFirstDeposit = false;
         }
         return super.withdraw(receiver_, proportion_);
+    }
+
+    function initializePosition(bytes calldata data_)
+        external
+        override
+        onlyMetaVault
+    {
+        notFirstDeposit = true;
+        _initializePosition();
     }
 }

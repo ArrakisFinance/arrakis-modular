@@ -11,7 +11,6 @@ interface IArrakisMetaVault {
 
     /// @dev triggered when an address that should not
     /// be zero is equal to address zero.
-    // TODO remove the argument.
     error AddressZero(string property);
 
     /// @dev triggered when the caller is different than
@@ -69,6 +68,17 @@ interface IArrakisMetaVault {
 
     /// @dev triggered when function is called by someone else than the owner.
     error OnlyOwner();
+
+    /// @dev triggered when setModule action try to remove funds.
+    error WithdrawNotAllowed();
+
+    /// @dev triggered when setModule function end without
+    /// initiliazePosition call.
+    error PositionNotInitialized();
+
+    /// @dev triggered when the first external call of setModule function
+    /// isn't InitializePosition function.
+    error NotPositionInitializationCall();
 
     // #endregion errors.
 

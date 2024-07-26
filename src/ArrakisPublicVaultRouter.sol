@@ -93,13 +93,13 @@ contract ArrakisPublicVaultRouter is
 
     /// @notice function used to pause the router.
     /// @dev only callable by owner
-    function pause() external whenNotPaused onlyOwner {
+    function pause() external onlyOwner {
         _pause();
     }
 
     /// @notice function used to unpause the router.
     /// @dev only callable by owner
-    function unpause() external whenPaused onlyOwner {
+    function unpause() external onlyOwner {
         _unpause();
     }
 
@@ -114,7 +114,7 @@ contract ArrakisPublicVaultRouter is
 
     // #endregion owner functions.
 
-    /// @notice addLiquidity adds liquidity to meta vault of iPnterest (mints L tokens)
+    /// @notice addLiquidity adds liquidity to meta vault of interest (mints L tokens)
     /// @param params_ AddLiquidityData struct containing data for adding liquidity
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
@@ -420,7 +420,7 @@ contract ArrakisPublicVaultRouter is
         (amount0, amount1) = _removeLiquidity(params_.removeData);
     }
 
-    /// @notice wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of iPnterest (mints L tokens)
+    /// @notice wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of interest (mints L tokens)
     /// @param params_ AddLiquidityData struct containing data for adding liquidity
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
@@ -610,25 +610,31 @@ contract ArrakisPublicVaultRouter is
             ? params_.addData.amount1Max + amount1Diff
             : params_.addData.amount1Max - amount1Diff;
 
-        if (amount0Use > amount0) {
-            if (token0 == address(weth)) {
-                weth.withdraw(amount0Use - amount0);
-                payable(msg.sender).sendValue(amount0Use - amount0);
-            } else {
-                uint256 balance =
-                    IERC20(token0).balanceOf(address(this));
-                IERC20(token0).safeTransfer(msg.sender, balance);
+        unchecked {
+            if (amount0Use > amount0) {
+                if (token0 == address(weth)) {
+                    weth.withdraw(amount0Use - amount0);
+                    payable(msg.sender).sendValue(
+                        amount0Use - amount0
+                    );
+                } else {
+                    uint256 balance =
+                        IERC20(token0).balanceOf(address(this));
+                    IERC20(token0).safeTransfer(msg.sender, balance);
+                }
             }
-        }
 
-        if (amount1Use > amount1) {
-            if (token1 == address(weth)) {
-                weth.withdraw(amount1Use - amount1);
-                payable(msg.sender).sendValue(amount1Use - amount1);
-            } else {
-                uint256 balance =
-                    IERC20(token1).balanceOf(address(this));
-                IERC20(token1).safeTransfer(msg.sender, balance);
+            if (amount1Use > amount1) {
+                if (token1 == address(weth)) {
+                    weth.withdraw(amount1Use - amount1);
+                    payable(msg.sender).sendValue(
+                        amount1Use - amount1
+                    );
+                } else {
+                    uint256 balance =
+                        IERC20(token1).balanceOf(address(this));
+                    IERC20(token1).safeTransfer(msg.sender, balance);
+                }
             }
         }
     }
@@ -711,12 +717,15 @@ contract ArrakisPublicVaultRouter is
             token1
         );
 
-        if (token0 == address(weth) && msg.value > amount0) {
-            weth.withdraw(msg.value - amount0);
-            payable(msg.sender).sendValue(msg.value - amount0);
-        } else if (token1 == address(weth) && msg.value > amount1) {
-            weth.withdraw(msg.value - amount1);
-            payable(msg.sender).sendValue(msg.value - amount1);
+        unchecked {
+            if (token0 == address(weth) && msg.value > amount0) {
+                weth.withdraw(msg.value - amount0);
+                payable(msg.sender).sendValue(msg.value - amount0);
+            } else if (token1 == address(weth) && msg.value > amount1)
+            {
+                weth.withdraw(msg.value - amount1);
+                payable(msg.sender).sendValue(msg.value - amount1);
+            }
         }
     }
 
@@ -878,21 +887,15 @@ contract ArrakisPublicVaultRouter is
         address module = address(IArrakisMetaVault(vault_).module());
 
         uint256 valueToSend;
-        uint256 balance0;
-        uint256 balance1;
         if (token0_ != nativeToken) {
-            IERC20(token0_).safeIncreaseAllowance(module, amount0_);
-            balance0 = IERC20(token0_).balanceOf(address(this));
+            IERC20(token0_).forceApprove(module, amount0_);
         } else {
             valueToSend = amount0_;
-            balance0 = address(this).balance;
         }
         if (token1_ != nativeToken) {
-            IERC20(token1_).safeIncreaseAllowance(module, amount1_);
-            balance1 = IERC20(token1_).balanceOf(address(this));
+            IERC20(token1_).forceApprove(module, amount1_);
         } else {
             valueToSend = amount1_;
-            balance1 = address(this).balance;
         }
 
         IArrakisMetaVaultPublic(vault_).mint{value: valueToSend}(
@@ -1204,15 +1207,14 @@ contract ArrakisPublicVaultRouter is
             uint256 amount1ToDeposit
         )
     {
-        // TODO check rounding !!!!
         (uint256 amount0, uint256 amount1) =
             IArrakisMetaVault(vault_).totalUnderlying();
 
         uint256 supply = IERC20(vault_).totalSupply();
 
-        if (amount0 == 0 && amount1 == 0) {
+        if (supply == 0) {
             (amount0, amount1) = IArrakisMetaVault(vault_).getInits();
-            supply = 1 ether;
+            supply = BASE;
         }
 
         uint256 proportion0 = amount0 == 0
@@ -1225,9 +1227,16 @@ contract ArrakisPublicVaultRouter is
         uint256 proportion =
             proportion0 < proportion1 ? proportion0 : proportion1;
 
-        amount0ToDeposit = FullMath.mulDiv(amount0, proportion, BASE);
-        amount1ToDeposit = FullMath.mulDiv(amount1, proportion, BASE);
         shareToMint = FullMath.mulDiv(proportion, supply, BASE);
+
+        proportion = FullMath.mulDivRoundingUp(
+            shareToMint, BASE, supply
+        );
+
+        amount0ToDeposit =
+            FullMath.mulDivRoundingUp(amount0, proportion, BASE);
+        amount1ToDeposit =
+            FullMath.mulDivRoundingUp(amount1, proportion, BASE);
     }
 
     // #endregion internal view functions.

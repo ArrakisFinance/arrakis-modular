@@ -207,7 +207,7 @@ contract ArrakisPublicVaultRouterTest is TestWrapper {
 
     function testUnPauseWhenPaused() public {
         vm.expectRevert(bytes("Pausable: not paused"));
-
+        vm.prank(owner);
         router.unpause();
     }
 
