@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity 0.8.19;
 
-import '@solady/contracts/utils/Base64.sol';
+import "@solady/contracts/utils/Base64.sol";
 
-import {NFTSVGUtils} from './NFTSVGUtils.sol';
+import {NFTSVGUtils} from "./NFTSVGUtils.sol";
 
 library NFTSVG {
     /// @notice Parameters for generating the URI
@@ -19,14 +19,19 @@ library NFTSVG {
 
     /// @notice Generates a URI for a given vault
     /// @param params_ Parameters for generating the URI
-    function generateTokenURI(SVGParams memory params_) public pure returns (string memory) {
+    function generateTokenURI(SVGParams memory params_)
+        public
+        pure
+        returns (string memory)
+    {
         string memory name = _generateName(params_);
         string memory description = _generateDescription(params_);
-        string memory image = Base64.encode(bytes(_generateSVGImage(params_.vault)));
+        string memory image =
+            Base64.encode(bytes(_generateSVGImage(params_.vault)));
 
         return string(
             abi.encodePacked(
-                'data:application/json;base64,',
+                "data:application/json;base64,",
                 Base64.encode(
                     bytes(
                         abi.encodePacked(
@@ -35,7 +40,7 @@ library NFTSVG {
                             '", "description":"',
                             description,
                             '", "image": "',
-                            'data:image/svg+xml;base64,',
+                            "data:image/svg+xml;base64,",
                             image,
                             '"}'
                         )
@@ -47,15 +52,20 @@ library NFTSVG {
 
     /// @notice Generates the name of the URI for a given vault
     /// @param params_ Parameters for generating the URI
-    function _generateName(SVGParams memory params_) internal pure returns (string memory) {
-        (string memory s1, string memory s2) = NFTSVGUtils.addressToString(params_.vault);
+    function _generateName(SVGParams memory params_)
+        internal
+        pure
+        returns (string memory)
+    {
+        (string memory s1, string memory s2) =
+            NFTSVGUtils.addressToString(params_.vault);
         return string(
             abi.encodePacked(
-                'Arrakis ',
+                "Arrakis ",
                 params_.symbol0,
-                '/',
+                "/",
                 params_.symbol1,
-                ': ',
+                ": ",
                 s1,
                 s2
             )
@@ -64,47 +74,64 @@ library NFTSVG {
 
     /// @notice Generates the description of the URI for a given vault
     /// @param params_ Parameters for generating the URI
-    function _generateDescription(SVGParams memory params_) internal pure returns (string memory) {
-        (string memory s1, string memory s2) = NFTSVGUtils.addressToString(params_.vault);
-        
+    function _generateDescription(SVGParams memory params_)
+        internal
+        pure
+        returns (string memory)
+    {
+        (string memory s1, string memory s2) =
+            NFTSVGUtils.addressToString(params_.vault);
+
         return string(
             abi.encodePacked(
-                unicode'⚠️ DO NOT TRANSFER TO UNTRUSTED PARTIES.',
-                '\\n\\nThis NFT gives ownership of an Arrakis Modular Private Vault (',
+                unicode"⚠️ DO NOT TRANSFER TO UNTRUSTED PARTIES.",
+                "\\n\\nThis NFT gives ownership of an Arrakis Modular Private Vault (",
                 s1,
                 s2,
-                ') with an inventory of ',
-                NFTSVGUtils.uintToFloatString(params_.amount0, params_.decimals0),
-                ' ',
+                ") with an inventory of ",
+                NFTSVGUtils.uintToFloatString(
+                    params_.amount0, params_.decimals0
+                ),
+                " ",
                 params_.symbol0,
-                ' and ',
-                NFTSVGUtils.uintToFloatString(params_.amount1, params_.decimals1),
-                ' ',
+                " and ",
+                NFTSVGUtils.uintToFloatString(
+                    params_.amount1, params_.decimals1
+                ),
+                " ",
                 params_.symbol1,
-                '.'
+                "."
             )
         );
     }
 
     /// @notice Generates the SVG image of the URI for a given vault
     /// @param vault_ The vault address represented by the NFT
-    function _generateSVGImage(address vault_) internal pure returns (string memory svg) {
+    function _generateSVGImage(address vault_)
+        internal
+        pure
+        returns (string memory svg)
+    {
         return string(
             abi.encodePacked(
                 '<svg width="290" height="500" viewBox="0 0 290 500" fill="none" xmlns="http://www.w3.org/2000/svg"><defs>',
                 _generateSVGDefs(),
-                '</defs>',
+                "</defs>",
                 _generateSVGFrame(),
                 _generateSVGFront(),
                 _generateSVGBack(vault_),
-                '</svg>'
+                "</svg>"
             )
-        );  
+        );
     }
 
     // #region auxiliary functions for generating the SVG image
 
-    function _generateSVGDefs() internal pure returns (string memory) {
+    function _generateSVGDefs()
+        internal
+        pure
+        returns (string memory)
+    {
         return string(
             abi.encodePacked(
                 '<linearGradient id="rect-gradient" gradientUnits="objectBoundingBox" x1="0" y1="0" x2=".75" y2="1.5">',
@@ -119,20 +146,28 @@ library NFTSVG {
         );
     }
 
-    function _generateSVGMasks() internal pure returns (string memory) {
+    function _generateSVGMasks()
+        internal
+        pure
+        returns (string memory)
+    {
         return string(
             abi.encodePacked(
                 '<mask id="waves-mask"><rect x="0" y="0" width="100%" height="100%" fill="white" />',
                 '<g style="scale(3)"><linearGradient id="waves2" x1="0" x2="1" y1="0" y2="0"><stop stop-color="#000000" offset="0"></stop><stop stop-color="#000000" offset="1"></stop></linearGradient>',
                 '<path d="" fill="black" opacity="0.33"><animate attributeName="d" dur="8s" repeatCount="indefinite" keyTimes="0;0.333;0.667;1" calcMode="spline" keySplines="0.5 0 0.5 1;0.5 0 0.5 1;0.5 0 0.5 1" begin="0s" values="M0 0L0 279.72Q72.50 95.90 145 80.31T290 -2.87L290 0Z;M0 0L0 178.34Q72.50 66.44 145 50.16T290 -49.50L290 0Z;M0 0L0 244.09Q72.50 178.37 145 151.37T290 -124.25L290 0Z;M0 0L0 279.72Q72.50 95.90 145 80.31T290 -2.87L290 0Z"></animate></path>'
                 '<path d="" fill="black" opacity="0.33"><animate attributeName="d" dur="8s" repeatCount="indefinite" keyTimes="0;0.333;0.667;1" calcMode="spline" keySplines="0.5 0 0.5 1;0.5 0 0.5 1;0.5 0 0.5 1" begin="-4.166666666666667s" values="M0 0L0 258.07Q72.50 130.78 145 98.80T290 -39.43L290 0Z;M0 0L0 242.23Q72.50 39.39 145 16.94T290 -28.59L290 0Z;M0 0L0 224.02Q72.50 53.87 145 31.25T290 -65.65L290 0Z;M0 0L0 258.07Q72.50 130.78 145 98.80T290 -39.43L290 0Z"></animate></path>',
-                '</g></mask>',
+                "</g></mask>",
                 '<mask id="inner_rect_mask" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="10.5" y="10.5" width="269" height="479"><rect x="10.5" y="10.5" width="269" height="479" rx="23.5" fill="#D9D9D9"/></mask>'
             )
         );
     }
 
-    function _generateSVGFrame() internal pure returns (string memory) {
+    function _generateSVGFrame()
+        internal
+        pure
+        returns (string memory)
+    {
         return string(
             abi.encodePacked(
                 '<rect width="290" height="500" rx="24" fill="black"/><rect width="290" height="500" rx="24" fill="url(#rect-gradient)"/>',
@@ -147,18 +182,26 @@ library NFTSVG {
         );
     }
 
-    function _generateSVGDunes() internal pure returns (string memory) {
+    function _generateSVGDunes()
+        internal
+        pure
+        returns (string memory)
+    {
         return string(
             abi.encodePacked(
                 '<g id="dunes" transform="translate(0 33)"><g mask="url(#inner_rect_mask)">',
                 '<path d="M0.5 355.5C178.5 330.5 153.023 310.248 108 316C76.5 320.024 86.3739 305.5 106 294.5C135.856 277.767 137.872 272.876 130.5 267.5M130.5 267.5C73.5966 287.906 40.9646 300.008 0.5 305.5M130.5 267.5C169.496 271.232 185.689 274.308 210.5 280.5C249.139 288.743 267.721 291.842 290 292" stroke="white" stroke-opacity="0.33"/>',
                 '<path d="M0.5 262.5C0.5 262.5 48.5 255 102 253C155.5 251 183 241.5 189.5 235.227M189.5 235.227C222.621 246.569 191.696 261.647 163.5 271M189.5 235.227C198.96 233.427 225.5 242.827 244.5 246.329C273.228 251.623 280.179 251.674 291 251.263" stroke="white" stroke-opacity="0.33"/>',
-                '</g></g>'
+                "</g></g>"
             )
         );
     }
 
-    function _generateSVGFront() internal pure returns (string memory) {
+    function _generateSVGFront()
+        internal
+        pure
+        returns (string memory)
+    {
         return string(
             abi.encodePacked(
                 '<g id="front" fill="white">',
@@ -169,13 +212,18 @@ library NFTSVG {
                 '<path opacity="0.6" d="M135.257 65.8977C137.673 65.9238 140.866 65.8977 142.727 65.7546C140.155 64.453 136.389 62.7654 136.389 62.7654L134.653 63.9801C134.47 64.1087 134.332 64.2923 134.26 64.5044C134.188 64.7165 134.186 64.9461 134.253 65.1598C134.32 65.3734 134.454 65.5602 134.634 65.6929C134.814 65.8256 135.033 65.8973 135.257 65.8977Z"/>',
                 '<path d="M211.14 112.992C207.492 82.4446 182.151 57.377 151.977 53.7805C147.539 53.2512 143.569 53.0646 142.463 53.0082C142.038 52.9841 141.619 53.1067 141.274 53.3553C139.296 54.761 137.152 56.236 135.061 57.6547C134.675 57.9172 134.365 58.276 134.16 58.6956C133.956 59.1152 133.865 59.5809 133.896 60.0466C133.927 60.5123 134.079 60.9618 134.338 61.3504C134.596 61.739 134.952 62.0534 135.369 62.2621C137.773 63.4595 140.293 64.7177 142.003 65.5767C142.309 65.7282 142.651 65.7941 142.992 65.7676C143.46 65.7286 148.91 65.8804 150.571 66.0713C167.925 68.0236 184.168 78.1192 193.565 92.8916C212.355 121.959 202.511 160.216 174.433 178.012C173.973 178.303 173.487 178.598 172.979 178.88C171.292 179.851 172.628 182.428 174.381 181.569C174.958 181.287 175.522 180.992 176.068 180.702C199.908 167.339 214.984 140.636 211.14 112.992Z" fill="url(#tail-gradient)"/>',
                 '<animateTransform attributeName="transform" attributeType="XML" type="rotate" from="360 140 120" to="0 140 120" dur="25s" repeatCount="indefinite"/>',
-                '</g></g>'
+                "</g></g>"
             )
         );
     }
 
-    function _generateSVGBack(address vault_) internal pure returns (string memory) {
-        (string memory s1, string memory s2) = NFTSVGUtils.addressToString(vault_);
+    function _generateSVGBack(address vault_)
+        internal
+        pure
+        returns (string memory)
+    {
+        (string memory s1, string memory s2) =
+            NFTSVGUtils.addressToString(vault_);
         return string(
             abi.encodePacked(
                 '<g id="back" attributeName="opacity" values="0;" fill="white" font-family="system-ui" font-weight="bold" text-anchor="middle">',
@@ -187,7 +235,7 @@ library NFTSVG {
                 s1,
                 '</text><text x="145" y="222.5">',
                 s2,
-                '</text></g>'
+                "</text></g>"
             )
         );
     }

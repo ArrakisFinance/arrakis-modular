@@ -2,16 +2,19 @@
 pragma solidity 0.8.19;
 
 import {NFTSVG} from "src/libraries/NFTSVG.sol";
-import '@solady/contracts/utils/Base64.sol';
 import {IPrivateVaultNFT} from "./interfaces/IPrivateVaultNFT.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 
-import {ERC20} from "@solady/contracts/tokens/ERC20.sol";
+import {IERC20Metadata} from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
 contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
-    constructor() ERC721("Arrakis Modular Private Vaults", "RAKIS-PV-NFT") {
+    constructor()
+        ERC721("Arrakis Modular Private Vaults", "RAKIS-PV-NFT")
+    {
         _initializeOwner(msg.sender);
     }
 
@@ -22,11 +25,17 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
         _safeMint(to_, tokenId_);
     }
 
-    function tokenURI(uint256 tokenId_) public view override returns (string memory) {
-        IArrakisMetaVault vault = IArrakisMetaVault(address(uint160(tokenId_)));
+    function tokenURI(uint256 tokenId_)
+        public
+        view
+        override
+        returns (string memory)
+    {
+        IArrakisMetaVault vault =
+            IArrakisMetaVault(address(uint160(tokenId_)));
         (uint256 amount0, uint256 amount1) = vault.totalUnderlying();
-        ERC20 token0 = ERC20(vault.token0());
-        ERC20 token1 = ERC20(vault.token1());
+        IERC20Metadata token0 = IERC20Metadata(vault.token0());
+        IERC20Metadata token1 = IERC20Metadata(vault.token1());
 
         return NFTSVG.generateTokenURI(
             NFTSVG.SVGParams({
