@@ -4,7 +4,6 @@ pragma solidity ^0.8.19;
 // #region foundry.
 
 import {console} from "forge-std/console.sol";
-import {Vm} from "forge-std/Vm.sol";
 
 // #endregion foundry.
 
