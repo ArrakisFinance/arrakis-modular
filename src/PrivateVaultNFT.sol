@@ -13,7 +13,7 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
 contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
     constructor()
-        ERC721("Arrakis Modular Private Vaults", "RAKIS-PV-NFT")
+        ERC721("Arrakis Private LP NFT", "ARRAKIS")
     {
         _initializeOwner(msg.sender);
     }
