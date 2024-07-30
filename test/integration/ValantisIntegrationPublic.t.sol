@@ -28,8 +28,11 @@ import {CreationCodePublicVault} from
     "../../src/CreationCodePublicVault.sol";
 import {CreationCodePrivateVault} from
     "../../src/CreationCodePrivateVault.sol";
+import {HOTExecutor} from "../../../src/modules/HOTExecutor.sol";
 
-import {SetupParams} from "../../src/structs/SManager.sol";
+import {
+    SetupParams, VaultInfo
+} from "../../src/structs/SManager.sol";
 
 import {IModulePublicRegistry} from
     "../../src/interfaces/IModulePublicRegistry.sol";
@@ -671,6 +674,106 @@ contract ValantisIntegrationPublicTest is TestWrapper, HOTBase {
 
         vm.prank(executor);
         IArrakisStandardManager(manager).rebalance(vault, datas);
+
+        // assertions.
+
+        (uint256 amount0, uint256 amount1) =
+            IArrakisLPModule(m).totalUnderlying();
+
+        assertEq(amount0, 1000e6);
+        assertEq(amount1, 1.5e18);
+    }
+
+    function test_swap_hot_executor() public {
+        // #region mint.
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        deal(address(token0), user, init0);
+        deal(address(token1), user, init1);
+
+        address m = address(IArrakisMetaVault(vault).module());
+
+        vm.startPrank(user);
+        token0.approve(m, init0);
+        token1.approve(m, init1);
+
+        IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
+        vm.stopPrank();
+
+        // #endregion mint.
+
+        address w3f =
+            vm.addr(uint256(keccak256(abi.encode("Web 3 function"))));
+
+        HOTExecutor executor =
+            new HOTExecutor(address(manager), w3f, owner);
+
+        // #region change executor.
+
+        {
+            (
+                ,
+                uint256 cooldownPeriod,
+                IOracleWrapper oracle,
+                uint24 maxDeviation,
+                ,
+                address stratAnnouncer,
+                uint24 maxSlippagePIPS,
+            ) = IArrakisStandardManager(manager).vaultInfo(vault);
+
+            vm.prank(IOwnable(vault).owner());
+            IArrakisStandardManager(manager).updateVaultInfo(
+                SetupParams({
+                    vault: vault,
+                    oracle: oracle,
+                    maxDeviation: maxDeviation,
+                    cooldownPeriod: cooldownPeriod,
+                    executor: address(executor),
+                    stratAnnouncer: stratAnnouncer,
+                    maxSlippagePIPS: maxSlippagePIPS
+                })
+            );
+        }
+
+        // #endregion change executor.
+
+        //(uint160 sqrtSpotPriceX96,,) = alm.getAMMState();
+
+        bool zeroForOne = true; // USDC -> WETH.
+        uint256 expectedMinReturn = 0.5 ether;
+        uint256 amountIn = 1000e6;
+        address router = address(this);
+
+        uint160 expectedSqrtSpotPriceUpperX96 =
+            1_771_595_571_142_957_102_904_975_518_859_264;
+        uint160 expectedSqrtSpotPriceLowerX96 =
+            1_771_595_571_142_957_102_904_975_518_859_264;
+        bytes memory payload =
+            abi.encodeWithSelector(this.swap.selector);
+
+        bytes memory data = abi.encodeWithSelector(
+            IValantisHOTModule.swap.selector,
+            zeroForOne,
+            expectedMinReturn,
+            amountIn,
+            router,
+            expectedSqrtSpotPriceUpperX96,
+            expectedSqrtSpotPriceLowerX96,
+            payload
+        );
+
+        bytes[] memory datas = new bytes[](1);
+        datas[0] = data;
+
+        uint256 expectedReservesAmount = init0;
+
+        vm.prank(w3f);
+        executor.rebalance(
+            vault, datas, expectedReservesAmount, zeroForOne
+        );
 
         // assertions.
 
