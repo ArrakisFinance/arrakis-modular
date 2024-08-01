@@ -840,7 +840,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         assertEq(
             string(
                 abi.encodePacked(
-                    "Arrakis Modular ",
+                    "Arrakis Public LP ",
                     IERC20Metadata(USDC).symbol(),
                     "/",
                     IERC20Metadata(WETH).symbol()
@@ -851,27 +851,6 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     }
 
     // #endregion test get token name.
-
-    // #region test get token symbol.
-
-    function testGetTokenSymbol() public {
-        string memory vaultSymbol = factory.getTokenSymbol(USDC, WETH);
-
-        assertEq(
-            string(
-                abi.encodePacked(
-                    "AM",
-                    "/",
-                    IERC20Metadata(USDC).symbol(),
-                    "/",
-                    IERC20Metadata(WETH).symbol()
-                )
-            ),
-            vaultSymbol
-        );
-    }
-
-    // #endregion test get token symbol.
 
     // #region test publicVaults.
 
