@@ -9,7 +9,7 @@ import {TestWrapper} from "../../utils/TestWrapper.sol";
 import {IArrakisPublicVaultRouter} from
     "../../../src/interfaces/IArrakisPublicVaultRouter.sol";
 import {IPermit2} from "../../../src/interfaces/IPermit2.sol";
-import {IWETH9} from "../../../src/interfaces/Iweth9.sol";
+import {IWETH9} from "../../../src/interfaces/IWETH9.sol";
 import {
     ArrakisPublicVaultRouter,
     AddLiquidityData,

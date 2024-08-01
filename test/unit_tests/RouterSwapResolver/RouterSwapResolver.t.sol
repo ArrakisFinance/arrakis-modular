@@ -11,7 +11,8 @@ import {IArrakisPublicVaultRouter} from
 import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
 import {RouterSwapResolver} from "../../../src/RouterSwapResolver.sol";
-import {IRouterSwapResolver} from "../../../src/interfaces/IRouterSwapResolver.sol";
+import {IRouterSwapResolver} from
+    "../../../src/interfaces/IRouterSwapResolver.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
@@ -212,10 +213,7 @@ contract RouterSwapResolverTest is TestWrapper {
 
         assertTrue(zeroForOne);
         /// we divide by 1000 to get rid of rounding up extra wei.
-        assertGt(
-            1 ether / 1000,
-            swapAmount / 1000
-        );
+        assertGt(1 ether / 1000, swapAmount / 1000);
     }
 
     function testCalculateSwapAmountCase6() public {
@@ -246,10 +244,7 @@ contract RouterSwapResolverTest is TestWrapper {
 
         assertFalse(zeroForOne);
         /// we divide by 100 to get rid of rounding up extra wei.
-        assertGt(
-            3_440_000_000 / 100,
-            swapAmount / 100
-        );
+        assertGt(3_440_000_000 / 100, swapAmount / 100);
     }
 
     function testCalculateSwapAmountCase7() public {
@@ -280,10 +275,7 @@ contract RouterSwapResolverTest is TestWrapper {
 
         assertFalse(zeroForOne);
         /// we divide by 100 to get rid of rounding up extra wei.
-        assertGt(
-            3_440_000_000 / 100,
-            swapAmount / 100
-        );
+        assertGt(3_440_000_000 / 100, swapAmount / 100);
     }
 
     // #endregion test calculate swap amount.
