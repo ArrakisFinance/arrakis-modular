@@ -79,11 +79,11 @@ Deployments of public vaults are **permissioned**, taking into account the sensi
 
 ### [ArrakisMetaVaultPrivate.sol](../src/ArrakisMetaVaultPrivate.sol)
 
-A meta-vault tailored for private use, where only the vault owner is permitted to add or remove liquidity. The vault owner retains the capability to configure or delegate the active management of the vault's assets. Inheriting from `ArrakisMetaVault`, this contract extends the abstract version to create a private meta-vault, which employs `PALMVaultNFT` for denoting ownership.
+A meta-vault tailored for private use, where only the vault owner is permitted to add or remove liquidity. The vault owner retains the capability to configure or delegate the active management of the vault's assets. Inheriting from `ArrakisMetaVault`, this contract extends the abstract version to create a private meta-vault, which employs `PrivateVaultNFT` for denoting ownership.
 
 Deployments of private vaults are **permissionless** and are not bound by a time-lock, given that the sensitive security parameters are intrinsically controlled by the custodian of the vault funds—that is, the owner acts as the sole user of the vault.
 
-### [PALMVaultNFT.sol](../src/PALMVaultNFT.sol)
+### [PrivateVaultNFT.sol](../src/PrivateVaultNFT.sol)
 
 An NFT contract designed to tokenize the ownership of private vaults, thus rendering them transferable. It is a standard NFT contract equipped with a dynamic token URI, which will facilitate a distinctive SVG design for each token.
 

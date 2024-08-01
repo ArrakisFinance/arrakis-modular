@@ -176,15 +176,6 @@ interface IArrakisMetaVaultFactory {
         address token1_
     ) external view returns (string memory);
 
-    /// @notice get Arrakis Modular standard token symbol for two corresponding tokens.
-    /// @param token0_ address of the first token.
-    /// @param token1_ address of the second token.
-    /// @return symbol symbol of the arrakis modular token vault.
-    function getTokenSymbol(
-        address token0_,
-        address token1_
-    ) external view returns (string memory);
-
     /// @notice get a list of public vaults created by this factory
     /// @param startIndex_ start index
     /// @param endIndex_ end index

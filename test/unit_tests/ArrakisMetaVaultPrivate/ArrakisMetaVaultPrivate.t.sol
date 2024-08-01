@@ -12,7 +12,7 @@ import {IArrakisMetaVaultPrivate} from
 import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
 import {PIPS} from "../../../src/constants/CArrakis.sol";
-import {PALMVaultNFT} from "../../../src/PALMVaultNFT.sol";
+import {PrivateVaultNFT} from "../../../src/PrivateVaultNFT.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721Receiver} from
@@ -43,7 +43,7 @@ contract ArrakisMetaVaultPrivateTest is
 
     ArrakisMetaVaultPrivate public vault;
     LpModuleMock public module;
-    PALMVaultNFT public nft;
+    PrivateVaultNFT public nft;
     address public receiver;
     address public manager;
     address public moduleRegistry;
@@ -61,7 +61,7 @@ contract ArrakisMetaVaultPrivateTest is
 
         // #endregion create module.
 
-        nft = new PALMVaultNFT();
+        nft = new PrivateVaultNFT();
 
         vault = new ArrakisMetaVaultPrivate(
             moduleRegistry, manager, USDC, WETH, address(nft)
@@ -446,4 +446,22 @@ contract ArrakisMetaVaultPrivateTest is
     }
 
     // #endregion test owner.
+
+    // #region test nft URI.
+
+    function testNftURI() public {
+        console.log(
+            "URI before deposit:\n\n",
+            nft.tokenURI(uint256(uint160(address(vault))))
+        );
+
+        testDeposit();
+        console.log(
+            "\n\n\n  URI after deposit:\n\n",
+            nft.tokenURI(uint256(uint160(address(vault))))
+        );
+        console.log("\n  vault:", address(vault));
+    }
+
+    // #endregion test nft URI.
 }
