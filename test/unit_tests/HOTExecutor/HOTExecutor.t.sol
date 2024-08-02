@@ -116,7 +116,7 @@ contract HOTExecutorTest is TestWrapper {
 
         vm.prank(w3f);
         vm.expectRevert(
-            IHOTExecutor.UnexpectedReservesAmount.selector
+            IHOTExecutor.UnexpectedReservesAmount0.selector
         );
         executor.rebalance(
             vault, payloads, expectedReservesAmounts, zeroForOne
@@ -133,7 +133,7 @@ contract HOTExecutorTest is TestWrapper {
 
         vm.prank(w3f);
         vm.expectRevert(
-            IHOTExecutor.UnexpectedReservesAmount.selector
+            IHOTExecutor.UnexpectedReservesAmount1.selector
         );
         executor.rebalance(
             vault, payloads, expectedReservesAmounts, zeroForOne
