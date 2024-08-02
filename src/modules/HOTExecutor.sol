@@ -26,6 +26,8 @@ contract HOTExecutor is IHOTExecutor, Ownable {
         manager = manager_;
         w3f = w3f_;
         _initializeOwner(owner_);
+
+        emit LogSetW3f(w3f_);
     }
 
     function setW3f(address newW3f_) external onlyOwner {
@@ -62,13 +64,14 @@ contract HOTExecutor is IHOTExecutor, Ownable {
 
                 if (zeroToOne_) {
                     if (amount0 < expectedReservesAmount_) {
-                        revert UnexpectedReservesAmount();
+                        revert UnexpectedReservesAmount0();
                     }
                 } else {
                     if (amount1 < expectedReservesAmount_) {
-                        revert UnexpectedReservesAmount();
+                        revert UnexpectedReservesAmount1();
                     }
                 }
+                break;
             }
         }
 
