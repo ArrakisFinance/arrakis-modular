@@ -6,7 +6,6 @@ import {console} from "forge-std/console.sol";
 import {CreateXScript} from "./CreateXScript.sol";
 import {ICreateX} from "./interfaces/ICreateX.sol";
 import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
-import {CREATEX_ADDRESS} from "./constants/CCreateX.sol";
 
 import {ArrakisStandardManager} from
     "../../src/ArrakisStandardManager.sol";
@@ -22,6 +21,8 @@ import {
 } from
     "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
+// Implementation : 0xC618797D1Fd0283d535753aDa6a6AA24Fce2e745
+// Proxy : 0x2e6E879648293e939aA68bA4c6c129A1Be733bDA
 contract DArrakisStandardManager is CreateXScript {
     // #region constants.
 
@@ -41,9 +42,9 @@ contract DArrakisStandardManager is CreateXScript {
         uint88(uint256(keccak256(abi.encode("Proxy version 1"))));
 
     address constant guardian =
-        0x3Cc5ceaFc3F68D79937fC87582a6343d2Fa2C4a5;
+        0x6F441151B478E0d60588f221f1A35BcC3f7aB981;
     address constant arrakisTimeLock =
-        0x9FE545267089DCa885aA9DB2287eEe0B829CC1E7;
+        0xAf6f9640092cB1236E5DB6E517576355b6C40b7f;
 
     uint256 constant defaultFeePIPS = 10_000; // 1%
     uint8 constant nativeCoinDecimals = 18;
@@ -55,19 +56,23 @@ contract DArrakisStandardManager is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        // owner multisig can do the deploymenet.
-        // owner will also be the owner of guardian.
-        deployer = ArrakisRoles.getOwner();
+        uint256 privateKey = vm.envUint("PK");
+
+        deployer = vm.addr(privateKey);
 
         address proxyAdmin = ArrakisRoles.getAdmin();
 
         console.logString("Deployer :");
         console.logAddress(deployer);
 
+        vm.startBroadcast(privateKey);
+
         address implementation =
             _deployArrakisStandardManagerImpl(guardian);
         address proxy =
             _deployTransparentProxy(implementation, proxyAdmin);
+
+        vm.stopBroadcast();
 
         // #region test a update.
 
@@ -105,15 +110,6 @@ contract DArrakisStandardManager is CreateXScript {
             abi.encodePacked(deployer, hex"00", bytes11(implVersion))
         );
 
-        bytes memory payload = abi.encodeWithSelector(
-            ICreateX.deployCreate3.selector, salt, initCode
-        );
-
-        console.logString("Payload :");
-        console.logBytes(payload);
-        console.logString("Send to :");
-        console.logAddress(CREATEX_ADDRESS);
-
         implementation = computeCreate3Address(salt, deployer);
 
         console.logString(
@@ -121,11 +117,9 @@ contract DArrakisStandardManager is CreateXScript {
         );
         console.logAddress(implementation);
 
-        vm.prank(deployer);
-
         address actualAddr = CreateX.deployCreate3(salt, initCode);
 
-        console.logString("Simulation Address :");
+        console.logString("Simulation Arrakis Standard Manager Implementation Address :");
         console.logAddress(actualAddr);
 
         if (actualAddr != implementation) {
@@ -146,21 +140,10 @@ contract DArrakisStandardManager is CreateXScript {
             abi.encodePacked(deployer, hex"00", bytes11(proxyVersion))
         );
 
-        bytes memory payload = abi.encodeWithSelector(
-            ICreateX.deployCreate3.selector, salt, initCode
-        );
-
-        console.logString("Payload :");
-        console.logBytes(payload);
-        console.logString("Send to :");
-        console.logAddress(CREATEX_ADDRESS);
-
         proxy = computeCreate3Address(salt, deployer);
 
         console.logString("Transparent Proxy Address : ");
         console.logAddress(proxy);
-
-        vm.prank(deployer);
 
         address actualAddr = CreateX.deployCreate3(salt, initCode);
 
@@ -170,30 +153,5 @@ contract DArrakisStandardManager is CreateXScript {
         if (actualAddr != proxy) {
             revert("Create 3 addresses don't match.");
         }
-    }
-
-    function _deployTestArrakisStandardManagerImpl(address guardian_)
-        internal
-        returns (address implementation)
-    {
-        bytes memory initCode = abi.encodePacked(
-            type(ArrakisStandardManager).creationCode,
-            abi.encode(
-                defaultFeePIPS,
-                NATIVE_COIN,
-                nativeCoinDecimals,
-                guardian_
-            )
-        );
-
-        bytes32 salt = bytes32(
-            abi.encodePacked(
-                deployer, hex"00", bytes11(implVersion + 1)
-            )
-        );
-
-        vm.prank(deployer);
-
-        implementation = CreateX.deployCreate3(salt, initCode);
     }
 }

@@ -6,37 +6,39 @@ import {console} from "forge-std/console.sol";
 import {CreateXScript} from "./CreateXScript.sol";
 import {ICreateX} from "./interfaces/ICreateX.sol";
 import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
-import {CREATEX_ADDRESS} from "./constants/CCreateX.sol";
 
 import {ArrakisMetaVaultFactory} from
     "../../src/ArrakisMetaVaultFactory.sol";
 
+// Factory : 0x820FB8127a689327C863de8433278d6181123982
 contract DFactory is CreateXScript {
     uint88 public version =
         uint88(uint256(keccak256(abi.encode("Factory version 1"))));
 
     address public constant manager =
-        0xAD8B6C7DFac9c0Ce773649f84a5652550d7f2543;
+        0x2e6E879648293e939aA68bA4c6c129A1Be733bDA;
     address public constant publicRegistry =
-        0x6C4F980fF2Ef4eB4580D909aA89d2d73c438029e;
+        0x791d75F87a701C3F7dFfcEC1B6094dB22c779603;
     address public constant privateRegistry =
-        0xc30F9Bb7d41c41fFD2639f6e203F4d52B19b6bCF;
+        0xe278C1944BA3321C1079aBF94961E9fF1127A265;
     address public constant creationCodePublicVault =
-        0xEC4BB009a737bAd1746138B6c0e8514cBb62817e;
+        0x374BCFff317203B5fab2c266b4a876d47E109331;
     address public constant creationCodePrivateVault =
-        0x5A361712C9092077cA99bb7cB1776b9d9F2DC14D;
+        0x69e58f06c4FB059E3F94Af3EB4DF64c57fdAb00f;
 
     function setUp() public {}
 
     function run() public {
-        // owner multisig can do the deploymenet.
-        // owner will also be the owner of guardian.
-        address deployer = ArrakisRoles.getOwner();
+        uint256 privateKey = vm.envUint("PK_TEST");
 
-        address owner = deployer;
+        address deployer = vm.addr(privateKey);
+
+        address owner = ArrakisRoles.getOwner();
 
         console.logString("Deployer :");
         console.logAddress(deployer);
+
+        vm.startBroadcast(privateKey);
 
         bytes memory initCode = abi.encodePacked(
             type(ArrakisMetaVaultFactory).creationCode,
@@ -54,21 +56,10 @@ contract DFactory is CreateXScript {
             abi.encodePacked(deployer, hex"00", bytes11(version))
         );
 
-        bytes memory payload = abi.encodeWithSelector(
-            ICreateX.deployCreate3.selector, salt, initCode
-        );
-
-        console.logString("Payload :");
-        console.logBytes(payload);
-        console.logString("Send to :");
-        console.logAddress(CREATEX_ADDRESS);
-
         address factory = computeCreate3Address(salt, deployer);
 
         console.logString("Factory Address : ");
         console.logAddress(factory);
-
-        vm.prank(deployer);
 
         address actualAddr = CreateX.deployCreate3(salt, initCode);
 
@@ -78,5 +69,7 @@ contract DFactory is CreateXScript {
         if (factory != actualAddr) {
             revert("Create 3 addresses don't match.");
         }
+
+        vm.stopBroadcast();
     }
 }

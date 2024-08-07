@@ -6,29 +6,29 @@ import {console} from "forge-std/console.sol";
 import {CreateXScript} from "./CreateXScript.sol";
 import {ICreateX} from "./interfaces/ICreateX.sol";
 import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
-import {CREATEX_ADDRESS} from "./constants/CCreateX.sol";
 
 import {RouterSwapResolver} from "../../src/RouterSwapResolver.sol";
 
+// Router Resolver : 0xC6c53369c36D6b4f4A6c195441Fe2d33149FB265
 contract DRouterResolver is CreateXScript {
     uint88 public version = uint88(
         uint256(keccak256(abi.encode("Router Resolver version 1")))
     );
 
     address public constant router =
-        0xFf24347dA277476d11c462Ea7314BA04fb8Fb793;
+        0x72aa2C8e6B14F30131081401Fa999fC964A66041;
 
     function setUp() public {}
 
     function run() public {
-        // owner multisig can do the deploymenet.
-        // owner will also be the owner of guardian.
-        address deployer = ArrakisRoles.getOwner();
+        uint256 privateKey = vm.envUint("PK_TEST");
 
-        address owner = deployer;
+        address deployer = vm.addr(privateKey);
 
         console.logString("Deployer :");
         console.logAddress(deployer);
+
+        vm.startBroadcast(privateKey);
 
         bytes memory initCode = abi.encodePacked(
             type(RouterSwapResolver).creationCode, abi.encode(router)
@@ -38,21 +38,10 @@ contract DRouterResolver is CreateXScript {
             abi.encodePacked(deployer, hex"00", bytes11(version))
         );
 
-        bytes memory payload = abi.encodeWithSelector(
-            ICreateX.deployCreate3.selector, salt, initCode
-        );
-
-        console.logString("Payload :");
-        console.logBytes(payload);
-        console.logString("Send to :");
-        console.logAddress(CREATEX_ADDRESS);
-
         address routerResolver = computeCreate3Address(salt, deployer);
 
         console.logString("Router Resolver Address : ");
         console.logAddress(routerResolver);
-
-        vm.prank(deployer);
 
         address actualAddr = CreateX.deployCreate3(salt, initCode);
 
@@ -62,5 +51,7 @@ contract DRouterResolver is CreateXScript {
         if (routerResolver != actualAddr) {
             revert("Create 3 addresses don't match.");
         }
+
+        vm.stopBroadcast();
     }
 }

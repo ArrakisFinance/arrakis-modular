@@ -6,13 +6,14 @@ import {console} from "forge-std/console.sol";
 import {CreateXScript} from "./CreateXScript.sol";
 import {ICreateX} from "./interfaces/ICreateX.sol";
 import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
-import {CREATEX_ADDRESS} from "./constants/CCreateX.sol";
 
 import {ModulePublicRegistry} from
     "../../src/ModulePublicRegistry.sol";
 import {ModulePrivateRegistry} from
     "../../src/ModulePrivateRegistry.sol";
 
+// Public Registry : 0x791d75F87a701C3F7dFfcEC1B6094dB22c779603
+// Private Registry: 0xe278C1944BA3321C1079aBF94961E9fF1127A265
 contract DModuleRegistries is CreateXScript {
     uint88 public publicVersion = uint88(
         uint256(
@@ -26,25 +27,24 @@ contract DModuleRegistries is CreateXScript {
         )
     );
 
-    address public constant guardian =
-        0x3Cc5ceaFc3F68D79937fC87582a6343d2Fa2C4a5;
-    address public constant arrakisTimeLock =
-        0x9FE545267089DCa885aA9DB2287eEe0B829CC1E7;
+    address constant guardian =
+        0x6F441151B478E0d60588f221f1A35BcC3f7aB981;
+    address constant arrakisTimeLock =
+        0xAf6f9640092cB1236E5DB6E517576355b6C40b7f;
 
     function setUp() public {}
 
     function run() public {
-        // owner multisig can do the deploymenet.
-        // owner will also be the owner of guardian.
-        address deployer = ArrakisRoles.getOwner();
+        uint256 privateKey = vm.envUint("PK");
 
-        address owner = deployer;
+        address deployer = vm.addr(privateKey);
 
-        // admin multisig will be the pauser.
-        address pauser = ArrakisRoles.getAdmin();
+        address owner = ArrakisRoles.getOwner();
 
         console.logString("Deployer :");
         console.logAddress(deployer);
+
+        vm.startBroadcast(privateKey);
 
         // #region public registry.
 
@@ -59,24 +59,14 @@ contract DModuleRegistries is CreateXScript {
             )
         );
 
-        bytes memory payload = abi.encodeWithSelector(
-            ICreateX.deployCreate3.selector, salt, initCode
-        );
-
-        console.logString("Payload :");
-        console.logBytes(payload);
-        console.logString("Send to :");
-        console.logAddress(CREATEX_ADDRESS);
-
         address publicRegistry = computeCreate3Address(salt, deployer);
 
         console.logString("Module Public Registry Address : ");
         console.logAddress(publicRegistry);
 
-        vm.prank(deployer);
         address actualAddr = CreateX.deployCreate3(salt, initCode);
 
-        console.logString("Simulation Address :");
+        console.logString("Simulation Module Public Registry Address :");
         console.logAddress(actualAddr);
 
         if (publicRegistry != actualAddr) {
@@ -98,22 +88,12 @@ contract DModuleRegistries is CreateXScript {
             )
         );
 
-        payload = abi.encodeWithSelector(
-            ICreateX.deployCreate3.selector, salt, initCode
-        );
-
-        console.logString("Payload :");
-        console.logBytes(payload);
-        console.logString("Send to :");
-        console.logAddress(CREATEX_ADDRESS);
-
         address privateRegistry =
             computeCreate3Address(salt, deployer);
 
         console.logString("Module Private Registry Address : ");
         console.logAddress(privateRegistry);
 
-        vm.prank(deployer);
         actualAddr = CreateX.deployCreate3(salt, initCode);
 
         console.logString("Simulation Address :");
@@ -124,5 +104,7 @@ contract DModuleRegistries is CreateXScript {
         }
 
         // #endregion private registry.
+
+        vm.stopBroadcast();
     }
 }

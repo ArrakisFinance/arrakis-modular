@@ -6,18 +6,18 @@ import {console} from "forge-std/console.sol";
 import {CreateXScript} from "./CreateXScript.sol";
 import {ICreateX} from "./interfaces/ICreateX.sol";
 import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
-import {CREATEX_ADDRESS} from "./constants/CCreateX.sol";
 
 import {ArrakisPublicVaultRouter} from
     "../../src/ArrakisPublicVaultRouter.sol";
 import {NATIVE_COIN} from "../../src/constants/CArrakis.sol";
 
+// Router : 0x72aa2C8e6B14F30131081401Fa999fC964A66041
 contract DRouter is CreateXScript {
     uint88 public version =
         uint88(uint256(keccak256(abi.encode("Router version 1"))));
 
     address public constant factory =
-        0x1209BD3e8fAf1d142D925B4edaCc30c296d22bf1;
+        0x820FB8127a689327C863de8433278d6181123982;
     address public constant permit2 =
         0x000000000022D473030F116dDEE9F6B43aC78BA3;
     address public constant weth =
@@ -26,14 +26,16 @@ contract DRouter is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        // owner multisig can do the deploymenet.
-        // owner will also be the owner of guardian.
-        address deployer = ArrakisRoles.getOwner();
+        uint256 privateKey = vm.envUint("PK_TEST");
 
-        address owner = deployer;
+        address deployer = vm.addr(privateKey);
+
+        address owner = ArrakisRoles.getOwner();
 
         console.logString("Deployer :");
         console.logAddress(deployer);
+
+        vm.startBroadcast(privateKey);
 
         bytes memory initCode = abi.encodePacked(
             type(ArrakisPublicVaultRouter).creationCode,
@@ -48,17 +50,10 @@ contract DRouter is CreateXScript {
             ICreateX.deployCreate3.selector, salt, initCode
         );
 
-        console.logString("Payload :");
-        console.logBytes(payload);
-        console.logString("Send to :");
-        console.logAddress(CREATEX_ADDRESS);
-
         address router = computeCreate3Address(salt, deployer);
 
         console.logString("Router Address : ");
         console.logAddress(router);
-
-        vm.prank(deployer);
 
         address actualAddr = CreateX.deployCreate3(salt, initCode);
 
@@ -68,5 +63,7 @@ contract DRouter is CreateXScript {
         if (router != actualAddr) {
             revert("Create 3 addresses don't match.");
         }
+
+        vm.stopBroadcast();
     }
 }
