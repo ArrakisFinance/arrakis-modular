@@ -67,8 +67,8 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
                     vault: address(vault),
                     amount0: amount0,
                     amount1: amount1,
-                    decimals0: 4,
-                    decimals1: 4,
+                    decimals0: 0,
+                    decimals1: 0,
                     symbol0: "TKN0",
                     symbol1: "TKN1"
                 })
