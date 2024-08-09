@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {INFTSVG, SVGParams} from "src/libraries/NFTSVG.sol";
+import {INFTSVG, SVGParams} from "src/utils/NFTSVG.sol";
 import {IPrivateVaultNFT} from "./interfaces/IPrivateVaultNFT.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 
@@ -37,52 +37,65 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
     }
 
     function tokenURI(uint256 tokenId_)
-        public
-        view
-        override
+        public view override
         returns (string memory)
     {
         IArrakisMetaVault vault = IArrakisMetaVault(address(uint160(tokenId_)));
         (uint256 amount0, uint256 amount1) = vault.totalUnderlying();
-        IERC20Metadata token0 = IERC20Metadata(vault.token0());
-        IERC20Metadata token1 = IERC20Metadata(vault.token1());
 
-        return INFTSVG(_library).generateVaultURI(
-            SVGParams({
-                vault: address(vault),
-                amount0: amount0,
-                amount1: amount1,
-                decimals0: token0.decimals(),
-                decimals1: token1.decimals(),
-                symbol0: token0.symbol(),
-                symbol1: token1.symbol()
-            })
-        );
+        bool all = true;
+        uint8 decimals0;
+        uint8 decimals1;
+        string memory symbol0;
+        string memory symbol1;
+        // perform low-level calls to handle unorthodox tokens
+        (bool success, bytes memory data) = vault.token0().staticcall(hex"313ce567"); // decimals()
+        if (success && data.length > 0) {
+            decimals0 = abi.decode(data, (uint8));
+        } else {
+            all = false;
+        }
+        (success, data) = vault.token1().staticcall(hex"313ce567"); // decimals()
+        if (success && data.length > 0) {
+            decimals1 = abi.decode(data, (uint8));
+        } else {
+            all = false;
+        }
+        (success, data) = vault.token0().staticcall(hex"95d89b41"); // symbol()
+        if (success && data.length > 0) {
+            symbol1 = abi.decode(data, (string));
+        } else {
+            all = false;
+        }
+        (success, data) = vault.token1().staticcall(hex"95d89b41"); // symbol()
+        if (success && data.length > 0) {
+            symbol0 = abi.decode(data, (string));
+        } else {
+            all = false;
+        }
 
-        // try INFTSVG(_library).generateVaultURI(
-        //     SVGParams({
-        //         vault: address(vault),
-        //         amount0: amount0,
-        //         amount1: amount1,
-        //         decimals0: token0.decimals(),
-        //         decimals1: token1.decimals(),
-        //         symbol0: token0.symbol(),
-        //         symbol1: token1.symbol()
-        //     })
-        // ) returns (string memory uri) {
-        //     return uri;
-        // } catch {
-        //     return INFTSVG(_library).generateFallbackURI(
-        //     SVGParams({
-        //         vault: address(vault),
-        //         amount0: amount0,
-        //         amount1: amount1,
-        //         decimals0: 0,
-        //         decimals1: 0,
-        //         symbol0: 'TKN0',
-        //         symbol1: 'TKN1'
-        //     })
-        // );
-        // }
+        return all
+            ? INFTSVG(_library).generateVaultURI(
+                SVGParams({
+                    vault: address(vault),
+                    amount0: amount0,
+                    amount1: amount1,
+                    decimals0: decimals0,
+                    decimals1: decimals1,
+                    symbol0: symbol0,
+                    symbol1: symbol1
+                })
+            )
+            : INFTSVG(_library).generateFallbackURI(
+                SVGParams({
+                    vault: address(vault),
+                    amount0: amount0,
+                    amount1: amount1,
+                    decimals0: 0,
+                    decimals1: 0,
+                    symbol0: "TKN0",
+                    symbol1: "TKN1"
+                })
+            );
     }
 }

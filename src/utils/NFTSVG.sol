@@ -15,7 +15,7 @@ struct SVGParams {
     string symbol1;
 }
 
-/// @dev Despite libraries can't inherit interfaces, we define the interface here
+/// @dev Interface for the NFTSVG contract
 interface INFTSVG {
     
     /// @notice Checks if the contract is compliant with the NFTSVG interface
@@ -192,10 +192,10 @@ contract NFTSVG is INFTSVG {
         return string(
             abi.encodePacked(
                 '<linearGradient id="rect-gradient" gradientUnits="objectBoundingBox" x1="0" y1="0" x2=".75" y2="1.5">',
-                '<stop offset="0"><animate attributeName="stop-color" values="#050302;#050302;#7D3711;#7D3711;#DC601D;#FFA760;#FFA760;#7D3711;#7D3711;#050302;#050302;#050302;#050302;" dur="30s" repeatCount="indefinite"></animate></stop>',
-                '<stop offset=".33"><animate attributeName="stop-color" values="#050302;#050302;#7D3711;#FFA760;#FFA760;#F56A20;#DC601D;#FA7C40;#7D3711;#7D3711;#050302;#050302;#050302;" dur="30s" repeatCount="indefinite"></animate></stop>',
-                '<stop offset=".67"><animate attributeName="stop-color" values="#050302;#050302;#050302;#7D3711;#DC601D;#FFA760;#FFA760;#F56A20;#DC601D;#7D3711;#E89857;#050302;#050302;" dur="30s" repeatCount="indefinite"></animate></stop>',
-                '<stop offset="1"><animate attributeName="stop-color" values="#050302;#050302;#050302;#050302;#7D3711;#DC601D;#DC601D;#FA7C40;#FA7C40;#DC601D;#E89857;#050302;#050302;" dur="30s" repeatCount="indefinite"></animate></stop>',
+                '<stop offset="0"><animate attributeName="stop-color" values="#050302;#050302;#7D440E;#7D440E;#DC701D;#F0B567;#F0B567;#7D440E;#7D440E;#050302;#050302;#050302;#050302;" dur="30s" repeatCount="indefinite"></animate></stop>',
+                '<stop offset=".33"><animate attributeName="stop-color" values="#050302;#050302;#7D440E;#F0B567;#F0B567;#EC9117;#DC701D;#FA7C40;#7D440E;#7D440E;#050302;#050302;#050302;" dur="30s" repeatCount="indefinite"></animate></stop>',
+                '<stop offset=".67"><animate attributeName="stop-color" values="#050302;#050302;#050302;#7D440E;#DC701D;#F0B567;#F0B567;#EC9117;#DC701D;#7D440E;#E89857;#050302;#050302;" dur="30s" repeatCount="indefinite"></animate></stop>',
+                '<stop offset="1"><animate attributeName="stop-color" values="#050302;#050302;#050302;#050302;#7D440E;#DC701D;#DC701D;#FA7C40;#FA7C40;#DC701D;#E89857;#050302;#050302;" dur="30s" repeatCount="indefinite"></animate></stop>',
                 '<animateTransform attributeName="gradientTransform" type="translate" from="-.8 -.8" to=".8 .8" dur="30s" repeatCount="indefinite" /></linearGradient>',
                 '<linearGradient id="tail-gradient" x1="183.99" y1="59.2903" x2="171.409" y2="178.815" gradientUnits="userSpaceOnUse"><stop stop-color="white"/><stop offset="1" stop-color="white" stop-opacity="0"/></linearGradient>',
                 _generateSVGMasks()
