@@ -55,6 +55,10 @@ library NFTSVGUtils {
         uint256 value_,
         uint8 decimals_
     ) public pure returns (string memory) {
+        if (decimals_ < 5) {
+            return _uintToString(value_);
+        }
+
         uint256 scaleFactor = 10 ** decimals_;
         uint256 fraction =
             (value_ % scaleFactor) / 10 ** (decimals_ - 4);

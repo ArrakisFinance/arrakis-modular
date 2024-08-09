@@ -453,7 +453,7 @@ contract ArrakisMetaVaultPrivateTest is
     function testNftURI() public {
         // setup NFTSVG
         address renderer = address(new NFTSVG());
-        nft.setLibrary(renderer);
+        nft.setRenderer(renderer);
 
         // test tokenURI
         console.log(
@@ -472,24 +472,21 @@ contract ArrakisMetaVaultPrivateTest is
     // #endregion test nft URI.
 
     function testFallbackNftURI() public {
-        // setup new vault for token with unorthodox symbols (MKR)
         address MKR = 0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2;
 
+        // setup new vault for token with unorthodox symbols (MKR)
         module = new LpModuleMock();
-        module.setToken0AndToken1(MKR, USDC);
-
+        module.setToken0AndToken1(MKR, WETH);
         nft = new PrivateVaultNFT();
-
         vault = new ArrakisMetaVaultPrivate(
-            moduleRegistry, manager, MKR, USDC, address(nft)
+            moduleRegistry, manager, MKR, WETH, address(nft)
         );
-
         nft.mint(address(this), uint256(uint160(address(vault))));
         vault.initialize(address(module));
 
         // setup NFTSVG
         address renderer = address(new NFTSVG());
-        nft.setLibrary(renderer);
+        nft.setRenderer(renderer);
 
         // test tokenURI
         console.log(
@@ -497,7 +494,7 @@ contract ArrakisMetaVaultPrivateTest is
             nft.tokenURI(uint256(uint160(address(vault))))
         );
 
-        _deposit(MKR, 1e18, USDC, 2000e6);
+        _deposit(MKR, 333e18, WETH, 1e18);
         console.log(
             "\n\n\n  URI after deposit:\n\n",
             nft.tokenURI(uint256(uint160(address(vault))))
