@@ -13,6 +13,7 @@ import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
 import {PIPS} from "../../../src/constants/CArrakis.sol";
 import {PrivateVaultNFT} from "../../../src/PrivateVaultNFT.sol";
+import {NFTSVG} from "src/libraries/NFTSVG.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721Receiver} from
@@ -450,6 +451,11 @@ contract ArrakisMetaVaultPrivateTest is
     // #region test nft URI.
 
     function testNftURI() public {
+
+        address libraryNFTSVG = address(new NFTSVG());
+
+        nft.setLibrary(libraryNFTSVG);
+
         console.log(
             "URI before deposit:\n\n",
             nft.tokenURI(uint256(uint160(address(vault))))

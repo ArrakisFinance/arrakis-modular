@@ -1,25 +1,51 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import "@solady/contracts/utils/Base64.sol";
-
 import {NFTSVGUtils} from "./NFTSVGUtils.sol";
 
-library NFTSVG {
-    /// @notice Parameters for generating the URI
-    struct SVGParams {
-        address vault;
-        uint256 amount0;
-        uint256 amount1;
-        uint8 decimals0;
-        uint8 decimals1;
-        string symbol0;
-        string symbol1;
+/// @notice Parameters for generating the URI
+struct SVGParams {
+    address vault;
+    uint256 amount0;
+    uint256 amount1;
+    uint8 decimals0;
+    uint8 decimals1;
+    string symbol0;
+    string symbol1;
+}
+
+/// @dev Despite libraries can't inherit interfaces, we define the interface here
+interface INFTSVG {
+    
+    /// @notice Checks if the contract is compliant with the NFTSVG interface
+    function isNFTSVG() external pure returns (bool);
+
+    /// @notice Generates a URI for a given vault
+    /// @param params_ Parameters for generating the URI
+    function generateVaultURI(SVGParams memory params_)
+        external
+        pure
+        returns (string memory);
+
+    /// @notice Generates a fallback URI for a given vault
+    /// @param params_ Parameters for generating the URI    
+    function generateFallbackURI(SVGParams memory params_)
+        external
+        pure
+        returns (string memory);
+}
+
+contract NFTSVG is INFTSVG {
+
+    /// @notice Checks if the contract is compliant with the NFTSVG interface
+    function isNFTSVG() external pure returns (bool) {
+        return true;
     }
 
     /// @notice Generates a URI for a given vault
     /// @param params_ Parameters for generating the URI
-    function generateTokenURI(SVGParams memory params_)
+    function generateVaultURI(SVGParams memory params_)
         public
         pure
         returns (string memory)
@@ -37,6 +63,37 @@ library NFTSVG {
                         abi.encodePacked(
                             '{"name":"',
                             name,
+                            '", "description":"',
+                            description,
+                            '", "image": "',
+                            "data:image/svg+xml;base64,",
+                            image,
+                            '"}'
+                        )
+                    )
+                )
+            )
+        );
+    }
+
+    /// @notice Generates a fallback URI for a given vault
+    /// @param params_ Parameters for generating the URI
+    function generateFallbackURI(SVGParams memory params_)
+        public
+        pure
+        returns (string memory)
+    {
+        string memory description = _generateDescription(params_);
+        string memory image =
+            Base64.encode(bytes(_generateSVGImage(params_.vault)));
+
+        return string(
+            abi.encodePacked(
+                "data:application/json;base64,",
+                Base64.encode(
+                    bytes(
+                        abi.encodePacked(
+                            '{"name":" Arrakis Private Vault',
                             '", "description":"',
                             description,
                             '", "image": "',
