@@ -11,10 +11,11 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
-error InvalidLibrary();
+error InvalidRenderer();
 
 contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
-    address private _library;
+
+    address private _renderer;
 
     constructor() ERC721("Arrakis Private LP NFT", "ARRAKIS") {
         _initializeOwner(msg.sender);
@@ -28,9 +29,9 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
     }
 
     // TODO: is it correct to have it as onlyOwner? will this be the Arrakis MS?
-    function setLibrary(address library_) external onlyOwner {
-        if (!INFTSVG(library_).isNFTSVG()) revert InvalidLibrary();
-        _library = library_;
+    function setRenderer(address renderer_) external onlyOwner {
+        if (!INFTSVG(renderer_).isNFTSVG()) revert InvalidRenderer();
+        _renderer = renderer_;
     }
 
     function tokenURI(uint256 tokenId_)
@@ -54,7 +55,7 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
             string memory symbol0,
             string memory symbol1
         ) {
-            return INFTSVG(_library).generateVaultURI(
+            return INFTSVG(_renderer).generateVaultURI(
                 SVGParams({
                     vault: address(vault),
                     amount0: amount0,
@@ -66,7 +67,7 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
                 })
             );
         } catch {
-            return INFTSVG(_library).generateFallbackURI(
+            return INFTSVG(_renderer).generateFallbackURI(
                 SVGParams({
                     vault: address(vault),
                     amount0: amount0,
