@@ -14,12 +14,9 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 error InvalidLibrary();
 
 contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
-
     address private _library;
 
-    constructor()
-        ERC721("Arrakis Private LP NFT", "ARRAKIS")
-    {
+    constructor() ERC721("Arrakis Private LP NFT", "ARRAKIS") {
         _initializeOwner(msg.sender);
     }
 
@@ -37,45 +34,27 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
     }
 
     function tokenURI(uint256 tokenId_)
-        public view override
+        public
+        view
+        override
         returns (string memory)
     {
-        IArrakisMetaVault vault = IArrakisMetaVault(address(uint160(tokenId_)));
+        IArrakisMetaVault vault =
+            IArrakisMetaVault(address(uint160(tokenId_)));
         (uint256 amount0, uint256 amount1) = vault.totalUnderlying();
 
-        bool all = true;
         uint8 decimals0;
         uint8 decimals1;
         string memory symbol0;
         string memory symbol1;
-        // perform low-level calls to handle unorthodox tokens
-        (bool success, bytes memory data) = vault.token0().staticcall(hex"313ce567"); // decimals()
-        if (success && data.length > 0) {
-            decimals0 = abi.decode(data, (uint8));
-        } else {
-            all = false;
-        }
-        (success, data) = vault.token1().staticcall(hex"313ce567"); // decimals()
-        if (success && data.length > 0) {
-            decimals1 = abi.decode(data, (uint8));
-        } else {
-            all = false;
-        }
-        (success, data) = vault.token0().staticcall(hex"95d89b41"); // symbol()
-        if (success && data.length > 0) {
-            symbol1 = abi.decode(data, (string));
-        } else {
-            all = false;
-        }
-        (success, data) = vault.token1().staticcall(hex"95d89b41"); // symbol()
-        if (success && data.length > 0) {
-            symbol0 = abi.decode(data, (string));
-        } else {
-            all = false;
-        }
 
-        return all
-            ? INFTSVG(_library).generateVaultURI(
+        try this.getMetaDatas(vault.token0(), vault.token1()) returns (
+            uint8 decimals0,
+            uint8 decimals1,
+            string memory symbol0,
+            string memory symbol1
+        ) {
+            return INFTSVG(_library).generateVaultURI(
                 SVGParams({
                     vault: address(vault),
                     amount0: amount0,
@@ -85,17 +64,38 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
                     symbol0: symbol0,
                     symbol1: symbol1
                 })
-            )
-            : INFTSVG(_library).generateFallbackURI(
+            );
+        } catch {
+            return INFTSVG(_library).generateFallbackURI(
                 SVGParams({
                     vault: address(vault),
                     amount0: amount0,
                     amount1: amount1,
-                    decimals0: 0,
-                    decimals1: 0,
+                    decimals0: 4,
+                    decimals1: 4,
                     symbol0: "TKN0",
                     symbol1: "TKN1"
                 })
             );
+        }
+    }
+
+    function getMetaDatas(
+        address token0_,
+        address token1_
+    )
+        public
+        view
+        returns (
+            uint8 decimals0,
+            uint8 decimals1,
+            string memory symbol0,
+            string memory symbol1
+        )
+    {
+        decimals0 = IERC20Metadata(token0_).decimals();
+        decimals1 = IERC20Metadata(token1_).decimals();
+        symbol0 = IERC20Metadata(token0_).symbol();
+        symbol1 = IERC20Metadata(token1_).symbol();
     }
 }
