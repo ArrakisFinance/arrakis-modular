@@ -43,11 +43,6 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
             IArrakisMetaVault(address(uint160(tokenId_)));
         (uint256 amount0, uint256 amount1) = vault.totalUnderlying();
 
-        uint8 decimals0;
-        uint8 decimals1;
-        string memory symbol0;
-        string memory symbol1;
-
         try this.getMetaDatas(vault.token0(), vault.token1()) returns (
             uint8 decimals0,
             uint8 decimals1,
