@@ -20,19 +20,19 @@ contract PrivateVaultNFT is
     IPrivateVaultNFT
 {
     address private _renderer;
-    address public announcer;
+    address public svgController;
 
     constructor() ERC721("Arrakis Private LP NFT", "ARRAKIS") {
         _initializeOwner(msg.sender);
     }
 
-    function initialize(address announcer_) external initializer {
-        if (announcer_ == address(0)) {
+    function initialize(address svgController_) external initializer {
+        if (svgController_ == address(0)) {
             revert AddressZero();
         }
-        announcer = announcer_;
+        svgController = svgController_;
 
-        emit LogAnnouncer(announcer_);
+        emit LogSvgController(svgController_);
     }
 
     /// @notice function used to mint nft (representing a vault) and send it.
@@ -43,12 +43,12 @@ contract PrivateVaultNFT is
     }
 
     /// @notice function used to set the renderer contract
-    /// @dev only the announcer can do it.
+    /// @dev only the svgController can do it.
     /// @param renderer_ address of the contract that will
     /// render the tokenUri for the svg of the nft.
     function setRenderer(address renderer_) external {
-        if (msg.sender != announcer) {
-            revert OnlyAnnouncer();
+        if (msg.sender != svgController) {
+            revert OnlySvgController();
         }
         bool _isNftSvg;
         try this.isNFTSVG(renderer_) returns (bool isNs) {

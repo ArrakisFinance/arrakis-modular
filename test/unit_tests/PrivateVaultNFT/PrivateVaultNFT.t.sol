@@ -16,13 +16,13 @@ import {NFTSVG} from "../../../src/utils/NFTSVG.sol";
 contract PrivateVaultNFTTest is TestWrapper {
     address public nft;
     address public owner;
-    address public announcer;
+    address public svgController;
     address public renderer;
 
     function setUp() external {
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
-        announcer =
-            vm.addr(uint256(keccak256(abi.encode("Announcer"))));
+        svgController =
+            vm.addr(uint256(keccak256(abi.encode("SvgController"))));
 
         vm.prank(owner);
         nft = address(new PrivateVaultNFT());
@@ -32,39 +32,39 @@ contract PrivateVaultNFTTest is TestWrapper {
 
     // #region test initialize.
 
-    function testInitializeAnnouncerAddressZero() public {
+    function testInitializeSvgControllerAddressZero() public {
         vm.expectRevert(IPrivateVaultNFT.AddressZero.selector);
         IPrivateVaultNFT(nft).initialize(address(0));
     }
 
     function testInitialize() public {
-        IPrivateVaultNFT(nft).initialize(announcer);
+        IPrivateVaultNFT(nft).initialize(svgController);
 
-        assertEq(announcer, IPrivateVaultNFT(nft).announcer());
+        assertEq(svgController, IPrivateVaultNFT(nft).svgController());
     }
 
     // #endregion test initialize.
 
     // #region test setRenderer.
 
-    function testSetRendererOnlyAnnouncer() public {
-        IPrivateVaultNFT(nft).initialize(announcer);
-        vm.expectRevert(IPrivateVaultNFT.OnlyAnnouncer.selector);
+    function testSetRendererOnlySvgController() public {
+        IPrivateVaultNFT(nft).initialize(svgController);
+        vm.expectRevert(IPrivateVaultNFT.OnlySvgController.selector);
         IPrivateVaultNFT(nft).setRenderer(renderer);
     }
 
     function testSetRendererInvalidRenderer() public {
         address rend =
             vm.addr(uint256(keccak256(abi.encode("Renderer"))));
-        IPrivateVaultNFT(nft).initialize(announcer);
+        IPrivateVaultNFT(nft).initialize(svgController);
         vm.expectRevert(IPrivateVaultNFT.InvalidRenderer.selector);
-        vm.prank(announcer);
+        vm.prank(svgController);
         IPrivateVaultNFT(nft).setRenderer(rend);
     }
 
     function testSetRenderer() public {
-        IPrivateVaultNFT(nft).initialize(announcer);
-        vm.prank(announcer);
+        IPrivateVaultNFT(nft).initialize(svgController);
+        vm.prank(svgController);
         IPrivateVaultNFT(nft).setRenderer(renderer);
     }
 
