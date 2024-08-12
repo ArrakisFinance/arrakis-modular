@@ -11,6 +11,9 @@ import {IArrakisMetaVaultPrivate} from
     "../../../src/interfaces/IArrakisMetaVaultPrivate.sol";
 import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
+import {IRenderController} from
+    "../../../src/interfaces/IRenderController.sol";
+import {RenderController} from "../../../src/RenderController.sol";
 import {PIPS} from "../../../src/constants/CArrakis.sol";
 import {PrivateVaultNFT} from "../../../src/PrivateVaultNFT.sol";
 import {NFTSVG} from "src/utils/NFTSVG.sol";
@@ -48,15 +51,14 @@ contract ArrakisMetaVaultPrivateTest is
     address public receiver;
     address public manager;
     address public moduleRegistry;
-    address public svgController;
+    address public owner;
 
     function setUp() public {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
         moduleRegistry =
             vm.addr(uint256(keccak256(abi.encode("Module Registry"))));
         receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        svgController =
-            vm.addr(uint256(keccak256(abi.encode("SvgController"))));
+        owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
 
         // #region create module.
 
@@ -67,11 +69,11 @@ contract ArrakisMetaVaultPrivateTest is
 
         nft = new PrivateVaultNFT();
 
+        RenderController(nft.renderController()).initialize(owner);
+
         vault = new ArrakisMetaVaultPrivate(
             moduleRegistry, manager, USDC, WETH, address(nft)
         );
-
-        nft.initialize(svgController);
 
         // #region mint nft.
 
@@ -458,8 +460,10 @@ contract ArrakisMetaVaultPrivateTest is
     function testNftURI() public {
         // setup NFTSVG
         address renderer = address(new NFTSVG());
-        vm.prank(svgController);
-        nft.setRenderer(renderer);
+        address renderController = nft.renderController();
+
+        vm.prank(owner);
+        IRenderController(renderController).setRenderer(renderer);
 
         // test tokenURI
         console.log(
@@ -490,12 +494,17 @@ contract ArrakisMetaVaultPrivateTest is
         nft.mint(address(this), uint256(uint160(address(vault))));
         vault.initialize(address(module));
 
-        nft.initialize(svgController);
-
         // setup NFTSVG
         address renderer = address(new NFTSVG());
-        vm.prank(svgController);
-        nft.setRenderer(renderer);
+        address renderController = nft.renderController();
+
+        RenderController(renderController).initialize(owner);
+
+        console.logString("TOTO");
+        vm.prank(owner);
+        IRenderController(renderController).setRenderer(renderer);
+
+        console.logString("TITI");
 
         // test tokenURI
         console.log(
