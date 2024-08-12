@@ -8,17 +8,31 @@ import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IERC20Metadata} from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {Initializable} from
+    "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
-error InvalidRenderer();
-
-contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
-
+contract PrivateVaultNFT is
+    Ownable,
+    ERC721,
+    Initializable,
+    IPrivateVaultNFT
+{
     address private _renderer;
+    address public announcer;
 
     constructor() ERC721("Arrakis Private LP NFT", "ARRAKIS") {
         _initializeOwner(msg.sender);
+    }
+
+    function initialize(address announcer_) external initializer {
+        if (announcer_ == address(0)) {
+            revert AddressZero();
+        }
+        announcer = announcer_;
+
+        emit LogAnnouncer(announcer_);
     }
 
     /// @notice function used to mint nft (representing a vault) and send it.
@@ -28,10 +42,24 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
         _safeMint(to_, tokenId_);
     }
 
-    // TODO: is it correct to have it as onlyOwner? will this be the Arrakis MS?
-    function setRenderer(address renderer_) external onlyOwner {
-        if (!INFTSVG(renderer_).isNFTSVG()) revert InvalidRenderer();
+    /// @notice function used to set the renderer contract
+    /// @dev only the announcer can do it.
+    /// @param renderer_ address of the contract that will
+    /// render the tokenUri for the svg of the nft.
+    function setRenderer(address renderer_) external {
+        if (msg.sender != announcer) {
+            revert OnlyAnnouncer();
+        }
+        bool _isNftSvg;
+        try this.isNFTSVG(renderer_) returns (bool isNs) {
+            _isNftSvg = isNs;
+        } catch {
+            _isNftSvg = false;
+        }
+        if (!_isNftSvg) revert InvalidRenderer();
         _renderer = renderer_;
+
+        emit LogSetRenderer(renderer_);
     }
 
     function tokenURI(uint256 tokenId_)
@@ -44,7 +72,8 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
             IArrakisMetaVault(address(uint160(tokenId_)));
         (uint256 amount0, uint256 amount1) = vault.totalUnderlying();
 
-        try this.getMetaDatas(vault.token0(), vault.token1()) returns (
+        try this.getMetaDatas(vault.token0(), vault.token1())
+        returns (
             uint8 decimals0,
             uint8 decimals1,
             string memory symbol0,
@@ -93,5 +122,9 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
         decimals1 = IERC20Metadata(token1_).decimals();
         symbol0 = IERC20Metadata(token0_).symbol();
         symbol1 = IERC20Metadata(token1_).symbol();
+    }
+
+    function isNFTSVG(address renderer_) public view returns (bool) {
+        return INFTSVG(renderer_).isNFTSVG();
     }
 }

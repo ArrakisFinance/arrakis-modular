@@ -48,12 +48,15 @@ contract ArrakisMetaVaultPrivateTest is
     address public receiver;
     address public manager;
     address public moduleRegistry;
+    address public announcer;
 
     function setUp() public {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
         moduleRegistry =
             vm.addr(uint256(keccak256(abi.encode("Module Registry"))));
         receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        announcer =
+            vm.addr(uint256(keccak256(abi.encode("Announcer"))));
 
         // #region create module.
 
@@ -67,6 +70,8 @@ contract ArrakisMetaVaultPrivateTest is
         vault = new ArrakisMetaVaultPrivate(
             moduleRegistry, manager, USDC, WETH, address(nft)
         );
+
+        nft.initialize(announcer);
 
         // #region mint nft.
 
@@ -453,6 +458,7 @@ contract ArrakisMetaVaultPrivateTest is
     function testNftURI() public {
         // setup NFTSVG
         address renderer = address(new NFTSVG());
+        vm.prank(announcer);
         nft.setRenderer(renderer);
 
         // test tokenURI
@@ -484,8 +490,11 @@ contract ArrakisMetaVaultPrivateTest is
         nft.mint(address(this), uint256(uint160(address(vault))));
         vault.initialize(address(module));
 
+        nft.initialize(announcer);
+
         // setup NFTSVG
         address renderer = address(new NFTSVG());
+        vm.prank(announcer);
         nft.setRenderer(renderer);
 
         // test tokenURI
@@ -502,7 +511,12 @@ contract ArrakisMetaVaultPrivateTest is
         console.log("\n  vault:", address(vault));
     }
 
-    function _deposit(address tkn0, uint256 amount0, address tkn1, uint256 amount1) internal {
+    function _deposit(
+        address tkn0,
+        uint256 amount0,
+        address tkn1,
+        uint256 amount1
+    ) internal {
         // #region whitelist depositor.
 
         address depositor =
