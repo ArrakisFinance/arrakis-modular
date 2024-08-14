@@ -6,13 +6,14 @@ import {console} from "forge-std/console.sol";
 import {CreateXScript} from "./CreateXScript.sol";
 import {ICreateX} from "./interfaces/ICreateX.sol";
 import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
-import {CREATEX_ADDRESS} from "./constants/CCreateX.sol";
 
 import {CreationCodePublicVault} from
     "../../src/CreationCodePublicVault.sol";
 import {CreationCodePrivateVault} from
     "../../src/CreationCodePrivateVault.sol";
 
+// Code Creation Public : 0x374BCFff317203B5fab2c266b4a876d47E109331
+// Code Creation Private : 0x69e58f06c4FB059E3F94Af3EB4DF64c57fdAb00f
 contract DCreationCode is CreateXScript {
     uint88 public publicVersion = uint88(
         uint256(
@@ -29,17 +30,14 @@ contract DCreationCode is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        // owner multisig can do the deploymenet.
-        // owner will also be the owner of guardian.
-        address deployer = ArrakisRoles.getOwner();
+        uint256 privateKey = vm.envUint("PK_TEST");
 
-        address owner = deployer;
-
-        // admin multisig will be the pauser.
-        address pauser = ArrakisRoles.getAdmin();
+        address deployer = vm.addr(privateKey);
 
         console.logString("Deployer :");
         console.logAddress(deployer);
+
+        vm.startBroadcast(privateKey);
 
         // #region public creation code.
 
@@ -53,22 +51,12 @@ contract DCreationCode is CreateXScript {
             )
         );
 
-        bytes memory payload = abi.encodeWithSelector(
-            ICreateX.deployCreate3.selector, salt, initCode
-        );
-
-        console.logString("Payload :");
-        console.logBytes(payload);
-        console.logString("Send to :");
-        console.logAddress(CREATEX_ADDRESS);
-
         address publicCreationCode =
             computeCreate3Address(salt, deployer);
 
         console.logString("Creation Code Public Address : ");
         console.logAddress(publicCreationCode);
 
-        vm.prank(deployer);
         address actualAddr = CreateX.deployCreate3(salt, initCode);
 
         console.logString("Simulation Address :");
@@ -92,22 +80,12 @@ contract DCreationCode is CreateXScript {
             )
         );
 
-        payload = abi.encodeWithSelector(
-            ICreateX.deployCreate3.selector, salt, initCode
-        );
-
-        console.logString("Payload :");
-        console.logBytes(payload);
-        console.logString("Send to :");
-        console.logAddress(CREATEX_ADDRESS);
-
         address privateCreationCode =
             computeCreate3Address(salt, deployer);
 
         console.logString("Creation Code Private Address : ");
         console.logAddress(privateCreationCode);
 
-        vm.prank(deployer);
         actualAddr = CreateX.deployCreate3(salt, initCode);
 
         console.logString("Simulation Address :");
@@ -118,5 +96,7 @@ contract DCreationCode is CreateXScript {
         }
 
         // #endregion private creation code.
+
+        vm.stopBroadcast();
     }
 }

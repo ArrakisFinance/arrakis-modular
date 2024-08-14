@@ -6,7 +6,6 @@ import {console} from "forge-std/console.sol";
 import {CreateXScript} from "./CreateXScript.sol";
 import {ICreateX} from "./interfaces/ICreateX.sol";
 import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
-import {CREATEX_ADDRESS} from "./constants/CCreateX.sol";
 
 import {TimelockController} from
     "@openzeppelin/contracts/governance/TimelockController.sol";
@@ -21,18 +20,20 @@ contract DArrakisTimeLock is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        // owner multisig can do the deploymenet.
-        // owner will also be the owner of guardian.
-        address deployer = ArrakisRoles.getOwner();
+        uint256 privateKey = vm.envUint("PK");
 
-        address proposer = deployer;
-        address executor = deployer;
+        address deployer = vm.addr(privateKey);
+
+        address proposer = ArrakisRoles.getOwner();
+        address executor = proposer;
 
         // admin multisig will be the pauser.
         address timeLockAdmin = ArrakisRoles.getAdmin();
 
         console.logString("Deployer :");
         console.logAddress(deployer);
+
+        vm.startBroadcast(privateKey);
 
         address[] memory proposers = new address[](1);
         proposers[0] = proposer;
@@ -49,23 +50,20 @@ contract DArrakisTimeLock is CreateXScript {
             abi.encodePacked(deployer, hex"00", bytes11(version))
         );
 
-        bytes memory payload = abi.encodeWithSelector(
-            ICreateX.deployCreate3.selector, salt, initCode
-        );
-
-        console.logString("Payload :");
-        console.logBytes(payload);
-        console.logString("Send to :");
-        console.logAddress(CREATEX_ADDRESS);
+        address implementation = computeCreate3Address(salt, deployer);
 
         console.logString("Arrakis Time Lock Address : ");
-        console.logAddress(computeCreate3Address(salt, deployer));
-
-        vm.prank(deployer);
+        console.logAddress(implementation);
 
         address actualAddr = CreateX.deployCreate3(salt, initCode);
 
         console.logString("Simulation Address :");
         console.logAddress(actualAddr);
+
+        if (actualAddr != implementation) {
+            revert("Create 3 addresses don't match.");
+        }
+
+        vm.stopBroadcast();
     }
 }
