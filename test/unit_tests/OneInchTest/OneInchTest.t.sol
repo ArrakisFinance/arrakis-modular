@@ -27,6 +27,8 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract OneinchTest is TestWrapper {
     using Surl for *;
@@ -50,10 +52,14 @@ contract OneinchTest is TestWrapper {
 
     string public constant networkId = "42161";
 
+    // address public constant tokenIn =
+    //     0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    // address public constant tokenOut =
+    //     0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
     address public constant tokenIn =
-        0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
-    address public constant tokenOut =
         0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
+    address public constant tokenOut =
+        0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     uint256 public constant amount = 1_000_000_000_000_000_000;
 
     address public constant oneInchAggregator =
@@ -64,6 +70,10 @@ contract OneinchTest is TestWrapper {
 
     address public constant chainlinkPriceFeed =
         0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612;
+
+    address public constant hyperLiquid = 0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7;
+
+    int256 public price18Decimals;
 
     function setUp() public {
         /// @dev specific fork.
@@ -86,7 +96,7 @@ contract OneinchTest is TestWrapper {
     }
 
     function testQuote() public {
-        int256 price18Decimals;
+        price18Decimals;
 
         (, price18Decimals,,,) = AggregatorV3Interface(
             chainlinkPriceFeed
@@ -94,8 +104,10 @@ contract OneinchTest is TestWrapper {
 
         price18Decimals = price18Decimals * 10 ** 10;
 
-        uint256 amount0In = 1 ether;
-        uint256 amount1In = 0;
+        // uint256 amount0In = 1 ether;
+        // uint256 amount1In = 0;
+        uint256 amount0In = 0;
+        uint256 amount1In = 20_000;
 
         (bool zeroForOne, uint256 swapAmount) = RouterSwapResolver(
             0xDa4D62149C778984524914DE9Ca062E866261459
@@ -109,7 +121,16 @@ contract OneinchTest is TestWrapper {
         console.logBool(zeroForOne);
         console.logUint(swapAmount);
 
-        uint256 amountOut = quote1Inch(tokenIn, tokenOut, swapAmount);
+        uint256 amountOut;
+        //  = quote1Inch(tokenIn, tokenOut, swapAmount);
+
+        bytes memory swapPayload;
+        //  =    swapTokenData(tokenIn, tokenOut, swapAmount);
+
+        (swapAmount,, amountOut, zeroForOne,, swapPayload) = this
+            .arrakisIndexer(
+            tokenOut, tokenIn, vault, amount0In, amount1In
+        );
 
         // uint256 amountOut = 1_718_900_152;
 
@@ -123,12 +144,13 @@ contract OneinchTest is TestWrapper {
 
         //0x12aa3caf000000000000000000000000e37e799d5077682fa0a244d46e5649f71457bd0900000000000000000000000082af49447d8a07e3bd95bd0d56f35241523fbab1000000000000000000000000af88d065e77c8cc2239327c5edb3a432268e5831000000000000000000000000e37e799d5077682fa0a244d46e5649f71457bd0900000000000000000000000025e9b0576f92d431882f158bb8fb4ac47bdd7b9600000000000000000000000000000000000000000000000000002cfd11f1035f00000000000000000000000000000000000000000000000000000000000291470000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008100000000000000000000000000000000000000000000000000000000006302a00000000000000000000000000000000000000000000000000000000000028c56ee63c1e581b1026b8e7276e7ac75410f1fcbbe21796e8f752682af49447d8a07e3bd95bd0d56f35241523fbab11111111254eeb25477b68fb85ed929f73a960582000000000000000000000000000000000000000000000000000000000000004c20964a
 
-        bytes memory swapPayload = swapTokenData(tokenIn, tokenOut, swapAmount);
+        console.logBytes(swapPayload);
 
         SwapData memory swapData = SwapData({
             swapPayload: swapPayload,
             amountInSwap: swapAmount,
-            amountOutSwap: (amountOut * 99) / 100,
+            // amountOutSwap: (amountOut * 99) / 100,
+            amountOutSwap: amountOut,
             swapRouter: oneInchAggregator,
             zeroForOne: zeroForOne
         });
@@ -136,8 +158,12 @@ contract OneinchTest is TestWrapper {
         AddLiquidityData memory addData = AddLiquidityData({
             amount0Max: amount0In,
             amount1Max: amount1In,
-            amount0Min: ((amount0In - swapAmount) * 98) / 100,
-            amount1Min: (amountOut * 98) / 100,
+            amount0Min : amountOut,
+            amount1Min : ((amount1In - swapAmount) * 98) / 100,
+            // amount0Min : amount0In - swapAmount,
+            // amount0Min: ((amount0In - swapAmount) * 98) / 100,
+            // amount1Min: (amountOut * 98) / 100,
+            // amount1Min: amountOut,
             amountSharesMin: 0,
             vault: vault,
             receiver: address(this)
@@ -146,13 +172,20 @@ contract OneinchTest is TestWrapper {
         SwapAndAddData memory swapAndAddData =
             SwapAndAddData({swapData: swapData, addData: addData});
 
-        deal(tokenIn, address(this), amount0In);
+        vm.prank(hyperLiquid);
+        IERC20(tokenIn).transfer(address(this), amount1In);
 
-        IERC20(tokenIn).approve(router, amount0In);
+        // deal(tokenIn, address(this), amount1In);
+
+        console.logString("TOTO");
+
+        IERC20(tokenIn).approve(router, amount1In);
 
         ArrakisPublicVaultRouter(payable(router)).swapAndAddLiquidity(
             swapAndAddData
         );
+
+        console.logBytes(abi.encodeWithSelector(ArrakisPublicVaultRouter.swapAndAddLiquidity.selector, swapAndAddData));
 
         console.log(
             "balance : %d ", IERC20(vault).balanceOf(address(this))
@@ -160,6 +193,111 @@ contract OneinchTest is TestWrapper {
     }
 
     // #region mock function 1inch.
+
+    function arrakisIndexer(
+        address token0_,
+        address token1_,
+        address vault_,
+        uint256 amount0Max_,
+        uint256 amount1Max_
+    )
+        public
+        returns (
+            uint256 swapAmountIn,
+            uint256 swapAmountOut,
+            uint256 minAmountOut,
+            bool zeroForOne,
+            address swapRouter,
+            bytes memory payload
+        )
+    {
+        uint8 decimals0 = IERC20Metadata(token0_).decimals();
+        uint8 decimals1 = IERC20Metadata(token1_).decimals();
+
+        // #region create the body of the request.
+
+        string memory body = "{";
+
+        {
+            body =
+                string.concat(body, '"chainId": "', networkId, '",');
+            body = string.concat(
+                body,
+                '"token0Address": "',
+                token0_.toHexString(),
+                '",'
+            );
+            body = string.concat(
+                body,
+                '"token1Address": "',
+                token1_.toHexString(),
+                '",'
+            );
+            body = string.concat(
+                body, '"vaultAddress": "', vault_.toHexString(), '",'
+            );
+            body = string.concat(
+                body, '"token0Decimals": ', decimals0.toString(), ","
+            );
+            body = string.concat(
+                body, '"token1Decimals": ', decimals1.toString(), ","
+            );
+            body = string.concat(
+                body, '"amount0Max": "', amount0Max_.toString(), '",'
+            );
+            body = string.concat(
+                body, '"amount1Max": "', amount1Max_.toString(), '",'
+            );
+            body = string.concat(
+                body, '"slippage": ', uint256(1).toString(), ","
+            );
+            body = string.concat(
+                body, '"priceX18": "', price18Decimals.toString(), '"'
+            );
+            body = string.concat(body, "}");
+
+            console.logString("Body : ");
+            console.logString(body);
+        }
+
+        // #endregion create the body of the request.
+
+        console.logString("Before arrakis request");
+
+        bytes memory data;
+
+        {
+            string[] memory headers = new string[](4);
+
+            headers[0] = "accept: application/json, text/plain, */*";
+            headers[1] = "accept-language: en-GB,en-US;q=0.9,en;q=0.8";
+            headers[2] = "content-type: application/json";
+            headers[3] = "priority: u=1, i";
+
+            {
+                string memory query =
+                    "https://indexer.staging-api.arrakis.finance/api/swap-resolver/modular";
+
+                uint256 status;
+
+                (status, data) = query.put(headers, body);
+                assertEq(status, 200);
+            }
+        }
+
+        string(data).toSlice();
+
+        string memory json = string(data);
+
+        swapAmountIn = json.readUint(".swapAmountIn");
+        swapAmountOut = json.readUint(".swapAmountOut");
+        minAmountOut = json.readUint(".minAmountOut");
+        zeroForOne = json.readBool(".zeroForOne");
+        swapRouter = json.readAddress(".swapRouter");
+        payload = json.readBytes(".swapPayload");
+
+        console.logString(json);
+    }
 
     function quote1Inch(
         address tokenIn_,
