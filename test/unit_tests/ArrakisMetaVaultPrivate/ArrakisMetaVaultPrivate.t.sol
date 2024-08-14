@@ -11,8 +11,12 @@ import {IArrakisMetaVaultPrivate} from
     "../../../src/interfaces/IArrakisMetaVaultPrivate.sol";
 import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
+import {IRenderController} from
+    "../../../src/interfaces/IRenderController.sol";
+import {RenderController} from "../../../src/RenderController.sol";
 import {PIPS} from "../../../src/constants/CArrakis.sol";
 import {PrivateVaultNFT} from "../../../src/PrivateVaultNFT.sol";
+import {NFTSVG} from "src/utils/NFTSVG.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721Receiver} from
@@ -47,12 +51,14 @@ contract ArrakisMetaVaultPrivateTest is
     address public receiver;
     address public manager;
     address public moduleRegistry;
+    address public owner;
 
     function setUp() public {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
         moduleRegistry =
             vm.addr(uint256(keccak256(abi.encode("Module Registry"))));
         receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
 
         // #region create module.
 
@@ -62,6 +68,8 @@ contract ArrakisMetaVaultPrivateTest is
         // #endregion create module.
 
         nft = new PrivateVaultNFT();
+
+        RenderController(nft.renderController()).initialize(owner);
 
         vault = new ArrakisMetaVaultPrivate(
             moduleRegistry, manager, USDC, WETH, address(nft)
@@ -450,12 +458,20 @@ contract ArrakisMetaVaultPrivateTest is
     // #region test nft URI.
 
     function testNftURI() public {
+        // setup NFTSVG
+        address renderer = address(new NFTSVG());
+        address renderController = nft.renderController();
+
+        vm.prank(owner);
+        IRenderController(renderController).setRenderer(renderer);
+
+        // test tokenURI
         console.log(
             "URI before deposit:\n\n",
             nft.tokenURI(uint256(uint160(address(vault))))
         );
 
-        testDeposit();
+        _deposit(USDC, 2000e6, WETH, 1e18);
         console.log(
             "\n\n\n  URI after deposit:\n\n",
             nft.tokenURI(uint256(uint160(address(vault))))
@@ -464,4 +480,86 @@ contract ArrakisMetaVaultPrivateTest is
     }
 
     // #endregion test nft URI.
+
+    function testFallbackNftURI() public {
+        address MKR = 0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2;
+
+        // setup new vault for token with unorthodox symbols (MKR)
+        module = new LpModuleMock();
+        module.setToken0AndToken1(MKR, WETH);
+        nft = new PrivateVaultNFT();
+        vault = new ArrakisMetaVaultPrivate(
+            moduleRegistry, manager, MKR, WETH, address(nft)
+        );
+        nft.mint(address(this), uint256(uint160(address(vault))));
+        vault.initialize(address(module));
+
+        // setup NFTSVG
+        address renderer = address(new NFTSVG());
+        address renderController = nft.renderController();
+
+        RenderController(renderController).initialize(owner);
+
+        console.logString("TOTO");
+        vm.prank(owner);
+        IRenderController(renderController).setRenderer(renderer);
+
+        console.logString("TITI");
+
+        // test tokenURI
+        console.log(
+            "URI before deposit:\n\n",
+            nft.tokenURI(uint256(uint160(address(vault))))
+        );
+
+        _deposit(MKR, 333e18, WETH, 1e18);
+        console.log(
+            "\n\n\n  URI after deposit:\n\n",
+            nft.tokenURI(uint256(uint160(address(vault))))
+        );
+        console.log("\n  vault:", address(vault));
+    }
+
+    function _deposit(
+        address tkn0,
+        uint256 amount0,
+        address tkn1,
+        uint256 amount1
+    ) internal {
+        // #region whitelist depositor.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address[] memory depositors = new address[](1);
+        depositors[0] = depositor;
+
+        address[] memory currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 0);
+
+        vault.whitelistDepositors(depositors);
+
+        currentDepositors = vault.depositors();
+
+        assertEq(currentDepositors.length, 1);
+        assertEq(currentDepositors[0], depositor);
+
+        // #endregion whitelist depositor.
+
+        deal(tkn0, address(depositor), amount0);
+        deal(tkn1, address(depositor), amount1);
+
+        vm.startPrank(depositor);
+
+        // #region approve module.
+
+        IERC20(tkn0).approve(address(module), amount0);
+        IERC20(tkn1).approve(address(module), amount1);
+
+        // #endregion approve module.
+
+        vault.deposit(amount0, amount1);
+
+        vm.stopPrank();
+    }
 }
