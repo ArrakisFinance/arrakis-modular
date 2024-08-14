@@ -16,7 +16,7 @@ import {CreationCodePrivateVault} from
     "../../../src/CreationCodePrivateVault.sol";
 import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
-import {PALMVaultNFT} from "../../../src/PALMVaultNFT.sol";
+import {PrivateVaultNFT} from "../../../src/PrivateVaultNFT.sol";
 import {TimeLock} from "../../../src/TimeLock.sol";
 
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
@@ -51,7 +51,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     // #endregion constant properties.
 
     ArrakisMetaVaultFactory public factory;
-    PALMVaultNFT public nft;
+    PrivateVaultNFT public nft;
     address public owner;
 
     address public beaconAdmin;
@@ -840,7 +840,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
         assertEq(
             string(
                 abi.encodePacked(
-                    "Arrakis Modular ",
+                    "Arrakis Public LP ",
                     IERC20Metadata(USDC).symbol(),
                     "/",
                     IERC20Metadata(WETH).symbol()
@@ -851,27 +851,6 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
     }
 
     // #endregion test get token name.
-
-    // #region test get token symbol.
-
-    function testGetTokenSymbol() public {
-        string memory vaultSymbol = factory.getTokenSymbol(USDC, WETH);
-
-        assertEq(
-            string(
-                abi.encodePacked(
-                    "AM",
-                    "/",
-                    IERC20Metadata(USDC).symbol(),
-                    "/",
-                    IERC20Metadata(WETH).symbol()
-                )
-            ),
-            vaultSymbol
-        );
-    }
-
-    // #endregion test get token symbol.
 
     // #region test publicVaults.
 

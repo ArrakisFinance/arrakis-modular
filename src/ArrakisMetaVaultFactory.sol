@@ -14,7 +14,7 @@ import {IManager} from "./interfaces/IManager.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
 import {IModuleRegistry} from "./interfaces/IModuleRegistry.sol";
 import {TimeLock} from "./TimeLock.sol";
-import {PALMVaultNFT} from "./PALMVaultNFT.sol";
+import {PrivateVaultNFT} from "./PrivateVaultNFT.sol";
 
 import {Create3} from "@create3/contracts/Create3.sol";
 
@@ -34,7 +34,7 @@ contract ArrakisMetaVaultFactory is
     address public immutable moduleRegistryPrivate;
     address public immutable creationCodePublicVault;
     address public immutable creationCodePrivateVault;
-    PALMVaultNFT public immutable nft;
+    PrivateVaultNFT public immutable nft;
 
     // #endregion immutable properties.
 
@@ -71,7 +71,7 @@ contract ArrakisMetaVaultFactory is
         moduleRegistryPrivate = moduleRegistryPrivate_;
         creationCodePublicVault = creationCodePublicVault_;
         creationCodePrivateVault = creationCodePrivateVault_;
-        nft = new PALMVaultNFT();
+        nft = new PrivateVaultNFT();
     }
 
     // #region pausable functions.
@@ -325,20 +325,7 @@ contract ArrakisMetaVaultFactory is
     ) public view returns (string memory) {
         string memory symbol0 = IERC20Metadata(token0_).symbol();
         string memory symbol1 = IERC20Metadata(token1_).symbol();
-        return _append("Arrakis Modular ", symbol0, "/", symbol1);
-    }
-
-    /// @notice get Arrakis Modular standard token symbol for two corresponding tokens.
-    /// @param token0_ address of the first token.
-    /// @param token1_ address of the second token.
-    /// @return symbol symbol of the arrakis modular token vault.
-    function getTokenSymbol(
-        address token0_,
-        address token1_
-    ) public view returns (string memory) {
-        string memory symbol0 = IERC20Metadata(token0_).symbol();
-        string memory symbol1 = IERC20Metadata(token1_).symbol();
-        return _append("AM/", symbol0, "/", symbol1);
+        return _append("Arrakis Public LP ", symbol0, "/", symbol1);
     }
 
     /// @notice get a list of public vaults created by this factory
@@ -474,19 +461,13 @@ contract ArrakisMetaVaultFactory is
         address token0_,
         address token1_
     ) internal view returns (bytes memory) {
-        string memory name = "Arrakis Modular Vault";
-        string memory symbol = "AMV";
+        string memory name = "Arrakis Public LP";
+        string memory symbol = "ARRAKIS";
 
         try this.getTokenName(token0_, token1_) returns (
             string memory result
         ) {
             name = result;
-        } catch {} // solhint-disable-line no-empty-blocks
-
-        try this.getTokenSymbol(token0_, token1_) returns (
-            string memory result
-        ) {
-            symbol = result;
         } catch {} // solhint-disable-line no-empty-blocks
 
         return abi.encode(
