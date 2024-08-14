@@ -17,7 +17,6 @@ struct SVGParams {
 
 /// @dev Interface for the NFTSVG contract
 interface INFTSVG {
-    
     /// @notice Checks if the contract is compliant with the NFTSVG interface
     function isNFTSVG() external pure returns (bool);
 
@@ -29,7 +28,7 @@ interface INFTSVG {
         returns (string memory);
 
     /// @notice Generates a fallback URI for a given vault
-    /// @param params_ Parameters for generating the URI    
+    /// @param params_ Parameters for generating the URI
     function generateFallbackURI(SVGParams memory params_)
         external
         pure
@@ -37,7 +36,6 @@ interface INFTSVG {
 }
 
 contract NFTSVG is INFTSVG {
-
     /// @notice Checks if the contract is compliant with the NFTSVG interface
     function isNFTSVG() external pure returns (bool) {
         return true;

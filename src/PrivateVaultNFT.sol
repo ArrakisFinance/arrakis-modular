@@ -4,21 +4,22 @@ pragma solidity 0.8.19;
 import {INFTSVG, SVGParams} from "src/utils/NFTSVG.sol";
 import {IPrivateVaultNFT} from "./interfaces/IPrivateVaultNFT.sol";
 import {IArrakisMetaVault} from "./interfaces/IArrakisMetaVault.sol";
+import {IRenderController} from "./interfaces/IRenderController.sol";
 
 import {IERC20Metadata} from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
+import {RenderController} from "./RenderController.sol";
+
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
-error InvalidRenderer();
-
 contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
-
-    address private _renderer;
+    address public immutable renderController;
 
     constructor() ERC721("Arrakis Private LP NFT", "ARRAKIS") {
         _initializeOwner(msg.sender);
+        renderController = address(new RenderController());
     }
 
     /// @notice function used to mint nft (representing a vault) and send it.
@@ -26,12 +27,6 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
     /// @param tokenId_ id of the NFT to mint.
     function mint(address to_, uint256 tokenId_) external onlyOwner {
         _safeMint(to_, tokenId_);
-    }
-
-    // TODO: is it correct to have it as onlyOwner? will this be the Arrakis MS?
-    function setRenderer(address renderer_) external onlyOwner {
-        if (!INFTSVG(renderer_).isNFTSVG()) revert InvalidRenderer();
-        _renderer = renderer_;
     }
 
     function tokenURI(uint256 tokenId_)
@@ -44,7 +39,11 @@ contract PrivateVaultNFT is Ownable, ERC721, IPrivateVaultNFT {
             IArrakisMetaVault(address(uint160(tokenId_)));
         (uint256 amount0, uint256 amount1) = vault.totalUnderlying();
 
-        try this.getMetaDatas(vault.token0(), vault.token1()) returns (
+        address _renderer =
+            IRenderController(renderController).renderer();
+
+        try this.getMetaDatas(vault.token0(), vault.token1())
+        returns (
             uint8 decimals0,
             uint8 decimals1,
             string memory symbol0,
