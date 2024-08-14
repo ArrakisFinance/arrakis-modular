@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity ^0.8.19;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.19;
 
 import "@solady/contracts/utils/Base64.sol";
 import {NFTSVGUtils} from "./NFTSVGUtils.sol";
