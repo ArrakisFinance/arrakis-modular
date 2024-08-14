@@ -28,7 +28,7 @@ import {CreationCodePublicVault} from
     "../../src/CreationCodePublicVault.sol";
 import {CreationCodePrivateVault} from
     "../../src/CreationCodePrivateVault.sol";
-import {HOTExecutor} from "../../../src/modules/HOTExecutor.sol";
+import {HOTExecutor} from "../../src/modules/HOTExecutor.sol";
 
 import {
     SetupParams, VaultInfo

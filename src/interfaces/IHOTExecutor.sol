@@ -6,7 +6,8 @@ interface IHOTExecutor {
 
     error AddressZero();
     error SameW3f();
-    error UnexpectedReservesAmount();
+    error UnexpectedReservesAmount0();
+    error UnexpectedReservesAmount1();
     error OnlyW3F();
 
     // #endregion errors.
