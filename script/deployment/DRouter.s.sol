@@ -6,6 +6,7 @@ import {console} from "forge-std/console.sol";
 import {CreateXScript} from "./CreateXScript.sol";
 import {ICreateX} from "./interfaces/ICreateX.sol";
 import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
+import {WethFactory} from "./constants/WethFactory.sol";
 
 import {ArrakisPublicVaultRouter} from
     "../../src/ArrakisPublicVaultRouter.sol";
@@ -20,8 +21,6 @@ contract DRouter is CreateXScript {
         0x820FB8127a689327C863de8433278d6181123982;
     address public constant permit2 =
         0x000000000022D473030F116dDEE9F6B43aC78BA3;
-    address public constant weth =
-        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     function setUp() public {}
 
@@ -31,6 +30,11 @@ contract DRouter is CreateXScript {
         address deployer = vm.addr(privateKey);
 
         address owner = ArrakisRoles.getOwner();
+
+        address weth = WethFactory.getWeth();
+
+        console.logString("WETH :");
+        console.logAddress(weth);
 
         console.logString("Deployer :");
         console.logAddress(deployer);

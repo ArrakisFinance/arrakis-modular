@@ -11,9 +11,9 @@ import {ArrakisPublicVaultRouter} from
 
 contract InitRouter is Script {
     address public constant router =
-        0xFf24347dA277476d11c462Ea7314BA04fb8Fb793;
+        0x72aa2C8e6B14F30131081401Fa999fC964A66041;
     address public constant routerExecutor =
-        0xBd6C1799f8433154e978De1b080235ff9beFC15A;
+        0x19488620Cdf3Ff1B0784AC4529Fb5c5AbAceb1B6;
 
     function setUp() public {}
 

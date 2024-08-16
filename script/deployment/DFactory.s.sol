@@ -11,6 +11,8 @@ import {ArrakisMetaVaultFactory} from
     "../../src/ArrakisMetaVaultFactory.sol";
 
 // Factory : 0x820FB8127a689327C863de8433278d6181123982
+// PrivateVaultNFT : 0x44A801e7E2E073bd8bcE4bCCf653239Fa156B762
+// Renderer Controller : 0x1Cc0Adff599F244f036a5C2425f646Aef884149D
 contract DFactory is CreateXScript {
     uint88 public version =
         uint88(uint256(keccak256(abi.encode("Factory version 1"))));

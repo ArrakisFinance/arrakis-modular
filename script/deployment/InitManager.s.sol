@@ -11,19 +11,21 @@ import {ArrakisStandardManager} from
 
 contract InitManager is Script {
     address public constant manager =
-        0xAD8B6C7DFac9c0Ce773649f84a5652550d7f2543;
+        0x2e6E879648293e939aA68bA4c6c129A1Be733bDA;
     address public constant factory =
-        0x1209BD3e8fAf1d142D925B4edaCc30c296d22bf1;
+        0x820FB8127a689327C863de8433278d6181123982;
 
     function setUp() public {}
 
     function run() public {
-        // owner multisig can do the deploymenet.
-        // owner will also be the owner of guardian.
-        address deployer = ArrakisRoles.getOwner();
+        uint256 privateKey = vm.envUint("PK_TEST");
 
-        address owner = deployer;
-        address defaultReceiver = deployer;
+        vm.startBroadcast(privateKey);
+
+        address deployer = vm.addr(privateKey);
+
+        address owner = ArrakisRoles.getOwner();
+        address defaultReceiver = owner;
 
         console.logString("Deployer :");
         console.logAddress(deployer);
@@ -35,14 +37,10 @@ contract InitManager is Script {
             factory
         );
 
-        console.logString("Payload :");
-        console.logBytes(payload);
-        console.logString("Send to :");
-        console.logAddress(manager);
-
-        vm.prank(deployer);
         ArrakisStandardManager(payable(manager)).initialize(
             owner, defaultReceiver, factory
         );
+
+        vm.stopBroadcast();
     }
 }

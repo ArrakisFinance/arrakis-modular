@@ -9,6 +9,7 @@ import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
 
 import {Guardian} from "../../src/Guardian.sol";
 
+// Guardian : 0x6F441151B478E0d60588f221f1A35BcC3f7aB981
 contract DGuardian is CreateXScript {
     uint88 public version =
         uint88(uint256(keccak256(abi.encode("D Guardian version 1"))));
