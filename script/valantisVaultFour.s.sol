@@ -14,12 +14,13 @@ import {TimeLock} from "../src/TimeLock.sol";
 
 // For Gnosis chain.
 
-address constant vault = 0x8cE9786dc4bbB558C1F219f10b1F2f70A6Ced7eC;
+address constant vault = 0xf790870ccF6aE66DdC69f68e6d05d446f1a6ad83;
 address payable constant manager =
-    payable(0xb6F7f65a5cc81B5dA5E9aB58FB37Cb174f4Fb3ca);
-address constant timeLock = 0x119e26B6D72376Ac741d5546eA295d1A0160E26c;
+    payable(0x2e6E879648293e939aA68bA4c6c129A1Be733bDA);
+address constant timeLock = 0xCFaD8B6981Da1c734352Bd31618040C23FE99117;
 address constant hotOracleWrapper =
-    0xCD3B683C6514e94A48d7993544C199341fcdD14E;
+    0xF23d83Da92844C53aD57e6031c231dC93eC4eE80;
+address constant executor = 0xacf11AFFD3ED865FA2Df304eC5048C29597F38F9;
 
 contract ValantisVaultFour is Script {
     function setUp() public {}
@@ -38,7 +39,7 @@ contract ValantisVaultFour is Script {
             uint256 cooldownPeriod,
             ,
             uint24 maxDeviation,
-            address executor,
+            ,
             address stratAnnouncer,
             uint24 maxSlippagePIPS,
         ) = ArrakisStandardManager(manager).vaultInfo(vault);
@@ -58,7 +59,7 @@ contract ValantisVaultFour is Script {
         );
 
         TimeLock(payable(timeLock)).schedule(
-            manager, 0, data, bytes32(0), bytes32(0), 1 minutes
+            manager, 0, data, bytes32(0), bytes32(0), 2 days
         );
 
         console.logString(

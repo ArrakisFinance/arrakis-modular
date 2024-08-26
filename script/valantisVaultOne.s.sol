@@ -14,15 +14,15 @@ import {PIPS} from "../src/constants/CArrakis.sol";
 /// @dev before this script we should whitelist the deployer as public vault deployer using the multisig
 /// on the factory side.
 
-bytes32 constant salt = keccak256(abi.encode("Salt"));
-address constant token0 = 0x6A023CCd1ff6F2045C3309768eAd9E68F978f6e1;
-address constant token1 = 0xDDAfbb505ad214D7b80b1f830fcCc89B60fb7A83;
+bytes32 constant salt = keccak256(abi.encode("Salt WETH/USDC USDC/WETH vault"));
+address constant token0 = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+address constant token1 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 address constant vaultOwner =
     0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
-address constant pool = 0x69aBfAE29aA7a1CAC061D3e05Eee806291A4dB87;
-uint256 constant init0 = 1e18;
-uint256 constant init1 = 3200e6;
+address constant pool = 0xD9a406DBC1a301B0D2eD5bA0d9398c4debe68202;
+uint256 constant init0 = 2670e6;
+uint256 constant init1 = 1e18;
 uint24 constant maxSlippage = PIPS / 50;
 address constant oracle = 0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
@@ -33,9 +33,17 @@ address constant stratAnnouncer =
     0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
 address constant valantisUpgradeableBeacon =
-    0x6c277E32706BCC2D8711e6F5c957436205523FC0;
-address constant factory = 0x30C552Be876Fe28D1E1b609F3d7DC289E7634a98;
+    0xE973Cf1e347EcF26232A95dBCc862AA488b0351b;
+address constant factory = 0x820FB8127a689327C863de8433278d6181123982;
 
+
+// Arbitrum TimeLock Address WETH/USDC : 0xCFaD8B6981Da1c734352Bd31618040C23FE99117.
+// Arbitrum ArrakisMetaVaultPublic WETH/USDC : 0xf790870ccF6aE66DdC69f68e6d05d446f1a6ad83.
+// Arbitrum Valantis Module WETH/USDC : 0x06aAd5A57722336C3b04C6515BBC1f83212f5D4a.
+
+// Mainnet TimeLock Address WETH/USDC : 0xCFaD8B6981Da1c734352Bd31618040C23FE99117.
+// Mainnet ArrakisMetaVaultPublic WETH/USDC : 0xf790870ccF6aE66DdC69f68e6d05d446f1a6ad83.
+// Mainnet Valantis Module WETH/USDC : 0x505f0Cc4D88E1B32d3F0F7FBf21258d2B30aD1E5.
 contract ValantisVaultOne is Script {
     function setUp() public {}
 
