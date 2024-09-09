@@ -64,7 +64,7 @@ contract BunkerModule is
 
     /// @notice initialize function to delegate call onced the beacon proxy is deployed,
     /// for initializing the bunker module.
-    /// @param metaVault_ address of the meta vault
+    /// @param metaVault_ address of the meta vault.
     function initialize(address metaVault_) external initializer {
         if (metaVault_ == address(0)) revert AddressZero();
 
@@ -93,9 +93,7 @@ contract BunkerModule is
 
     // #endregion guardian functions.
 
-    function initializePosition(bytes calldata) external {
-        revert NotImplemented();
-    }
+    function initializePosition(bytes calldata) external {}
 
     /// @notice function used by metaVault to withdraw tokens from the strategy.
     /// @param receiver_ address that will receive tokens.

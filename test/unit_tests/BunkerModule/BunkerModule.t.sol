@@ -114,7 +114,7 @@ contract BunkerModuleTest is TestWrapper {
     // #region test initialize position.
 
     function testInitializePositionNotImplemented() public {
-        vm.expectRevert(IBunkerModule.NotImplemented.selector);
+        // Initialize position should not revert.
         module.initializePosition("");
     }
 
@@ -280,7 +280,8 @@ contract BunkerModuleTest is TestWrapper {
     // #region test withdraw manager balance.
 
     function testWithdrawManagerBalanceNotImplemented() public {
-        (uint256 amount0, uint256 amount1) = module.withdrawManagerBalance();
+        (uint256 amount0, uint256 amount1) =
+            module.withdrawManagerBalance();
 
         assertEq(amount0, 0);
         assertEq(amount1, 0);

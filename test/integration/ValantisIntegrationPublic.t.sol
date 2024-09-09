@@ -23,6 +23,10 @@ import {ArrakisStandardManager} from
 import {Guardian} from "../../src/Guardian.sol";
 import {ValantisModulePublic} from
     "../../src/modules/ValantisHOTModulePublic.sol";
+import {
+    BunkerModule,
+    IBunkerModule
+} from "../../src/modules/BunkerModule.sol";
 import {CreationCodePublicVault} from
     "../../src/CreationCodePublicVault.sol";
 import {CreationCodePrivateVault} from
@@ -125,6 +129,9 @@ contract ValantisIntegrationPublicTest is TestWrapper, HOTBase {
     address public valantisImplementation;
     address public valantisBeacon;
 
+    address public bunkerImplementation;
+    address public bunkerBeacon;
+
     address privateModule;
     address public vault;
     address public executor;
@@ -217,6 +224,42 @@ contract ValantisIntegrationPublicTest is TestWrapper, HOTBase {
         assertEq(
             ERC20(vault).balanceOf(receiver), 1e18 - MINIMUM_LIQUIDITY
         );
+    }
+
+    function test_bunker() public {
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        deal(address(token0), user, init0);
+        deal(address(token1), user, init1);
+
+        address m = address(IArrakisMetaVault(vault).module());
+
+        vm.startPrank(user);
+        token0.approve(m, init0);
+        token1.approve(m, init1);
+
+        IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
+        vm.stopPrank();
+
+        assertEq(
+            ERC20(vault).balanceOf(receiver), 1e18 - MINIMUM_LIQUIDITY
+        );
+
+        address[] memory modules =
+            IArrakisMetaVault(vault).whitelistedModules();
+        bytes[] memory datas = new bytes[](1);
+        datas[0] = abi.encodeWithSelector(
+            IArrakisLPModule.initializePosition.selector, ""
+        );
+
+        vm.prank(manager);
+        IArrakisMetaVault(vault).setModule(modules[1], datas);
+
+        assertEq(token0.balanceOf(modules[1]), init0);
+
+        assertEq(token1.balanceOf(modules[1]), init1);
     }
 
     function test_burn() public {
@@ -926,10 +969,9 @@ contract ValantisIntegrationPublicTest is TestWrapper, HOTBase {
         return address(new Guardian(owner_, pauser_));
     }
 
-    function _deployManager(address guardian_)
-        internal
-        returns (address manager)
-    {
+    function _deployManager(
+        address guardian_
+    ) internal returns (address manager) {
         /// @dev default fee pips is set at 10%
 
         address implementation = address(
@@ -951,11 +993,16 @@ contract ValantisIntegrationPublicTest is TestWrapper, HOTBase {
         );
     }
 
-    function _deployValantisImplementation(address guardian_)
-        internal
-        returns (address)
-    {
+    function _deployValantisImplementation(
+        address guardian_
+    ) internal returns (address) {
         return address(new ValantisModulePublic(guardian_));
+    }
+
+    function _deployBunkerModuleImplementation(
+        address guardian_
+    ) internal returns (address) {
+        return address(new BunkerModule(guardian_));
     }
 
     function _deployCreationCodePublicVault()
@@ -1008,9 +1055,9 @@ contract ValantisIntegrationPublicTest is TestWrapper, HOTBase {
         IModuleRegistry(moduleRegistry).initialize(factory_);
     }
 
-    function _setup(SovereignPoolConstructorArgs memory poolArgs)
-        internal
-    {
+    function _setup(
+        SovereignPoolConstructorArgs memory poolArgs
+    ) internal {
         pool = this.deploySovereignPool(poolArgs);
 
         // #region create guardian.
@@ -1147,6 +1194,35 @@ contract ValantisIntegrationPublicTest is TestWrapper, HOTBase {
         );
 
         // #endregion create public vault.
+
+        // #region create bunker module and add it to vault.
+
+        bunkerImplementation =
+            _deployBunkerModuleImplementation(guardian);
+        bunkerBeacon =
+            address(new UpgradeableBeacon(bunkerImplementation));
+
+        UpgradeableBeacon(bunkerBeacon).transferOwnership(
+            arrakisTimeLock
+        );
+
+        moduleCreationPayload = abi.encodeWithSelector(
+            IBunkerModule.initialize.selector, vault
+        );
+
+        beacons = new address[](1);
+        beacons[0] = bunkerBeacon;
+
+        vm.prank(owner);
+        IModuleRegistry(moduleRegistry).whitelistBeacons(beacons);
+
+        bytes[] memory datas = new bytes[](1);
+        datas[0] = moduleCreationPayload;
+
+        vm.prank(IOwnable(vault).owner());
+        IArrakisMetaVault(vault).whitelistModules(beacons, datas);
+
+        // #endregion create bunker module and add it to vault.
 
         address m = address(IArrakisMetaVault(vault).module());
 
