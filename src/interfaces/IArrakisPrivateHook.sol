@@ -3,7 +3,7 @@ pragma solidity ^0.8.25;
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 
-interface IPermissionHook {
+interface IArrakisPrivateHook {
     // #region errors.
 
     error AddressZero();

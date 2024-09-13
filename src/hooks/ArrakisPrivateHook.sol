@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.25;
 
-import {IPermissionHook} from "../interfaces/IPermissionHook.sol";
+import {IArrakisPrivateHook} from "../interfaces/IArrakisPrivateHook.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 
@@ -15,7 +15,7 @@ import {BeforeSwapDelta} from
     "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 
-contract PermissionHook is IHooks, IPermissionHook {
+contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
     address public immutable module;
 
     uint24 public fee;
@@ -41,7 +41,7 @@ contract PermissionHook is IHooks, IPermissionHook {
     }
 
     /// @notice The hook called before the state of a pool is initialized.
-    /// @dev function not implemented, PermissionHook will not support this hook.
+    /// @dev function not implemented, ArrakisPrivateHook will not support this hook.
     function beforeInitialize(
         address,
         PoolKey calldata,
@@ -52,7 +52,7 @@ contract PermissionHook is IHooks, IPermissionHook {
     }
 
     /// @notice The hook called after the state of a pool is initialized.
-    /// @dev function not implemented, PermissionHook will not support this hook.
+    /// @dev function not implemented, ArrakisPrivateHook will not support this hook.
     function afterInitialize(
         address,
         PoolKey calldata,
@@ -79,7 +79,7 @@ contract PermissionHook is IHooks, IPermissionHook {
     }
 
     /// @notice The hook called after liquidity is added.
-    /// @dev function not implemented, PermissionHook will not support this hook.
+    /// @dev function not implemented, ArrakisPrivateHook will not support this hook.
     function afterAddLiquidity(
         address,
         PoolKey calldata,
@@ -107,7 +107,7 @@ contract PermissionHook is IHooks, IPermissionHook {
     }
 
     /// @notice The hook called after liquidity is removed.
-    /// @dev function not implemented, PermissionHook will not support this hook.
+    /// @dev function not implemented, ArrakisPrivateHook will not support this hook.
     function afterRemoveLiquidity(
         address,
         PoolKey calldata,
@@ -120,7 +120,7 @@ contract PermissionHook is IHooks, IPermissionHook {
     }
 
     /// @notice The hook called before a swap.
-    /// @dev function not implemented, PermissionHook will not support this hook.
+    /// @dev function not implemented, ArrakisPrivateHook will not support this hook.
     function beforeSwap(
         address,
         PoolKey calldata,
@@ -131,7 +131,7 @@ contract PermissionHook is IHooks, IPermissionHook {
     }
 
     /// @notice The hook called after a swap.
-    /// @dev function not implemented, PermissionHook will not support this hook.
+    /// @dev function not implemented, ArrakisPrivateHook will not support this hook.
     function afterSwap(
         address,
         PoolKey calldata,
@@ -143,7 +143,7 @@ contract PermissionHook is IHooks, IPermissionHook {
     }
 
     /// @notice The hook called before donate.
-    /// @dev function not implemented, PermissionHook will not support this hook.
+    /// @dev function not implemented, ArrakisPrivateHook will not support this hook.
     function beforeDonate(
         address,
         PoolKey calldata,
@@ -155,7 +155,7 @@ contract PermissionHook is IHooks, IPermissionHook {
     }
 
     /// @notice The hook called after donate.
-    /// @dev function not implemented, PermissionHook will not support this hook.
+    /// @dev function not implemented, ArrakisPrivateHook will not support this hook.
     function afterDonate(
         address,
         PoolKey calldata,
