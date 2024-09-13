@@ -19,3 +19,6 @@
 [submodule "lib/valantis-hot"]
 	path = lib/valantis-hot
 	url = https://github.com/ValantisLabs/valantis-hot
+[submodule "lib/automate"]
+	path = lib/automate
+	url = https://github.com/gelatodigital/automate
