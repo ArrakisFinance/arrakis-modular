@@ -19,3 +19,6 @@
 [submodule "lib/valantis-hot"]
 	path = lib/valantis-hot
 	url = https://github.com/ValantisLabs/valantis-hot
+[submodule "lib/v4-periphery"]
+	path = lib/v4-periphery
+	url = https://github.com/Uniswap/v4-periphery

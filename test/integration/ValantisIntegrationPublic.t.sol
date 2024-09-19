@@ -227,6 +227,8 @@ contract ValantisIntegrationPublicTest is TestWrapper, HOTBase {
     }
 
     function test_bunker() public {
+        // #region first user mint.
+
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
         address receiver =
             vm.addr(uint256(keccak256(abi.encode("Receiver"))));
@@ -243,6 +245,26 @@ contract ValantisIntegrationPublicTest is TestWrapper, HOTBase {
         IArrakisMetaVaultPublic(vault).mint(1e18, receiver);
         vm.stopPrank();
 
+        // #endregion fisrt user mint.
+
+        // #region second user mint.
+
+        address user2 = vm.addr(uint256(keccak256(abi.encode("User 2"))));
+        address receiver2 =
+            vm.addr(uint256(keccak256(abi.encode("Receiver 2"))));
+        
+        deal(address(token0), user2, init0);
+        deal(address(token1), user2, init1);
+
+        vm.startPrank(user2);
+        token0.approve(m, init0);
+        token1.approve(m, init1);
+
+        IArrakisMetaVaultPublic(vault).mint(1e18, receiver2);
+        vm.stopPrank();
+
+        // #endregion second user mint.
+
         assertEq(
             ERC20(vault).balanceOf(receiver), 1e18 - MINIMUM_LIQUIDITY
         );
@@ -254,12 +276,50 @@ contract ValantisIntegrationPublicTest is TestWrapper, HOTBase {
             IArrakisLPModule.initializePosition.selector, ""
         );
 
+        address a = address(IValantisHOTModule(modules[0]).pool());
+
         vm.prank(manager);
         IArrakisMetaVault(vault).setModule(modules[1], datas);
 
-        assertEq(token0.balanceOf(modules[1]), init0);
+        assertEq(token0.balanceOf(modules[1]), 2 * init0);
 
-        assertEq(token1.balanceOf(modules[1]), init1);
+        assertEq(token1.balanceOf(modules[1]), 2 * init1);
+
+        assertEq(token0.balanceOf(a), 0);
+        assertEq(token1.balanceOf(a), 0);
+
+        // #region first user burn.
+
+        assertEq(token0.balanceOf(receiver), 0);
+        assertEq(token1.balanceOf(receiver), 0);
+
+        vm.startPrank(receiver);
+        uint256 receiverBalance = ERC20(vault).balanceOf(receiver);
+        (uint256 burn0, uint256 burn1) = IArrakisMetaVaultPublic(vault).burn(
+            receiverBalance, receiver
+        );
+        vm.stopPrank();
+
+        assertEq(token0.balanceOf(receiver), burn0);
+        assertEq(token1.balanceOf(receiver), burn1);
+
+        // #endregion first user burn.
+
+        // #region switch module to arrakis module.
+
+        vm.prank(manager);
+        IArrakisMetaVault(vault).setModule(modules[0], datas);
+
+        (uint256 amount0, uint256 amount1) = IArrakisMetaVault(vault)
+            .totalUnderlying();
+
+        assertEq(token0.balanceOf(modules[1]), 0);
+        assertEq(token1.balanceOf(modules[1]), 0);
+
+        assertEq(token0.balanceOf(a), amount0);
+        assertEq(token1.balanceOf(a), amount1);
+
+        // #endregion switch module to arrakis module.
     }
 
     function test_burn() public {
