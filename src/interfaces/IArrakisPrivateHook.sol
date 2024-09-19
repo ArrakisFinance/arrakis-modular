@@ -9,7 +9,7 @@ interface IArrakisPrivateHook {
     error AddressZero();
     error OnlyModule();
     error NotImplemented();
-    error OnlyVaultManager();
+    error OnlyVaultExecutor();
 
     // #endregion errors.
 
@@ -19,11 +19,18 @@ interface IArrakisPrivateHook {
 
     // #endregion events.
 
-    function setFee(PoolKey calldata poolKey_, uint24 fee_) external;
+    function setFee(
+        PoolKey calldata poolKey_,
+        uint24 fee_
+    ) external;
 
     // #region view functions.
 
     function module() external view returns (address);
+    function vault() external view returns (address);
+    function manager() external view returns (address);
+    function fee() external view returns (uint24);
+    function poolManager() external view returns (address);
 
     // #endregion view functions.
 }
