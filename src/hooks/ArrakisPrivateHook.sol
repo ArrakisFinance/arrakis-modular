@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.25;
+pragma solidity ^0.8.26;
 
-import {IArrakisPrivateHook} from "../interfaces/IArrakisPrivateHook.sol";
+import {IArrakisPrivateHook} from
+    "../interfaces/IArrakisPrivateHook.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
+import {IArrakisStandardManager} from
+    "../interfaces/IArrakisStandardManager.sol";
 
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {IPoolManager} from
@@ -16,22 +19,41 @@ import {BeforeSwapDelta} from
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 
 contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
+
+    // #region immutable properties.
+
     address public immutable module;
+    address public immutable poolManager;
+    address public immutable vault;
+    address public immutable manager;
+
+    // #endregion immutable properties.
 
     uint24 public fee;
-    address public poolManager;
 
-    constructor(address module_) {
-        if (module_ == address(0)) {
+    constructor(address module_, address poolManager_) {
+        if (module_ == address(0) || poolManager_ == address(0)) {
             revert AddressZero();
         }
 
         module = module_;
+        poolManager = poolManager_;
+
+        IArrakisMetaVault _vault =
+            IArrakisLPModule(module).metaVault();
+        vault = address(_vault);
+        manager = _vault.manager();
     }
 
-    function setFee(PoolKey calldata poolKey_, uint24 fee_) external {
-        if (msg.sender != IArrakisLPModule(module).metaVault().manager()) {
-            revert OnlyVaultManager();
+    function setFee(
+        PoolKey calldata poolKey_,
+        uint24 fee_
+    ) external {
+        (,,,, address executor,,,) =
+            IArrakisStandardManager(manager).vaultInfo(vault);
+
+        if (msg.sender != executor) {
+            revert OnlyVaultExecutor();
         }
 
         fee = fee_;
@@ -48,7 +70,7 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
         uint160,
         bytes calldata
     ) external virtual returns (bytes4) {
-        poolManager = msg.sender;
+        revert NotImplemented();
     }
 
     /// @notice The hook called after the state of a pool is initialized.
