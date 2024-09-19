@@ -19,8 +19,8 @@ address payable constant manager =
     payable(0x2e6E879648293e939aA68bA4c6c129A1Be733bDA);
 address constant timeLock = 0xCFaD8B6981Da1c734352Bd31618040C23FE99117;
 address constant hotOracleWrapper =
-    0xF23d83Da92844C53aD57e6031c231dC93eC4eE80;
-address constant executor = 0xacf11AFFD3ED865FA2Df304eC5048C29597F38F9;
+    0x1DDDEc1cE817bc771b6339E9DE97ae81B3bE0da4;
+address constant executor = 0x030DE9fd3ca63AB012f4E22dB595b66C812c8525;
 
 contract ValantisVaultFour is Script {
     function setUp() public {}
