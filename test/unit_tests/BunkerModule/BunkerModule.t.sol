@@ -264,6 +264,31 @@ contract BunkerModuleTest is TestWrapper {
         assertEq(IERC20(USDC).balanceOf(receiver), 2_500_000_000);
     }
 
+    function testWithdrawBis() public {
+        deal(USDC, address(module), 2_500_000_000);
+
+        address receiver = vm.addr(20);
+
+        vm.prank(address(metaVault));
+
+        module.withdraw(receiver, BASE);
+
+        assertEq(IERC20(WETH).balanceOf(receiver), 0);
+        assertEq(IERC20(USDC).balanceOf(receiver), 2_500_000_000);
+    }
+
+    function testWithdrawBis2() public {
+        deal(WETH, address(module), 1 ether);
+
+        address receiver = vm.addr(20);
+
+        vm.prank(address(metaVault));
+
+        module.withdraw(receiver, BASE);
+
+        assertEq(IERC20(WETH).balanceOf(receiver), 1 ether);
+    }
+
     // #endregion test withdraw.
 
     // #region test validate rebalance.
@@ -297,6 +322,13 @@ contract BunkerModuleTest is TestWrapper {
     }
 
     // #endregion test set manager fee pips.
+
+    // #region test manager fee pips.
+
+    function testManagerFeePIPS() public {
+        vm.expectRevert(IBunkerModule.NotImplemented.selector);
+        module.managerFeePIPS();
+    }
 
     // #region test manager balance 0 and manager balance 1.
 

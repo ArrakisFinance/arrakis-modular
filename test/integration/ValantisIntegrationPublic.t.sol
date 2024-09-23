@@ -132,7 +132,7 @@ contract ValantisIntegrationPublicTest is TestWrapper, HOTBase {
     address public bunkerImplementation;
     address public bunkerBeacon;
 
-    address privateModule;
+    address public privateModule;
     address public vault;
     address public executor;
     address public stratAnnouncer;
