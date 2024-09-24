@@ -6,9 +6,18 @@ import {TestWrapper} from "../utils/TestWrapper.sol";
 import {console} from "forge-std/console.sol";
 // #endregion foundry.
 
-import {UniV4StandardModule} from
-    "../../src/modules/UniV4StandardModule.sol";
+import {UniV4StandardModulePublic} from
+    "../../src/modules/UniV4StandardModulePublic.sol";
 import {BunkerModule} from "../../src/modules/BunkerModule.sol";
+import {ArrakisPublicVaultRouterV2} from
+    "../../src/ArrakisPublicVaultRouterV2.sol";
+import {RouterSwapExecutor} from "../../src/RouterSwapExecutor.sol";
+import {UniV4StandardModuleResolver} from
+    "../../src/modules/resolvers/UniV4StandardModuleResolver.sol";
+import {
+    NATIVE_COIN,
+    TEN_PERCENT
+} from "../../src/constants/CArrakis.sol";
 
 // #region interfaces.
 
@@ -18,6 +27,8 @@ import {IArrakisPrivateVaultRouter} from
     "../../src/interfaces/IArrakisPrivateVaultRouter.sol";
 import {IArrakisPublicVaultRouter} from
     "../../src/interfaces/IArrakisPublicVaultRouter.sol";
+import {IArrakisPublicVaultRouterV2} from
+    "../../src/interfaces/IArrakisPublicVaultRouterV2.sol";
 import {IArrakisStandardManager} from
     "../../src/interfaces/IArrakisStandardManager.sol";
 import {IGuardian} from "../../src/interfaces/IGuardian.sol";
@@ -31,6 +42,7 @@ import {IRouterSwapResolver} from
 import {IOwnable} from "../../src/interfaces/IOwnable.sol";
 import {IUniV4StandardModule} from
     "../../src/interfaces/IUniV4StandardModule.sol";
+import {IOracleWrapper} from "../../src/interfaces/IOracleWrapper.sol";
 
 // #endregion interfaces.
 
@@ -51,6 +63,15 @@ import {
     PoolManager,
     IPoolManager
 } from "@uniswap/v4-core/src/PoolManager.sol";
+import {
+    Currency,
+    CurrencyLibrary
+} from "@uniswap/v4-core/src/types/Currency.sol";
+import {
+    PoolKey,
+    PoolIdLibrary
+} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 
 // #endregion uniswap v4.
 
@@ -60,6 +81,8 @@ import {
 
 contract UniswapV4IntegrationTest is TestWrapper {
     using SafeERC20 for IERC20Metadata;
+    using CurrencyLibrary for Currency;
+    using PoolIdLibrary for PoolKey;
 
     // #region constant properties.
     address public constant WETH =
@@ -86,12 +109,12 @@ contract UniswapV4IntegrationTest is TestWrapper {
         0xe278C1944BA3321C1079aBF94961E9fF1127A265;
     address public constant pauser =
         0xfae375Bc5060A51343749CEcF5c8ABe65F11cCAC;
-    address public constant router =
-        0x72aa2C8e6B14F30131081401Fa999fC964A66041;
-    address public constant routerResolver =
-        0xC6c53369c36D6b4f4A6c195441Fe2d33149FB265;
     address public constant valantisModuleBeacon =
         0xE973Cf1e347EcF26232A95dBCc862AA488b0351b;
+    address public constant permit2 =
+        0x000000000022D473030F116dDEE9F6B43aC78BA3;
+    address public constant weth =
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     // #endregion arrakis modular contracts.
 
     address public owner;
@@ -107,6 +130,14 @@ contract UniswapV4IntegrationTest is TestWrapper {
     address public vault;
     address public executor;
     address public stratAnnouncer;
+
+    // #region arrakis.
+
+    address public router;
+    address public swapExecutor;
+    address public uniV4resolver;
+
+    // #endregion arrakis.
 
     // #region uniswap.
 
@@ -126,6 +157,8 @@ contract UniswapV4IntegrationTest is TestWrapper {
     uint256 public init0;
     uint256 public init1;
     uint24 public maxSlippage;
+    PoolKey public poolKey;
+    uint160 public sqrtPriceX96;
 
     // #endregion vault infos.
 
@@ -156,7 +189,79 @@ contract UniswapV4IntegrationTest is TestWrapper {
             (IERC20Metadata(USDC), IERC20Metadata(WETH));
 
         // #endregion setup.
+
+        _setup();
+
+        // #region create a uniswap v4 pool.
+
+        Currency currency0 = Currency.wrap(USDC);
+        Currency currency1 = Currency.wrap(WETH);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+
+        IPoolManager(poolManager).unlock(abi.encode(0));
+
+        // #endregion create a uniswap v4 pool.
+
+        // #region create a vault.
+
+        bytes32 salt =
+            keccak256(abi.encode("Public vault Univ4 salt"));
+        init0 = 2000e6;
+        init1 = 1e18;
+        maxSlippage = 10_000;
+
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            false,
+            poolKey
+        );
+
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
+
+        // #endregion create a vault.
     }
+
+    // #region uniswap v4 callback function.
+
+    function unlockCallback(
+        bytes calldata data
+    ) public returns (bytes memory) {
+        uint256 typeOfLockAcquired = abi.decode(data, (uint256));
+
+        if (typeOfLockAcquired == 0) {
+            IPoolManager(poolManager).initialize(
+                poolKey, sqrtPriceX96, ""
+            );
+        }
+    }
+
+    // #endregion uniswap v4 callback function.
+
+    // #region test.
+
+    function test_mint() public {
+        
+    }
+
+    // #endregion test.
 
     // #region internal functions.
 
@@ -168,8 +273,6 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         address[] memory deployers = new address[](1);
         deployers[0] = deployer;
-
-        console.log("Factory Owner : %d", factoryOwner);
 
         vm.prank(factoryOwner);
         IArrakisMetaVaultFactory(factory).whitelistDeployer(deployers);
@@ -188,6 +291,47 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         // #endregion create bunker module.
 
+        // #region create router v2.
+
+        router = _deployArrakisPublicRouter();
+
+        // #endregion create router v2.
+
+        // #region create routerSwapExecutor.
+
+        swapExecutor = _deployRouterSwapExecutor(router);
+
+        // #endregion create routerSwapExecutor.
+
+        // #region create resolver.
+
+        uniV4resolver =
+            _deployUniV4StandardModuleResolver(poolManager);
+
+        // #endregion create resolver.
+
+        // #region initialize router.
+
+        vm.prank(owner);
+
+        ArrakisPublicVaultRouterV2(payable(router)).updateSwapExecutor(
+            swapExecutor
+        );
+
+        // #endregion initialize router.
+
+        // #region whitelist resolver.
+
+        address[] memory resolvers = new address[](1);
+        resolvers[0] = uniV4resolver;
+
+        vm.prank(owner);
+        IArrakisPublicVaultRouterV2(router).whitelistResolvers(
+            resolvers
+        );
+
+        // #endregion whitelist resolver.
+
         // #region create an uniswap standard module.
 
         _deployUniswapStandardModule(poolManager);
@@ -198,10 +342,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
         beacons[0] = bunkerBeacon;
         beacons[1] = uniswapStandardModuleBeacon;
 
-        address registryOwner = IOwnable(publicRegistry).owner();
-
-        console.log("Registry Owner : %d", registryOwner);
-        vm.startPrank(registryOwner);
+        vm.startPrank(IOwnable(publicRegistry).owner());
 
         IModuleRegistry(publicRegistry).whitelistBeacons(beacons);
         IModuleRegistry(privateRegistry).whitelistBeacons(beacons);
@@ -218,6 +359,10 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         bunkerBeacon =
             address(new UpgradeableBeacon(bunkerImplementation));
+
+        UpgradeableBeacon(bunkerBeacon).transferOwnership(
+            arrakisTimeLock
+        );
     }
 
     function _deployUniswapStandardModule(
@@ -226,7 +371,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
         // #region create uniswap standard module.
 
         uniswapStandardModuleImplementation =
-            address(new UniV4StandardModule(poolManager, guardian));
+            address(new UniV4StandardModulePublic(poolManager, guardian));
         uniswapStandardModuleBeacon = address(
             new UpgradeableBeacon(uniswapStandardModuleImplementation)
         );
@@ -235,6 +380,29 @@ contract UniswapV4IntegrationTest is TestWrapper {
             .transferOwnership(arrakisTimeLock);
 
         // #endregion create uniswap standard module.
+    }
+
+    function _deployArrakisPublicRouter()
+        internal
+        returns (address routerV2)
+    {
+        return address(
+            new ArrakisPublicVaultRouterV2(
+                NATIVE_COIN, permit2, owner, factory, weth
+            )
+        );
+    }
+
+    function _deployRouterSwapExecutor(
+        address router
+    ) internal returns (address swapExecutor) {
+        return address(new RouterSwapExecutor(router, NATIVE_COIN));
+    }
+
+    function _deployUniV4StandardModuleResolver(
+        address poolManager
+    ) internal returns (address resolver) {
+        return address(new UniV4StandardModuleResolver(poolManager));
     }
 
     function _setupETHUSDCVault() internal returns (address vault) {}

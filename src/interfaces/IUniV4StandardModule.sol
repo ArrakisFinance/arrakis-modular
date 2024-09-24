@@ -5,6 +5,9 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 
+import {SwapPayload} from "../structs/SUniswapV4.sol";
+import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
+
 interface IUniV4StandardModule {
     // #region errors.
 
@@ -27,6 +30,11 @@ interface IUniV4StandardModule {
     error OverMaxDeviation();
     error CallBackNotSupported();
     error NativeCoinCannotBeToken1();
+    error MaxSlippageGtTenPercent();
+    error ExpectedMinReturnTooLow();
+    error WrongRouter();
+    error SwapCallFailed();
+    error SlippageTooHigh();
 
     // #endregion errors.
 
@@ -64,7 +72,9 @@ interface IUniV4StandardModule {
         uint256 init1_,
         bool isInversed_,
         PoolKey calldata poolKey_,
-        address metaVault_
+        address metaVault_,
+        IOracleWrapper oracle_,
+        uint24 maxSlippage_
     ) external;
 
     // #endregion only meta vault owner functions.
@@ -73,11 +83,13 @@ interface IUniV4StandardModule {
 
     function setPool(
         PoolKey calldata poolKey_,
-        LiquidityRange[] calldata liquidityRanges_
+        LiquidityRange[] calldata liquidityRanges_,
+        SwapPayload calldata swapPayload_
     ) external;
 
     function rebalance(
-        LiquidityRange[] calldata liquidityRanges_
+        LiquidityRange[] calldata liquidityRanges_,
+        SwapPayload memory swapPayload_
     )
         external
         returns (

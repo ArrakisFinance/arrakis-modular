@@ -7,8 +7,8 @@ import {TestWrapper} from "../../utils/TestWrapper.sol";
 // #endregion foundry.
 
 // #region Uniswap Module.
-import {UniV4StandardModule} from
-    "../../../src/modules/UniV4StandardModule.sol";
+import {UniV4StandardModulePublic} from
+    "../../../src/modules/UniV4StandardModulePublic.sol";
 import {IUniV4StandardModule} from
     "../../../src/interfaces/IUniV4StandardModule.sol";
 import {IArrakisLPModule} from
@@ -21,6 +21,9 @@ import {
     PIPS,
     NATIVE_COIN
 } from "../../../src/constants/CArrakis.sol";
+import {
+    SwapPayload
+} from "../../../src/structs/SUniswapV4.sol";
 // #endregion Uniswap Module.
 
 // #region openzeppelin.
@@ -87,7 +90,7 @@ contract UniV4StandardModuleTest is TestWrapper {
     address public guardian;
     address public owner;
 
-    UniV4StandardModule public module;
+    UniV4StandardModulePublic public module;
 
     function setUp() public {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
@@ -138,7 +141,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implmentation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -150,7 +153,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
 
@@ -248,7 +251,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
     function testConstructorPoolManagerAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        new UniV4StandardModule(address(0), guardian);
+        new UniV4StandardModulePublic(address(0), guardian);
     }
 
     function testConstructorMetaVaultAddressZero() public {
@@ -256,7 +259,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implmentation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -269,14 +272,14 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
 
     function testConstructorGuardianAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        new UniV4StandardModule(address(poolManager), address(0));
+        new UniV4StandardModulePublic(address(poolManager), address(0));
     }
 
     function testConstructorCurrency0DtToken0() public {
@@ -297,7 +300,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolManager.unlock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -316,7 +319,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 USDC
             )
         );
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -341,7 +344,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolManager.unlock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -360,7 +363,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 NATIVE_COIN
             )
         );
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -383,7 +386,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolManager.unlock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -402,7 +405,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 WETH
             )
         );
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -425,7 +428,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolManager.unlock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -444,7 +447,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 USDC
             )
         );
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -469,7 +472,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolManager.unlock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -488,7 +491,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 NATIVE_COIN
             )
         );
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -513,7 +516,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolManager.unlock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -532,7 +535,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 WETH
             )
         );
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -557,7 +560,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolManager.unlock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -572,7 +575,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.expectRevert(
             IUniV4StandardModule.NativeCoinCannotBeToken1.selector
         );
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -597,7 +600,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolManager.unlock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -612,7 +615,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.expectRevert(
             IUniV4StandardModule.NativeCoinCannotBeToken1.selector
         );
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -644,7 +647,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolManager.unlock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -659,7 +662,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.expectRevert(
             IUniV4StandardModule.NoModifyLiquidityHooks.selector
         );
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -689,7 +692,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         poolManager.unlock(abi.encode(2));
         address implmentation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -704,7 +707,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.expectRevert(
             IUniV4StandardModule.NoModifyLiquidityHooks.selector
         );
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -726,7 +729,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         });
 
         address implmentation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -739,7 +742,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
 
         vm.expectRevert(IUniV4StandardModule.SqrtPriceZero.selector);
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -757,10 +760,12 @@ contract UniV4StandardModuleTest is TestWrapper {
             )
         );
 
+        SwapPayload memory swapPayload;
+
         IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
             new IUniV4StandardModule.LiquidityRange[](0);
 
-        module.setPool(poolKey, liquidityRange);
+        module.setPool(poolKey, liquidityRange, swapPayload);
     }
 
     function testSetPoolCurrency0DtToken0() public {
@@ -768,6 +773,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             vm.addr(uint256(keccak256(abi.encode("FalseCurrency"))));
 
         poolKey.currency0 = Currency.wrap(falseCurrency);
+
+        SwapPayload memory swapPayload;
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -781,7 +788,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             new IUniV4StandardModule.LiquidityRange[](0);
 
         vm.prank(manager);
-        module.setPool(poolKey, liquidityRange);
+        module.setPool(poolKey, liquidityRange, swapPayload);
     }
 
     function testSetPoolCurrency1DtToken1() public {
@@ -801,18 +808,21 @@ contract UniV4StandardModuleTest is TestWrapper {
         IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
             new IUniV4StandardModule.LiquidityRange[](0);
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.setPool(poolKey, liquidityRange);
+        module.setPool(poolKey, liquidityRange, swapPayload);
     }
 
     function testSetPoolSamePool() public {
         IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
             new IUniV4StandardModule.LiquidityRange[](0);
 
+        SwapPayload memory swapPayload;
         vm.expectRevert(IUniV4StandardModule.SamePool.selector);
 
         vm.prank(manager);
-        module.setPool(poolKey, liquidityRange);
+        module.setPool(poolKey, liquidityRange, swapPayload);
     }
 
     function testSetPoolNoModifyLiquidityHooks() public {
@@ -837,11 +847,13 @@ contract UniV4StandardModuleTest is TestWrapper {
         IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
             new IUniV4StandardModule.LiquidityRange[](0);
 
+        SwapPayload memory swapPayload;
+
         vm.expectRevert(
             IUniV4StandardModule.NoModifyLiquidityHooks.selector
         );
         vm.prank(manager);
-        module.setPool(poolKey, liquidityRange);
+        module.setPool(poolKey, liquidityRange, swapPayload);
     }
 
     function testSetPoolSqrtPriceZero() public {
@@ -856,9 +868,11 @@ contract UniV4StandardModuleTest is TestWrapper {
         IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
             new IUniV4StandardModule.LiquidityRange[](0);
 
+        SwapPayload memory swapPayload;
+
         vm.expectRevert(IUniV4StandardModule.SqrtPriceZero.selector);
         vm.prank(manager);
-        module.setPool(poolKey, liquidityRange);
+        module.setPool(poolKey, liquidityRange, swapPayload);
     }
 
     function testSetPool() public {
@@ -875,8 +889,10 @@ contract UniV4StandardModuleTest is TestWrapper {
         IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
             new IUniV4StandardModule.LiquidityRange[](0);
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.setPool(poolKey, liquidityRange);
+        module.setPool(poolKey, liquidityRange, swapPayload);
     }
 
     function testSetPoolRemoveRange() public {
@@ -937,8 +953,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -956,7 +974,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             new IUniV4StandardModule.LiquidityRange[](0);
 
         vm.prank(manager);
-        module.setPool(poolKey, l);
+        module.setPool(poolKey, l, swapPayload);
     }
 
     // #endregion test set pool.
@@ -1075,8 +1093,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -1162,8 +1182,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -1247,8 +1269,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -1338,8 +1362,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -1429,8 +1455,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -1489,7 +1517,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -1501,7 +1529,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
@@ -1548,7 +1576,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -1560,7 +1588,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
@@ -1613,8 +1641,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -1665,7 +1695,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -1677,7 +1707,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
@@ -1924,8 +1954,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -2057,9 +2089,10 @@ contract UniV4StandardModuleTest is TestWrapper {
             new IUniV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
+        SwapPayload memory swapPayload;
 
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -2132,8 +2165,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -2151,7 +2186,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.prank(manager);
         vm.expectRevert(IUniV4StandardModule.OverBurning.selector);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do another rebalance to overburn.
     }
@@ -2214,8 +2249,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -2233,7 +2270,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.prank(manager);
         vm.expectRevert(abi.encodeWithSelector(IUniV4StandardModule.RangeShouldBeActive.selector, tickLower + 50, tickUpper + 50));
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do a second rebalance to remove unknown liquidity.
     }
@@ -2299,6 +2336,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -2307,7 +2346,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 tickLower
             )
         );
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
     }
@@ -2373,6 +2412,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -2380,7 +2421,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 TickMath.MIN_TICK - 1
             )
         );
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
     }
@@ -2446,6 +2487,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -2453,7 +2496,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 TickMath.MAX_TICK + 1
             )
         );
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
     }
@@ -2516,8 +2559,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -2565,7 +2610,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         });
 
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion change ranges.
 
@@ -2656,8 +2701,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -2741,8 +2788,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -2822,8 +2871,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidityRanges[0] = liquidityRange;
 
+        SwapPayload memory swapPayload;
+
         vm.prank(manager);
-        module.rebalance(liquidityRanges);
+        module.rebalance(liquidityRanges, swapPayload);
 
         // #endregion do rebalance.
 
@@ -2907,7 +2958,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new UniV4StandardModule(address(poolManager), guardian)
+            new UniV4StandardModulePublic(address(poolManager), guardian)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -2919,7 +2970,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModule(
+        module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
