@@ -72,9 +72,9 @@ interface IUniV4StandardModule {
         uint256 init1_,
         bool isInversed_,
         PoolKey calldata poolKey_,
-        address metaVault_,
         IOracleWrapper oracle_,
-        uint24 maxSlippage_
+        uint24 maxSlippage_,
+        address metaVault_
     ) external;
 
     // #endregion only meta vault owner functions.

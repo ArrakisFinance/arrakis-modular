@@ -177,9 +177,9 @@ abstract contract UniV4StandardModule is
         uint256 init1_,
         bool isInversed_,
         PoolKey calldata poolKey_,
-        address metaVault_,
         IOracleWrapper oracle_,
-        uint24 maxSlippage_
+        uint24 maxSlippage_,
+        address metaVault_
     ) external initializer {
         // #region checks.
         if (

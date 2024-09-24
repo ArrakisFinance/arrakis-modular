@@ -19,6 +19,7 @@ import {IOwnable} from "../../../src/interfaces/IOwnable.sol";
 import {
     BASE,
     PIPS,
+    TEN_PERCENT,
     NATIVE_COIN
 } from "../../../src/constants/CArrakis.sol";
 import {
@@ -90,6 +91,12 @@ contract UniV4StandardModuleTest is TestWrapper {
     address public guardian;
     address public owner;
 
+    // #region mocks contracts.
+
+    OracleMock public oracle;
+
+    // #endregion mocks contracts.
+
     UniV4StandardModulePublic public module;
 
     function setUp() public {
@@ -133,6 +140,12 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #endregion create a pool.
 
+        // #region create an oracle.
+
+        oracle = new OracleMock();
+
+        // #endregion create an oracle.
+
         // #endregion do a poolManager deployment.
 
         // #region create uni v4 module.
@@ -150,6 +163,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             false,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -268,6 +283,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             false,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             address(0)
         );
 
@@ -309,6 +326,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             false,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -353,6 +372,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             false,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -395,6 +416,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             false,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -437,6 +460,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             true,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -481,6 +506,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             true,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -525,6 +552,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             true,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -569,6 +598,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             true,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -609,6 +640,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             false,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -656,6 +689,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             false,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -701,6 +736,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             false,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -738,6 +775,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             false,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
