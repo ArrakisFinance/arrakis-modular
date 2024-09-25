@@ -2,22 +2,25 @@
 pragma solidity ^0.8.19;
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
+
+import {SwapPayload} from "../structs/SUniswapV4.sol";
+import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 
 interface IUniV4StandardModule {
     // #region errors.
 
-    error Token0GteToken1();
     error Currency0DtToken0(address currency0, address token0);
     error Currency1DtToken1(address currency1, address token1);
+    error Currency1DtToken0(address currency1, address token0);
+    error Currency0DtToken1(address currency0, address token1);
     error SqrtPriceZero();
     error OnlyPoolManager();
     error OnlyModuleCaller();
     error InvalidCurrencyDelta();
     error RangeShouldBeActive(int24 tickLower, int24 tickUpper);
     error OverBurning();
-    error RangeNotFound();
-    error LiquidityToAddEqZero();
-    error LiquidityToRemoveEqZero();
     error TicksMisordered(int24 tickLower, int24 tickUpper);
     error TickLowerOutOfBounds(int24 tickLower);
     error TickUpperOutOfBounds(int24 tickUpper);
@@ -26,8 +29,12 @@ interface IUniV4StandardModule {
     error NoModifyLiquidityHooks();
     error OverMaxDeviation();
     error CallBackNotSupported();
-    error OnlyMetaVaultOwner();
-    error PoolKeyAlreadySet();
+    error NativeCoinCannotBeToken1();
+    error MaxSlippageGtTenPercent();
+    error ExpectedMinReturnTooLow();
+    error WrongRouter();
+    error SwapCallFailed();
+    error SlippageTooHigh();
 
     // #endregion errors.
 
@@ -60,7 +67,15 @@ interface IUniV4StandardModule {
 
     // #region only meta vault owner functions.
 
-    function initializePoolKey(PoolKey calldata poolKey_) external;
+    function initialize(
+        uint256 init0_,
+        uint256 init1_,
+        bool isInversed_,
+        PoolKey calldata poolKey_,
+        IOracleWrapper oracle_,
+        uint24 maxSlippage_,
+        address metaVault_
+    ) external;
 
     // #endregion only meta vault owner functions.
 
@@ -68,10 +83,14 @@ interface IUniV4StandardModule {
 
     function setPool(
         PoolKey calldata poolKey_,
-        LiquidityRange[] calldata liquidityRanges_
+        LiquidityRange[] calldata liquidityRanges_,
+        SwapPayload calldata swapPayload_
     ) external;
 
-    function rebalance(LiquidityRange[] calldata liquidityRanges_)
+    function rebalance(
+        LiquidityRange[] calldata liquidityRanges_,
+        SwapPayload memory swapPayload_
+    )
         external
         returns (
             uint256 amount0Minted,
@@ -81,4 +100,23 @@ interface IUniV4StandardModule {
         );
 
     // #endregion only manager functions.
+
+    // #region view functions.
+
+    /// @notice function used to get the list of active ranges.
+    /// @return ranges active ranges
+    function getRanges() external view returns (Range[] memory ranges);
+
+    function poolKey()
+        external
+        view
+        returns (
+            Currency currency0,
+            Currency currency1,
+            uint24 fee,
+            int24 tickSpacing,
+            IHooks hooks
+        );
+
+    // #endregion view functions.
 }

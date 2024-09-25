@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.25;
+pragma solidity ^0.8.26;
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
@@ -64,8 +64,24 @@ struct PositionUnderlying {
 }
 
 struct Withdraw {
-    uint256 burn0;
-    uint256 burn1;
-    uint256 fee0;
-    uint256 fee1;
+    IPoolManager poolManager;
+    address receiver;
+     uint256 proportion;
+}
+
+struct SwapPayload {
+    bytes payload;
+    address router;
+    uint256 amountIn;
+    uint256 expectedMinReturn;
+    bool zeroForOne;
+}
+
+struct SwapBalances {
+    uint256 actual0;
+    uint256 actual1;
+    uint256 initBalance0;
+    uint256 initBalance1;
+    uint256 balance0;
+    uint256 balance1;
 }

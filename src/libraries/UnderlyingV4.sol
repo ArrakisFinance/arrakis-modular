@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.25;
+pragma solidity ^0.8.26;
 
 import {
     UnderlyingPayload,
@@ -22,7 +22,8 @@ import {
     PoolIdLibrary,
     PoolId
 } from "@uniswap/v4-core/src/types/PoolId.sol";
-import {LiquidityAmounts} from "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
+import {LiquidityAmounts} from
+    "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
 import {
     Currency,
     CurrencyLibrary
@@ -43,8 +44,7 @@ library UnderlyingV4 {
     // solhint-disable-next-line function-max-lines
     function totalUnderlyingForMint(
         UnderlyingPayload memory underlyingPayload_,
-        uint256 proportion_,
-        address metaVault_
+        uint256 proportion_
     ) public view returns (uint256 amount0, uint256 amount1) {
         uint256 fee0;
         uint256 fee1;
@@ -165,12 +165,15 @@ library UnderlyingV4 {
             uint256 fee1
         )
     {
-        (uint160 sqrtPriceX96,,,) = underlying_.poolManager.getSlot0(
-            PoolIdLibrary.toId(underlying_.range.poolKey)
-        );
+        if (sqrtPriceX96_ == 0) {
+            (sqrtPriceX96_,,,) = underlying_.poolManager.getSlot0(
+                PoolIdLibrary.toId(underlying_.range.poolKey)
+            );
+        }
+
         PositionUnderlying memory positionUnderlying =
         PositionUnderlying({
-            sqrtPriceX96: sqrtPriceX96_ > 0 ? sqrtPriceX96_ : sqrtPriceX96,
+            sqrtPriceX96: sqrtPriceX96_,
             poolManager: underlying_.poolManager,
             poolKey: underlying_.range.poolKey,
             self: underlying_.self,
@@ -242,7 +245,7 @@ library UnderlyingV4 {
                 positionState.liquidity,
                 positionState.feeGrowthInside0LastX128,
                 positionState.feeGrowthInside1LastX128
-            )  = positionUnderlying_.poolManager.getPositionInfo(
+            ) = positionUnderlying_.poolManager.getPositionInfo(
                 poolId,
                 positionUnderlying_.self,
                 positionUnderlying_.lowerTick,
@@ -301,9 +304,7 @@ library UnderlyingV4 {
             positionState.liquidity,
             positionState.feeGrowthInside0LastX128,
             positionState.feeGrowthInside1LastX128
-        ) = positionUnderlying_
-            .poolManager
-            .getPositionInfo(
+        ) = positionUnderlying_.poolManager.getPositionInfo(
             poolId,
             positionUnderlying_.self,
             positionUnderlying_.lowerTick,
@@ -445,15 +446,11 @@ library UnderlyingV4 {
 
         uint256 leftOver0 = underlyingPayload_.poolManager.balanceOf(
             address(this),
-            IUniV4ModuleBase(underlyingPayload_.self).poolKey()
-                .currency0
-                .toId()
+            Currency.wrap(underlyingPayload_.token0).toId()
         );
         uint256 leftOver1 = underlyingPayload_.poolManager.balanceOf(
             address(this),
-            IUniV4ModuleBase(underlyingPayload_.self).poolKey()
-                .currency1
-                .toId()
+            Currency.wrap(underlyingPayload_.token1).toId()
         );
 
         amount0 += fee0 + leftOver0;
