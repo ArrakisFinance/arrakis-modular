@@ -1565,6 +1565,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             true,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -1624,6 +1626,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             true,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -1743,6 +1747,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             true,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 
@@ -3006,6 +3012,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             init1,
             false,
             poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
             metaVault
         );
 

@@ -407,7 +407,12 @@ abstract contract UniV4StandardModule is
                 })
             });
         }
-        bytes memory data = abi.encode(2, abi.encode(liquidityRanges));
+
+        /// @dev default swapPayload, no swap happens here.
+        /// swapPayload will be empty. And will use it to do rebalance and collect fees.
+        SwapPayload memory swapPayload;
+
+        bytes memory data = abi.encode(2, abi.encode(liquidityRanges, swapPayload));
 
         bytes memory result = poolManager.unlock(data);
 

@@ -105,7 +105,7 @@ contract UniV4StandardModulePublic is
                 abi.decode(data, (address, uint256));
             return _deposit(_poolManager, depositor, proportion);
         }
-        _unlockCallback(_poolManager, action, data);
+        return _unlockCallback(_poolManager, action, data);
     }
 
     // #region internal functions.
