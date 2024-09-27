@@ -33,7 +33,6 @@ interface IUniV4StandardModule {
     error MaxSlippageGtTenPercent();
     error ExpectedMinReturnTooLow();
     error WrongRouter();
-    error SwapCallFailed();
     error SlippageTooHigh();
 
     // #endregion errors.

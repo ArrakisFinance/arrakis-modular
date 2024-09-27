@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
-import {
-    UniV4StandardModule
-} from "../abstracts/UniV4StandardModule.sol";
-import {IArrakisLPModulePrivate} from "../interfaces/IArrakisLPModulePrivate.sol";
+import {UniV4StandardModule} from
+    "../abstracts/UniV4StandardModule.sol";
+import {IArrakisLPModulePrivate} from
+    "../interfaces/IArrakisLPModulePrivate.sol";
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
@@ -33,7 +33,8 @@ import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {IERC20Metadata} from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -49,7 +50,10 @@ contract UniV4StandardModulePrivate is
     using Address for address payable;
     using SafeERC20 for IERC20Metadata;
 
-    constructor(address poolManager_, address guardian_) UniV4StandardModule(poolManager_, guardian_) {}
+    constructor(
+        address poolManager_,
+        address guardian_
+    ) UniV4StandardModule(poolManager_, guardian_) {}
 
     /// @notice deposit function for private vault.
     /// @param depositor_ address that will provide the tokens.
@@ -59,13 +63,7 @@ contract UniV4StandardModulePrivate is
         address depositor_,
         uint256 amount0_,
         uint256 amount1_
-    ) 
-        external
-        payable
-        onlyMetaVault
-        whenNotPaused
-        nonReentrant
-    {
+    ) external payable onlyMetaVault whenNotPaused nonReentrant {
         // #region checks.
 
         if (depositor_ == address(0)) revert AddressZero();
@@ -79,7 +77,8 @@ contract UniV4StandardModulePrivate is
 
         bytes memory result = poolManager.unlock(data);
 
-        (uint256 amount0, uint256 amount1) = abi.decode(result, (uint256, uint256));
+        (uint256 amount0, uint256 amount1) =
+            abi.decode(result, (uint256, uint256));
 
         emit LogFund(depositor_, amount0, amount1);
     }
@@ -105,7 +104,7 @@ contract UniV4StandardModulePrivate is
                 abi.decode(data, (address, uint256, uint256));
             return _fund(_poolManager, depositor, amount0, amount1);
         }
-        _unlockCallback(_poolManager, action, data);
+        return _unlockCallback(_poolManager, action, data);
     }
 
     // #region internal functions.

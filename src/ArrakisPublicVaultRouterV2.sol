@@ -25,6 +25,7 @@ import {
 import {IWETH9} from "./interfaces/IWETH9.sol";
 import {IResolver} from "./interfaces/IResolver.sol";
 
+// #region openzeppelin.
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {
     SafeERC20,
@@ -35,6 +36,7 @@ import {ReentrancyGuard} from
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {EnumerableSet} from
     "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+// #endregion openzeppelin.
 
 // #region solady dependencies.
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
