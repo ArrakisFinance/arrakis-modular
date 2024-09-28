@@ -83,7 +83,7 @@ abstract contract UniV4StandardModule is
 
     IPoolManager public immutable poolManager;
 
-    // #endregion immutable properties
+    // #endregion immutable properties.
 
     // #region internal immutables.
 
@@ -229,12 +229,13 @@ abstract contract UniV4StandardModule is
         __Pausable_init();
     }
 
-    function initializePosition(bytes calldata) external {
+    function initializePosition(
+        bytes calldata
+    ) external onlyMetaVault {
         /// @dev put tokens into poolManager
+        bytes memory data = abi.encode(3, bytes(""));
 
-        bytes memory data = abi.encode(3);
-
-        poolManager.unlock(data);
+        bytes memory result = poolManager.unlock(data);
     }
 
     // #region only manager functions.
@@ -407,7 +408,13 @@ abstract contract UniV4StandardModule is
                 })
             });
         }
-        bytes memory data = abi.encode(2, abi.encode(liquidityRanges));
+
+        /// @dev default swapPayload, no swap happens here.
+        /// swapPayload will be empty. And will use it to do rebalance and collect fees.
+        SwapPayload memory swapPayload;
+
+        bytes memory data =
+            abi.encode(2, abi.encode(liquidityRanges, swapPayload));
 
         bytes memory result = poolManager.unlock(data);
 
@@ -620,9 +627,9 @@ abstract contract UniV4StandardModule is
     // #region internal functions.
 
     function _unlockCallback(
-         IPoolManager _poolManager,
-         uint256 action,
-         bytes memory data
+        IPoolManager _poolManager,
+        uint256 action,
+        bytes memory data
     ) internal returns (bytes memory) {
         if (action == 1) {
             (address receiver, uint256 proportion) =
@@ -801,12 +808,14 @@ abstract contract UniV4StandardModule is
 
                 // #endregion manager fees.
 
-                withdraw_.poolManager.take(
-                    _poolKey.currency0, manager, managerFee0
-                );
-                withdraw_.poolManager.take(
-                    _poolKey.currency1, manager, managerFee1
-                );
+                if (managerFee0 > 0)
+                    withdraw_.poolManager.take(
+                        _poolKey.currency0, manager, managerFee0
+                    );
+                if (managerFee1 > 0)
+                    withdraw_.poolManager.take(
+                        _poolKey.currency1, manager, managerFee1
+                    );
 
                 if (managerFee0 > 0 || managerFee1 > 0) {
                     emit LogWithdrawManagerBalance(
@@ -837,16 +846,18 @@ abstract contract UniV4StandardModule is
         {
             (amount0, amount1) = _checkCurrencyBalances();
 
-            withdraw_.poolManager.mint(
-                address(this),
-                CurrencyLibrary.toId(_poolKey.currency0),
-                amount0
-            );
-            withdraw_.poolManager.mint(
-                address(this),
-                CurrencyLibrary.toId(_poolKey.currency1),
-                amount1
-            );
+            if (amount0 > 0)
+                withdraw_.poolManager.mint(
+                    address(this),
+                    CurrencyLibrary.toId(_poolKey.currency0),
+                    amount0
+                );
+            if (amount1 > 0)
+                withdraw_.poolManager.mint(
+                    address(this),
+                    CurrencyLibrary.toId(_poolKey.currency1),
+                    amount1
+                );
         }
 
         // #endregion mint extra collected fees.
@@ -1021,48 +1032,78 @@ abstract contract UniV4StandardModule is
                 swapPayload_.zeroForOne,
                 swapPayload_.expectedMinReturn,
                 swapPayload_.amountIn,
-                _token0.decimals(),
-                _token1.decimals()
+                address(_token0) == NATIVE_COIN
+                    ? 18
+                    : _token0.decimals(),
+                address(_token1) == NATIVE_COIN
+                    ? 18
+                    : _token1.decimals()
             );
 
             SwapBalances memory balances;
             {
-                balances.initBalance0 =
-                    _token0.balanceOf(address(this));
-                balances.initBalance1 =
-                    _token1.balanceOf(address(this));
+                balances.initBalance0 = address(_token0)
+                    == NATIVE_COIN
+                    ? address(this).balance
+                    : _token0.balanceOf(address(this));
+                balances.initBalance1 = address(_token1)
+                    == NATIVE_COIN
+                    ? address(this).balance
+                    : _token1.balanceOf(address(this));
+
+                uint256 ethToSend;
 
                 if (swapPayload_.zeroForOne) {
-                    poolManager_.take(
-                        address(token0) == NATIVE_COIN
-                            ? Currency.wrap(address(0))
-                            : Currency.wrap(address(token0)),
-                        address(this),
-                        swapPayload_.amountIn
-                    );
+                    if (address(_token0) == NATIVE_COIN) {
+                        poolManager_.take(
+                            Currency.wrap(address(0)),
+                            address(this),
+                            swapPayload_.amountIn
+                        );
 
-                    balances.actual0 = _token0.balanceOf(
-                        address(this)
-                    ) - balances.initBalance0;
+                        ethToSend = swapPayload_.amountIn;
+
+                        balances.actual0 =
+                            address(this).balance - balances.initBalance0;
+                    } else {
+                        poolManager_.take(
+                            Currency.wrap(address(_token0)),
+                            address(this),
+                            swapPayload_.amountIn
+                        );
+
+                        balances.actual0 = _token0.balanceOf(
+                            address(this)
+                        ) - balances.initBalance0;
+                    }
                 } else {
-                    poolManager_.take(
-                        address(token1) == NATIVE_COIN
-                            ? Currency.wrap(address(0))
-                            : Currency.wrap(address(token1)),
-                        address(this),
-                        swapPayload_.amountIn
-                    );
+                    if (address(_token1) == NATIVE_COIN) {
+                        poolManager_.take(
+                            Currency.wrap(address(0)),
+                            address(this),
+                            swapPayload_.amountIn
+                        );
 
-                    balances.actual1 = _token1.balanceOf(
-                        address(this)
-                    ) - balances.initBalance1;
+                        ethToSend = swapPayload_.amountIn;
+                        balances.actual1 =
+                            address(this).balance - balances.initBalance1;
+                    } else {
+                        poolManager_.take(
+                            Currency.wrap(address(_token1)),
+                            address(this),
+                            swapPayload_.amountIn
+                        );
+                        balances.actual1 = _token1.balanceOf(
+                            address(this)
+                        ) - balances.initBalance1;
+                    }
                 }
 
-                if (swapPayload_.zeroForOne) {
+                if (swapPayload_.zeroForOne && address(_token0) != NATIVE_COIN) {
                     _token0.forceApprove(
                         swapPayload_.router, swapPayload_.amountIn
                     );
-                } else {
+                } else if (address(_token1) != NATIVE_COIN) {
                     _token1.forceApprove(
                         swapPayload_.router, swapPayload_.amountIn
                     );
@@ -1073,21 +1114,30 @@ abstract contract UniV4StandardModule is
                 }
 
                 {
-                    (bool success,) =
-                        swapPayload_.router.call(swapPayload_.payload);
-                    if (!success) revert SwapCallFailed();
+                    payable(swapPayload_.router).functionCallWithValue(
+                        swapPayload_.payload, ethToSend
+                    );
                 }
 
-                if (swapPayload_.zeroForOne) {
+                if (
+                    swapPayload_.zeroForOne
+                        && address(_token0) != NATIVE_COIN
+                ) {
                     _token0.forceApprove(swapPayload_.router, 0);
-                } else {
+                } else if (address(_token1) != NATIVE_COIN) {
                     _token1.forceApprove(swapPayload_.router, 0);
                 }
 
-                balances.balance0 = _token0.balanceOf(address(this))
-                    - balances.initBalance0;
-                balances.balance1 = _token1.balanceOf(address(this))
-                    - balances.initBalance1;
+                balances.balance0 = (
+                    address(_token0) == NATIVE_COIN
+                        ? address(this).balance
+                        : _token0.balanceOf(address(this))
+                ) - balances.initBalance0;
+                balances.balance1 = (
+                    address(_token1) == NATIVE_COIN
+                        ? address(this).balance
+                        : _token1.balanceOf(address(this))
+                ) - balances.initBalance1;
 
                 if (swapPayload_.zeroForOne) {
                     if (
@@ -1109,7 +1159,7 @@ abstract contract UniV4StandardModule is
 
                 {
                     if (balances.balance0 > 0) {
-                        if (address(token0) == NATIVE_COIN) {
+                        if (address(_token0) == NATIVE_COIN) {
                             poolManager_.sync(
                                 Currency.wrap(address(0))
                             );
@@ -1118,7 +1168,7 @@ abstract contract UniV4StandardModule is
                             }();
                         } else {
                             poolManager_.sync(
-                                Currency.wrap(address(token0))
+                                Currency.wrap(address(_token0))
                             );
                             _token0.safeTransfer(
                                 address(poolManager),
@@ -1128,7 +1178,7 @@ abstract contract UniV4StandardModule is
                         }
                     }
                     if (balances.balance1 > 0) {
-                        if (address(token1) == NATIVE_COIN) {
+                        if (address(_token1) == NATIVE_COIN) {
                             poolManager_.sync(
                                 Currency.wrap(address(0))
                             );
@@ -1137,7 +1187,7 @@ abstract contract UniV4StandardModule is
                             }();
                         } else {
                             poolManager_.sync(
-                                Currency.wrap(address(token1))
+                                Currency.wrap(address(_token1))
                             );
                             _token1.safeTransfer(
                                 address(poolManager),
@@ -1200,52 +1250,56 @@ abstract contract UniV4StandardModule is
         IPoolManager poolManager_
     ) internal returns (bytes memory result) {
         PoolKey memory _poolKey = poolKey;
+
         // #region get current balances.
-
-        uint256 amount0 = _poolKey.currency0.isAddressZero()
+        uint256 amountCurrency0 = _poolKey.currency0.isAddressZero()
             ? address(this).balance
-            : token0.balanceOf(address(this));
-        uint256 amount1 = token1.balanceOf(address(this));
-
+            : IERC20Metadata(Currency.unwrap(_poolKey.currency0))
+                .balanceOf(address(this));
+        uint256 amountCurrency1 = IERC20Metadata(
+            Currency.unwrap(_poolKey.currency1)
+        ).balanceOf(address(this));
         // #endregion get current balances.
 
         // #region mint into poolManager.
 
-        if (amount0 > 0) {
+        if (amountCurrency0 > 0) {
             // Mint
             poolManager_.mint(
                 address(this),
                 CurrencyLibrary.toId(_poolKey.currency0),
-                amount0
+                amountCurrency0
             );
 
             // Sync and settle
             poolManager_.sync(_poolKey.currency0);
             if (_poolKey.currency0.isAddressZero()) {
                 /// @dev no need to use Address lib for PoolManager.
-                poolManager_.settle{value: amount0}();
+                poolManager_.settle{value: amountCurrency0}();
             } else {
-                token0.safeTransfer(address(poolManager_), amount0);
+                IERC20Metadata(Currency.unwrap(_poolKey.currency0))
+                    .safeTransfer(address(poolManager_), amountCurrency0);
                 poolManager_.settle();
             }
         }
-        if (amount1 > 0) {
+        if (amountCurrency1 > 0) {
             // Mint
             poolManager_.mint(
                 address(this),
                 CurrencyLibrary.toId(_poolKey.currency1),
-                amount1
+                amountCurrency1
             );
             poolManager_.sync(_poolKey.currency1);
-            token1.safeTransfer(address(poolManager_), amount1);
+            IERC20Metadata(Currency.unwrap(_poolKey.currency1))
+                .safeTransfer(address(poolManager_), amountCurrency1);
             poolManager_.settle();
         }
 
         // #endregion mint into poolManager.
 
         return isInversed
-            ? abi.encode(amount1, amount0)
-            : abi.encode(amount0, amount1);
+            ? abi.encode(amountCurrency1, amountCurrency0)
+            : abi.encode(amountCurrency0, amountCurrency1);
     }
 
     function _collectFee(
