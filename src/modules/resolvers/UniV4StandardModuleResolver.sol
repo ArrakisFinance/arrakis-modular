@@ -82,8 +82,6 @@ contract UniV4StandardModuleResolver is
             maxAmount0_ = maxAmount0_ - numberOfRanges;
             maxAmount1_ = maxAmount1_ - numberOfRanges;
 
-            
-
             poolRanges = new PoolRange[](_ranges.length);
 
             PoolKey memory poolKey;
