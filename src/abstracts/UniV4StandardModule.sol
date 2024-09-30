@@ -188,7 +188,6 @@ abstract contract UniV4StandardModule is
         if (maxSlippage_ > TEN_PERCENT) {
             revert MaxSlippageGtTenPercent();
         }
-
         // #endregion checks.
 
         metaVault = IArrakisMetaVault(metaVault_);

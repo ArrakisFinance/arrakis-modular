@@ -6,7 +6,7 @@ import {
     PositionUnderlying,
     RangeData
 } from "../structs/SUniswapV4.sol";
-import {PIPS} from "../constants/CArrakis.sol";
+import {BASE} from "../constants/CArrakis.sol";
 import {IUniV4ModuleBase} from "../interfaces/IUniV4ModuleBase.sol";
 
 import {IPoolManager} from
@@ -16,14 +16,10 @@ import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
 import {FixedPoint128} from
     "@uniswap/v4-core/src/libraries/FixedPoint128.sol";
-import {SqrtPriceMath} from
-    "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
 import {
     PoolIdLibrary,
     PoolId
 } from "@uniswap/v4-core/src/types/PoolId.sol";
-import {LiquidityAmounts} from
-    "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
 import {
     Currency,
     CurrencyLibrary
@@ -32,6 +28,11 @@ import {StateLibrary} from
     "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TransientStateLibrary} from
     "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
+
+import {LiquidityAmounts} from
+    "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
+import {SqrtPriceMath} from
+    "@v3-lib-0.8/contracts/SqrtPriceMath.sol";
 
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -67,23 +68,23 @@ library UnderlyingV4 {
         }
 
         uint256 leftOver0 = underlyingPayload_.poolManager.balanceOf(
-            address(this),
+            underlyingPayload_.self,
             IUniV4ModuleBase(underlyingPayload_.self).poolKey()
                 .currency0
                 .toId()
         );
         uint256 leftOver1 = underlyingPayload_.poolManager.balanceOf(
-            address(this),
+            underlyingPayload_.self,
             IUniV4ModuleBase(underlyingPayload_.self).poolKey()
                 .currency1
                 .toId()
         );
 
         amount0 += FullMath.mulDivRoundingUp(
-            proportion_, fee0 + leftOver0, PIPS
+            proportion_, fee0 + leftOver0, BASE
         );
         amount1 += FullMath.mulDivRoundingUp(
-            proportion_, fee1 + leftOver1, PIPS
+            proportion_, fee1 + leftOver1, BASE
         );
     }
 
@@ -269,7 +270,7 @@ library UnderlyingV4 {
                     FullMath.mulDiv(
                         uint256(positionState.liquidity),
                         proportion_,
-                        PIPS
+                        BASE
                     )
                 )
             )
@@ -373,14 +374,14 @@ library UnderlyingV4 {
     ) public pure returns (uint256 proportion) {
         // compute proportional amount of tokens to mint
         if (current0_ == 0 && current1_ > 0) {
-            proportion = FullMath.mulDiv(amount1Max_, PIPS, current1_);
+            proportion = FullMath.mulDiv(amount1Max_, BASE, current1_);
         } else if (current1_ == 0 && current0_ > 0) {
-            proportion = FullMath.mulDiv(amount0Max_, PIPS, current0_);
+            proportion = FullMath.mulDiv(amount0Max_, BASE, current0_);
         } else if (current0_ > 0 && current1_ > 0) {
             uint256 amount0Mint =
-                FullMath.mulDiv(amount0Max_, PIPS, current0_);
+                FullMath.mulDiv(amount0Max_, BASE, current0_);
             uint256 amount1Mint =
-                FullMath.mulDiv(amount1Max_, PIPS, current1_);
+                FullMath.mulDiv(amount1Max_, BASE, current1_);
             require(
                 amount0Mint > 0 && amount1Mint > 0,
                 "ArrakisVaultV2: mint 0"
@@ -445,11 +446,11 @@ library UnderlyingV4 {
         }
 
         uint256 leftOver0 = underlyingPayload_.poolManager.balanceOf(
-            address(this),
+            underlyingPayload_.self,
             Currency.wrap(underlyingPayload_.token0).toId()
         );
         uint256 leftOver1 = underlyingPayload_.poolManager.balanceOf(
-            address(this),
+            underlyingPayload_.self,
             Currency.wrap(underlyingPayload_.token1).toId()
         );
 
