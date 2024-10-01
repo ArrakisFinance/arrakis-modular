@@ -104,37 +104,6 @@ library UnderlyingV4 {
         return _totalUnderlyingWithFees(underlyingPayload_, 0);
     }
 
-    function totalAmountsAndFees(
-        UnderlyingPayload memory underlyingPayload_
-    )
-        public
-        view
-        returns (
-            uint256 amount0,
-            uint256 amount1,
-            uint256 fee0,
-            uint256 fee1
-        )
-    {
-        for (uint256 i; i < underlyingPayload_.ranges.length; i++) {
-            {
-                (uint256 a0, uint256 a1, uint256 f0, uint256 f1) =
-                underlying(
-                    RangeData({
-                        self: underlyingPayload_.self,
-                        range: underlyingPayload_.ranges[i],
-                        poolManager: underlyingPayload_.poolManager
-                    }),
-                    0
-                );
-                amount0 += a0;
-                amount1 += a1;
-                fee0 += f0;
-                fee1 += f1;
-            }
-        }
-    }
-
     function totalUnderlyingAtPriceWithFees(
         UnderlyingPayload memory underlyingPayload_,
         uint160 sqrtPriceX96_
@@ -362,35 +331,6 @@ library UnderlyingV4 {
                     sqrtRatioAX96, sqrtRatioBX96, liquidity
                 )
             );
-        }
-    }
-
-    // solhint-disable-next-line function-max-lines
-    function computeProportion(
-        uint256 current0_,
-        uint256 current1_,
-        uint256 amount0Max_,
-        uint256 amount1Max_
-    ) public pure returns (uint256 proportion) {
-        // compute proportional amount of tokens to mint
-        if (current0_ == 0 && current1_ > 0) {
-            proportion = FullMath.mulDiv(amount1Max_, BASE, current1_);
-        } else if (current1_ == 0 && current0_ > 0) {
-            proportion = FullMath.mulDiv(amount0Max_, BASE, current0_);
-        } else if (current0_ > 0 && current1_ > 0) {
-            uint256 amount0Mint =
-                FullMath.mulDiv(amount0Max_, BASE, current0_);
-            uint256 amount1Mint =
-                FullMath.mulDiv(amount1Max_, BASE, current1_);
-            require(
-                amount0Mint > 0 && amount1Mint > 0,
-                "ArrakisVaultV2: mint 0"
-            );
-
-            proportion =
-                amount0Mint < amount1Mint ? amount0Mint : amount1Mint;
-        } else {
-            revert("ArrakisVaultV2: panic");
         }
     }
 
