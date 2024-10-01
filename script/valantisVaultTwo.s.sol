@@ -26,10 +26,10 @@ import {TimeLock} from "../src/TimeLock.sol";
 
 // For Gnosis chain.
 
-address constant vault = 0x8cE9786dc4bbB558C1F219f10b1F2f70A6Ced7eC;
-address constant timeLock = 0x119e26B6D72376Ac741d5546eA295d1A0160E26c;
-address constant alm = 0x614b8B047cAfEc2Fcfc788dd4aFE9e32fe924Cd0;
-address constant oracle = 0xCD3B683C6514e94A48d7993544C199341fcdD14E;
+address constant vault = 0xf790870ccF6aE66DdC69f68e6d05d446f1a6ad83;
+address constant timeLock = 0xCFaD8B6981Da1c734352Bd31618040C23FE99117;
+address constant alm = 0x3269994964DFE4aa5f8dd0C99eD40e881562132A;
+address constant oracle = 0xF23d83Da92844C53aD57e6031c231dC93eC4eE80;
 
 contract ValantisVaultTwo is Script {
     function setUp() public {}
@@ -52,7 +52,7 @@ contract ValantisVaultTwo is Script {
         );
 
         TimeLock(payable(timeLock)).schedule(
-            module, 0, data, bytes32(0), bytes32(0), 1 minutes
+            module, 0, data, bytes32(0), bytes32(0), 2 days
         );
 
         // Uncomment for sepolia

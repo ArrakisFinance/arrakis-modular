@@ -13,9 +13,12 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// @dev ask to valantis team to grant module as poolManager (sovereignPool) and
 /// liquidityProvider (hot alm) before running this script.
 
-address constant vault = 0x8cE9786dc4bbB558C1F219f10b1F2f70A6Ced7eC;
-address constant alm = 0x614b8B047cAfEc2Fcfc788dd4aFE9e32fe924Cd0;
+address constant vault = 0xf790870ccF6aE66DdC69f68e6d05d446f1a6ad83;
+address constant alm = 0x6ca2D5dbA66BAf72eD10a5e9D7700263d5229Aff;
 
+// arbitrum HOT Oracle Wrapper: 0xE4DB6eA3a076aD4Cb1795c6517DA4bb60FD507f0. (WETH/USDC) for alm 0xC4c855095f5872BeC67d0916D49cf881d4fafe1e and vault 0xf790870ccF6aE66DdC69f68e6d05d446f1a6ad83.
+// mainnet HOT Oracle Wrapper : 0xF23d83Da92844C53aD57e6031c231dC93eC4eE80. (WETH/USDC) for alm 0x3269994964DFE4aa5f8dd0C99eD40e881562132A and vault 0xf790870ccF6aE66DdC69f68e6d05d446f1a6ad83.
+// base HOT Oracle Wrapper : 0x1DDDEc1cE817bc771b6339E9DE97ae81B3bE0da4. (WETH/USDC) for alm 0x6ca2D5dbA66BAf72eD10a5e9D7700263d5229Aff and vault 0xf790870ccF6aE66DdC69f68e6d05d446f1a6ad83.
 contract HOTOracle is Script {
     function setUp() public {}
 

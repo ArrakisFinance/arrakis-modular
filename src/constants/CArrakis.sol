@@ -8,3 +8,4 @@ uint24 constant TEN_PERCENT = 100_000;
 uint256 constant WEEK = 604_800;
 address constant NATIVE_COIN =
     0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+uint8 constant NATIVE_COIN_DECIMALS = 18;
