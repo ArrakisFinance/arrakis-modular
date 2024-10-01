@@ -133,14 +133,14 @@ contract UniV4StandardModuleResolver is
         } else {
             (uint256 init0, uint256 init1) = IArrakisLPModule(module).getInits();
             shareToMint = computeMintAmounts(
-                init0, init1, 1 ether, maxAmount0_, maxAmount1_
+                init0, init1, BASE, maxAmount0_, maxAmount1_
             );
 
             // compute amounts owed to contract
             amount0ToDeposit =
-                FullMath.mulDivRoundingUp(shareToMint, init0, 1 ether);
+                FullMath.mulDivRoundingUp(shareToMint, init0, BASE);
             amount1ToDeposit =
-                FullMath.mulDivRoundingUp(shareToMint, init1, 1 ether);
+                FullMath.mulDivRoundingUp(shareToMint, init1, BASE);
         }
     }
 
@@ -171,11 +171,5 @@ contract UniV4StandardModuleResolver is
             mintAmount =
                 amount0Mint < amount1Mint ? amount0Mint : amount1Mint;
         }
-        /// @dev this cannot be reached due to MaxAmountsTooLow check on
-        /// getMintAmounts function.
-
-        //  else {
-        //     revert NotSupported();
-        // }
     }
 }

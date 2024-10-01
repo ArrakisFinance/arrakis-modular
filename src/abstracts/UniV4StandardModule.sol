@@ -7,12 +7,12 @@ import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
-import {IOwnable} from "../interfaces/IOwnable.sol";
 import {
     PIPS,
     BASE,
     NATIVE_COIN,
-    TEN_PERCENT
+    TEN_PERCENT,
+    NATIVE_COIN_DECIMALS
 } from "../constants/CArrakis.sol";
 import {
     UnderlyingPayload,
@@ -61,9 +61,17 @@ import {StateLibrary} from
     "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TransientStateLibrary} from
     "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
+import {
+    BalanceDelta,
+    BalanceDeltaLibrary
+} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 
 /// @notice this module can only set uni v4 pool that have generic hook,
 /// that don't require specific action to become liquidity provider.
+/// @dev due to native coin standard difference between uni V4 and arrakis,
+/// we are assuming that all inputed amounts are using arrakis vault token0/token1
+/// as reference. Internal logic of UniV4StandardModule will handle the conversion or
+/// use the poolKey to interact with the poolManager.
 abstract contract UniV4StandardModule is
     ReentrancyGuardUpgradeable,
     PausableUpgradeable,
@@ -78,6 +86,18 @@ abstract contract UniV4StandardModule is
     using Address for address payable;
     using StateLibrary for IPoolManager;
     using TransientStateLibrary for IPoolManager;
+    using BalanceDeltaLibrary for BalanceDelta;
+
+    // #region enum.
+
+    enum Action {
+        WITHDRAW,
+        REBALANCE,
+        INITIALIZE_POSITION,
+        DEPOSIT_FUND
+    }
+
+    // #endregion enum.
 
     // #region immutable properties.
 
@@ -232,7 +252,8 @@ abstract contract UniV4StandardModule is
         bytes calldata
     ) external onlyMetaVault {
         /// @dev put tokens into poolManager
-        bytes memory data = abi.encode(3, bytes(""));
+        bytes memory data =
+            abi.encode(Action.INITIALIZE_POSITION, bytes(""));
 
         bytes memory result = poolManager.unlock(data);
     }
@@ -246,23 +267,16 @@ abstract contract UniV4StandardModule is
     ) external onlyManager nonReentrant {
         address _token0 = address(token0);
         address _token1 = address(token1);
+        PoolKey memory _poolKey = poolKey;
 
         _checkTokens(poolKey_, _token0, _token1, isInversed);
+        _checkPermissions(poolKey_);
 
         if (
-            poolKey_.fee == poolKey.fee
-                && poolKey_.tickSpacing == poolKey.tickSpacing
-                && address(poolKey_.hooks) == address(poolKey.hooks)
+            poolKey_.fee == _poolKey.fee
+                && poolKey_.tickSpacing == _poolKey.tickSpacing
+                && address(poolKey_.hooks) == address(_poolKey.hooks)
         ) revert SamePool();
-
-        if (
-            poolKey_.hooks.hasPermission(
-                Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG
-            )
-                || poolKey_.hooks.hasPermission(
-                    Hooks.AFTER_REMOVE_LIQUIDITY_FLAG
-                )
-        ) revert NoModifyLiquidityHooks();
 
         /// @dev check if the pool is initialized.
         PoolId poolId = poolKey_.toId();
@@ -276,7 +290,7 @@ abstract contract UniV4StandardModule is
 
         uint256 length = _ranges.length;
 
-        PoolId currentPoolId = poolKey.toId();
+        PoolId currentPoolId = _poolKey.toId();
         LiquidityRange[] memory liquidityRanges =
             new LiquidityRange[](length);
         // no swap happens here.
@@ -290,7 +304,7 @@ abstract contract UniV4StandardModule is
                     address(this),
                     range.tickLower,
                     range.tickUpper,
-                    ""
+                    bytes32(0)
                 )
             );
             (uint128 liquidityToRemove,,) = poolManager
@@ -327,7 +341,7 @@ abstract contract UniV4StandardModule is
 
         // #endregion add liquidity on the new pool.
 
-        emit LogSetPool(poolKey, poolKey = poolKey_);
+        emit LogSetPool(_poolKey, poolKey_);
     }
 
     // #endregion only manager functions.
@@ -356,8 +370,9 @@ abstract contract UniV4StandardModule is
 
         // #endregion checks.
 
-        bytes memory data =
-            abi.encode(1, abi.encode(receiver_, proportion_));
+        bytes memory data = abi.encode(
+            Action.WITHDRAW, abi.encode(receiver_, proportion_)
+        );
 
         bytes memory result = poolManager.unlock(data);
 
@@ -412,8 +427,9 @@ abstract contract UniV4StandardModule is
         /// swapPayload will be empty. And will use it to do rebalance and collect fees.
         SwapPayload memory swapPayload;
 
-        bytes memory data =
-            abi.encode(2, abi.encode(liquidityRanges, swapPayload));
+        bytes memory data = abi.encode(
+            Action.REBALANCE, abi.encode(liquidityRanges, swapPayload)
+        );
 
         bytes memory result = poolManager.unlock(data);
 
@@ -562,10 +578,10 @@ abstract contract UniV4StandardModule is
         (address _token0, address _token1) = _getTokens(_poolKey);
 
         uint8 token0Decimals = _token0 == address(0)
-            ? 18
+            ? NATIVE_COIN_DECIMALS
             : IERC20Metadata(_token0).decimals();
         uint8 token1Decimals = _token1 == address(0)
-            ? 18
+            ? NATIVE_COIN_DECIMALS
             : IERC20Metadata(_token1).decimals();
 
         // #region compute pool price.
@@ -627,10 +643,10 @@ abstract contract UniV4StandardModule is
 
     function _unlockCallback(
         IPoolManager _poolManager,
-        uint256 action,
+        Action action,
         bytes memory data
     ) internal returns (bytes memory) {
-        if (action == 1) {
+        if (action == Action.WITHDRAW) {
             (address receiver, uint256 proportion) =
                 abi.decode(data, (address, uint256));
             return _withdraw(
@@ -641,7 +657,7 @@ abstract contract UniV4StandardModule is
                 })
             );
         }
-        if (action == 2) {
+        if (action == Action.REBALANCE) {
             (
                 LiquidityRange[] memory liquidityRanges,
                 SwapPayload memory swapPayload
@@ -650,11 +666,9 @@ abstract contract UniV4StandardModule is
                 _rebalance(_poolManager, liquidityRanges, swapPayload);
         }
         /// @dev initialize position.
-        if (action == 3) {
+        if (action == Action.INITIALIZE_POSITION) {
             return _initializePosition(_poolManager);
         }
-
-        revert CallBackNotSupported();
     }
 
     function _withdraw(
@@ -701,7 +715,7 @@ abstract contract UniV4StandardModule is
                 address(this),
                 range.tickLower,
                 range.tickUpper,
-                ""
+                bytes32(0)
             );
 
             /// @dev multiply -1 because we will remove liquidity.
@@ -743,7 +757,7 @@ abstract contract UniV4StandardModule is
 
         {
             (, uint256 leftOver0,, uint256 leftOver1) =
-                _get1155Balances();
+                _get6909Balances();
 
             // rounding up during mint only
             uint256 leftOver0ToBurn =
@@ -798,23 +812,32 @@ abstract contract UniV4StandardModule is
                 uint256 managerFee1 =
                     FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
 
-                fee0ToWithdraw = FullMath.mulDiv(
-                    fee0 - managerFee0, withdraw_.proportion, BASE
-                );
-                fee1ToWithdraw = FullMath.mulDiv(
-                    fee1 - managerFee1, withdraw_.proportion, BASE
-                );
+                /// @dev if proportion is 100% we take all fees, to prevent
+                /// rounding errors.
+                if (withdraw_.proportion == BASE) {
+                    fee0ToWithdraw = fee0 - managerFee0;
+                    fee1ToWithdraw = fee1 - managerFee1;
+                } else {
+                    fee0ToWithdraw = FullMath.mulDiv(
+                        fee0 - managerFee0, withdraw_.proportion, BASE
+                    );
+                    fee1ToWithdraw = FullMath.mulDiv(
+                        fee1 - managerFee1, withdraw_.proportion, BASE
+                    );
+                }
 
                 // #endregion manager fees.
 
-                if (managerFee0 > 0)
+                if (managerFee0 > 0) {
                     withdraw_.poolManager.take(
                         _poolKey.currency0, manager, managerFee0
                     );
-                if (managerFee1 > 0)
+                }
+                if (managerFee1 > 0) {
                     withdraw_.poolManager.take(
                         _poolKey.currency1, manager, managerFee1
                     );
+                }
 
                 if (managerFee0 > 0 || managerFee1 > 0) {
                     emit LogWithdrawManagerBalance(
@@ -845,18 +868,20 @@ abstract contract UniV4StandardModule is
         {
             (amount0, amount1) = _checkCurrencyBalances();
 
-            if (amount0 > 0)
+            if (amount0 > 0) {
                 withdraw_.poolManager.mint(
                     address(this),
                     CurrencyLibrary.toId(_poolKey.currency0),
                     amount0
                 );
-            if (amount1 > 0)
+            }
+            if (amount1 > 0) {
                 withdraw_.poolManager.mint(
                     address(this),
                     CurrencyLibrary.toId(_poolKey.currency1),
                     amount1
                 );
+            }
         }
 
         // #endregion mint extra collected fees.
@@ -874,8 +899,10 @@ abstract contract UniV4StandardModule is
             uint256 amount1Burned
         )
     {
-        bytes memory data =
-            abi.encode(2, abi.encode(liquidityRanges_, swapPayload_));
+        bytes memory data = abi.encode(
+            Action.REBALANCE,
+            abi.encode(liquidityRanges_, swapPayload_)
+        );
 
         bytes memory result = poolManager.unlock(data);
 
@@ -1023,37 +1050,39 @@ abstract contract UniV4StandardModule is
 
         // #region swap.
 
+        /// @dev here we are reasonning in term of token0 and token1 of vault (not poolKey).
         if (swapPayload_.amountIn > 0) {
             IERC20Metadata _token0 = token0;
             IERC20Metadata _token1 = token1;
+
+            bool isToken0Native = address(_token0) == NATIVE_COIN;
+            bool isToken1Native = address(_token1) == NATIVE_COIN;
 
             _checkMinReturn(
                 swapPayload_.zeroForOne,
                 swapPayload_.expectedMinReturn,
                 swapPayload_.amountIn,
-                address(_token0) == NATIVE_COIN
-                    ? 18
+                isToken0Native
+                    ? NATIVE_COIN_DECIMALS
                     : _token0.decimals(),
-                address(_token1) == NATIVE_COIN
-                    ? 18
+                isToken1Native
+                    ? NATIVE_COIN_DECIMALS
                     : _token1.decimals()
             );
 
             SwapBalances memory balances;
             {
-                balances.initBalance0 = address(_token0)
-                    == NATIVE_COIN
+                balances.initBalance0 = isToken0Native
                     ? address(this).balance
                     : _token0.balanceOf(address(this));
-                balances.initBalance1 = address(_token1)
-                    == NATIVE_COIN
+                balances.initBalance1 = isToken1Native
                     ? address(this).balance
                     : _token1.balanceOf(address(this));
 
                 uint256 ethToSend;
 
                 if (swapPayload_.zeroForOne) {
-                    if (address(_token0) == NATIVE_COIN) {
+                    if (isToken0Native) {
                         poolManager_.take(
                             Currency.wrap(address(0)),
                             address(this),
@@ -1062,8 +1091,8 @@ abstract contract UniV4StandardModule is
 
                         ethToSend = swapPayload_.amountIn;
 
-                        balances.actual0 =
-                            address(this).balance - balances.initBalance0;
+                        balances.actual0 = address(this).balance
+                            - balances.initBalance0;
                     } else {
                         poolManager_.take(
                             Currency.wrap(address(_token0)),
@@ -1076,7 +1105,7 @@ abstract contract UniV4StandardModule is
                         ) - balances.initBalance0;
                     }
                 } else {
-                    if (address(_token1) == NATIVE_COIN) {
+                    if (isToken1Native) {
                         poolManager_.take(
                             Currency.wrap(address(0)),
                             address(this),
@@ -1084,8 +1113,8 @@ abstract contract UniV4StandardModule is
                         );
 
                         ethToSend = swapPayload_.amountIn;
-                        balances.actual1 =
-                            address(this).balance - balances.initBalance1;
+                        balances.actual1 = address(this).balance
+                            - balances.initBalance1;
                     } else {
                         poolManager_.take(
                             Currency.wrap(address(_token1)),
@@ -1098,11 +1127,13 @@ abstract contract UniV4StandardModule is
                     }
                 }
 
-                if (swapPayload_.zeroForOne && address(_token0) != NATIVE_COIN) {
+                if (swapPayload_.zeroForOne && !isToken0Native) {
                     _token0.forceApprove(
                         swapPayload_.router, swapPayload_.amountIn
                     );
-                } else if (address(_token1) != NATIVE_COIN) {
+                } else if (
+                    !swapPayload_.zeroForOne && !isToken1Native
+                ) {
                     _token1.forceApprove(
                         swapPayload_.router, swapPayload_.amountIn
                     );
@@ -1118,22 +1149,21 @@ abstract contract UniV4StandardModule is
                     );
                 }
 
-                if (
-                    swapPayload_.zeroForOne
-                        && address(_token0) != NATIVE_COIN
-                ) {
+                if (swapPayload_.zeroForOne && !isToken0Native) {
                     _token0.forceApprove(swapPayload_.router, 0);
-                } else if (address(_token1) != NATIVE_COIN) {
+                } else if (
+                    !swapPayload_.zeroForOne && !isToken1Native
+                ) {
                     _token1.forceApprove(swapPayload_.router, 0);
                 }
 
                 balances.balance0 = (
-                    address(_token0) == NATIVE_COIN
+                    isToken0Native
                         ? address(this).balance
                         : _token0.balanceOf(address(this))
                 ) - balances.initBalance0;
                 balances.balance1 = (
-                    address(_token1) == NATIVE_COIN
+                    isToken1Native
                         ? address(this).balance
                         : _token1.balanceOf(address(this))
                 ) - balances.initBalance1;
@@ -1158,7 +1188,7 @@ abstract contract UniV4StandardModule is
 
                 {
                     if (balances.balance0 > 0) {
-                        if (address(_token0) == NATIVE_COIN) {
+                        if (isToken0Native) {
                             poolManager_.sync(
                                 Currency.wrap(address(0))
                             );
@@ -1177,7 +1207,7 @@ abstract contract UniV4StandardModule is
                         }
                     }
                     if (balances.balance1 > 0) {
-                        if (address(_token1) == NATIVE_COIN) {
+                        if (isToken1Native) {
                             poolManager_.sync(
                                 Currency.wrap(address(0))
                             );
@@ -1250,8 +1280,10 @@ abstract contract UniV4StandardModule is
     ) internal returns (bytes memory result) {
         PoolKey memory _poolKey = poolKey;
 
+        bool isCurrency0Native = _poolKey.currency0.isAddressZero();
+
         // #region get current balances.
-        uint256 amountCurrency0 = _poolKey.currency0.isAddressZero()
+        uint256 amountCurrency0 = isCurrency0Native
             ? address(this).balance
             : IERC20Metadata(Currency.unwrap(_poolKey.currency0))
                 .balanceOf(address(this));
@@ -1272,7 +1304,7 @@ abstract contract UniV4StandardModule is
 
             // Sync and settle
             poolManager_.sync(_poolKey.currency0);
-            if (_poolKey.currency0.isAddressZero()) {
+            if (isCurrency0Native) {
                 /// @dev no need to use Address lib for PoolManager.
                 poolManager_.settle{value: amountCurrency0}();
             } else {
@@ -1355,7 +1387,7 @@ abstract contract UniV4StandardModule is
         // #endregion effects.
         // #region interactions.
 
-        poolManager.modifyLiquidity(
+        (BalanceDelta delta,) = poolManager.modifyLiquidity(
             poolKey_,
             IPoolManager.ModifyLiquidityParams({
                 liquidityDelta: SafeCast.toInt256(
@@ -1368,22 +1400,9 @@ abstract contract UniV4StandardModule is
             ""
         );
 
-        (amount0, amount1) = _checkCurrencyBalances();
-
-        if (amount0 > 0) {
-            poolManager.burn(
-                address(this),
-                CurrencyLibrary.toId(poolKey_.currency0),
-                amount0
-            );
-        }
-        if (amount1 > 0) {
-            poolManager.burn(
-                address(this),
-                CurrencyLibrary.toId(poolKey_.currency1),
-                amount1
-            );
-        }
+        (amount0, amount1) = _checkCurrencyDelta(
+            int256(delta.amount0()), int256(delta.amount1())
+        );
 
         // #endregion interactions.
 
@@ -1407,7 +1426,7 @@ abstract contract UniV4StandardModule is
             state.feeGrowthInside0LastX128,
             state.feeGrowthInside1LastX128
         ) = poolManager.getPositionInfo(
-            poolId_, address(this), tickLower_, tickUpper_, ""
+            poolId_, address(this), tickLower_, tickUpper_, bytes32(0)
         );
 
         // #endregion get liquidity.
@@ -1438,7 +1457,7 @@ abstract contract UniV4StandardModule is
 
         // #region interactions.
 
-        poolManager.modifyLiquidity(
+        (BalanceDelta delta,) = poolManager.modifyLiquidity(
             poolKey_,
             IPoolManager.ModifyLiquidityParams({
                 liquidityDelta: -SafeCast.toInt256(uint256(liquidityToRemove_)),
@@ -1449,32 +1468,9 @@ abstract contract UniV4StandardModule is
             ""
         );
 
-        amount0 = SafeCast.toUint256(
-            poolManager.currencyDelta(
-                address(this), poolKey.currency0
-            )
-        );
+        amount0 = SafeCast.toUint256(delta.amount0());
 
-        amount1 = SafeCast.toUint256(
-            poolManager.currencyDelta(
-                address(this), poolKey.currency1
-            )
-        );
-
-        if (amount0 > 0) {
-            poolManager.mint(
-                address(this),
-                CurrencyLibrary.toId(poolKey_.currency0),
-                amount0
-            );
-        }
-        if (amount1 > 0) {
-            poolManager.mint(
-                address(this),
-                CurrencyLibrary.toId(poolKey_.currency1),
-                amount1
-            );
-        }
+        amount1 = SafeCast.toUint256(delta.amount1());
 
         // #endregion interactions.
 
@@ -1485,7 +1481,7 @@ abstract contract UniV4StandardModule is
 
     // #region view functions.
 
-    function _get1155Balances()
+    function _get6909Balances()
         internal
         view
         returns (
@@ -1514,15 +1510,24 @@ abstract contract UniV4StandardModule is
         int256 currency0BalanceRaw = poolManager.currencyDelta(
             address(this), poolKey.currency0
         );
-        if (currency0BalanceRaw > 0) revert InvalidCurrencyDelta();
-        uint256 currency0Balance =
-            SafeCast.toUint256(-currency0BalanceRaw);
         int256 currency1BalanceRaw = poolManager.currencyDelta(
             address(this), poolKey.currency1
         );
-        if (currency1BalanceRaw > 0) revert InvalidCurrencyDelta();
+        return _checkCurrencyDelta(
+            currency0BalanceRaw, currency1BalanceRaw
+        );
+    }
+
+    function _checkCurrencyDelta(
+        int256 currency0BalanceRaw_,
+        int256 currency1BalanceRaw_
+    ) internal view returns (uint256, uint256) {
+        if (currency0BalanceRaw_ > 0) revert InvalidCurrencyDelta();
+        uint256 currency0Balance =
+            SafeCast.toUint256(-currency0BalanceRaw_);
+        if (currency1BalanceRaw_ > 0) revert InvalidCurrencyDelta();
         uint256 currency1Balance =
-            SafeCast.toUint256(-currency1BalanceRaw);
+            SafeCast.toUint256(-currency1BalanceRaw_);
 
         return (currency0Balance, currency1Balance);
     }
@@ -1587,7 +1592,7 @@ abstract contract UniV4StandardModule is
         bool isInversed_
     ) internal pure {
         if (isInversed_) {
-            /// @dev Currency.unwrap(poolKey_.currency1) != address(0) is not possible
+            /// @dev Currency.unwrap(poolKey_.currency1) == address(0) is not possible
             /// @dev because currency0 should be lower currency1.
 
             if (token0_ == NATIVE_COIN) {
@@ -1648,7 +1653,7 @@ abstract contract UniV4StandardModule is
                 || poolKey_.hooks.hasPermission(
                     Hooks.AFTER_REMOVE_LIQUIDITY_FLAG
                 )
-        ) revert NoModifyLiquidityHooks();
+        ) revert NoRemoveLiquidityHooks();
     }
 
     function _checkMinReturn(
