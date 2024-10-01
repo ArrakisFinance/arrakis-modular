@@ -75,7 +75,7 @@ contract UniV4StandardModulePublic is
         // #endregion checks.
 
         bytes memory data =
-            abi.encode(0, abi.encode(depositor_, proportion_));
+            abi.encode(Action.DEPOSIT_FUND, abi.encode(depositor_, proportion_));
 
         bytes memory result = poolManager.unlock(data);
 
@@ -100,12 +100,12 @@ contract UniV4StandardModulePublic is
         (uint256 action, bytes memory data) =
             abi.decode(data_, (uint256, bytes));
 
-        if (action == 0) {
+        if (Action(action) == Action.DEPOSIT_FUND) {
             (address depositor, uint256 proportion) =
                 abi.decode(data, (address, uint256));
             return _deposit(_poolManager, depositor, proportion);
         }
-        return _unlockCallback(_poolManager, action, data);
+        return _unlockCallback(_poolManager, Action(action), data);
     }
 
     // #region internal functions.
@@ -235,7 +235,7 @@ contract UniV4StandardModulePublic is
             // #region get how much left over we have on poolManager and mint.
 
             (, uint256 leftOver0,, uint256 leftOver1) =
-                _get1155Balances();
+                _get6909Balances();
 
             if (length == 0 && leftOver0 == 0 && leftOver1 == 0) {
                 leftOver0 = _init0;

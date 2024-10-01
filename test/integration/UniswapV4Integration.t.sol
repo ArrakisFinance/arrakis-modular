@@ -18,6 +18,9 @@ import {
     NATIVE_COIN,
     TEN_PERCENT
 } from "../../src/constants/CArrakis.sol";
+import {SwapPayload} from "../../src/structs/SUniswapV4.sol";
+import {IArrakisMetaVault} from
+    "../../src/interfaces/IArrakisMetaVault.sol";
 
 // #region interfaces.
 
@@ -27,8 +30,10 @@ import {IArrakisPrivateVaultRouter} from
     "../../src/interfaces/IArrakisPrivateVaultRouter.sol";
 import {IArrakisPublicVaultRouter} from
     "../../src/interfaces/IArrakisPublicVaultRouter.sol";
-import {IArrakisPublicVaultRouterV2} from
-    "../../src/interfaces/IArrakisPublicVaultRouterV2.sol";
+import {
+    IArrakisPublicVaultRouterV2,
+    AddLiquidityData
+} from "../../src/interfaces/IArrakisPublicVaultRouterV2.sol";
 import {IArrakisStandardManager} from
     "../../src/interfaces/IArrakisStandardManager.sol";
 import {IGuardian} from "../../src/interfaces/IGuardian.sol";
@@ -43,6 +48,8 @@ import {IOwnable} from "../../src/interfaces/IOwnable.sol";
 import {IUniV4StandardModule} from
     "../../src/interfaces/IUniV4StandardModule.sol";
 import {IOracleWrapper} from "../../src/interfaces/IOracleWrapper.sol";
+import {IUniV4StandardModuleResolver} from
+    "../../src/interfaces/IUniV4StandardModuleResolver.sol";
 
 // #endregion interfaces.
 
@@ -54,6 +61,8 @@ import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {UpgradeableBeacon} from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 // #endregion openzeppelin.
 
@@ -72,10 +81,16 @@ import {
     PoolIdLibrary
 } from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 
 // #endregion uniswap v4.
 
+import {LiquidityAmounts} from
+    "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
+
 // #region valantis mocks.
+
+import {OracleWrapper} from "./mocks/OracleWrapper.sol";
 
 // #endregion valantis mocks.
 
@@ -188,6 +203,12 @@ contract UniswapV4IntegrationTest is TestWrapper {
         (token0, token1) =
             (IERC20Metadata(USDC), IERC20Metadata(WETH));
 
+        // #region create an oracle.
+
+        oracle = address(new OracleWrapper());
+
+        // #endregion create an oracle.
+
         // #endregion setup.
 
         _setup();
@@ -224,7 +245,9 @@ contract UniswapV4IntegrationTest is TestWrapper {
             init0,
             init1,
             false,
-            poolKey
+            poolKey,
+            IOracleWrapper(oracle),
+            maxSlippage
         );
 
         bytes memory initManagementPayload = abi.encode(
@@ -237,6 +260,17 @@ contract UniswapV4IntegrationTest is TestWrapper {
         );
 
         // #endregion create a vault.
+
+        vm.prank(deployer);
+        vault = IArrakisMetaVaultFactory(factory).deployPublicVault(
+            salt,
+            USDC,
+            WETH,
+            owner,
+            uniswapStandardModuleBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
     }
 
     // #region uniswap v4 callback function.
@@ -255,10 +289,554 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
     // #endregion uniswap v4 callback function.
 
+    // #region test resolver constructor.
+
+    function testResolverConstructorAddressZero() public {
+        vm.expectRevert(
+            IUniV4StandardModuleResolver.AddressZero.selector
+        );
+        new UniV4StandardModuleResolver(address(0));
+    }
+
+    function test_compute_mint_amounts_mint_zero() public {
+        vm.expectRevert(
+            IUniV4StandardModuleResolver.MintZero.selector
+        );
+        IUniV4StandardModuleResolver(uniV4resolver).computeMintAmounts(
+            2000e6, 1e18, 1e18, 0, 0
+        );
+    }
+
+    // #endregion test resolver constructor.
+
     // #region test.
 
-    function test_mint() public {
-        
+    function test_addLiquidity() public {
+        (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
+        IArrakisPublicVaultRouterV2(router).getMintAmounts(
+            vault, init0 / 3, init1, uniV4resolver
+        );
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+
+        deal(WETH, user, amount1);
+
+        deal(USDC, user, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(user);
+
+        IERC20Metadata(USDC).approve(router, amount0);
+        IERC20Metadata(WETH).approve(router, amount1);
+
+        // #endregion approve router.
+
+        // #region add liquidity.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: amount0,
+                amount1Max: amount1,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint,
+                vault: vault,
+                receiver: user
+            }),
+            address(uniV4resolver)
+        );
+
+        vm.stopPrank();
+
+        // #endregion add liquidity.
+    }
+
+    function test_addLiquidityMaxAmountsTooLow() public {
+        (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
+        IArrakisPublicVaultRouterV2(router).getMintAmounts(
+            vault, init0 / 3, init1, uniV4resolver
+        );
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+
+        deal(WETH, user, amount1);
+
+        deal(USDC, user, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(user);
+
+        IERC20Metadata(USDC).approve(router, amount0);
+        IERC20Metadata(WETH).approve(router, amount1);
+
+        // #endregion approve router.
+
+        // #region add liquidity.
+
+        vm.expectRevert(
+            IUniV4StandardModuleResolver.MaxAmountsTooLow.selector
+        );
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: amount0,
+                amount1Max: 0,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint,
+                vault: vault,
+                receiver: user
+            }),
+            address(uniV4resolver)
+        );
+
+        vm.stopPrank();
+
+        // #endregion add liquidity.
+    }
+
+    function test_addLiquidity_after_first_deposit() public {
+        (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
+        IArrakisPublicVaultRouterV2(router).getMintAmounts(
+            vault, init0 / 3, init1, uniV4resolver
+        );
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+
+        deal(WETH, user, amount1);
+        deal(USDC, user, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(user);
+
+        IERC20Metadata(USDC).approve(router, amount0);
+        IERC20Metadata(WETH).approve(router, amount1);
+
+        // #endregion approve router.
+
+        // #region add liquidity.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: amount0,
+                amount1Max: amount1,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint,
+                vault: vault,
+                receiver: user
+            }),
+            address(uniV4resolver)
+        );
+
+        vm.stopPrank();
+
+        // #endregion add liquidity.
+
+        // #region second user deposit.
+
+        (sharesToMint, amount0, amount1) = IArrakisPublicVaultRouterV2(
+            router
+        ).getMintAmounts(vault, init0, init1 / 3, uniV4resolver);
+
+        address secondUser =
+            vm.addr(uint256(keccak256(abi.encode("Second User"))));
+
+        deal(WETH, secondUser, amount1);
+        deal(USDC, secondUser, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(secondUser);
+
+        IERC20Metadata(USDC).approve(router, amount0);
+        IERC20Metadata(WETH).approve(router, amount1);
+
+        // #endregion approve router.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: amount0,
+                amount1Max: amount1,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint,
+                vault: vault,
+                receiver: secondUser
+            }),
+            address(uniV4resolver)
+        );
+
+        vm.stopPrank();
+
+        // #endregion second user deposit.
+    }
+
+    function test_addLiquidity_after_first_deposit_only_token1()
+        public
+    {
+        // #region create a vault.
+
+        bytes32 salt =
+            keccak256(abi.encode("Public vault Univ4 salt v2"));
+        init0 = 0;
+        init1 = 1e18;
+        maxSlippage = 10_000;
+
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            false,
+            poolKey,
+            IOracleWrapper(oracle),
+            maxSlippage
+        );
+
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
+
+        // #endregion create a vault.
+
+        vm.prank(deployer);
+        vault = IArrakisMetaVaultFactory(factory).deployPublicVault(
+            salt,
+            USDC,
+            WETH,
+            owner,
+            uniswapStandardModuleBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
+
+        (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
+        IArrakisPublicVaultRouterV2(router).getMintAmounts(
+            vault, 1, init1, uniV4resolver
+        );
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+
+        deal(WETH, user, amount1);
+        deal(USDC, user, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(user);
+
+        IERC20Metadata(USDC).approve(router, amount0);
+        IERC20Metadata(WETH).approve(router, amount1);
+
+        // #endregion approve router.
+
+        // #region add liquidity.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: 1,
+                amount1Max: amount1,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint,
+                vault: vault,
+                receiver: user
+            }),
+            address(uniV4resolver)
+        );
+
+        vm.stopPrank();
+
+        // #endregion add liquidity.
+
+        // #region second user deposit.
+
+        (sharesToMint, amount0, amount1) = IArrakisPublicVaultRouterV2(
+            router
+        ).getMintAmounts(vault, 1, init1 / 3, uniV4resolver);
+
+        address secondUser =
+            vm.addr(uint256(keccak256(abi.encode("Second User"))));
+
+        deal(WETH, secondUser, amount1);
+        deal(USDC, secondUser, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(secondUser);
+
+        IERC20Metadata(USDC).approve(router, amount0);
+        IERC20Metadata(WETH).approve(router, amount1);
+
+        // #endregion approve router.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: 1,
+                amount1Max: amount1,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint,
+                vault: vault,
+                receiver: secondUser
+            }),
+            address(uniV4resolver)
+        );
+
+        vm.stopPrank();
+
+        // #endregion second user deposit.
+    }
+
+    function test_addLiquidity_after_first_deposit_only_token0()
+        public
+    {
+        // #region create a vault.
+
+        bytes32 salt =
+            keccak256(abi.encode("Public vault Univ4 salt v2"));
+        init0 = 2000e6;
+        init1 = 0;
+        maxSlippage = 10_000;
+
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            false,
+            poolKey,
+            IOracleWrapper(oracle),
+            maxSlippage
+        );
+
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
+
+        // #endregion create a vault.
+
+        vm.prank(deployer);
+        vault = IArrakisMetaVaultFactory(factory).deployPublicVault(
+            salt,
+            USDC,
+            WETH,
+            owner,
+            uniswapStandardModuleBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
+
+        (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
+        IArrakisPublicVaultRouterV2(router).getMintAmounts(
+            vault, init0, 1, uniV4resolver
+        );
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+
+        deal(WETH, user, amount1);
+        deal(USDC, user, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(user);
+
+        IERC20Metadata(USDC).approve(router, amount0);
+        IERC20Metadata(WETH).approve(router, amount1);
+
+        // #endregion approve router.
+
+        // #region add liquidity.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: amount0,
+                amount1Max: 1,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint,
+                vault: vault,
+                receiver: user
+            }),
+            address(uniV4resolver)
+        );
+
+        vm.stopPrank();
+
+        // #endregion add liquidity.
+
+        // #region second user deposit.
+
+        (sharesToMint, amount0, amount1) = IArrakisPublicVaultRouterV2(
+            router
+        ).getMintAmounts(vault, init0 / 3, 1, uniV4resolver);
+
+        address secondUser =
+            vm.addr(uint256(keccak256(abi.encode("Second User"))));
+
+        deal(WETH, secondUser, amount1);
+        deal(USDC, secondUser, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(secondUser);
+
+        IERC20Metadata(USDC).approve(router, amount0);
+        IERC20Metadata(WETH).approve(router, amount1);
+
+        // #endregion approve router.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: amount0,
+                amount1Max: 1,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint,
+                vault: vault,
+                receiver: secondUser
+            }),
+            address(uniV4resolver)
+        );
+
+        vm.stopPrank();
+
+        // #endregion second user deposit.
+    }
+
+    function test_rebalance_then_addLiquidity() public {
+        (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
+        IArrakisPublicVaultRouterV2(router).getMintAmounts(
+            vault, init0, init1, uniV4resolver
+        );
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+
+        deal(WETH, user, amount1);
+
+        deal(USDC, user, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(user);
+
+        IERC20Metadata(USDC).approve(router, amount0);
+        IERC20Metadata(WETH).approve(router, amount1);
+
+        // #endregion approve router.
+
+        // #region add liquidity.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: amount0,
+                amount1Max: amount1,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint,
+                vault: vault,
+                receiver: user
+            }),
+            address(uniV4resolver)
+        );
+
+        vm.stopPrank();
+
+        // #endregion add liquidity.
+        {
+            // #region rebalance.
+
+            int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+            int24 tickLower = (tick / 10) * 10 - (2 * 10);
+            int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+            IUniV4StandardModule.Range memory range =
+            IUniV4StandardModule.Range({
+                tickLower: tickLower,
+                tickUpper: tickUpper
+            });
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtPriceAtTick(tickLower),
+                TickMath.getSqrtPriceAtTick(tickUpper),
+                init0,
+                init1
+            );
+
+            IUniV4StandardModule.LiquidityRange memory liquidityRange =
+            IUniV4StandardModule.LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
+
+            IUniV4StandardModule.LiquidityRange[] memory
+                liquidityRanges =
+                    new IUniV4StandardModule.LiquidityRange[](1);
+
+            liquidityRanges[0] = liquidityRange;
+            SwapPayload memory swapPayload;
+
+            vm.startPrank(arrakisStandardManager);
+            IUniV4StandardModule(
+                address(IArrakisMetaVault(vault).module())
+            ).rebalance(liquidityRanges, swapPayload);
+            vm.stopPrank();
+
+            // #endregion rebalance.
+        }
+
+        // #region second user deposit.
+
+        (sharesToMint, amount0, amount1) = IArrakisPublicVaultRouterV2(
+            router
+        ).getMintAmounts(vault, init0, init1 / 3, uniV4resolver);
+
+        address secondUser =
+            vm.addr(uint256(keccak256(abi.encode("Second User"))));
+
+        deal(WETH, secondUser, amount1);
+        deal(USDC, secondUser, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(secondUser);
+
+        IERC20Metadata(USDC).approve(router, init0);
+        IERC20Metadata(WETH).approve(router, init1 / 3);
+
+        // #endregion approve router.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: init0,
+                amount1Max: init1 / 3,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint,
+                vault: vault,
+                receiver: secondUser
+            }),
+            address(uniV4resolver)
+        );
+
+        vm.stopPrank();
+
+        // #endregion second user deposit.
     }
 
     // #endregion test.
@@ -266,7 +844,6 @@ contract UniswapV4IntegrationTest is TestWrapper {
     // #region internal functions.
 
     function _setup() internal {
-        deployer = vm.addr(uint256(keccak256(abi.encode("Deployer"))));
         // #region whitelist a deployer.
 
         address factoryOwner = IOwnable(factory).owner();
@@ -345,7 +922,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
         vm.startPrank(IOwnable(publicRegistry).owner());
 
         IModuleRegistry(publicRegistry).whitelistBeacons(beacons);
-        IModuleRegistry(privateRegistry).whitelistBeacons(beacons);
+        // IModuleRegistry(privateRegistry).whitelistBeacons(beacons);
 
         vm.stopPrank();
     }
@@ -370,8 +947,9 @@ contract UniswapV4IntegrationTest is TestWrapper {
     ) internal {
         // #region create uniswap standard module.
 
-        uniswapStandardModuleImplementation =
-            address(new UniV4StandardModulePublic(poolManager, guardian));
+        uniswapStandardModuleImplementation = address(
+            new UniV4StandardModulePublic(poolManager, guardian)
+        );
         uniswapStandardModuleBeacon = address(
             new UpgradeableBeacon(uniswapStandardModuleImplementation)
         );

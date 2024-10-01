@@ -692,7 +692,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
     }
 
-    function testConstructorNoModifyLiquidityHooksBefore() public {
+    function testConstructorNoRemoveLiquidityHooksBefore() public {
         SimpleHook hook = SimpleHook(
             address(uint160(Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG))
         );
@@ -736,14 +736,14 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
 
         vm.expectRevert(
-            IUniV4StandardModule.NoModifyLiquidityHooks.selector
+            IUniV4StandardModule.NoRemoveLiquidityHooks.selector
         );
         module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
 
-    function testConstructorNoModifyLiquidityHooksAfter() public {
+    function testConstructorNoRemoveLiquidityHooksAfter() public {
         SimpleHook hook = SimpleHook(
             address(uint160(Hooks.AFTER_REMOVE_LIQUIDITY_FLAG))
         );
@@ -785,7 +785,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
 
         vm.expectRevert(
-            IUniV4StandardModule.NoModifyLiquidityHooks.selector
+            IUniV4StandardModule.NoRemoveLiquidityHooks.selector
         );
         module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
@@ -1019,7 +1019,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         module.setPool(poolKey, liquidityRange, swapPayload);
     }
 
-    function testSetPoolNoModifyLiquidityHooks() public {
+    function testSetPoolNoRemoveLiquidityHooks() public {
         SimpleHook hook = SimpleHook(
             address(uint160(Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG))
         );
@@ -1044,7 +1044,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         SwapPayload memory swapPayload;
 
         vm.expectRevert(
-            IUniV4StandardModule.NoModifyLiquidityHooks.selector
+            IUniV4StandardModule.NoRemoveLiquidityHooks.selector
         );
         vm.prank(manager);
         module.setPool(poolKey, liquidityRange, swapPayload);
@@ -2310,9 +2310,7 @@ contract UniV4StandardModuleTest is TestWrapper {
     }
 
     function testUnlockCallbackCallBackNotSupported() public {
-        vm.expectRevert(
-            IUniV4StandardModule.CallBackNotSupported.selector
-        );
+        vm.expectRevert();
 
         vm.prank(address(poolManager));
         module.unlockCallback(abi.encode(4, bytes("")));

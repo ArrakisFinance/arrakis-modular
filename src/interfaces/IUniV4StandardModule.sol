@@ -26,7 +26,7 @@ interface IUniV4StandardModule {
     error TickUpperOutOfBounds(int24 tickUpper);
     error OnlyMetaVaultOrManager();
     error SamePool();
-    error NoModifyLiquidityHooks();
+    error NoRemoveLiquidityHooks();
     error OverMaxDeviation();
     error CallBackNotSupported();
     error NativeCoinCannotBeToken1();

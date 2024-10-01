@@ -8,33 +8,20 @@ import {IArrakisLPModulePrivate} from
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
-import {
-    Range as PoolRange,
-    UnderlyingPayload
-} from "../structs/SUniswapV4.sol";
-import {UnderlyingV4} from "../libraries/UnderlyingV4.sol";
 import {NATIVE_COIN} from "../constants/CArrakis.sol";
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {
-    PoolId,
     PoolIdLibrary
 } from "@uniswap/v4-core/src/types/PoolId.sol";
-import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
 import {
     Currency,
     CurrencyLibrary
 } from "@uniswap/v4-core/src/types/Currency.sol";
-import {StateLibrary} from
-    "@uniswap/v4-core/src/libraries/StateLibrary.sol";
-
-import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 
 import {IERC20Metadata} from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {SafeCast} from
-    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -46,7 +33,6 @@ contract UniV4StandardModulePrivate is
 {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
-    using StateLibrary for IPoolManager;
     using Address for address payable;
     using SafeERC20 for IERC20Metadata;
 
@@ -55,7 +41,7 @@ contract UniV4StandardModulePrivate is
         address guardian_
     ) UniV4StandardModule(poolManager_, guardian_) {}
 
-    /// @notice deposit function for private vault.
+    /// @notice fund function for private vault.
     /// @param depositor_ address that will provide the tokens.
     /// @param amount0_ amount of token0 that depositor want to send to module.
     /// @param amount1_ amount of token1 that depositor want to send to module.
@@ -73,7 +59,7 @@ contract UniV4StandardModulePrivate is
         // #endregion checks.
 
         bytes memory data =
-            abi.encode(0, abi.encode(depositor_, amount0_, amount1_));
+            abi.encode(Action.DEPOSIT_FUND, abi.encode(depositor_, amount0_, amount1_));
 
         bytes memory result = poolManager.unlock(data);
 
@@ -99,12 +85,13 @@ contract UniV4StandardModulePrivate is
         (uint256 action, bytes memory data) =
             abi.decode(data_, (uint256, bytes));
 
-        if (action == 0) {
+        if (Action(action) == Action.DEPOSIT_FUND) {
             (address depositor, uint256 amount0, uint256 amount1) =
                 abi.decode(data, (address, uint256, uint256));
             return _fund(_poolManager, depositor, amount0, amount1);
         }
-        return _unlockCallback(_poolManager, action, data);
+
+        return _unlockCallback(_poolManager, Action(action), data);
     }
 
     // #region internal functions.
@@ -135,7 +122,7 @@ contract UniV4StandardModulePrivate is
 
                 poolManager_.mint(
                     address(this),
-                    CurrencyLibrary.toId(currency0),
+                    currency0.toId(),
                     amount0_
                 );
 
@@ -166,7 +153,7 @@ contract UniV4StandardModulePrivate is
 
                 poolManager_.mint(
                     address(this),
-                    CurrencyLibrary.toId(currency1),
+                    currency1.toId(),
                     amount1_
                 );
 

@@ -6,7 +6,7 @@ import {
     PositionUnderlying,
     RangeData
 } from "../structs/SUniswapV4.sol";
-import {PIPS} from "../constants/CArrakis.sol";
+import {BASE} from "../constants/CArrakis.sol";
 import {IUniV4ModuleBase} from "../interfaces/IUniV4ModuleBase.sol";
 
 import {IPoolManager} from
@@ -16,14 +16,10 @@ import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
 import {FixedPoint128} from
     "@uniswap/v4-core/src/libraries/FixedPoint128.sol";
-import {SqrtPriceMath} from
-    "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
 import {
     PoolIdLibrary,
     PoolId
 } from "@uniswap/v4-core/src/types/PoolId.sol";
-import {LiquidityAmounts} from
-    "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
 import {
     Currency,
     CurrencyLibrary
@@ -32,6 +28,11 @@ import {StateLibrary} from
     "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TransientStateLibrary} from
     "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
+
+import {LiquidityAmounts} from
+    "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
+import {SqrtPriceMath} from
+    "@v3-lib-0.8/contracts/SqrtPriceMath.sol";
 
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -67,23 +68,23 @@ library UnderlyingV4 {
         }
 
         uint256 leftOver0 = underlyingPayload_.poolManager.balanceOf(
-            address(this),
+            underlyingPayload_.self,
             IUniV4ModuleBase(underlyingPayload_.self).poolKey()
                 .currency0
                 .toId()
         );
         uint256 leftOver1 = underlyingPayload_.poolManager.balanceOf(
-            address(this),
+            underlyingPayload_.self,
             IUniV4ModuleBase(underlyingPayload_.self).poolKey()
                 .currency1
                 .toId()
         );
 
         amount0 += FullMath.mulDivRoundingUp(
-            proportion_, fee0 + leftOver0, PIPS
+            proportion_, fee0 + leftOver0, BASE
         );
         amount1 += FullMath.mulDivRoundingUp(
-            proportion_, fee1 + leftOver1, PIPS
+            proportion_, fee1 + leftOver1, BASE
         );
     }
 
@@ -101,37 +102,6 @@ library UnderlyingV4 {
         )
     {
         return _totalUnderlyingWithFees(underlyingPayload_, 0);
-    }
-
-    function totalAmountsAndFees(
-        UnderlyingPayload memory underlyingPayload_
-    )
-        public
-        view
-        returns (
-            uint256 amount0,
-            uint256 amount1,
-            uint256 fee0,
-            uint256 fee1
-        )
-    {
-        for (uint256 i; i < underlyingPayload_.ranges.length; i++) {
-            {
-                (uint256 a0, uint256 a1, uint256 f0, uint256 f1) =
-                underlying(
-                    RangeData({
-                        self: underlyingPayload_.self,
-                        range: underlyingPayload_.ranges[i],
-                        poolManager: underlyingPayload_.poolManager
-                    }),
-                    0
-                );
-                amount0 += a0;
-                amount1 += a1;
-                fee0 += f0;
-                fee1 += f1;
-            }
-        }
     }
 
     function totalUnderlyingAtPriceWithFees(
@@ -269,7 +239,7 @@ library UnderlyingV4 {
                     FullMath.mulDiv(
                         uint256(positionState.liquidity),
                         proportion_,
-                        PIPS
+                        BASE
                     )
                 )
             )
@@ -364,35 +334,6 @@ library UnderlyingV4 {
         }
     }
 
-    // solhint-disable-next-line function-max-lines
-    function computeProportion(
-        uint256 current0_,
-        uint256 current1_,
-        uint256 amount0Max_,
-        uint256 amount1Max_
-    ) public pure returns (uint256 proportion) {
-        // compute proportional amount of tokens to mint
-        if (current0_ == 0 && current1_ > 0) {
-            proportion = FullMath.mulDiv(amount1Max_, PIPS, current1_);
-        } else if (current1_ == 0 && current0_ > 0) {
-            proportion = FullMath.mulDiv(amount0Max_, PIPS, current0_);
-        } else if (current0_ > 0 && current1_ > 0) {
-            uint256 amount0Mint =
-                FullMath.mulDiv(amount0Max_, PIPS, current0_);
-            uint256 amount1Mint =
-                FullMath.mulDiv(amount1Max_, PIPS, current1_);
-            require(
-                amount0Mint > 0 && amount1Mint > 0,
-                "ArrakisVaultV2: mint 0"
-            );
-
-            proportion =
-                amount0Mint < amount1Mint ? amount0Mint : amount1Mint;
-        } else {
-            revert("ArrakisVaultV2: panic");
-        }
-    }
-
     function _getFeesOwned(
         Position.State memory self,
         uint256 feeGrowthInside0X128,
@@ -445,11 +386,11 @@ library UnderlyingV4 {
         }
 
         uint256 leftOver0 = underlyingPayload_.poolManager.balanceOf(
-            address(this),
+            underlyingPayload_.self,
             Currency.wrap(underlyingPayload_.token0).toId()
         );
         uint256 leftOver1 = underlyingPayload_.poolManager.balanceOf(
-            address(this),
+            underlyingPayload_.self,
             Currency.wrap(underlyingPayload_.token1).toId()
         );
 

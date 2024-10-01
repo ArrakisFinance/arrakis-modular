@@ -73,8 +73,8 @@ contract UniV4StandardModuleResolver is
             uint256 numberOfRanges = _ranges.length;
 
             if (
-                _ranges.length >= maxAmount0_
-                    || _ranges.length >= maxAmount1_
+                numberOfRanges >= maxAmount0_
+                    || numberOfRanges >= maxAmount1_
             ) {
                 revert MaxAmountsTooLow();
             }
@@ -127,20 +127,20 @@ contract UniV4StandardModuleResolver is
                 maxAmount1_
             );
             uint256 proportion =
-                FullMath.mulDiv(shareToMint, 1e18, totalSupply);
+                FullMath.mulDiv(shareToMint, BASE, totalSupply);
             (amount0ToDeposit, amount1ToDeposit) = UnderlyingV4
                 .totalUnderlyingForMint(underlyingPayload, proportion);
         } else {
             (uint256 init0, uint256 init1) = IArrakisLPModule(module).getInits();
             shareToMint = computeMintAmounts(
-                init0, init1, 1 ether, maxAmount0_, maxAmount1_
+                init0, init1, BASE, maxAmount0_, maxAmount1_
             );
 
             // compute amounts owed to contract
             amount0ToDeposit =
-                FullMath.mulDivRoundingUp(shareToMint, init0, 1 ether);
+                FullMath.mulDivRoundingUp(shareToMint, init0, BASE);
             amount1ToDeposit =
-                FullMath.mulDivRoundingUp(shareToMint, init1, 1 ether);
+                FullMath.mulDivRoundingUp(shareToMint, init1, BASE);
         }
     }
 
@@ -163,14 +163,13 @@ contract UniV4StandardModuleResolver is
                 FullMath.mulDiv(amount0Max_, totalSupply_, current0_);
             uint256 amount1Mint =
                 FullMath.mulDiv(amount1Max_, totalSupply_, current1_);
+
             if (amount0Mint == 0 || amount1Mint == 0) {
                 revert MintZero();
             }
 
             mintAmount =
                 amount0Mint < amount1Mint ? amount0Mint : amount1Mint;
-        } else {
-            revert NotSupported();
         }
     }
 }
