@@ -314,7 +314,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
     function test_addLiquidity() public {
         (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
         IArrakisPublicVaultRouterV2(router).getMintAmounts(
-            vault, init0 / 3, init1, uniV4resolver
+            vault, init0 / 3, init1
         );
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
@@ -343,8 +343,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amountSharesMin: sharesToMint,
                 vault: vault,
                 receiver: user
-            }),
-            address(uniV4resolver)
+            })
         );
 
         vm.stopPrank();
@@ -355,7 +354,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
     function test_addLiquidityMaxAmountsTooLow() public {
         (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
         IArrakisPublicVaultRouterV2(router).getMintAmounts(
-            vault, init0 / 3, init1, uniV4resolver
+            vault, init0 / 3, init1
         );
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
@@ -387,8 +386,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amountSharesMin: sharesToMint,
                 vault: vault,
                 receiver: user
-            }),
-            address(uniV4resolver)
+            })
         );
 
         vm.stopPrank();
@@ -399,7 +397,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
     function test_addLiquidity_after_first_deposit() public {
         (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
         IArrakisPublicVaultRouterV2(router).getMintAmounts(
-            vault, init0 / 3, init1, uniV4resolver
+            vault, init0 / 3, init1
         );
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
@@ -427,8 +425,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amountSharesMin: sharesToMint,
                 vault: vault,
                 receiver: user
-            }),
-            address(uniV4resolver)
+            })
         );
 
         vm.stopPrank();
@@ -439,7 +436,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         (sharesToMint, amount0, amount1) = IArrakisPublicVaultRouterV2(
             router
-        ).getMintAmounts(vault, init0, init1 / 3, uniV4resolver);
+        ).getMintAmounts(vault, init0, init1 / 3);
 
         address secondUser =
             vm.addr(uint256(keccak256(abi.encode("Second User"))));
@@ -465,8 +462,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amountSharesMin: sharesToMint,
                 vault: vault,
                 receiver: secondUser
-            }),
-            address(uniV4resolver)
+            })
         );
 
         vm.stopPrank();
@@ -519,7 +515,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
         IArrakisPublicVaultRouterV2(router).getMintAmounts(
-            vault, 1, init1, uniV4resolver
+            vault, 1, init1
         );
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
@@ -547,8 +543,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amountSharesMin: sharesToMint,
                 vault: vault,
                 receiver: user
-            }),
-            address(uniV4resolver)
+            })
         );
 
         vm.stopPrank();
@@ -559,7 +554,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         (sharesToMint, amount0, amount1) = IArrakisPublicVaultRouterV2(
             router
-        ).getMintAmounts(vault, 1, init1 / 3, uniV4resolver);
+        ).getMintAmounts(vault, 1, init1 / 3);
 
         address secondUser =
             vm.addr(uint256(keccak256(abi.encode("Second User"))));
@@ -585,8 +580,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amountSharesMin: sharesToMint,
                 vault: vault,
                 receiver: secondUser
-            }),
-            address(uniV4resolver)
+            })
         );
 
         vm.stopPrank();
@@ -639,7 +633,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
         IArrakisPublicVaultRouterV2(router).getMintAmounts(
-            vault, init0, 1, uniV4resolver
+            vault, init0, 1
         );
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
@@ -667,8 +661,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amountSharesMin: sharesToMint,
                 vault: vault,
                 receiver: user
-            }),
-            address(uniV4resolver)
+            })
         );
 
         vm.stopPrank();
@@ -679,7 +672,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         (sharesToMint, amount0, amount1) = IArrakisPublicVaultRouterV2(
             router
-        ).getMintAmounts(vault, init0 / 3, 1, uniV4resolver);
+        ).getMintAmounts(vault, init0 / 3, 1);
 
         address secondUser =
             vm.addr(uint256(keccak256(abi.encode("Second User"))));
@@ -705,8 +698,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amountSharesMin: sharesToMint,
                 vault: vault,
                 receiver: secondUser
-            }),
-            address(uniV4resolver)
+            })
         );
 
         vm.stopPrank();
@@ -717,7 +709,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
     function test_rebalance_then_addLiquidity() public {
         (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
         IArrakisPublicVaultRouterV2(router).getMintAmounts(
-            vault, init0, init1, uniV4resolver
+            vault, init0, init1
         );
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
@@ -746,8 +738,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amountSharesMin: sharesToMint,
                 vault: vault,
                 receiver: user
-            }),
-            address(uniV4resolver)
+            })
         );
 
         vm.stopPrank();
@@ -804,7 +795,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         (sharesToMint, amount0, amount1) = IArrakisPublicVaultRouterV2(
             router
-        ).getMintAmounts(vault, init0, init1 / 3, uniV4resolver);
+        ).getMintAmounts(vault, init0, init1 / 3);
 
         address secondUser =
             vm.addr(uint256(keccak256(abi.encode("Second User"))));
@@ -830,8 +821,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amountSharesMin: sharesToMint,
                 vault: vault,
                 receiver: secondUser
-            }),
-            address(uniV4resolver)
+            })
         );
 
         vm.stopPrank();
@@ -902,9 +892,12 @@ contract UniswapV4IntegrationTest is TestWrapper {
         address[] memory resolvers = new address[](1);
         resolvers[0] = uniV4resolver;
 
+        bytes32[] memory ids = new bytes32[](1);
+        ids[0] = keccak256(abi.encode("UniV4StandardModulePublic"));
+
         vm.prank(owner);
-        IArrakisPublicVaultRouterV2(router).whitelistResolvers(
-            resolvers
+        IArrakisPublicVaultRouterV2(router).setResolvers(
+            ids, resolvers
         );
 
         // #endregion whitelist resolver.

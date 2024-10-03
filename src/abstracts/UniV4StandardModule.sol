@@ -4,6 +4,8 @@ pragma solidity ^0.8.26;
 import {IUniV4StandardModule} from
     "../interfaces/IUniV4StandardModule.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
+import {IArrakisLPModuleID} from
+    "../interfaces/IArrakisLPModuleID.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
@@ -76,6 +78,7 @@ abstract contract UniV4StandardModule is
     ReentrancyGuardUpgradeable,
     PausableUpgradeable,
     IArrakisLPModule,
+    IArrakisLPModuleID,
     IUniV4StandardModule,
     IUnlockCallback
 {
@@ -102,6 +105,7 @@ abstract contract UniV4StandardModule is
     // #region immutable properties.
 
     IPoolManager public immutable poolManager;
+    bytes32 public immutable id;
 
     // #endregion immutable properties.
 

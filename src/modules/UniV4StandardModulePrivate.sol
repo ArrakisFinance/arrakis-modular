@@ -11,9 +11,7 @@ import {IPoolManager} from
 import {NATIVE_COIN} from "../constants/CArrakis.sol";
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
-import {
-    PoolIdLibrary
-} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {
     Currency,
     CurrencyLibrary
@@ -39,7 +37,9 @@ contract UniV4StandardModulePrivate is
     constructor(
         address poolManager_,
         address guardian_
-    ) UniV4StandardModule(poolManager_, guardian_) {}
+    ) UniV4StandardModule(poolManager_, guardian_) {
+        id = keccak256(abi.encode("UniV4StandardModulePublic"));
+    }
 
     /// @notice fund function for private vault.
     /// @param depositor_ address that will provide the tokens.
@@ -58,8 +58,10 @@ contract UniV4StandardModulePrivate is
 
         // #endregion checks.
 
-        bytes memory data =
-            abi.encode(Action.DEPOSIT_FUND, abi.encode(depositor_, amount0_, amount1_));
+        bytes memory data = abi.encode(
+            Action.DEPOSIT_FUND,
+            abi.encode(depositor_, amount0_, amount1_)
+        );
 
         bytes memory result = poolManager.unlock(data);
 
@@ -121,9 +123,7 @@ contract UniV4StandardModulePrivate is
                 }
 
                 poolManager_.mint(
-                    address(this),
-                    currency0.toId(),
-                    amount0_
+                    address(this), currency0.toId(), amount0_
                 );
 
                 poolManager_.sync(currency0);
@@ -152,9 +152,7 @@ contract UniV4StandardModulePrivate is
                 }
 
                 poolManager_.mint(
-                    address(this),
-                    currency1.toId(),
-                    amount1_
+                    address(this), currency1.toId(), amount1_
                 );
 
                 poolManager_.sync(currency1);

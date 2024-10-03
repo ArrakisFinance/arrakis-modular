@@ -30,9 +30,8 @@ interface IArrakisPublicVaultRouterV2 {
     error MsgValueDTMaxAmount();
     error NoWethToken();
     error Permit2WethNotAuthorized();
-    error ResolverAlreadyWhitelisted();
-    error NotWhitelistedResolver();
-    error OnlyResolver();
+    error UnequalLength();
+    error ModuleNotSupported();
 
     // #endregion errors.
 
@@ -50,13 +49,7 @@ interface IArrakisPublicVaultRouterV2 {
         uint256 amountOutSwap
     );
 
-    event LogWhitelistResolvers(
-        address[] resolvers
-    );
-
-    event LogBlacklistResolvers(
-        address[] resolvers
-    );
+    event LogSetResolvers(bytes32[] ids, address[] resolvers);
 
     // #endregion events.
 
@@ -72,13 +65,11 @@ interface IArrakisPublicVaultRouterV2 {
 
     /// @notice addLiquidity adds liquidity to meta vault of interest (mints L tokens)
     /// @param params_ AddLiquidityData struct containing data for adding liquidity
-    /// @param resolver_ Address of resolver contract that will compute mint amount.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     function addLiquidity(
-        AddLiquidityData memory params_,
-        address resolver_
+        AddLiquidityData memory params_
     )
         external
         payable
@@ -90,15 +81,13 @@ interface IArrakisPublicVaultRouterV2 {
 
     /// @notice swapAndAddLiquidity transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddData struct containing data for swap
-    /// @param resolver_ Address of resolver contract that will compute mint amount.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
     function swapAndAddLiquidity(
-        SwapAndAddData memory params_,
-        address resolver_
+        SwapAndAddData memory params_
     )
         external
         payable
@@ -120,13 +109,11 @@ interface IArrakisPublicVaultRouterV2 {
 
     /// @notice addLiquidityPermit2 adds liquidity to public vault of interest (mints LP tokens)
     /// @param params_ AddLiquidityPermit2Data struct containing data for adding liquidity
-    /// @param resolver_ Address of resolver contract that will compute mint amount.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     function addLiquidityPermit2(
-        AddLiquidityPermit2Data memory params_,
-        address resolver_
+        AddLiquidityPermit2Data memory params_
     )
         external
         payable
@@ -138,15 +125,13 @@ interface IArrakisPublicVaultRouterV2 {
 
     /// @notice swapAndAddLiquidityPermit2 transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddPermit2Data struct containing data for swap
-    /// @param resolver_ Address of resolver contract that will compute mint amount.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
     function swapAndAddLiquidityPermit2(
-        SwapAndAddPermit2Data memory params_,
-        address resolver_
+        SwapAndAddPermit2Data memory params_
     )
         external
         payable
@@ -168,13 +153,11 @@ interface IArrakisPublicVaultRouterV2 {
 
     /// @notice wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of interest (mints L tokens)
     /// @param params_ AddLiquidityData struct containing data for adding liquidity
-    /// @param resolver_ Address of resolver contract that will compute mint amount.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     function wrapAndAddLiquidity(
-        AddLiquidityData memory params_,
-        address resolver_
+        AddLiquidityData memory params_
     )
         external
         payable
@@ -186,15 +169,13 @@ interface IArrakisPublicVaultRouterV2 {
 
     /// @notice wrapAndSwapAndAddLiquidity wrap eth and transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddData struct containing data for swap
-    /// @param resolver_ Address of resolver contract that will compute mint amount.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
     function wrapAndSwapAndAddLiquidity(
-        SwapAndAddData memory params_,
-        address resolver_
+        SwapAndAddData memory params_
     )
         external
         payable
@@ -208,13 +189,11 @@ interface IArrakisPublicVaultRouterV2 {
 
     /// @notice wrapAndAddLiquidityPermit2 wrap eth and adds liquidity to public vault of interest (mints LP tokens)
     /// @param params_ AddLiquidityPermit2Data struct containing data for adding liquidity
-    /// @param resolver_ Address of resolver contract that will compute mint amount.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     function wrapAndAddLiquidityPermit2(
-        AddLiquidityPermit2Data memory params_,
-        address resolver_
+        AddLiquidityPermit2Data memory params_
     )
         external
         payable
@@ -226,15 +205,13 @@ interface IArrakisPublicVaultRouterV2 {
 
     /// @notice wrapAndSwapAndAddLiquidityPermit2 wrap eth and transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddPermit2Data struct containing data for swap
-    /// @param resolver_ Address of resolver contract that will compute mint amount.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
     function wrapAndSwapAndAddLiquidityPermit2(
-        SwapAndAddPermit2Data memory params_,
-        address resolver_
+        SwapAndAddPermit2Data memory params_
     )
         external
         payable
@@ -246,29 +223,30 @@ interface IArrakisPublicVaultRouterV2 {
             uint256 amount1Diff
         );
 
-    function whitelistResolvers(address[] calldata resolvers_) external;
-
-    function blacklistResolvers(address[] calldata resolvers_) external;
+    function setResolvers(
+        bytes32[] calldata ids_,
+        address[] calldata resolvers_
+    ) external;
 
     // #endregion functions.
 
     // #region view functions.
 
-    function resolvers() external view returns (address[] memory);
+    function resolvers(
+        bytes32 id_
+    ) external view returns (address);
 
     /// @notice getMintAmounts used to get the shares we can mint from some max amounts.
     /// @param vault_ meta vault address.
     /// @param maxAmount0_ maximum amount of token0 user want to contribute.
     /// @param maxAmount1_ maximum amount of token1 user want to contribute.
-    /// @param resolver_ resolver to use to perform get mint amounts.
     /// @return shareToMint maximum amount of share user can get for 'maxAmount0_' and 'maxAmount1_'.
     /// @return amount0ToDeposit amount of token0 user should deposit into the vault for minting 'shareToMint'.
     /// @return amount1ToDeposit amount of token1 user should deposit into the vault for minting 'shareToMint'.
     function getMintAmounts(
         address vault_,
         uint256 maxAmount0_,
-        uint256 maxAmount1_,
-        address resolver_
+        uint256 maxAmount1_
     )
         external
         view
