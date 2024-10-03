@@ -50,12 +50,18 @@ contract UniV4StandardModulePublic is
     using Address for address payable;
     using SafeERC20 for IERC20Metadata;
 
+    // #region public constants.
+
+    // keccak256(abi.encode("UniV4StandardModulePublic"))
+    bytes32 public constant id =
+        0x22f7eb8a1e047f6c492e05813f6e9c6cb1563d057a61278b8e0ae7977af1ac3f;
+
+    // #endregion public constants.
+
     constructor(
         address poolManager_,
         address guardian_
-    ) UniV4StandardModule(poolManager_, guardian_) {
-        id = keccak256(abi.encode("UniV4StandardModulePublic"));
-    }
+    ) UniV4StandardModule(poolManager_, guardian_) {}
 
     /// @notice function used by metaVault to deposit tokens into the strategy.
     /// @param depositor_ address that will provide the tokens.

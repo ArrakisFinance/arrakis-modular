@@ -105,7 +105,6 @@ abstract contract UniV4StandardModule is
     // #region immutable properties.
 
     IPoolManager public immutable poolManager;
-    bytes32 public immutable id;
 
     // #endregion immutable properties.
 
