@@ -806,10 +806,11 @@ abstract contract UniV4StandardModule is
         {
             address manager = metaVault.manager();
 
-            // #region manager fees.
+            
             uint256 fee0ToWithdraw;
             uint256 fee1ToWithdraw;
             {
+                // #region manager fees.
                 uint256 managerFee0 =
                     FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
                 uint256 managerFee1 =
@@ -869,7 +870,17 @@ abstract contract UniV4StandardModule is
         // #region mint extra collected fees.
 
         {
-            (amount0, amount1) = _checkCurrencyBalances();
+            amount0 = SafeCast.toUint256(
+                withdraw_.poolManager.currencyDelta(
+                    address(this), poolKey.currency0
+                )
+            );
+
+            amount1 = SafeCast.toUint256(
+                withdraw_.poolManager.currencyDelta(
+                    address(this), poolKey.currency1
+                )
+            );
 
             if (amount0 > 0) {
                 withdraw_.poolManager.mint(
@@ -931,6 +942,7 @@ abstract contract UniV4StandardModule is
     ) internal returns (bytes memory result) {
         PoolKey memory _poolKey = poolKey;
         uint256 length = liquidityRanges_.length;
+
         // #region fees computations.
 
         uint256 fee0;
