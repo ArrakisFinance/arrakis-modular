@@ -36,7 +36,7 @@ contract UniV4StandardModulePrivate is
 
     // #region public constants.
 
-    // keccak256(abi.encode("UniV4StandardModulePrivate"))
+    /// @dev id = keccak256(abi.encode("UniV4StandardModulePrivate"))
     bytes32 public constant id =
         0xae9c8e22b1f7ab201e144775cd6f848c3c1b0a82315571de8c67ce32ca9a7d44;
 
