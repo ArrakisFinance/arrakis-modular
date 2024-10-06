@@ -65,7 +65,8 @@ import {TransientStateLibrary} from
     "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
 import {
     BalanceDelta,
-    BalanceDeltaLibrary
+    BalanceDeltaLibrary,
+    toBalanceDelta
 } from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 
 /// @notice this module can only set uni v4 pool that have generic hook,
@@ -296,8 +297,6 @@ abstract contract UniV4StandardModule is
         PoolId currentPoolId = _poolKey.toId();
         LiquidityRange[] memory liquidityRanges =
             new LiquidityRange[](length);
-        // no swap happens here.
-        SwapPayload memory swapPayload;
 
         for (uint256 i; i < length; i++) {
             Range memory range = _ranges[i];
@@ -324,7 +323,11 @@ abstract contract UniV4StandardModule is
             });
         }
 
-        _internalRebalance(liquidityRanges, swapPayload);
+        {
+            // no swap happens here.
+            SwapPayload memory swapPayload;
+            _internalRebalance(liquidityRanges, swapPayload);
+        }
 
         // #endregion get liquidities and remove.
 
@@ -656,7 +659,11 @@ abstract contract UniV4StandardModule is
                 Withdraw({
                     poolManager: _poolManager,
                     receiver: receiver,
-                    proportion: proportion
+                    proportion: proportion,
+                    amount0: 0,
+                    amount1: 0,
+                    fee0: 0,
+                    fee1: 0
                 })
             );
         }
@@ -678,222 +685,239 @@ abstract contract UniV4StandardModule is
         Withdraw memory withdraw_
     ) internal returns (bytes memory result) {
         PoolKey memory _poolKey = poolKey;
-        PoolId poolId = _poolKey.toId();
-        uint256 length = _ranges.length;
-
-        // #region fees computations.
-
-        uint256 fee0;
-        uint256 fee1;
-        {
-            PoolRange[] memory poolRanges = _getPoolRanges(length);
-
-            (address _token0, address _token1) = _getTokens(_poolKey);
-
-            (,, fee0, fee1) = UnderlyingV4.totalUnderlyingWithFees(
-                UnderlyingPayload({
-                    ranges: poolRanges,
-                    poolManager: withdraw_.poolManager,
-                    token0: _token0,
-                    token1: _token1,
-                    self: address(this)
-                })
-            );
-        }
-
-        // #endregion fees computations.
 
         // #region get liquidity for each positions and burn.
 
-        for (uint256 i; i < length; i++) {
-            Range memory range = _ranges[i];
-
-            Position.State memory state;
-            (
-                state.liquidity,
-                state.feeGrowthInside0LastX128,
-                state.feeGrowthInside1LastX128
-            ) = withdraw_.poolManager.getPositionInfo(
-                poolId,
-                address(this),
-                range.tickLower,
-                range.tickUpper,
-                bytes32(0)
-            );
-
-            /// @dev multiply -1 because we will remove liquidity.
-            uint256 liquidity = FullMath.mulDiv(
-                uint256(state.liquidity), withdraw_.proportion, BASE
-            );
-
-            if (liquidity == uint256(state.liquidity)) {
-                bytes32 positionId = keccak256(
-                    abi.encode(
-                        poolId, range.tickLower, range.tickUpper
-                    )
-                );
-                _activeRanges[positionId] = false;
-                (uint256 indexToRemove, uint256 l) =
-                    _getRangeIndex(range.tickLower, range.tickUpper);
-
-                _ranges[indexToRemove] = _ranges[l - 1];
-                _ranges.pop();
-            }
-
-            if (liquidity > 0) {
-                withdraw_.poolManager.modifyLiquidity(
-                    _poolKey,
-                    IPoolManager.ModifyLiquidityParams({
-                        liquidityDelta: -1 * SafeCast.toInt256(liquidity),
-                        tickLower: range.tickLower,
-                        tickUpper: range.tickUpper,
-                        salt: bytes32(0)
-                    }),
-                    ""
-                );
-            }
-        }
-
-        // #endregion get liquidity for each positions and burn.
-
-        // #region get how much left over we have on poolManager and burn.
-
         {
-            (, uint256 leftOver0,, uint256 leftOver1) =
-                _get6909Balances();
+            BalanceDelta delta;
+            {
+                BalanceDelta fees;
+                PoolId poolId = _poolKey.toId();
+                uint256 length = _ranges.length;
 
-            // rounding up during mint only
-            uint256 leftOver0ToBurn =
-                FullMath.mulDiv(leftOver0, withdraw_.proportion, BASE);
-            uint256 leftOver1ToBurn =
-                FullMath.mulDiv(leftOver1, withdraw_.proportion, BASE);
+                for (uint256 i; i < length; i++) {
+                    Range memory range = _ranges[i];
 
-            if (leftOver0ToBurn > 0) {
-                withdraw_.poolManager.burn(
-                    address(this),
-                    CurrencyLibrary.toId(_poolKey.currency0),
-                    leftOver0ToBurn
-                );
+                    Position.State memory state;
+                    (
+                        state.liquidity,
+                        state.feeGrowthInside0LastX128,
+                        state.feeGrowthInside1LastX128
+                    ) = withdraw_.poolManager.getPositionInfo(
+                        poolId,
+                        address(this),
+                        range.tickLower,
+                        range.tickUpper,
+                        bytes32(0)
+                    );
+
+                    /// @dev multiply -1 because we will remove liquidity.
+                    uint256 liquidity = FullMath.mulDiv(
+                        uint256(state.liquidity),
+                        withdraw_.proportion,
+                        BASE
+                    );
+
+                    if (liquidity == uint256(state.liquidity)) {
+                        bytes32 positionId = keccak256(
+                            abi.encode(
+                                poolId,
+                                range.tickLower,
+                                range.tickUpper
+                            )
+                        );
+                        _activeRanges[positionId] = false;
+                        (uint256 indexToRemove, uint256 l) =
+                        _getRangeIndex(
+                            range.tickLower, range.tickUpper
+                        );
+
+                        _ranges[indexToRemove] = _ranges[l - 1];
+                        _ranges.pop();
+                    }
+
+                    if (liquidity > 0) {
+                        (
+                            BalanceDelta callerDelta,
+                            BalanceDelta feesAccrued
+                        ) = withdraw_.poolManager.modifyLiquidity(
+                            _poolKey,
+                            IPoolManager.ModifyLiquidityParams({
+                                liquidityDelta: -1
+                                    * SafeCast.toInt256(liquidity),
+                                tickLower: range.tickLower,
+                                tickUpper: range.tickUpper,
+                                salt: bytes32(0)
+                            }),
+                            ""
+                        );
+
+                        delta = delta + callerDelta;
+                        fees = fees + feesAccrued;
+                    }
+                }
+                withdraw_.fee0 = SafeCast.toUint256(int256(fees.amount0()));
+                withdraw_.fee1 = SafeCast.toUint256(int256(fees.amount1()));
             }
-            if (leftOver1ToBurn > 0) {
-                withdraw_.poolManager.burn(
-                    address(this),
-                    CurrencyLibrary.toId(_poolKey.currency1),
-                    leftOver1ToBurn
+
+            // #endregion get liquidity for each positions and burn.
+
+            // #region get how much left over we have on poolManager and burn.
+
+            {
+                (, uint256 leftOver0,, uint256 leftOver1) =
+                    _get6909Balances();
+
+                // rounding up during mint only
+                uint256 leftOver0ToBurn = FullMath.mulDiv(
+                    leftOver0, withdraw_.proportion, BASE
                 );
+                uint256 leftOver1ToBurn = FullMath.mulDiv(
+                    leftOver1, withdraw_.proportion, BASE
+                );
+
+                if (leftOver0ToBurn > 0) {
+                    withdraw_.poolManager.burn(
+                        address(this),
+                        CurrencyLibrary.toId(_poolKey.currency0),
+                        leftOver0ToBurn
+                    );
+                }
+                if (leftOver1ToBurn > 0) {
+                    withdraw_.poolManager.burn(
+                        address(this),
+                        CurrencyLibrary.toId(_poolKey.currency1),
+                        leftOver1ToBurn
+                    );
+                }
+
+                delta = delta
+                    + toBalanceDelta(
+                        SafeCast.toInt128(
+                            SafeCast.toInt256(leftOver0ToBurn)
+                        ),
+                        SafeCast.toInt128(
+                            SafeCast.toInt256(leftOver1ToBurn)
+                        )
+                    );
+
+                withdraw_.amount0 =
+                    SafeCast.toUint256(int256(delta.amount0()));
+                withdraw_.amount1 =
+                    SafeCast.toUint256(int256(delta.amount1()));
             }
         }
-
         // #endregion get how much left over we have on poolManager and mint.
-
-        uint256 amount0 = SafeCast.toUint256(
-            withdraw_.poolManager.currencyDelta(
-                address(this), _poolKey.currency0
-            )
-        );
-
-        uint256 amount1 = SafeCast.toUint256(
-            withdraw_.poolManager.currencyDelta(
-                address(this), _poolKey.currency1
-            )
-        );
 
         // #region take and send token to receiver.
 
         /// @dev if receiver is a smart contract, the sm should implement receive
         /// fallback function.
-
         {
-            address manager = metaVault.manager();
-
-            
-            uint256 fee0ToWithdraw;
-            uint256 fee1ToWithdraw;
             {
                 // #region manager fees.
                 uint256 managerFee0 =
-                    FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
+                    FullMath.mulDiv(withdraw_.fee0, managerFeePIPS, PIPS);
                 uint256 managerFee1 =
-                    FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
+                    FullMath.mulDiv(withdraw_.fee1, managerFeePIPS, PIPS);
 
-                /// @dev if proportion is 100% we take all fees, to prevent
-                /// rounding errors.
-                if (withdraw_.proportion == BASE) {
-                    fee0ToWithdraw = fee0 - managerFee0;
-                    fee1ToWithdraw = fee1 - managerFee1;
-                } else {
-                    fee0ToWithdraw = FullMath.mulDiv(
-                        fee0 - managerFee0, withdraw_.proportion, BASE
-                    );
-                    fee1ToWithdraw = FullMath.mulDiv(
-                        fee1 - managerFee1, withdraw_.proportion, BASE
-                    );
+                {
+                    uint256 amount0ToTake;
+                    uint256 amount1ToTake;
+
+                    /// @dev if proportion is 100% we take all fees, to prevent
+                    /// rounding errors.
+                    if (withdraw_.proportion == BASE) {
+                        amount0ToTake =
+                            withdraw_.amount0 - managerFee0;
+                        amount1ToTake =
+                            withdraw_.amount1 - managerFee1;
+                    } else {
+                        amount0ToTake = withdraw_.amount0 - withdraw_.fee0
+                            + FullMath.mulDiv(
+                                withdraw_.fee0 - managerFee0,
+                                withdraw_.proportion,
+                                BASE
+                            );
+                        amount1ToTake = withdraw_.amount1 - withdraw_.fee1
+                            + FullMath.mulDiv(
+                                withdraw_.fee1 - managerFee1,
+                                withdraw_.proportion,
+                                BASE
+                            );
+                    }
+
+                    if (amount0ToTake > 0) {
+                        withdraw_.poolManager.take(
+                            _poolKey.currency0,
+                            withdraw_.receiver,
+                            amount0ToTake
+                        );
+
+                        withdraw_.amount0 -= amount0ToTake;
+                    }
+
+                    if (amount1ToTake > 0) {
+                        withdraw_.poolManager.take(
+                            _poolKey.currency1,
+                            withdraw_.receiver,
+                            amount1ToTake
+                        );
+                        withdraw_.amount1 -= amount1ToTake;
+                    }
+
+                    result = isInversed
+                        ? abi.encode(amount1ToTake, amount0ToTake)
+                        : abi.encode(amount0ToTake, amount1ToTake);
                 }
 
-                // #endregion manager fees.
+                // #region manager fees.
+
+                address manager;
+                if (managerFee0 > 0 || managerFee1 > 0) {
+                    manager = metaVault.manager();
+
+                    emit LogWithdrawManagerBalance(
+                        manager, managerFee0, managerFee1
+                    );
+                }
 
                 if (managerFee0 > 0) {
                     withdraw_.poolManager.take(
                         _poolKey.currency0, manager, managerFee0
                     );
+
+                    withdraw_.amount0 -= managerFee0;
                 }
                 if (managerFee1 > 0) {
                     withdraw_.poolManager.take(
                         _poolKey.currency1, manager, managerFee1
                     );
+
+                    withdraw_.amount1 -= managerFee1;
                 }
 
-                if (managerFee0 > 0 || managerFee1 > 0) {
-                    emit LogWithdrawManagerBalance(
-                        manager, managerFee0, managerFee1
-                    );
-                }
+                // #endregion manager fees.
             }
-
-            amount0 = amount0 - fee0 + fee0ToWithdraw;
-            amount1 = amount1 - fee1 + fee1ToWithdraw;
-
-            withdraw_.poolManager.take(
-                _poolKey.currency0, withdraw_.receiver, amount0
-            );
-            withdraw_.poolManager.take(
-                _poolKey.currency1, withdraw_.receiver, amount1
-            );
         }
 
         // #endregion take and send token to receiver.
 
-        result = isInversed
-            ? abi.encode(amount1, amount0)
-            : abi.encode(amount0, amount1);
-
         // #region mint extra collected fees.
 
         {
-            amount0 = SafeCast.toUint256(
-                withdraw_.poolManager.currencyDelta(
-                    address(this), poolKey.currency0
-                )
-            );
-
-            amount1 = SafeCast.toUint256(
-                withdraw_.poolManager.currencyDelta(
-                    address(this), poolKey.currency1
-                )
-            );
-
-            if (amount0 > 0) {
+            if (withdraw_.amount0 > 0) {
                 withdraw_.poolManager.mint(
                     address(this),
                     CurrencyLibrary.toId(_poolKey.currency0),
-                    amount0
+                    withdraw_.amount0
                 );
             }
-            if (amount1 > 0) {
+            if (withdraw_.amount1 > 0) {
                 withdraw_.poolManager.mint(
                     address(this),
                     CurrencyLibrary.toId(_poolKey.currency1),
-                    amount1
+                    withdraw_.amount1
                 );
             }
         }
@@ -1420,10 +1444,6 @@ abstract contract UniV4StandardModule is
         );
 
         // #endregion interactions.
-
-        if (isInversed) {
-            (amount0, amount1) = (amount1, amount0);
-        }
     }
 
     function _removeLiquidity(
@@ -1488,10 +1508,6 @@ abstract contract UniV4StandardModule is
         amount1 = SafeCast.toUint256(delta.amount1());
 
         // #endregion interactions.
-
-        if (isInversed) {
-            (amount0, amount1) = (amount1, amount0);
-        }
     }
 
     // #region view functions.
