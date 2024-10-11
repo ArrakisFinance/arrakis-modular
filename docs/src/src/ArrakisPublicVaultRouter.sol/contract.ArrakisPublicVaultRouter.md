@@ -1,5 +1,5 @@
 # ArrakisPublicVaultRouter
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/ArrakisPublicVaultRouter.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/ArrakisPublicVaultRouter.sol)
 
 **Inherits:**
 [IArrakisPublicVaultRouter](/src/interfaces/IArrakisPublicVaultRouter.sol/interface.IArrakisPublicVaultRouter.md), ReentrancyGuard, Ownable, Pausable
@@ -20,13 +20,6 @@ IPermit2 public immutable permit2;
 ```
 
 
-### swapper
-
-```solidity
-IRouterSwapExecutor public immutable swapper;
-```
-
-
 ### factory
 
 ```solidity
@@ -38,6 +31,13 @@ IArrakisMetaVaultFactory public immutable factory;
 
 ```solidity
 IWETH9 public immutable weth;
+```
+
+
+### swapper
+
+```solidity
+IRouterSwapExecutor public swapper;
 ```
 
 
@@ -53,7 +53,13 @@ modifier onlyPublicVault(address vault_);
 
 
 ```solidity
-constructor(address nativeToken_, address permit2_, address swapper_, address owner_, address factory_, address weth_);
+constructor(
+    address nativeToken_,
+    address permit2_,
+    address owner_,
+    address factory_,
+    address weth_
+);
 ```
 
 ### pause
@@ -64,7 +70,7 @@ function used to pause the router.
 
 
 ```solidity
-function pause() external whenNotPaused onlyOwner;
+function pause() external onlyOwner;
 ```
 
 ### unpause
@@ -75,12 +81,22 @@ function used to unpause the router.
 
 
 ```solidity
-function unpause() external whenPaused onlyOwner;
+function unpause() external onlyOwner;
+```
+
+### updateSwapExecutor
+
+
+```solidity
+function updateSwapExecutor(address swapper_)
+    external
+    whenNotPaused
+    onlyOwner;
 ```
 
 ### addLiquidity
 
-addLiquidity adds liquidity to meta vault of iPnterest (mints L tokens)
+addLiquidity adds liquidity to meta vault of interest (mints L tokens)
 
 
 ```solidity
@@ -119,7 +135,13 @@ function swapAndAddLiquidity(SwapAndAddData memory params_)
     nonReentrant
     whenNotPaused
     onlyPublicVault(params_.addData.vault)
-    returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
+    returns (
+        uint256 amount0,
+        uint256 amount1,
+        uint256 sharesReceived,
+        uint256 amount0Diff,
+        uint256 amount1Diff
+    );
 ```
 **Parameters**
 
@@ -200,13 +222,21 @@ swapAndAddLiquidityPermit2 transfer tokens to and calls RouterSwapExecutor
 
 
 ```solidity
-function swapAndAddLiquidityPermit2(SwapAndAddPermit2Data memory params_)
+function swapAndAddLiquidityPermit2(
+    SwapAndAddPermit2Data memory params_
+)
     external
     payable
     nonReentrant
     whenNotPaused
     onlyPublicVault(params_.swapAndAddData.addData.vault)
-    returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
+    returns (
+        uint256 amount0,
+        uint256 amount1,
+        uint256 sharesReceived,
+        uint256 amount0Diff,
+        uint256 amount1Diff
+    );
 ```
 **Parameters**
 
@@ -231,7 +261,9 @@ removeLiquidityPermit2 removes liquidity from vault and burns LP tokens
 
 
 ```solidity
-function removeLiquidityPermit2(RemoveLiquidityPermit2Data memory params_)
+function removeLiquidityPermit2(
+    RemoveLiquidityPermit2Data memory params_
+)
     external
     nonReentrant
     whenNotPaused
@@ -254,7 +286,7 @@ function removeLiquidityPermit2(RemoveLiquidityPermit2Data memory params_)
 
 ### wrapAndAddLiquidity
 
-wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of iPnterest (mints L tokens)
+wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of interest (mints L tokens)
 
 
 ```solidity
@@ -293,7 +325,13 @@ function wrapAndSwapAndAddLiquidity(SwapAndAddData memory params_)
     nonReentrant
     whenNotPaused
     onlyPublicVault(params_.addData.vault)
-    returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
+    returns (
+        uint256 amount0,
+        uint256 amount1,
+        uint256 sharesReceived,
+        uint256 amount0Diff,
+        uint256 amount1Diff
+    );
 ```
 **Parameters**
 
@@ -320,7 +358,9 @@ wrapAndAddLiquidityPermit2 wrap eth and adds liquidity to public vault of intere
 
 
 ```solidity
-function wrapAndAddLiquidityPermit2(AddLiquidityPermit2Data memory params_)
+function wrapAndAddLiquidityPermit2(
+    AddLiquidityPermit2Data memory params_
+)
     external
     payable
     nonReentrant
@@ -349,13 +389,21 @@ wrapAndSwapAndAddLiquidityPermit2 wrap eth and transfer tokens to and calls Rout
 
 
 ```solidity
-function wrapAndSwapAndAddLiquidityPermit2(SwapAndAddPermit2Data memory params_)
+function wrapAndSwapAndAddLiquidityPermit2(
+    SwapAndAddPermit2Data memory params_
+)
     external
     payable
     nonReentrant
     whenNotPaused
     onlyPublicVault(params_.swapAndAddData.addData.vault)
-    returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
+    returns (
+        uint256 amount0,
+        uint256 amount1,
+        uint256 sharesReceived,
+        uint256 amount0Diff,
+        uint256 amount1Diff
+    );
 ```
 **Parameters**
 
@@ -389,10 +437,18 @@ getMintAmounts used to get the shares we can mint from some max amounts.
 
 
 ```solidity
-function getMintAmounts(address vault_, uint256 maxAmount0_, uint256 maxAmount1_)
+function getMintAmounts(
+    address vault_,
+    uint256 maxAmount0_,
+    uint256 maxAmount1_
+)
     external
     view
-    returns (uint256 shareToMint, uint256 amount0ToDeposit, uint256 amount1ToDeposit);
+    returns (
+        uint256 shareToMint,
+        uint256 amount0ToDeposit,
+        uint256 amount1ToDeposit
+    );
 ```
 **Parameters**
 
@@ -430,7 +486,11 @@ function _addLiquidity(
 
 
 ```solidity
-function _swapAndAddLiquidity(SwapAndAddData memory params_, address token0_, address token1_)
+function _swapAndAddLiquidity(
+    SwapAndAddData memory params_,
+    address token0_,
+    address token1_
+)
     internal
     returns (
         uint256 amount0Use,
@@ -447,16 +507,28 @@ function _swapAndAddLiquidity(SwapAndAddData memory params_, address token0_, ad
 
 
 ```solidity
-function _swapAndAddLiquiditySendBackLeftOver(SwapAndAddData memory params_, address token0_, address token1_)
+function _swapAndAddLiquiditySendBackLeftOver(
+    SwapAndAddData memory params_,
+    address token0_,
+    address token1_
+)
     internal
-    returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
+    returns (
+        uint256 amount0,
+        uint256 amount1,
+        uint256 sharesReceived,
+        uint256 amount0Diff,
+        uint256 amount1Diff
+    );
 ```
 
 ### _removeLiquidity
 
 
 ```solidity
-function _removeLiquidity(RemoveLiquidityData memory params_) internal returns (uint256 amount0, uint256 amount1);
+function _removeLiquidity(RemoveLiquidityData memory params_)
+    internal
+    returns (uint256 amount0, uint256 amount1);
 ```
 
 ### _permit2AddLengthOne
@@ -503,15 +575,22 @@ function _permit2Add(
 
 
 ```solidity
-function _permit2SwapAndAddLengthOne(SwapAndAddPermit2Data memory params_, address token0_, address token1_) internal;
+function _permit2SwapAndAddLengthOne(
+    SwapAndAddPermit2Data memory params_,
+    address token0_,
+    address token1_
+) internal;
 ```
 
 ### _permit2SwapAndAddLengthOneOrTwo
 
 
 ```solidity
-function _permit2SwapAndAddLengthOneOrTwo(SwapAndAddPermit2Data memory params_, address token0_, address token1_)
-    internal;
+function _permit2SwapAndAddLengthOneOrTwo(
+    SwapAndAddPermit2Data memory params_,
+    address token0_,
+    address token1_
+) internal;
 ```
 
 ### _permit2SwapAndAdd
@@ -530,9 +609,17 @@ function _permit2SwapAndAdd(
 
 
 ```solidity
-function _getMintAmounts(address vault_, uint256 maxAmount0_, uint256 maxAmount1_)
+function _getMintAmounts(
+    address vault_,
+    uint256 maxAmount0_,
+    uint256 maxAmount1_
+)
     internal
     view
-    returns (uint256 shareToMint, uint256 amount0ToDeposit, uint256 amount1ToDeposit);
+    returns (
+        uint256 shareToMint,
+        uint256 amount0ToDeposit,
+        uint256 amount1ToDeposit
+    );
 ```
 

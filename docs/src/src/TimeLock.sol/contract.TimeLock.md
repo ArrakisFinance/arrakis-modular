@@ -1,5 +1,5 @@
 # TimeLock
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/TimeLock.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/TimeLock.sol)
 
 **Inherits:**
 TimelockController, [ITimeLock](/src/interfaces/ITimeLock.sol/interface.ITimeLock.md)
@@ -10,8 +10,12 @@ TimelockController, [ITimeLock](/src/interfaces/ITimeLock.sol/interface.ITimeLoc
 
 
 ```solidity
-constructor(uint256 minDelay, address[] memory proposers, address[] memory executors, address admin)
-    TimelockController(minDelay, proposers, executors, admin);
+constructor(
+    uint256 minDelay,
+    address[] memory proposers,
+    address[] memory executors,
+    address admin
+) TimelockController(minDelay, proposers, executors, admin);
 ```
 
 ### updateDelay

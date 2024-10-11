@@ -1,8 +1,29 @@
 # IArrakisStandardManager
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/IArrakisStandardManager.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/interfaces/IArrakisStandardManager.sol)
 
 
 ## Functions
+### initialize
+
+function used to initialize standard manager proxy.
+
+
+```solidity
+function initialize(
+    address owner_,
+    address defaultReceiver_,
+    address factory_
+) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`owner_`|`address`|address of the owner of standard manager.|
+|`defaultReceiver_`|`address`|address of the receiver of tokens (by default).|
+|`factory_`|`address`|ArrakisMetaVaultFactory contract address.|
+
+
 ### pause
 
 function used to pause the manager.
@@ -46,7 +67,11 @@ function used to set receiver of a specific token.
 
 
 ```solidity
-function setReceiverByToken(address vault_, bool isSetReceiverToken0_, address receiver_) external;
+function setReceiverByToken(
+    address vault_,
+    bool isSetReceiverToken0_,
+    address receiver_
+) external;
 ```
 **Parameters**
 
@@ -63,7 +88,10 @@ function used to decrease the fees taken by manager for a specific managed vault
 
 
 ```solidity
-function decreaseManagerFeePIPS(address vault_, uint24 newFeePIPS_) external;
+function decreaseManagerFeePIPS(
+    address vault_,
+    uint24 newFeePIPS_
+) external;
 ```
 **Parameters**
 
@@ -94,7 +122,10 @@ function used to submit a fees increase in a managed vault.
 
 
 ```solidity
-function submitIncreaseManagerFeePIPS(address vault_, uint24 newFeePIPS_) external;
+function submitIncreaseManagerFeePIPS(
+    address vault_,
+    uint24 newFeePIPS_
+) external;
 ```
 **Parameters**
 
@@ -111,7 +142,9 @@ on a vault.
 
 
 ```solidity
-function withdrawManagerBalance(address vault_) external returns (uint256 amount0, uint256 amount1);
+function withdrawManagerBalance(address vault_)
+    external
+    returns (uint256 amount0, uint256 amount1);
 ```
 **Parameters**
 
@@ -133,7 +166,10 @@ function used to manage vault's strategy.
 
 
 ```solidity
-function rebalance(address vault_, bytes[] calldata payloads_) external;
+function rebalance(
+    address vault_,
+    bytes[] calldata payloads_
+) external;
 ```
 **Parameters**
 
@@ -149,7 +185,11 @@ function used to set a new module (strategy) for the vault.
 
 
 ```solidity
-function setModule(address vault_, address module_, bytes[] calldata payloads_) external;
+function setModule(
+    address vault_,
+    address module_,
+    bytes[] calldata payloads_
+) external;
 ```
 **Parameters**
 
@@ -190,13 +230,35 @@ function updateVaultInfo(SetupParams calldata params_) external;
 |`params_`|`SetupParams`|struct containing all the data for updating the vault.|
 
 
+### announceStrategy
+
+function used to announce the strategy that the vault will follow.
+
+
+```solidity
+function announceStrategy(
+    address vault_,
+    string memory strategy_
+) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault_`|`address`|address of arrakis meta vault that will follow the strategy.|
+|`strategy_`|`string`|string containing the strategy name that will be used.|
+
+
 ### initializedVaults
 
 function used to get a list of managed vaults.
 
 
 ```solidity
-function initializedVaults(uint256 startIndex_, uint256 endIndex_) external view returns (address[] memory);
+function initializedVaults(
+    uint256 startIndex_,
+    uint256 endIndex_
+) external view returns (address[] memory);
 ```
 **Parameters**
 
@@ -212,7 +274,10 @@ function used to get the number of vault under management.
 
 
 ```solidity
-function numInitializedVaults() external view returns (uint256 numberOfVaults);
+function numInitializedVaults()
+    external
+    view
+    returns (uint256 numberOfVaults);
 ```
 
 ### guardian
@@ -305,6 +370,70 @@ function defaultReceiver() external view returns (address);
 |`<none>`|`address`|defaultReceiver address of the default receiver.|
 
 
+### receiversByToken
+
+function used to get the receiver of a specific token.
+
+
+```solidity
+function receiversByToken(address token_)
+    external
+    view
+    returns (address receiver);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`token_`|`address`|address of the ERC20 token that we want the receiver of|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`receiver`|`address`|address of the receiver of 'token_'|
+
+
+### vaultInfo
+
+function used to get vault management config.
+
+
+```solidity
+function vaultInfo(address vault_)
+    external
+    view
+    returns (
+        uint256 lastRebalance,
+        uint256 cooldownPeriod,
+        IOracleWrapper oracle,
+        uint24 maxDeviation,
+        address executor,
+        address stratAnnouncer,
+        uint24 maxSlippagePIPS,
+        uint24 managerFeePIPS
+    );
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault_`|`address`|address of the metaVault.|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`lastRebalance`|`uint256`|timestamp when the last rebalance happen.|
+|`cooldownPeriod`|`uint256`|minimum duration between two rebalance.|
+|`oracle`|`IOracleWrapper`|oracle used to check against price manipulation.|
+|`maxDeviation`|`uint24`|maximum deviation from oracle price allowed.|
+|`executor`|`address`|address that can trigger a rebalance.|
+|`stratAnnouncer`|`address`|address that will announce a strategy to follow.|
+|`maxSlippagePIPS`|`uint24`|maximum slippage authorized.|
+|`managerFeePIPS`|`uint24`|fees that manager take.|
+
+
 ## Events
 ### LogWhitelistNftRebalancers
 
@@ -359,7 +488,12 @@ event LogFundBalance(address indexed vault, uint256 balance);
 ### LogWithdrawVaultBalance
 
 ```solidity
-event LogWithdrawVaultBalance(address indexed vault, uint256 amount, address receiver, uint256 newBalance);
+event LogWithdrawVaultBalance(
+    address indexed vault,
+    uint256 amount,
+    address receiver,
+    uint256 newBalance
+);
 ```
 
 ### LogSetDefaultReceiver
@@ -377,7 +511,12 @@ event LogSetReceiverByToken(address indexed token, address receiver);
 ### LogWithdrawManagerBalance
 
 ```solidity
-event LogWithdrawManagerBalance(address indexed receiver0, address indexed receiver1, uint256 amount0, uint256 amount1);
+event LogWithdrawManagerBalance(
+    address indexed receiver0,
+    address indexed receiver1,
+    uint256 amount0,
+    uint256 amount1
+);
 ```
 
 ### LogChangeManagerFee
@@ -389,7 +528,9 @@ event LogChangeManagerFee(address vault, uint256 newFeePIPS);
 ### LogIncreaseManagerFeeSubmission
 
 ```solidity
-event LogIncreaseManagerFeeSubmission(address vault, uint256 newFeePIPS);
+event LogIncreaseManagerFeeSubmission(
+    address vault, uint256 newFeePIPS
+);
 ```
 
 ### LogRebalance
@@ -401,13 +542,21 @@ event LogRebalance(address indexed vault, bytes[] payloads);
 ### LogSetModule
 
 ```solidity
-event LogSetModule(address indexed vault, address module, bytes[] payloads);
+event LogSetModule(
+    address indexed vault, address module, bytes[] payloads
+);
 ```
 
 ### LogSetFactory
 
 ```solidity
 event LogSetFactory(address vaultFactory);
+```
+
+### LogStrategyAnnouncement
+
+```solidity
+event LogStrategyAnnouncement(address vault, string strategy);
 ```
 
 ## Errors
@@ -651,12 +800,6 @@ error EndIndexGtNbOfVaults(uint256 endIndex, uint256 numberOfVaults);
 error OnlyGuardian(address caller, address guardian);
 ```
 
-### FactoryAlreadySet
-
-```solidity
-error FactoryAlreadySet();
-```
-
 ### OnlyFactory
 
 ```solidity
@@ -667,5 +810,23 @@ error OnlyFactory(address caller, address factory);
 
 ```solidity
 error VaultNotDeployed();
+```
+
+### SetManagerFeeCallNotAllowed
+
+```solidity
+error SetManagerFeeCallNotAllowed();
+```
+
+### OnlyStratAnnouncer
+
+```solidity
+error OnlyStratAnnouncer();
+```
+
+### PublicVaultTotalSupplyChanged
+
+```solidity
+error PublicVaultTotalSupplyChanged();
 ```
 

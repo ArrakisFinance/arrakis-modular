@@ -1,5 +1,5 @@
 # ModulePublicRegistry
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/ModulePublicRegistry.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/ModulePublicRegistry.sol)
 
 **Inherits:**
 [ModuleRegistry](/src/abstracts/ModuleRegistry.sol/abstract.ModuleRegistry.md), [IModulePublicRegistry](/src/interfaces/IModulePublicRegistry.sol/interface.IModulePublicRegistry.md)
@@ -10,8 +10,11 @@
 
 
 ```solidity
-constructor(address factory_, address owner_, address guardian_, address admin_)
-    ModuleRegistry(factory_, owner_, guardian_, admin_);
+constructor(
+    address owner_,
+    address guardian_,
+    address admin_
+) ModuleRegistry(owner_, guardian_, admin_);
 ```
 
 ### createModule
@@ -21,7 +24,11 @@ whitelisted as module inside a vault.
 
 
 ```solidity
-function createModule(address vault_, address beacon_, bytes calldata payload_) external returns (address module);
+function createModule(
+    address vault_,
+    address beacon_,
+    bytes calldata payload_
+) external returns (address module);
 ```
 **Parameters**
 

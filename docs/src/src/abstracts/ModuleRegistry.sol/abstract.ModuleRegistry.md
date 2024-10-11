@@ -1,15 +1,15 @@
 # ModuleRegistry
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/abstracts/ModuleRegistry.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/abstracts/ModuleRegistry.sol)
 
 **Inherits:**
-[IModuleRegistry](/src/interfaces/IModuleRegistry.sol/interface.IModuleRegistry.md), Ownable
+[IModuleRegistry](/src/interfaces/IModuleRegistry.sol/interface.IModuleRegistry.md), Ownable, Initializable
 
 
 ## State Variables
 ### factory
 
 ```solidity
-IArrakisMetaVaultFactory public immutable factory;
+IArrakisMetaVaultFactory public factory;
 ```
 
 
@@ -18,7 +18,7 @@ IArrakisMetaVaultFactory public immutable factory;
 
 
 ```solidity
-address public admin;
+address public immutable admin;
 ```
 
 
@@ -41,8 +41,23 @@ EnumerableSet.AddressSet internal _beacons;
 
 
 ```solidity
-constructor(address factory_, address owner_, address guardian_, address admin_);
+constructor(address owner_, address guardian_, address admin_);
 ```
+
+### initialize
+
+*function used to initialize module registry.*
+
+
+```solidity
+function initialize(address factory_) external initializer;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`factory_`|`address`|address of ArrakisMetaVaultFactory, who is the only one who can call the init management function.|
+
 
 ### beacons
 
@@ -67,7 +82,10 @@ beacon_
 
 
 ```solidity
-function beaconsContains(address beacon_) external view returns (bool isContained);
+function beaconsContains(address beacon_)
+    external
+    view
+    returns (bool isContained);
 ```
 **Parameters**
 
@@ -98,7 +116,9 @@ implementation of valid module.
 
 
 ```solidity
-function whitelistBeacons(address[] calldata beacons_) external onlyOwner;
+function whitelistBeacons(address[] calldata beacons_)
+    external
+    onlyOwner;
 ```
 **Parameters**
 
@@ -114,7 +134,9 @@ implementation of unvalid (from now) module.
 
 
 ```solidity
-function blacklistBeacons(address[] calldata beacons_) external onlyOwner;
+function blacklistBeacons(address[] calldata beacons_)
+    external
+    onlyOwner;
 ```
 **Parameters**
 
@@ -127,13 +149,17 @@ function blacklistBeacons(address[] calldata beacons_) external onlyOwner;
 
 
 ```solidity
-function _createModule(address vault_, address beacon_, bytes calldata payload_) internal returns (address module);
+function _createModule(
+    address vault_,
+    address beacon_,
+    bytes calldata payload_
+) internal returns (address module);
 ```
 
 ### _checkVaultNotAddressZero
 
 
 ```solidity
-function _checkVaultNotAddressZero(address vault_) internal;
+function _checkVaultNotAddressZero(address vault_) internal pure;
 ```
 

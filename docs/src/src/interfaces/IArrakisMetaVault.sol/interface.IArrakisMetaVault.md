@@ -1,5 +1,5 @@
 # IArrakisMetaVault
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/IArrakisMetaVault.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/interfaces/IArrakisMetaVault.sol)
 
 IArrakisMetaVault is a vault that is able to invest dynamically deposited
 tokens into protocols through his module.
@@ -12,14 +12,12 @@ function used to initialize default module.
 
 
 ```solidity
-function initialize(address token0_, address token1_, address module_) external;
+function initialize(address module_) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`token0_`|`address`|address of the first token of the token pair.|
-|`token1_`|`address`|address of the second token of the token pair.|
 |`module_`|`address`|address of the default module.|
 
 
@@ -29,7 +27,10 @@ function used to set module
 
 
 ```solidity
-function setModule(address module_, bytes[] calldata payloads_) external;
+function setModule(
+    address module_,
+    bytes[] calldata payloads_
+) external;
 ```
 **Parameters**
 
@@ -45,7 +46,10 @@ function used to whitelist modules that can used by manager.
 
 
 ```solidity
-function whitelistModules(address[] calldata beacons_, bytes[] calldata data_) external;
+function whitelistModules(
+    address[] calldata beacons_,
+    bytes[] calldata data_
+) external;
 ```
 **Parameters**
 
@@ -76,7 +80,10 @@ function used to get the list of modules whitelisted.
 
 
 ```solidity
-function whitelistedModules() external view returns (address[] memory modules);
+function whitelistedModules()
+    external
+    view
+    returns (address[] memory modules);
 ```
 **Returns**
 
@@ -92,7 +99,10 @@ on the position.
 
 
 ```solidity
-function totalUnderlying() external view returns (uint256 amount0, uint256 amount1);
+function totalUnderlying()
+    external
+    view
+    returns (uint256 amount0, uint256 amount1);
 ```
 **Returns**
 
@@ -109,7 +119,10 @@ on the position for a specific price.
 
 
 ```solidity
-function totalUnderlyingAtPrice(uint160 priceX96) external view returns (uint256 amount0, uint256 amount1);
+function totalUnderlyingAtPrice(uint160 priceX96)
+    external
+    view
+    returns (uint256 amount0, uint256 amount1);
 ```
 **Parameters**
 
@@ -131,7 +144,10 @@ function used to get the initial amounts needed to open a position.
 
 
 ```solidity
-function getInits() external view returns (uint256 init0, uint256 init1);
+function getInits()
+    external
+    view
+    returns (uint256 init0, uint256 init1);
 ```
 **Returns**
 
@@ -433,5 +449,31 @@ error ArrayNotSameLength();
 
 ```solidity
 error OnlyOwner();
+```
+
+### WithdrawNotAllowed
+*triggered when setModule action try to remove funds.*
+
+
+```solidity
+error WithdrawNotAllowed();
+```
+
+### PositionNotInitialized
+*triggered when setModule function end without
+initiliazePosition call.*
+
+
+```solidity
+error PositionNotInitialized();
+```
+
+### NotPositionInitializationCall
+*triggered when the first external call of setModule function
+isn't InitializePosition function.*
+
+
+```solidity
+error NotPositionInitializationCall();
 ```
 

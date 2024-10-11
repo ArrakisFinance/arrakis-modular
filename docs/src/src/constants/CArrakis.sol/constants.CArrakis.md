@@ -1,5 +1,17 @@
 # Constants
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/constants/CArrakis.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/constants/CArrakis.sol)
+
+### MINIMUM_LIQUIDITY
+
+```solidity
+uint256 constant MINIMUM_LIQUIDITY = 10 ** 3;
+```
+
+### BASE
+
+```solidity
+uint256 constant BASE = 1e18;
+```
 
 ### PIPS
 
@@ -16,12 +28,19 @@ uint24 constant TEN_PERCENT = 100_000;
 ### WEEK
 
 ```solidity
-uint256 constant WEEK = 604800;
+uint256 constant WEEK = 604_800;
 ```
 
 ### NATIVE_COIN
 
 ```solidity
-address constant NATIVE_COIN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+address constant NATIVE_COIN =
+    0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+```
+
+### NATIVE_COIN_DECIMALS
+
+```solidity
+uint8 constant NATIVE_COIN_DECIMALS = 18;
 ```
 

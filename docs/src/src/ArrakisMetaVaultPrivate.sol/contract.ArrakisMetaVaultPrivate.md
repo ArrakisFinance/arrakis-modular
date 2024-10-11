@@ -1,5 +1,5 @@
 # ArrakisMetaVaultPrivate
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/ArrakisMetaVaultPrivate.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/ArrakisMetaVaultPrivate.sol)
 
 **Inherits:**
 [ArrakisMetaVault](/src/abstracts/ArrakisMetaVault.sol/abstract.ArrakisMetaVault.md), [IArrakisMetaVaultPrivate](/src/interfaces/IArrakisMetaVaultPrivate.sol/interface.IArrakisMetaVaultPrivate.md), [IOwnable](/src/interfaces/IOwnable.sol/interface.IOwnable.md)
@@ -25,7 +25,13 @@ EnumerableSet.AddressSet internal _depositors;
 
 
 ```solidity
-constructor(address moduleRegistry_, address manager_, address nft_) ArrakisMetaVault(moduleRegistry_, manager_);
+constructor(
+    address moduleRegistry_,
+    address manager_,
+    address token0_,
+    address token1_,
+    address nft_
+) ArrakisMetaVault(moduleRegistry_, manager_, token0_, token1_);
 ```
 
 ### deposit
@@ -35,7 +41,10 @@ inherent strategy.
 
 
 ```solidity
-function deposit(uint256 amount0_, uint256 amount1_) external payable;
+function deposit(
+    uint256 amount0_,
+    uint256 amount1_
+) external payable;
 ```
 **Parameters**
 
@@ -52,7 +61,10 @@ underpin strategy.
 
 
 ```solidity
-function withdraw(uint256 proportion_, address receiver_)
+function withdraw(
+    uint256 proportion_,
+    address receiver_
+)
     external
     onlyOwnerCustom
     returns (uint256 amount0, uint256 amount1);
@@ -78,7 +90,9 @@ function used to whitelist depositors.
 
 
 ```solidity
-function whitelistDepositors(address[] calldata depositors_) external onlyOwnerCustom;
+function whitelistDepositors(address[] calldata depositors_)
+    external
+    onlyOwnerCustom;
 ```
 **Parameters**
 
@@ -93,7 +107,9 @@ function used to blacklist depositors.
 
 
 ```solidity
-function blacklistDepositors(address[] calldata depositors_) external onlyOwnerCustom;
+function blacklistDepositors(address[] calldata depositors_)
+    external
+    onlyOwnerCustom;
 ```
 **Parameters**
 
@@ -130,7 +146,10 @@ function depositors() external view returns (address[] memory);
 
 
 ```solidity
-function _deposit(uint256 amount0_, uint256 amount1_) internal nonReentrant;
+function _deposit(
+    uint256 amount0_,
+    uint256 amount1_
+) internal nonReentrant;
 ```
 
 ### _onlyOwnerCheck
