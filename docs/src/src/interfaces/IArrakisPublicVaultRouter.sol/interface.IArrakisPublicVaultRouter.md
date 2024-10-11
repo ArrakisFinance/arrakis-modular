@@ -1,5 +1,5 @@
 # IArrakisPublicVaultRouter
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/IArrakisPublicVaultRouter.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/interfaces/IArrakisPublicVaultRouter.sol)
 
 
 ## Functions
@@ -27,7 +27,7 @@ function unpause() external;
 
 ### addLiquidity
 
-addLiquidity adds liquidity to meta vault of iPnterest (mints L tokens)
+addLiquidity adds liquidity to meta vault of interest (mints L tokens)
 
 
 ```solidity
@@ -60,7 +60,13 @@ swapAndAddLiquidity transfer tokens to and calls RouterSwapExecutor
 function swapAndAddLiquidity(SwapAndAddData memory params_)
     external
     payable
-    returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
+    returns (
+        uint256 amount0,
+        uint256 amount1,
+        uint256 sharesReceived,
+        uint256 amount0Diff,
+        uint256 amount1Diff
+    );
 ```
 **Parameters**
 
@@ -85,7 +91,9 @@ removeLiquidity removes liquidity from vault and burns LP tokens
 
 
 ```solidity
-function removeLiquidity(RemoveLiquidityData memory params_) external returns (uint256 amount0, uint256 amount1);
+function removeLiquidity(RemoveLiquidityData memory params_)
+    external
+    returns (uint256 amount0, uint256 amount1);
 ```
 **Parameters**
 
@@ -133,10 +141,18 @@ swapAndAddLiquidityPermit2 transfer tokens to and calls RouterSwapExecutor
 
 
 ```solidity
-function swapAndAddLiquidityPermit2(SwapAndAddPermit2Data memory params_)
+function swapAndAddLiquidityPermit2(
+    SwapAndAddPermit2Data memory params_
+)
     external
     payable
-    returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
+    returns (
+        uint256 amount0,
+        uint256 amount1,
+        uint256 sharesReceived,
+        uint256 amount0Diff,
+        uint256 amount1Diff
+    );
 ```
 **Parameters**
 
@@ -161,9 +177,9 @@ removeLiquidityPermit2 removes liquidity from vault and burns LP tokens
 
 
 ```solidity
-function removeLiquidityPermit2(RemoveLiquidityPermit2Data memory params_)
-    external
-    returns (uint256 amount0, uint256 amount1);
+function removeLiquidityPermit2(
+    RemoveLiquidityPermit2Data memory params_
+) external returns (uint256 amount0, uint256 amount1);
 ```
 **Parameters**
 
@@ -181,7 +197,7 @@ function removeLiquidityPermit2(RemoveLiquidityPermit2Data memory params_)
 
 ### wrapAndAddLiquidity
 
-wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of iPnterest (mints L tokens)
+wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of interest (mints L tokens)
 
 
 ```solidity
@@ -214,7 +230,13 @@ wrapAndSwapAndAddLiquidity wrap eth and transfer tokens to and calls RouterSwapE
 function wrapAndSwapAndAddLiquidity(SwapAndAddData memory params_)
     external
     payable
-    returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
+    returns (
+        uint256 amount0,
+        uint256 amount1,
+        uint256 sharesReceived,
+        uint256 amount0Diff,
+        uint256 amount1Diff
+    );
 ```
 **Parameters**
 
@@ -239,7 +261,9 @@ wrapAndAddLiquidityPermit2 wrap eth and adds liquidity to public vault of intere
 
 
 ```solidity
-function wrapAndAddLiquidityPermit2(AddLiquidityPermit2Data memory params_)
+function wrapAndAddLiquidityPermit2(
+    AddLiquidityPermit2Data memory params_
+)
     external
     payable
     returns (uint256 amount0, uint256 amount1, uint256 sharesReceived);
@@ -265,10 +289,18 @@ wrapAndSwapAndAddLiquidityPermit2 wrap eth and transfer tokens to and calls Rout
 
 
 ```solidity
-function wrapAndSwapAndAddLiquidityPermit2(SwapAndAddPermit2Data memory params_)
+function wrapAndSwapAndAddLiquidityPermit2(
+    SwapAndAddPermit2Data memory params_
+)
     external
     payable
-    returns (uint256 amount0, uint256 amount1, uint256 sharesReceived, uint256 amount0Diff, uint256 amount1Diff);
+    returns (
+        uint256 amount0,
+        uint256 amount1,
+        uint256 sharesReceived,
+        uint256 amount0Diff,
+        uint256 amount1Diff
+    );
 ```
 **Parameters**
 
@@ -293,10 +325,18 @@ getMintAmounts used to get the shares we can mint from some max amounts.
 
 
 ```solidity
-function getMintAmounts(address vault_, uint256 maxAmount0_, uint256 maxAmount1_)
+function getMintAmounts(
+    address vault_,
+    uint256 maxAmount0_,
+    uint256 maxAmount1_
+)
     external
     view
-    returns (uint256 shareToMint, uint256 amount0ToDeposit, uint256 amount1ToDeposit);
+    returns (
+        uint256 shareToMint,
+        uint256 amount0ToDeposit,
+        uint256 amount1ToDeposit
+    );
 ```
 **Parameters**
 
@@ -321,7 +361,12 @@ event emitted when a swap happen before depositing.
 
 
 ```solidity
-event Swapped(bool zeroForOne, uint256 amount0Diff, uint256 amount1Diff, uint256 amountOutSwap);
+event Swapped(
+    bool zeroForOne,
+    uint256 amount0Diff,
+    uint256 amount1Diff,
+    uint256 amountOutSwap
+);
 ```
 
 **Parameters**
@@ -404,18 +449,6 @@ error LengthMismatch();
 
 ```solidity
 error NoNativeToken();
-```
-
-### Deposit0
-
-```solidity
-error Deposit0();
-```
-
-### Deposit1
-
-```solidity
-error Deposit1();
 ```
 
 ### MsgValueZero

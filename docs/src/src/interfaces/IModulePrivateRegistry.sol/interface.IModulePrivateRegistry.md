@@ -1,5 +1,5 @@
 # IModulePrivateRegistry
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/IModulePrivateRegistry.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/interfaces/IModulePrivateRegistry.sol)
 
 
 ## Events
@@ -8,7 +8,13 @@ Log creation of a private module.
 
 
 ```solidity
-event LogCreatePrivateModule(address beacon, bytes payload, address vault, address creator, address module);
+event LogCreatePrivateModule(
+    address beacon,
+    bytes payload,
+    address vault,
+    address creator,
+    address module
+);
 ```
 
 **Parameters**

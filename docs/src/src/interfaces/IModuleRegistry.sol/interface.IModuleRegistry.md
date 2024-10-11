@@ -1,5 +1,5 @@
 # IModuleRegistry
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/IModuleRegistry.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/interfaces/IModuleRegistry.sol)
 
 **Author:**
 Arrakis Team.
@@ -31,7 +31,10 @@ beacon_
 
 
 ```solidity
-function beaconsContains(address beacon_) external view returns (bool isContained);
+function beaconsContains(address beacon_)
+    external
+    view
+    returns (bool isContained);
 ```
 **Parameters**
 
@@ -73,6 +76,21 @@ function admin() external view returns (address);
 |`<none>`|`address`|admin address that can upgrade beacon implementation.|
 
 
+### initialize
+
+*function used to initialize module registry.*
+
+
+```solidity
+function initialize(address factory_) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`factory_`|`address`|address of ArrakisMetaVaultFactory, who is the only one who can call the init management function.|
+
+
 ### whitelistBeacons
 
 function used to whitelist IBeacon  that contain
@@ -112,7 +130,11 @@ whitelisted as module inside a vault.
 
 
 ```solidity
-function createModule(address vault_, address beacon_, bytes calldata payload_) external returns (address module);
+function createModule(
+    address vault_,
+    address beacon_,
+    bytes calldata payload_
+) external returns (address module);
 ```
 **Parameters**
 

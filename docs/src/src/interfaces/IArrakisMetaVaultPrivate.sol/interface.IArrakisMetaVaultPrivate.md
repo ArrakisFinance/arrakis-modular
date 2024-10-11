@@ -1,5 +1,5 @@
 # IArrakisMetaVaultPrivate
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/IArrakisMetaVaultPrivate.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/interfaces/IArrakisMetaVaultPrivate.sol)
 
 
 ## Functions
@@ -10,7 +10,10 @@ inherent strategy.
 
 
 ```solidity
-function deposit(uint256 amount0_, uint256 amount1_) external payable;
+function deposit(
+    uint256 amount0_,
+    uint256 amount1_
+) external payable;
 ```
 **Parameters**
 
@@ -27,7 +30,10 @@ underpin strategy.
 
 
 ```solidity
-function withdraw(uint256 proportion_, address receiver_) external returns (uint256 amount0, uint256 amount1);
+function withdraw(
+    uint256 proportion_,
+    address receiver_
+) external returns (uint256 amount0, uint256 amount1);
 ```
 **Parameters**
 
@@ -50,7 +56,8 @@ function used to whitelist depositors.
 
 
 ```solidity
-function whitelistDepositors(address[] calldata depositors_) external;
+function whitelistDepositors(address[] calldata depositors_)
+    external;
 ```
 **Parameters**
 
@@ -65,7 +72,8 @@ function used to blacklist depositors.
 
 
 ```solidity
-function blacklistDepositors(address[] calldata depositors_) external;
+function blacklistDepositors(address[] calldata depositors_)
+    external;
 ```
 **Parameters**
 
@@ -110,7 +118,9 @@ Event describing a withdrawal of participation by an user inside this vault.
 
 
 ```solidity
-event LogWithdraw(uint256 proportion, uint256 amount0, uint256 amount1);
+event LogWithdraw(
+    uint256 proportion, uint256 amount0, uint256 amount1
+);
 ```
 
 **Parameters**

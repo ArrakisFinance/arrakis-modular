@@ -1,5 +1,5 @@
 # ArrakisStandardManager
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/ArrakisStandardManager.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/ArrakisStandardManager.sol)
 
 **Inherits:**
 [IArrakisStandardManager](/src/interfaces/IArrakisStandardManager.sol/interface.IArrakisStandardManager.md), [IManager](/src/interfaces/IManager.sol/interface.IManager.md), Ownable, ReentrancyGuardUpgradeable, PausableUpgradeable
@@ -102,7 +102,12 @@ modifier onlyGuardian();
 
 
 ```solidity
-constructor(uint256 defaultFeePIPS_, address nativeToken_, uint8 nativeTokenDecimals_, address guardian_);
+constructor(
+    uint256 defaultFeePIPS_,
+    address nativeToken_,
+    uint8 nativeTokenDecimals_,
+    address guardian_
+);
 ```
 
 ### initialize
@@ -114,7 +119,11 @@ the option to set 0 as default fee pips.*
 
 
 ```solidity
-function initialize(address owner_, address defaultReceiver_, address factory_) external initializer;
+function initialize(
+    address owner_,
+    address defaultReceiver_,
+    address factory_
+) external initializer;
 ```
 **Parameters**
 
@@ -133,7 +142,7 @@ function used to pause the manager.
 
 
 ```solidity
-function pause() external whenNotPaused onlyGuardian;
+function pause() external onlyGuardian;
 ```
 
 ### unpause
@@ -144,7 +153,7 @@ function used to unpause the manager.
 
 
 ```solidity
-function unpause() external whenPaused onlyGuardian;
+function unpause() external onlyGuardian;
 ```
 
 ### setDefaultReceiver
@@ -153,7 +162,9 @@ function used to set the default receiver of tokens earned.
 
 
 ```solidity
-function setDefaultReceiver(address newDefaultReceiver_) external onlyOwner;
+function setDefaultReceiver(address newDefaultReceiver_)
+    external
+    onlyOwner;
 ```
 **Parameters**
 
@@ -168,10 +179,11 @@ function used to set receiver of a specific token.
 
 
 ```solidity
-function setReceiverByToken(address vault_, bool isSetReceiverToken0_, address receiver_)
-    external
-    onlyOwner
-    onlyWhitelistedVault(vault_);
+function setReceiverByToken(
+    address vault_,
+    bool isSetReceiverToken0_,
+    address receiver_
+) external onlyOwner onlyWhitelistedVault(vault_);
 ```
 **Parameters**
 
@@ -188,7 +200,10 @@ function used to decrease the fees taken by manager for a specific vault.
 
 
 ```solidity
-function decreaseManagerFeePIPS(address vault_, uint24 newFeePIPS_) external onlyOwner onlyWhitelistedVault(vault_);
+function decreaseManagerFeePIPS(
+    address vault_,
+    uint24 newFeePIPS_
+) external onlyOwner onlyWhitelistedVault(vault_);
 ```
 **Parameters**
 
@@ -204,7 +219,9 @@ function used to finalize a time lock fees increase on a vault.
 
 
 ```solidity
-function finalizeIncreaseManagerFeePIPS(address vault_) external onlyOwner;
+function finalizeIncreaseManagerFeePIPS(address vault_)
+    external
+    onlyOwner;
 ```
 **Parameters**
 
@@ -219,10 +236,10 @@ function used to submit a fees increase in a managed vault.
 
 
 ```solidity
-function submitIncreaseManagerFeePIPS(address vault_, uint24 newFeePIPS_)
-    external
-    onlyOwner
-    onlyWhitelistedVault(vault_);
+function submitIncreaseManagerFeePIPS(
+    address vault_,
+    uint24 newFeePIPS_
+) external onlyOwner onlyWhitelistedVault(vault_);
 ```
 **Parameters**
 
@@ -268,11 +285,10 @@ function used to manage vault's strategy.
 
 
 ```solidity
-function rebalance(address vault_, bytes[] calldata payloads_)
-    external
-    nonReentrant
-    whenNotPaused
-    onlyWhitelistedVault(vault_);
+function rebalance(
+    address vault_,
+    bytes[] calldata payloads_
+) external nonReentrant whenNotPaused onlyWhitelistedVault(vault_);
 ```
 **Parameters**
 
@@ -286,12 +302,15 @@ function rebalance(address vault_, bytes[] calldata payloads_)
 
 function used to set a new module (strategy) for the vault.
 
+*only public vault should have this check.*
+
 
 ```solidity
-function setModule(address vault_, address module_, bytes[] calldata payloads_)
-    external
-    whenNotPaused
-    onlyWhitelistedVault(vault_);
+function setModule(
+    address vault_,
+    address module_,
+    bytes[] calldata payloads_
+) external whenNotPaused onlyWhitelistedVault(vault_);
 ```
 **Parameters**
 
@@ -308,7 +327,9 @@ function used to init management of a meta vault.
 
 
 ```solidity
-function initManagement(SetupParams calldata params_) external whenNotPaused;
+function initManagement(SetupParams calldata params_)
+    external
+    whenNotPaused;
 ```
 **Parameters**
 
@@ -336,17 +357,42 @@ function updateVaultInfo(SetupParams calldata params_)
 |`params_`|`SetupParams`|struct containing all the data for updating the vault.|
 
 
+### receive
+
+
+```solidity
+receive() external payable;
+```
+
+### announceStrategy
+
+function used to announce the strategy that the vault will follow.
+
+
+```solidity
+function announceStrategy(
+    address vault_,
+    string memory strategy_
+) external onlyWhitelistedVault(vault_);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault_`|`address`|address of arrakis meta vault that will follow the strategy.|
+|`strategy_`|`string`|string containing the strategy name that will be used.|
+
+
 ### initializedVaults
 
 function used to get a list of managed vaults.
 
 
 ```solidity
-function initializedVaults(uint256 startIndex_, uint256 endIndex_)
-    external
-    view
-    whenNotPaused
-    returns (address[] memory);
+function initializedVaults(
+    uint256 startIndex_,
+    uint256 endIndex_
+) external view whenNotPaused returns (address[] memory);
 ```
 **Parameters**
 
@@ -356,20 +402,16 @@ function initializedVaults(uint256 startIndex_, uint256 endIndex_)
 |`endIndex_`|`uint256`|ending index until which the caller want to read the array of managed vaults.|
 
 
-### receive
-
-
-```solidity
-receive() external payable;
-```
-
 ### numInitializedVaults
 
 function used to get the number of vault under management.
 
 
 ```solidity
-function numInitializedVaults() external view returns (uint256 numberOfVaults);
+function numInitializedVaults()
+    external
+    view
+    returns (uint256 numberOfVaults);
 ```
 
 ### guardian
@@ -414,7 +456,10 @@ function used to know the selector of initManagement functions.
 
 
 ```solidity
-function getInitManagementSelector() external pure returns (bytes4 selector);
+function getInitManagementSelector()
+    external
+    pure
+    returns (bytes4 selector);
 ```
 
 ### _initManagement
@@ -428,6 +473,8 @@ function _initManagement(SetupParams memory params_) internal;
 
 
 ```solidity
-function _updateParamsChecks(SetupParams memory params_) internal view;
+function _updateParamsChecks(SetupParams memory params_)
+    internal
+    view;
 ```
 

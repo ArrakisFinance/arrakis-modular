@@ -1,5 +1,5 @@
 # IArrakisLPModule
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/IArrakisLPModule.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/interfaces/IArrakisLPModule.sol)
 
 **Author:**
 Arrakis Finance
@@ -31,20 +31,39 @@ function used to unpause the module.
 function unpause() external;
 ```
 
+### initializePosition
+
+function used to initialize the module
+when a module switch happen
+
+
+```solidity
+function initializePosition(bytes calldata data_) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`data_`|`bytes`|bytes that contain information to initialize the position.|
+
+
 ### withdraw
 
 function used by metaVault to withdraw tokens from the strategy.
 
 
 ```solidity
-function withdraw(address receiver_, uint256 proportion_) external returns (uint256 amount0, uint256 amount1);
+function withdraw(
+    address receiver_,
+    uint256 proportion_
+) external returns (uint256 amount0, uint256 amount1);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`receiver_`|`address`|address that will receive tokens.|
-|`proportion_`|`uint256`|number of share needed to be withdrawn.|
+|`proportion_`|`uint256`|the proportion of the total position that need to be withdrawn.|
 
 **Returns**
 
@@ -60,7 +79,9 @@ function used by metaVault or manager to get manager fees.
 
 
 ```solidity
-function withdrawManagerBalance() external returns (uint256 amount0, uint256 amount1);
+function withdrawManagerBalance()
+    external
+    returns (uint256 amount0, uint256 amount1);
 ```
 **Returns**
 
@@ -181,7 +202,7 @@ function token0() external view returns (IERC20Metadata);
 
 ### token1
 
-function used to get token0 as IERC20Metadata.
+function used to get token1 as IERC20Metadata.
 
 
 ```solidity
@@ -200,7 +221,10 @@ function used to get the initial amounts needed to open a position.
 
 
 ```solidity
-function getInits() external view returns (uint256 init0, uint256 init1);
+function getInits()
+    external
+    view
+    returns (uint256 init0, uint256 init1);
 ```
 **Returns**
 
@@ -217,7 +241,10 @@ on the position.
 
 
 ```solidity
-function totalUnderlying() external view returns (uint256 amount0, uint256 amount1);
+function totalUnderlying()
+    external
+    view
+    returns (uint256 amount0, uint256 amount1);
 ```
 **Returns**
 
@@ -234,7 +261,10 @@ on the position for a specific price.
 
 
 ```solidity
-function totalUnderlyingAtPrice(uint160 priceX96_) external view returns (uint256 amount0, uint256 amount1);
+function totalUnderlyingAtPrice(uint160 priceX96_)
+    external
+    view
+    returns (uint256 amount0, uint256 amount1);
 ```
 **Parameters**
 
@@ -257,7 +287,10 @@ before rebalance.
 
 
 ```solidity
-function validateRebalance(IOracleWrapper oracle_, uint24 maxDeviation_) external view;
+function validateRebalance(
+    IOracleWrapper oracle_,
+    uint24 maxDeviation_
+) external view;
 ```
 **Parameters**
 
@@ -275,7 +308,12 @@ Event describing a withdrawal of participation by an user inside this module.
 
 
 ```solidity
-event LogWithdraw(address indexed receiver, uint256 proportion, uint256 amount0, uint256 amount1);
+event LogWithdraw(
+    address indexed receiver,
+    uint256 proportion,
+    uint256 amount0,
+    uint256 amount1
+);
 ```
 
 **Parameters**
@@ -292,7 +330,9 @@ Event describing a manager fee withdrawal.
 
 
 ```solidity
-event LogWithdrawManagerBalance(address manager, uint256 amount0, uint256 amount1);
+event LogWithdrawManagerBalance(
+    address manager, uint256 amount0, uint256 amount1
+);
 ```
 
 **Parameters**
@@ -355,13 +395,13 @@ zero.*
 error ProportionZero();
 ```
 
-### ProportionGtPIPS
+### ProportionGtBASE
 *triggered if during withdraw more than 100% of the
 position.*
 
 
 ```solidity
-error ProportionGtPIPS();
+error ProportionGtBASE();
 ```
 
 ### NewFeesGtPIPS

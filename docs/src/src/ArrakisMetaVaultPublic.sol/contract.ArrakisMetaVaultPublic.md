@@ -1,5 +1,5 @@
 # ArrakisMetaVaultPublic
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/ArrakisMetaVaultPublic.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/ArrakisMetaVaultPublic.sol)
 
 **Inherits:**
 [IArrakisMetaVaultPublic](/src/interfaces/IArrakisMetaVaultPublic.sol/interface.IArrakisMetaVaultPublic.md), [ArrakisMetaVault](/src/abstracts/ArrakisMetaVault.sol/abstract.ArrakisMetaVault.md), Ownable, ERC20
@@ -25,8 +25,15 @@ string internal _symbol;
 
 
 ```solidity
-constructor(address owner_, string memory name_, string memory symbol_, address moduleRegistry_, address manager_)
-    ArrakisMetaVault(moduleRegistry_, manager_);
+constructor(
+    address owner_,
+    string memory name_,
+    string memory symbol_,
+    address moduleRegistry_,
+    address manager_,
+    address token0_,
+    address token1_
+) ArrakisMetaVault(moduleRegistry_, manager_, token0_, token1_);
 ```
 
 ### mint
@@ -35,7 +42,10 @@ function used to mint share of the vault position
 
 
 ```solidity
-function mint(uint256 shares_, address receiver_) external payable returns (uint256 amount0, uint256 amount1);
+function mint(
+    uint256 shares_,
+    address receiver_
+) external payable returns (uint256 amount0, uint256 amount1);
 ```
 **Parameters**
 
@@ -58,7 +68,10 @@ function used to burn share of the vault position.
 
 
 ```solidity
-function burn(uint256 shares_, address receiver_) external returns (uint256 amount0, uint256 amount1);
+function burn(
+    uint256 shares_,
+    address receiver_
+) external returns (uint256 amount0, uint256 amount1);
 ```
 **Parameters**
 
@@ -136,7 +149,10 @@ function symbol() public view override returns (string memory);
 
 
 ```solidity
-function _deposit(uint256 proportion_) internal nonReentrant returns (uint256 amount0, uint256 amount1);
+function _deposit(uint256 proportion_)
+    internal
+    nonReentrant
+    returns (uint256 amount0, uint256 amount1);
 ```
 
 ### _onlyOwnerCheck

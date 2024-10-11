@@ -1,5 +1,5 @@
 # IArrakisMetaVaultFactory
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/interfaces/IArrakisMetaVaultFactory.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/interfaces/IArrakisMetaVaultFactory.sol)
 
 
 ## Functions
@@ -141,7 +141,7 @@ function blacklistDeployer(address[] calldata deployers_) external;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`deployers_`|`address[]`|list of addresses that owner want to grant permission to deploy.|
+|`deployers_`|`address[]`|list of addresses that owner want to revoke permission to deploy.|
 
 
 ### getTokenName
@@ -150,7 +150,10 @@ get Arrakis Modular standard token name for two corresponding tokens.
 
 
 ```solidity
-function getTokenName(address token0_, address token1_) external view returns (string memory);
+function getTokenName(
+    address token0_,
+    address token1_
+) external view returns (string memory);
 ```
 **Parameters**
 
@@ -166,35 +169,16 @@ function getTokenName(address token0_, address token1_) external view returns (s
 |`<none>`|`string`|name name of the arrakis modular token vault.|
 
 
-### getTokenSymbol
-
-get Arrakis Modular standard token symbol for two corresponding tokens.
-
-
-```solidity
-function getTokenSymbol(address token0_, address token1_) external view returns (string memory);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`token0_`|`address`|address of the first token.|
-|`token1_`|`address`|address of the second token.|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`string`|symbol symbol of the arrakis modular token vault.|
-
-
 ### publicVaults
 
 get a list of public vaults created by this factory
 
 
 ```solidity
-function publicVaults(uint256 startIndex_, uint256 endIndex_) external view returns (address[] memory);
+function publicVaults(
+    uint256 startIndex_,
+    uint256 endIndex_
+) external view returns (address[] memory);
 ```
 **Parameters**
 
@@ -252,7 +236,10 @@ get a list of private vaults created by this factory
 
 
 ```solidity
-function privateVaults(uint256 startIndex_, uint256 endIndex_) external view returns (address[] memory);
+function privateVaults(
+    uint256 startIndex_,
+    uint256 endIndex_
+) external view returns (address[] memory);
 ```
 **Parameters**
 
@@ -274,7 +261,10 @@ numOfPrivateVaults counts the total number of private vaults in existence
 
 
 ```solidity
-function numOfPrivateVaults() external view returns (uint256 result);
+function numOfPrivateVaults()
+    external
+    view
+    returns (uint256 result);
 ```
 **Returns**
 
@@ -289,7 +279,10 @@ isPrivateVault check if the inputed vault is a private vault.
 
 
 ```solidity
-function isPrivateVault(address vault_) external view returns (bool);
+function isPrivateVault(address vault_)
+    external
+    view
+    returns (bool);
 ```
 **Parameters**
 

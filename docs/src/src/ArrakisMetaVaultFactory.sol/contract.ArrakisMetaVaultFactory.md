@@ -1,5 +1,5 @@
 # ArrakisMetaVaultFactory
-[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/22c7b5c5fce6ff4d3a051aa4fbf376745815e340/src/ArrakisMetaVaultFactory.sol)
+[Git Source](https://github.com/ArrakisFinance/arrakis-modular/blob/4485c572ded3a830c181fa38ceaac13efe8eb7f1/src/ArrakisMetaVaultFactory.sol)
 
 **Inherits:**
 [IArrakisMetaVaultFactory](/src/interfaces/IArrakisMetaVaultFactory.sol/interface.IArrakisMetaVaultFactory.md), Pausable, Ownable
@@ -19,6 +19,20 @@ address public immutable moduleRegistryPublic;
 
 ```solidity
 address public immutable moduleRegistryPrivate;
+```
+
+
+### creationCodePublicVault
+
+```solidity
+address public immutable creationCodePublicVault;
+```
+
+
+### creationCodePrivateVault
+
+```solidity
+address public immutable creationCodePrivateVault;
 ```
 
 
@@ -62,7 +76,14 @@ EnumerableSet.AddressSet internal _deployers;
 
 
 ```solidity
-constructor(address owner_, address manager_, address moduleRegistryPublic_, address moduleRegistryPrivate_);
+constructor(
+    address owner_,
+    address manager_,
+    address moduleRegistryPublic_,
+    address moduleRegistryPrivate_,
+    address creationCodePublicVault_,
+    address creationCodePrivateVault_
+);
 ```
 
 ### pause
@@ -73,7 +94,7 @@ function used to pause the factory.
 
 
 ```solidity
-function pause() external whenNotPaused onlyOwner;
+function pause() external onlyOwner;
 ```
 
 ### unpause
@@ -84,7 +105,7 @@ function used to unpause the factory.
 
 
 ```solidity
-function unpause() external whenPaused onlyOwner;
+function unpause() external onlyOwner;
 ```
 
 ### setManager
@@ -182,7 +203,9 @@ function used to grant the role to deploy to a list of addresses.
 
 
 ```solidity
-function whitelistDeployer(address[] calldata deployers_) external onlyOwner;
+function whitelistDeployer(address[] calldata deployers_)
+    external
+    onlyOwner;
 ```
 **Parameters**
 
@@ -197,13 +220,15 @@ function used to grant the role to deploy to a list of addresses.
 
 
 ```solidity
-function blacklistDeployer(address[] calldata deployers_) external onlyOwner;
+function blacklistDeployer(address[] calldata deployers_)
+    external
+    onlyOwner;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`deployers_`|`address[]`|list of addresses that owner want to grant permission to deploy.|
+|`deployers_`|`address[]`|list of addresses that owner want to revoke permission to deploy.|
 
 
 ### getTokenName
@@ -212,7 +237,10 @@ get Arrakis Modular standard token name for two corresponding tokens.
 
 
 ```solidity
-function getTokenName(address token0_, address token1_) public view returns (string memory);
+function getTokenName(
+    address token0_,
+    address token1_
+) public view returns (string memory);
 ```
 **Parameters**
 
@@ -228,35 +256,16 @@ function getTokenName(address token0_, address token1_) public view returns (str
 |`<none>`|`string`|name name of the arrakis modular token vault.|
 
 
-### getTokenSymbol
-
-get Arrakis Modular standard token symbol for two corresponding tokens.
-
-
-```solidity
-function getTokenSymbol(address token0_, address token1_) public view returns (string memory);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`token0_`|`address`|address of the first token.|
-|`token1_`|`address`|address of the second token.|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`string`|symbol symbol of the arrakis modular token vault.|
-
-
 ### publicVaults
 
 get a list of public vaults created by this factory
 
 
 ```solidity
-function publicVaults(uint256 startIndex_, uint256 endIndex_) external view returns (address[] memory);
+function publicVaults(
+    uint256 startIndex_,
+    uint256 endIndex_
+) external view returns (address[] memory);
 ```
 **Parameters**
 
@@ -314,7 +323,10 @@ get a list of private vaults created by this factory
 
 
 ```solidity
-function privateVaults(uint256 startIndex_, uint256 endIndex_) external view returns (address[] memory);
+function privateVaults(
+    uint256 startIndex_,
+    uint256 endIndex_
+) external view returns (address[] memory);
 ```
 **Parameters**
 
@@ -351,7 +363,10 @@ isPrivateVault check if the inputed vault is a private vault.
 
 
 ```solidity
-function isPrivateVault(address vault_) external view returns (bool);
+function isPrivateVault(address vault_)
+    external
+    view
+    returns (bool);
 ```
 **Parameters**
 
@@ -379,10 +394,13 @@ function deployers() external view returns (address[] memory);
 
 
 ```solidity
-function _initManagement(address vault_, bytes memory data_) internal;
+function _initManagement(
+    address vault_,
+    bytes memory data_
+) internal;
 ```
 
-### _append
+### _getPublicVaultConstructorPayload
 
 *to anticipate futur changes in the manager's initManagement function
 manager should implement getInitManagementSelector function, so factory can get the
@@ -393,9 +411,22 @@ so manager should follow this pattern where vault address is the first parameter
 
 
 ```solidity
-function _append(string memory a_, string memory b_, string memory c_, string memory d_)
-    internal
-    pure
-    returns (string memory);
+function _getPublicVaultConstructorPayload(
+    address timeLock_,
+    address token0_,
+    address token1_
+) internal view returns (bytes memory);
+```
+
+### _append
+
+
+```solidity
+function _append(
+    string memory a_,
+    string memory b_,
+    string memory c_,
+    string memory d_
+) internal pure returns (string memory);
 ```
 
