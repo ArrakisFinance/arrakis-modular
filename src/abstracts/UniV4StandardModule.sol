@@ -967,7 +967,6 @@ abstract contract UniV4StandardModule is
                         manager, managerFee0, managerFee1
                     );
                 }
-
                 if (managerFee0 > 0) {
                     withdraw_.poolManager.take(
                         _poolKey.currency0, manager, managerFee0
