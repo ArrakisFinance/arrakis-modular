@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
-import {
-    UniV4StandardModule
-} from "../abstracts/UniV4StandardModule.sol";
-import {IArrakisLPModulePublic} from "../interfaces/IArrakisLPModulePublic.sol";
+import {UniV4StandardModule} from
+    "../abstracts/UniV4StandardModule.sol";
+import {IArrakisLPModulePublic} from
+    "../interfaces/IArrakisLPModulePublic.sol";
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
@@ -33,7 +33,8 @@ import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {IERC20Metadata} from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -49,7 +50,18 @@ contract UniV4StandardModulePublic is
     using Address for address payable;
     using SafeERC20 for IERC20Metadata;
 
-    constructor(address poolManager_, address guardian_) UniV4StandardModule(poolManager_, guardian_) {}
+    // #region public constants.
+
+    /// @dev id = keccak256(abi.encode("UniV4StandardModulePublic"))
+    bytes32 public constant id =
+        0x22f7eb8a1e047f6c492e05813f6e9c6cb1563d057a61278b8e0ae7977af1ac3f;
+
+    // #endregion public constants.
+
+    constructor(
+        address poolManager_,
+        address guardian_
+    ) UniV4StandardModule(poolManager_, guardian_) {}
 
     /// @notice function used by metaVault to deposit tokens into the strategy.
     /// @param depositor_ address that will provide the tokens.
@@ -74,8 +86,9 @@ contract UniV4StandardModulePublic is
 
         // #endregion checks.
 
-        bytes memory data =
-            abi.encode(Action.DEPOSIT_FUND, abi.encode(depositor_, proportion_));
+        bytes memory data = abi.encode(
+            Action.DEPOSIT_FUND, abi.encode(depositor_, proportion_)
+        );
 
         bytes memory result = poolManager.unlock(data);
 

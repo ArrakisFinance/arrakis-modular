@@ -24,6 +24,7 @@ import {
 } from "./interfaces/IPermit2.sol";
 import {IWETH9} from "./interfaces/IWETH9.sol";
 import {IResolver} from "./interfaces/IResolver.sol";
+import {IArrakisLPModuleID} from "./interfaces/IArrakisLPModuleID.sol";
 
 // #region openzeppelin.
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
@@ -34,8 +35,6 @@ import {
 import {ReentrancyGuard} from
     "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
-import {EnumerableSet} from
-    "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 // #endregion openzeppelin.
 
 // #region solady dependencies.
@@ -50,23 +49,30 @@ contract ArrakisPublicVaultRouterV2 is
 {
     using Address for address payable;
     using SafeERC20 for IERC20;
-    using EnumerableSet for EnumerableSet.AddressSet;
 
     // #region immutable properties.
 
+    /// @notice address of the native token.
     address public immutable nativeToken;
+    /// @notice permit2 contract address.
     IPermit2 public immutable permit2;
+    /// @notice arrakis meta vault factory contract address.
     IArrakisMetaVaultFactory public immutable factory;
+    /// @notice wrapped eth contract address.
     IWETH9 public immutable weth;
 
     // #endregion immutable properties.
 
+    /// @notice swap executor contract address.
     IRouterSwapExecutor public swapper;
-    EnumerableSet.AddressSet internal _resolvers;
+    /// @notice resolvers mapping.
+    mapping(bytes32 => address) public resolvers;
 
     // #region modifiers.
 
-    modifier onlyPublicVault(address vault_) {
+    modifier onlyPublicVault(
+        address vault_
+    ) {
         if (!factory.isPublicVault(vault_)) revert OnlyPublicVault();
         _;
     }
@@ -114,60 +120,34 @@ contract ArrakisPublicVaultRouterV2 is
         swapper = IRouterSwapExecutor(swapper_);
     }
 
+    /// @dev bytes32(0) should be used to set valantis resolver.
+    function setResolvers(
+        bytes32[] calldata ids_,
+        address[] calldata resolvers_
+    ) external onlyOwner {
+        if (ids_.length != resolvers_.length) revert UnequalLength();
+
+        for (uint256 i; i < ids_.length;) {
+            if (resolvers_[i] == address(0)) revert AddressZero();
+            resolvers[ids_[i]] = resolvers_[i];
+
+            unchecked {
+                i++;
+            }
+        }
+
+        emit LogSetResolvers(ids_, resolvers_);
+    }
+
     // #endregion owner functions.
-
-    function whitelistResolvers(
-        address[] calldata resolvers_
-    ) external whenNotPaused onlyOwner {
-        uint256 length = resolvers_.length;
-        for (uint256 i; i < length;) {
-            address resolver = resolvers_[i];
-            if (resolver == address(0)) {
-                revert AddressZero();
-            }
-            if (_resolvers.contains(resolver)) {
-                revert ResolverAlreadyWhitelisted();
-            }
-
-            _resolvers.add(resolver);
-
-            unchecked {
-                i++;
-            }
-        }
-
-        emit LogWhitelistResolvers(resolvers_);
-    }
-
-    function blacklistResolvers(
-        address[] calldata resolvers_
-    ) external whenNotPaused onlyOwner {
-        uint256 length = resolvers_.length;
-        for (uint256 i; i < length;) {
-            address resolver = resolvers_[i];
-            if (!_resolvers.contains(resolver)) {
-                revert NotWhitelistedResolver();
-            }
-
-            _resolvers.remove(resolver);
-
-            unchecked {
-                i++;
-            }
-        }
-
-        emit LogBlacklistResolvers(resolvers_);
-    }
 
     /// @notice addLiquidity adds liquidity to meta vault of interest (mints L tokens)
     /// @param params_ AddLiquidityData struct containing data for adding liquidity
-    /// @param resolver_ Address of resolver contract that will compute mint amount.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     function addLiquidity(
-        AddLiquidityData memory params_,
-        address resolver_
+        AddLiquidityData memory params_
     )
         external
         payable
@@ -186,10 +166,7 @@ contract ArrakisPublicVaultRouterV2 is
         }
 
         (sharesReceived, amount0, amount1) = _getMintAmounts(
-            params_.vault,
-            params_.amount0Max,
-            params_.amount1Max,
-            resolver_
+            params_.vault, params_.amount0Max, params_.amount1Max
         );
 
         if (sharesReceived == 0) revert NothingToMint();
@@ -244,15 +221,13 @@ contract ArrakisPublicVaultRouterV2 is
 
     /// @notice swapAndAddLiquidity transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddData struct containing data for swap
-    /// @param resolver_ address of the contract that will compute mint amounts.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
     function swapAndAddLiquidity(
-        SwapAndAddData memory params_,
-        address resolver_
+        SwapAndAddData memory params_
     )
         external
         payable
@@ -313,9 +288,7 @@ contract ArrakisPublicVaultRouterV2 is
         // #endregion interactions.
 
         (amount0, amount1, sharesReceived, amount0Diff, amount1Diff) =
-        _swapAndAddLiquiditySendBackLeftOver(
-            params_, token0, token1, resolver_
-        );
+        _swapAndAddLiquiditySendBackLeftOver(params_, token0, token1);
     }
 
     /// @notice removeLiquidity removes liquidity from vault and burns LP tokens
@@ -342,13 +315,11 @@ contract ArrakisPublicVaultRouterV2 is
 
     /// @notice addLiquidityPermit2 adds liquidity to public vault of interest (mints LP tokens)
     /// @param params_ AddLiquidityPermit2Data struct containing data for adding liquidity
-    /// @param resolver_ Address of the resolver contract that will compute the mint amounts.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     function addLiquidityPermit2(
-        AddLiquidityPermit2Data memory params_,
-        address resolver_
+        AddLiquidityPermit2Data memory params_
     )
         external
         payable
@@ -372,8 +343,7 @@ contract ArrakisPublicVaultRouterV2 is
         (sharesReceived, amount0, amount1) = _getMintAmounts(
             params_.addData.vault,
             params_.addData.amount0Max,
-            params_.addData.amount1Max,
-            resolver_
+            params_.addData.amount1Max
         );
 
         if (sharesReceived == 0) revert NothingToMint();
@@ -408,15 +378,13 @@ contract ArrakisPublicVaultRouterV2 is
 
     /// @notice swapAndAddLiquidityPermit2 transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddPermit2Data struct containing data for swap
-    /// @param resolver_ Address of the contract that will
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
     function swapAndAddLiquidityPermit2(
-        SwapAndAddPermit2Data memory params_,
-        address resolver_
+        SwapAndAddPermit2Data memory params_
     )
         external
         payable
@@ -449,7 +417,7 @@ contract ArrakisPublicVaultRouterV2 is
 
         (amount0, amount1, sharesReceived, amount0Diff, amount1Diff) =
         _swapAndAddLiquiditySendBackLeftOver(
-            params_.swapAndAddData, token0, token1, resolver_
+            params_.swapAndAddData, token0, token1
         );
     }
 
@@ -487,13 +455,11 @@ contract ArrakisPublicVaultRouterV2 is
 
     /// @notice wrapAndAddLiquidity wrap eth and adds liquidity to meta vault of interest (mints L tokens)
     /// @param params_ AddLiquidityData struct containing data for adding liquidity
-    /// @param resolver_ Address of the resolver contract that will compute mint amounts.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     function wrapAndAddLiquidity(
-        AddLiquidityData memory params_,
-        address resolver_
+        AddLiquidityData memory params_
     )
         external
         payable
@@ -522,10 +488,7 @@ contract ArrakisPublicVaultRouterV2 is
         }
 
         (sharesReceived, amount0, amount1) = _getMintAmounts(
-            params_.vault,
-            params_.amount0Max,
-            params_.amount1Max,
-            resolver_
+            params_.vault, params_.amount0Max, params_.amount1Max
         );
 
         if (sharesReceived == 0) revert NothingToMint();
@@ -587,15 +550,13 @@ contract ArrakisPublicVaultRouterV2 is
 
     /// @notice wrapAndSwapAndAddLiquidity wrap eth and transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddData struct containing data for swap
-    /// @param resolver_ Address of the resolver contract that will compute mint amounts.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
     function wrapAndSwapAndAddLiquidity(
-        SwapAndAddData memory params_,
-        address resolver_
+        SwapAndAddData memory params_
     )
         external
         payable
@@ -676,7 +637,7 @@ contract ArrakisPublicVaultRouterV2 is
             sharesReceived,
             amount0Diff,
             amount1Diff
-        ) = _swapAndAddLiquidity(params_, token0, token1, resolver_);
+        ) = _swapAndAddLiquidity(params_, token0, token1);
 
         /// @dev hack to get rid of stack too depth
         uint256 amount0Use = (params_.swapData.zeroForOne)
@@ -717,13 +678,11 @@ contract ArrakisPublicVaultRouterV2 is
 
     /// @notice wrapAndAddLiquidityPermit2 wrap eth and adds liquidity to public vault of interest (mints LP tokens)
     /// @param params_ AddLiquidityPermit2Data struct containing data for adding liquidity
-    /// @param resolver_ Address of the contract that will compute mint amounts.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     function wrapAndAddLiquidityPermit2(
-        AddLiquidityPermit2Data memory params_,
-        address resolver_
+        AddLiquidityPermit2Data memory params_
     )
         external
         payable
@@ -756,8 +715,7 @@ contract ArrakisPublicVaultRouterV2 is
         (sharesReceived, amount0, amount1) = _getMintAmounts(
             params_.addData.vault,
             params_.addData.amount0Max,
-            params_.addData.amount1Max,
-            resolver_
+            params_.addData.amount1Max
         );
 
         if (sharesReceived == 0) revert NothingToMint();
@@ -810,15 +768,13 @@ contract ArrakisPublicVaultRouterV2 is
 
     /// @notice wrapAndSwapAndAddLiquidityPermit2 wrap eth and transfer tokens to and calls RouterSwapExecutor
     /// @param params_ SwapAndAddPermit2Data struct containing data for swap
-    /// @param resolver_ address that will compute mint amounts.
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return sharesReceived amount of public vault tokens transferred to `receiver`
     /// @return amount0Diff token0 balance difference post swap
     /// @return amount1Diff token1 balance difference post swap
     function wrapAndSwapAndAddLiquidityPermit2(
-        SwapAndAddPermit2Data memory params_,
-        address resolver_
+        SwapAndAddPermit2Data memory params_
     )
         external
         payable
@@ -887,7 +843,7 @@ contract ArrakisPublicVaultRouterV2 is
             amount0Diff,
             amount1Diff
         ) = _swapAndAddLiquidity(
-            params_.swapAndAddData, token0, token1, resolver_
+            params_.swapAndAddData, token0, token1
         );
 
         /// @dev hack to get rid of stack too depth
@@ -933,15 +889,13 @@ contract ArrakisPublicVaultRouterV2 is
     /// @param vault_ meta vault address.
     /// @param maxAmount0_ maximum amount of token0 user want to contribute.
     /// @param maxAmount1_ maximum amount of token1 user want to contribute.
-    /// @param resolver_ address of the contract that will compute mint amount.
     /// @return shareToMint maximum amount of share user can get for 'maxAmount0_' and 'maxAmount1_'.
     /// @return amount0ToDeposit amount of token0 user should deposit into the vault for minting 'shareToMint'.
     /// @return amount1ToDeposit amount of token1 user should deposit into the vault for minting 'shareToMint'.
     function getMintAmounts(
         address vault_,
         uint256 maxAmount0_,
-        uint256 maxAmount1_,
-        address resolver_
+        uint256 maxAmount1_
     )
         external
         view
@@ -951,13 +905,13 @@ contract ArrakisPublicVaultRouterV2 is
             uint256 amount1ToDeposit
         )
     {
-        return _getMintAmounts(
-            vault_, maxAmount0_, maxAmount1_, resolver_
-        );
+        return _getMintAmounts(vault_, maxAmount0_, maxAmount1_);
     }
 
-    function resolvers() external view returns (address[] memory) {
-        return _resolvers.values();
+    function getModuleID(
+        address module_
+    ) public view returns (bytes32) {
+        return IArrakisLPModuleID(module_).id();
     }
 
     // #endregion external view functions.
@@ -995,8 +949,7 @@ contract ArrakisPublicVaultRouterV2 is
     function _swapAndAddLiquidity(
         SwapAndAddData memory params_,
         address token0_,
-        address token1_,
-        address resolver_
+        address token1_
     )
         internal
         returns (
@@ -1050,7 +1003,7 @@ contract ArrakisPublicVaultRouterV2 is
             : params_.addData.amount1Max - amount1Diff;
 
         (sharesReceived, amount0, amount1) = _getMintAmounts(
-            params_.addData.vault, amount0Use, amount1Use, resolver_
+            params_.addData.vault, amount0Use, amount1Use
         );
 
         if (sharesReceived == 0) revert NothingToMint();
@@ -1075,8 +1028,7 @@ contract ArrakisPublicVaultRouterV2 is
     function _swapAndAddLiquiditySendBackLeftOver(
         SwapAndAddData memory params_,
         address token0_,
-        address token1_,
-        address resolver_
+        address token1_
     )
         internal
         returns (
@@ -1097,7 +1049,7 @@ contract ArrakisPublicVaultRouterV2 is
             sharesReceived,
             amount0Diff,
             amount1Diff
-        ) = _swapAndAddLiquidity(params_, token0_, token1_, resolver_);
+        ) = _swapAndAddLiquidity(params_, token0_, token1_);
 
         if (amount0Use > amount0) {
             if (token0_ == nativeToken) {
@@ -1291,8 +1243,7 @@ contract ArrakisPublicVaultRouterV2 is
     function _getMintAmounts(
         address vault_,
         uint256 maxAmount0_,
-        uint256 maxAmount1_,
-        address resolver_
+        uint256 maxAmount1_
     )
         internal
         view
@@ -1302,11 +1253,24 @@ contract ArrakisPublicVaultRouterV2 is
             uint256 amount1ToDeposit
         )
     {
-        if (!_resolvers.contains(resolver_)) {
-            revert OnlyResolver();
+        // #region vault's active module id.
+
+        address module = address(IArrakisMetaVault(vault_).module());
+        address resolver;
+
+        try this.getModuleID(module) returns (bytes32 id) {
+            resolver = resolvers[id];
+            if (resolver == address(0)) {
+                revert ModuleNotSupported();
+            }
+        } catch {
+            ///@dev it's a valantis module. Because that module don't IArrakisLPModuleID.
+            resolver = resolvers[bytes32(0)];
         }
 
-        return IResolver(resolver_).getMintAmounts(
+        // #endregion vault's active module id.
+
+        return IResolver(resolver).getMintAmounts(
             vault_, maxAmount0_, maxAmount1_
         );
     }

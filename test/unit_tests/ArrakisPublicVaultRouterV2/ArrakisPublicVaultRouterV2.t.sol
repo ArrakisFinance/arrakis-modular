@@ -108,8 +108,11 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         address[] memory resolvers = new address[](1);
         resolvers[0] = resolver;
 
+        bytes32[] memory resolverIds = new bytes32[](1);
+        resolverIds[0] = bytes32(0);
+
         vm.prank(owner);
-        router.whitelistResolvers(resolvers);
+        router.setResolvers(resolverIds, resolvers);
 
         // #endregion add resolver.
     }
@@ -254,81 +257,51 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
 
     // #endregion test unpause.
 
-    // #region test whitelistResolvers.
+    // #region test setResolvers.
 
-    function testWhitelistResolversOnlyOwner() public {
+    function testSetResolversOnlyOwner() public {
         address notOwner =
             vm.addr(uint256(keccak256(abi.encode("NotOwner"))));
         address[] memory resolvers = new address[](1);
         resolvers[0] = resolver;
 
+        bytes32[] memory ids = new bytes32[](1);
+        ids[0] = bytes32(0);
+
         vm.expectRevert(Ownable.Unauthorized.selector);
 
         vm.prank(notOwner);
-        router.whitelistResolvers(resolvers);
+        router.setResolvers(ids, resolvers);
     }
 
-    function testWhitelistResolversAddressZero() public {
+    function testSetResolversUnequalLength() public {
         address[] memory resolvers = new address[](1);
         resolvers[0] = address(0);
+        bytes32[] memory ids = new bytes32[](0);
+
+        vm.expectRevert(
+            IArrakisPublicVaultRouterV2.UnequalLength.selector
+        );
+
+        vm.prank(owner);
+        router.setResolvers(ids, resolvers);
+    }
+
+    function testSetResolversAddressZero() public {
+        address[] memory resolvers = new address[](1);
+        resolvers[0] = address(0);
+        bytes32[] memory ids = new bytes32[](1);
+        ids[0] = bytes32(0);
 
         vm.expectRevert(
             IArrakisPublicVaultRouterV2.AddressZero.selector
         );
 
         vm.prank(owner);
-        router.whitelistResolvers(resolvers);
+        router.setResolvers(ids, resolvers);
     }
 
-    function testWhitelistResolversResolverAlreadyWhitelisted()
-        public
-    {
-        address[] memory resolvers = new address[](1);
-        resolvers[0] = resolver;
-
-        vm.expectRevert(
-            IArrakisPublicVaultRouterV2
-                .ResolverAlreadyWhitelisted
-                .selector
-        );
-
-        vm.prank(owner);
-        router.whitelistResolvers(resolvers);
-    }
-
-    // #endregion test whitelistResolvers.
-
-    // #region test blacklistResolvers.
-
-    function testBlacklistResolversOnlyOwner() public {
-        address notOwner =
-            vm.addr(uint256(keccak256(abi.encode("NotOwner"))));
-        address[] memory resolvers = new address[](1);
-        resolvers[0] = resolver;
-
-        vm.expectRevert(Ownable.Unauthorized.selector);
-
-        vm.prank(notOwner);
-        router.blacklistResolvers(resolvers);
-    }
-
-    function testBlacklistResolversNotWhitelistedResolver() public {
-        address notResolver =
-            vm.addr(uint256(keccak256(abi.encode("NotResolver"))));
-        address[] memory resolvers = new address[](1);
-        resolvers[0] = notResolver;
-
-        vm.expectRevert(
-            IArrakisPublicVaultRouterV2
-                .NotWhitelistedResolver
-                .selector
-        );
-
-        vm.prank(owner);
-        router.blacklistResolvers(resolvers);
-    }
-
-    // #endregion test blacklistResolvers.
+    // #endregion test setResolvers.
 
     // #region test addLiquidity.
 
@@ -353,7 +326,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.OnlyPublicVault.selector
         );
 
-        router.addLiquidity(params, resolver);
+        router.addLiquidity(params);
     }
 
     function testAddLiquidityEmptyMaxAmount() public {
@@ -382,7 +355,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.EmptyMaxAmounts.selector
         );
 
-        router.addLiquidity(params, resolver);
+        router.addLiquidity(params);
     }
 
     function testAddLiquidityNothingToMint() public {
@@ -413,7 +386,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.NothingToMint.selector
         );
 
-        router.addLiquidity(params, resolver);
+        router.addLiquidity(params);
     }
 
     function testAddLiquidityNothingToMint2() public {
@@ -444,7 +417,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.NothingToMint.selector
         );
 
-        router.addLiquidity(params, resolver);
+        router.addLiquidity(params);
     }
 
     function testAddLiquidityNothingToMint3() public {
@@ -476,7 +449,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.NothingToMint.selector
         );
 
-        router.addLiquidity(params, resolver);
+        router.addLiquidity(params);
     }
 
     function testAddLiquidityBelowMinAmounts() public {
@@ -509,7 +482,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.BelowMinAmounts.selector
         );
 
-        router.addLiquidity(params, resolver);
+        router.addLiquidity(params);
     }
 
     function testAddLiquidityBelowMinAmounts2() public {
@@ -542,7 +515,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.BelowMinAmounts.selector
         );
 
-        router.addLiquidity(params, resolver);
+        router.addLiquidity(params);
     }
 
     function testAddLiquidity() public {
@@ -577,7 +550,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         IERC20(WETH).approve(address(router), 1e18);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
 
-        router.addLiquidity(params, resolver);
+        router.addLiquidity(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
     }
@@ -614,7 +587,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         assertEq(address(this).balance, 1e18 * 2);
         assertEq(address(vault).balance, 1e18);
 
-        router.addLiquidity{value: 1e18 * 2}(params, resolver);
+        router.addLiquidity{value: 1e18 * 2}(params);
 
         assertEq(address(vault).balance, 2e18);
         assertEq(address(this).balance, 1e18);
@@ -653,7 +626,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         assertEq(address(this).balance, 1e18 * 2);
         assertEq(address(vault).balance, 1e18);
 
-        router.addLiquidity{value: 1e18 * 2}(params, resolver);
+        router.addLiquidity{value: 1e18 * 2}(params);
 
         assertEq(address(vault).balance, 2e18);
         assertEq(address(this).balance, 1e18);
@@ -695,7 +668,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.OnlyPublicVault.selector
         );
 
-        router.swapAndAddLiquidity(params, resolver);
+        router.swapAndAddLiquidity(params);
     }
 
     function testSwapAndAddLiquidityEmptyMaxAmounts() public {
@@ -741,7 +714,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.EmptyMaxAmounts.selector
         );
 
-        router.swapAndAddLiquidity(params, resolver);
+        router.swapAndAddLiquidity(params);
     }
 
     function testSwapAndAddLiquidityNotEnoughNativeTokenSent()
@@ -792,7 +765,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
                 .selector
         );
 
-        router.swapAndAddLiquidity{value: 1e18 - 1}(params, resolver);
+        router.swapAndAddLiquidity{value: 1e18 - 1}(params);
     }
 
     function testSwapAndAddLiquidityNotEnoughNativeTokenSent2()
@@ -843,7 +816,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
                 .selector
         );
 
-        router.swapAndAddLiquidity{value: 1e18 - 1}(params, resolver);
+        router.swapAndAddLiquidity{value: 1e18 - 1}(params);
     }
 
     function testSwapAndAddLiquidity() public {
@@ -892,7 +865,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
 
-        router.swapAndAddLiquidity(params, resolver);
+        router.swapAndAddLiquidity(params);
 
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
@@ -948,7 +921,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.NothingToMint.selector
         );
 
-        router.swapAndAddLiquidity(params, resolver);
+        router.swapAndAddLiquidity(params);
     }
 
     function testSwapAndAddLiquidityBelowMinAmounts() public {
@@ -997,7 +970,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.BelowMinAmounts.selector
         );
 
-        router.swapAndAddLiquidity(params, resolver);
+        router.swapAndAddLiquidity(params);
     }
 
     function testSwapAndAddLiquidityOneForZeroGoodDealOnSwap()
@@ -1049,7 +1022,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
 
-        router.swapAndAddLiquidity(params, resolver);
+        router.swapAndAddLiquidity(params);
 
         assertEq(IERC20(USDC).balanceOf(address(this)), 100e6);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
@@ -1104,7 +1077,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
 
-        router.swapAndAddLiquidity(params, resolver);
+        router.swapAndAddLiquidity(params);
 
         assertEq(IERC20(WETH).balanceOf(address(this)), 1e17);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
@@ -1161,7 +1134,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
         assertEq(address(vault).balance, 1e18);
 
-        router.swapAndAddLiquidity(params, resolver);
+        router.swapAndAddLiquidity(params);
 
         assertEq(address(this).balance - balance, 1e17);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
@@ -1218,7 +1191,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
         assertEq(address(vault).balance, 1e18);
 
-        router.swapAndAddLiquidity(params, resolver);
+        router.swapAndAddLiquidity(params);
 
         assertEq(address(this).balance - balance, 1e17);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
@@ -1270,7 +1243,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
         assertEq(address(vault).balance, 1e18);
 
-        router.swapAndAddLiquidity{value: 2e18}(params, resolver);
+        router.swapAndAddLiquidity{value: 2e18}(params);
 
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
         assertEq(address(vault).balance, 2e18);
@@ -1321,7 +1294,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
         assertEq(address(vault).balance, 1e18);
 
-        router.swapAndAddLiquidity{value: 2e18}(params, resolver);
+        router.swapAndAddLiquidity{value: 2e18}(params);
 
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
         assertEq(address(vault).balance, 2e18);
@@ -1529,7 +1502,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.OnlyPublicVault.selector
         );
 
-        router.addLiquidityPermit2(params, resolver);
+        router.addLiquidityPermit2(params);
     }
 
     function testAddLiquidityPermit2EmptyMaxAmount() public {
@@ -1575,7 +1548,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.EmptyMaxAmounts.selector
         );
 
-        router.addLiquidityPermit2(params, resolver);
+        router.addLiquidityPermit2(params);
     }
 
     function testAddLiquidityPermit2NothingToMint() public {
@@ -1623,7 +1596,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.NothingToMint.selector
         );
 
-        router.addLiquidityPermit2(params, resolver);
+        router.addLiquidityPermit2(params);
     }
 
     function testAddLiquidityPermit2NothingToMint2() public {
@@ -1671,7 +1644,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.NothingToMint.selector
         );
 
-        router.addLiquidityPermit2(params, resolver);
+        router.addLiquidityPermit2(params);
     }
 
     function testAddLiquidityPermit2NothingToMint3() public {
@@ -1720,7 +1693,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.NothingToMint.selector
         );
 
-        router.addLiquidityPermit2(params, resolver);
+        router.addLiquidityPermit2(params);
     }
 
     function testAddLiquidityPermit2BelowMinAmounts() public {
@@ -1770,7 +1743,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.BelowMinAmounts.selector
         );
 
-        router.addLiquidityPermit2(params, resolver);
+        router.addLiquidityPermit2(params);
     }
 
     function testAddLiquidityPermit2BelowMinAmounts2() public {
@@ -1820,7 +1793,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.BelowMinAmounts.selector
         );
 
-        router.addLiquidityPermit2(params, resolver);
+        router.addLiquidityPermit2(params);
     }
 
     function testAddLiquidityPermit2LengthMismatch() public {
@@ -1877,7 +1850,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.LengthMismatch.selector
         );
 
-        router.addLiquidityPermit2(params, resolver);
+        router.addLiquidityPermit2(params);
     }
 
     function testAddLiquidityPermit2() public {
@@ -1930,7 +1903,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         IERC20(WETH).approve(address(PERMIT2), 1e18);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
 
-        router.addLiquidityPermit2(params, resolver);
+        router.addLiquidityPermit2(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
     }
@@ -1985,7 +1958,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         IERC20(USDC).approve(address(PERMIT2), 2000e6);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
 
-        router.addLiquidityPermit2(params, resolver);
+        router.addLiquidityPermit2(params);
 
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
     }
@@ -2045,7 +2018,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
 
-        router.addLiquidityPermit2(params, resolver);
+        router.addLiquidityPermit2(params);
 
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
@@ -2103,7 +2076,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.OnlyPublicVault.selector
         );
 
-        router.swapAndAddLiquidityPermit2(params, resolver);
+        router.swapAndAddLiquidityPermit2(params);
     }
 
     function testSwapAndAddLiquidityPermit2EmptyMaxAmounts() public {
@@ -2159,7 +2132,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.EmptyMaxAmounts.selector
         );
 
-        router.swapAndAddLiquidityPermit2(params, resolver);
+        router.swapAndAddLiquidityPermit2(params);
     }
 
     function testSwapAndAddLiquidityPermit2LengthMismatch() public {
@@ -2229,7 +2202,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             IArrakisPublicVaultRouterV2.LengthMismatch.selector
         );
 
-        router.swapAndAddLiquidityPermit2(params, resolver);
+        router.swapAndAddLiquidityPermit2(params);
     }
 
     function testSwapAndAddLiquidityPermit2() public {
@@ -2294,7 +2267,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
 
-        router.swapAndAddLiquidityPermit2(params, resolver);
+        router.swapAndAddLiquidityPermit2(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
@@ -2362,7 +2335,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         assertEq(IERC20(WETH).balanceOf(address(vault)), 1e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
 
-        router.swapAndAddLiquidityPermit2(params, resolver);
+        router.swapAndAddLiquidityPermit2(params);
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
@@ -2548,9 +2521,7 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
             uint256 shareToMint,
             uint256 amount0ToDeposit,
             uint256 amount1ToDeposit
-        ) = router.getMintAmounts(
-            address(vault), 1e18, 2000e6, resolver
-        );
+        ) = router.getMintAmounts(address(vault), 1e18, 2000e6);
 
         assertEq(shareToMint, 1e18);
         assertEq(amount0ToDeposit, 1e18);

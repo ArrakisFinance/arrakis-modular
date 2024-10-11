@@ -2,6 +2,8 @@
 pragma solidity ^0.8.19;
 
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
+import {IArrakisLPModuleID} from
+    "../interfaces/IArrakisLPModuleID.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
@@ -21,11 +23,20 @@ import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 contract BunkerModule is
     IArrakisLPModule,
+    IArrakisLPModuleID,
     IBunkerModule,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable
 {
     using SafeERC20 for IERC20Metadata;
+
+    // #region public immutables.
+
+    // keccak256(abi.encode("BunkerModule"))
+    bytes32 public constant id =
+        0xce98d8396fff0b5125f78c5c5878c5c82596417dec23d9d52e0ed2377d14b9b8;
+
+    // #endregion public immutables.
 
     // #region public properties.
 
@@ -54,7 +65,9 @@ contract BunkerModule is
         _;
     }
 
-    constructor(address guardian_) {
+    constructor(
+        address guardian_
+    ) {
         if (guardian_ == address(0)) revert AddressZero();
 
         _guardian = guardian_;
@@ -65,7 +78,9 @@ contract BunkerModule is
     /// @notice initialize function to delegate call onced the beacon proxy is deployed,
     /// for initializing the bunker module.
     /// @param metaVault_ address of the meta vault.
-    function initialize(address metaVault_) external initializer {
+    function initialize(
+        address metaVault_
+    ) external initializer {
         if (metaVault_ == address(0)) revert AddressZero();
 
         metaVault = IArrakisMetaVault(metaVault_);
@@ -93,7 +108,9 @@ contract BunkerModule is
 
     // #endregion guardian functions.
 
-    function initializePosition(bytes calldata) external {}
+    function initializePosition(
+        bytes calldata
+    ) external {}
 
     /// @notice function used by metaVault to withdraw tokens from the strategy.
     /// @param receiver_ address that will receive tokens.
@@ -157,7 +174,9 @@ contract BunkerModule is
     }
 
     /// @notice function used to set manager fees.
-    function setManagerFeePIPS(uint256) external {
+    function setManagerFeePIPS(
+        uint256
+    ) external {
         revert NotImplemented();
     }
 

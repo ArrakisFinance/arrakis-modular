@@ -143,7 +143,7 @@ interface IArrakisLPModule {
     /// @return token0 as IERC20Metadata.
     function token0() external view returns (IERC20Metadata);
 
-    /// @notice function used to get token0 as IERC20Metadata.
+    /// @notice function used to get token1 as IERC20Metadata.
     /// @return token1 as IERC20Metadata.
     function token1() external view returns (IERC20Metadata);
 
