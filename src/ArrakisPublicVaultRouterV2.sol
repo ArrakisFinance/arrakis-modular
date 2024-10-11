@@ -52,14 +52,20 @@ contract ArrakisPublicVaultRouterV2 is
 
     // #region immutable properties.
 
+    /// @notice address of the native token.
     address public immutable nativeToken;
+    /// @notice permit2 contract address.
     IPermit2 public immutable permit2;
+    /// @notice arrakis meta vault factory contract address.
     IArrakisMetaVaultFactory public immutable factory;
+    /// @notice wrapped eth contract address.
     IWETH9 public immutable weth;
 
     // #endregion immutable properties.
 
+    /// @notice swap executor contract address.
     IRouterSwapExecutor public swapper;
+    /// @notice resolvers mapping.
     mapping(bytes32 => address) public resolvers;
 
     // #region modifiers.

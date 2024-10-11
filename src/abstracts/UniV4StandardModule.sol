@@ -105,6 +105,7 @@ abstract contract UniV4StandardModule is
 
     // #region immutable properties.
 
+    /// @notice function used to get the uniswap v4 pool manager.
     IPoolManager public immutable poolManager;
 
     // #endregion immutable properties.
@@ -117,16 +118,21 @@ abstract contract UniV4StandardModule is
 
     // #region public properties.
 
+    /// @notice module's metaVault as IArrakisMetaVault.
     IArrakisMetaVault public metaVault;
+    /// @notice module's token0 as IERC20Metadata.
     IERC20Metadata public token0;
+    /// @notice module's token1 as IERC20Metadata.
     IERC20Metadata public token1;
+    /// @notice boolean to know if the poolKey's currencies pair are inversed.
     bool public isInversed;
-    uint256 public managerBalance0;
-    uint256 public managerBalance1;
+    /// @notice manager fees share.
     uint256 public managerFeePIPS;
+    /// oracle that will be used to proctect rebalances against attacks.
     IOracleWrapper public oracle;
+    /// @notice max slippage that can occur during swap rebalance.
     uint24 public maxSlippage;
-
+    /// @notice pool's key of the module.
     PoolKey public poolKey;
 
     // #endregion public properties.
@@ -196,6 +202,18 @@ abstract contract UniV4StandardModule is
 
     // #endregion guardian functions.
 
+    /// @notice initialize function to delegate call onced the beacon proxy is deployed,
+    /// for initializing the uniswap v4 standard module.
+    /// @dev this function will deposit fund as left over on poolManager.
+    /// @param init0_ initial amount of token0 to provide to uniswap standard module.
+    /// @param init1_ initial amount of token1 to provide to valantis module.
+    /// @param isInversed_ boolean to check if the poolKey's currencies pair are inversed,
+    /// compared to the module's tokens pair.
+    /// @param poolKey_ pool key of the uniswap v4 pool that will be used by the module.
+    /// @param oracle_ address of the oracle used by the uniswap v4 standard module.
+    /// @param maxSlippage_ allowed to manager for rebalancing the inventory using
+    /// swap.
+    /// @param metaVault_ address of the meta vault
     function initialize(
         uint256 init0_,
         uint256 init1_,
@@ -252,6 +270,8 @@ abstract contract UniV4StandardModule is
         __Pausable_init();
     }
 
+    /// @notice function used to initialize the module
+    /// when a module switch happen
     function initializePosition(
         bytes calldata
     ) external onlyMetaVault {
@@ -264,6 +284,10 @@ abstract contract UniV4StandardModule is
 
     // #region only manager functions.
 
+    /// @notice function used to set the pool for the module.
+    /// @param poolKey_ pool key of the uniswap v4 pool that will be used by the module.
+    /// @param liquidityRanges_ list of liquidity ranges to be used by the module on the new pool.
+    /// @param swapPayload_ swap payload to be used during rebalance.
     function setPool(
         PoolKey calldata poolKey_,
         LiquidityRange[] calldata liquidityRanges_,
@@ -387,6 +411,13 @@ abstract contract UniV4StandardModule is
         emit LogWithdraw(receiver_, proportion_, amount0, amount1);
     }
 
+    /// @notice function used to rebalance the inventory of the module.
+    /// @param liquidityRanges_ list of liquidity ranges to be used by the module.
+    /// @param swapPayload_ swap payload to be used during rebalance.
+    /// @return amount0Minted amount of token0 minted.
+    /// @return amount1Minted amount of token1 minted.
+    /// @return amount0Burned amount of token0 burned.
+    /// @return amount1Burned amount of token1 burned.
     function rebalance(
         LiquidityRange[] memory liquidityRanges_,
         SwapPayload memory swapPayload_
@@ -643,6 +674,56 @@ abstract contract UniV4StandardModule is
         if (deviation > maxDeviation_) revert OverMaxDeviation();
     }
 
+    /// @notice function used to get manager token0 balance.
+    /// @dev amount of fees in token0 that manager have not taken yet.
+    /// @return managerFee0 amount of token0 that manager earned.
+    function managerBalance0()
+        external
+        view
+        returns (uint256 managerFee0)
+    {
+        PoolRange[] memory poolRanges = _getPoolRanges(_ranges.length);
+
+        (address _token0, address _token1) = _getTokens(poolKey);
+
+        (,, uint256 fee0,) = UnderlyingV4.totalUnderlyingWithFees(
+            UnderlyingPayload({
+                ranges: poolRanges,
+                poolManager: poolManager,
+                token0: _token0,
+                token1: _token1,
+                self: address(this)
+            })
+        );
+
+        managerFee0 = FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
+    }
+
+    /// @notice function used to get manager token1 balance.
+    /// @dev amount of fees in token1 that manager have not taken yet.
+    /// @return managerFee1 amount of token1 that manager earned.
+    function managerBalance1()
+        external
+        view
+        returns (uint256 managerFee1)
+    {
+        PoolRange[] memory poolRanges = _getPoolRanges(_ranges.length);
+
+        (address _token0, address _token1) = _getTokens(poolKey);
+
+        (,,, uint256 fee1) = UnderlyingV4.totalUnderlyingWithFees(
+            UnderlyingPayload({
+                ranges: poolRanges,
+                poolManager: poolManager,
+                token0: _token0,
+                token1: _token1,
+                self: address(this)
+            })
+        );
+
+        managerFee1 = FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
+    }
+
     // #endregion view functions.
 
     // #region internal functions.
@@ -756,8 +837,10 @@ abstract contract UniV4StandardModule is
                         fees = fees + feesAccrued;
                     }
                 }
-                withdraw_.fee0 = SafeCast.toUint256(int256(fees.amount0()));
-                withdraw_.fee1 = SafeCast.toUint256(int256(fees.amount1()));
+                withdraw_.fee0 =
+                    SafeCast.toUint256(int256(fees.amount0()));
+                withdraw_.fee1 =
+                    SafeCast.toUint256(int256(fees.amount1()));
             }
 
             // #endregion get liquidity for each positions and burn.
@@ -815,11 +898,12 @@ abstract contract UniV4StandardModule is
         /// fallback function.
         {
             {
-                // #region manager fees.
-                uint256 managerFee0 =
-                    FullMath.mulDiv(withdraw_.fee0, managerFeePIPS, PIPS);
-                uint256 managerFee1 =
-                    FullMath.mulDiv(withdraw_.fee1, managerFeePIPS, PIPS);
+                uint256 managerFee0 = FullMath.mulDiv(
+                    withdraw_.fee0, managerFeePIPS, PIPS
+                );
+                uint256 managerFee1 = FullMath.mulDiv(
+                    withdraw_.fee1, managerFeePIPS, PIPS
+                );
 
                 {
                     uint256 amount0ToTake;
@@ -833,13 +917,15 @@ abstract contract UniV4StandardModule is
                         amount1ToTake =
                             withdraw_.amount1 - managerFee1;
                     } else {
-                        amount0ToTake = withdraw_.amount0 - withdraw_.fee0
+                        amount0ToTake = withdraw_.amount0
+                            - withdraw_.fee0
                             + FullMath.mulDiv(
                                 withdraw_.fee0 - managerFee0,
                                 withdraw_.proportion,
                                 BASE
                             );
-                        amount1ToTake = withdraw_.amount1 - withdraw_.fee1
+                        amount1ToTake = withdraw_.amount1
+                            - withdraw_.fee1
                             + FullMath.mulDiv(
                                 withdraw_.fee1 - managerFee1,
                                 withdraw_.proportion,
@@ -881,7 +967,6 @@ abstract contract UniV4StandardModule is
                         manager, managerFee0, managerFee1
                     );
                 }
-
                 if (managerFee0 > 0) {
                     withdraw_.poolManager.take(
                         _poolKey.currency0, manager, managerFee0
