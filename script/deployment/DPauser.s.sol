@@ -9,10 +9,11 @@ import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
 
 import {Pauser} from "../../src/Pauser.sol";
 
-// Pauser : 0xfae375Bc5060A51343749CEcF5c8ABe65F11cCAC
+// Pauser : 0xfae375Bc5060A51343749CEcF5c8ABe65F11cCAC.
+// Pauser v2 : 0x700a1cdA1495C1B34c4962e9742A8A8832aAc03A.
 contract DPauser is CreateXScript {
     uint88 public version =
-        uint88(uint256(keccak256(abi.encode("D Pauser version 1"))));
+        uint88(uint256(keccak256(abi.encode("D Pauser version 2"))));
 
     function setUp() public {}
 

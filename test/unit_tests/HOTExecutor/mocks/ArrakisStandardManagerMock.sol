@@ -6,4 +6,10 @@ contract ArrakisStandardManagerMock {
         address vault_,
         bytes[] calldata payloads_
     ) external {}
+
+    function setModule(
+        address vault_,
+        address module_,
+        bytes[] calldata payloads_
+    ) external {}
 }
