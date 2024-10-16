@@ -88,6 +88,44 @@ contract HOTExecutorTest is TestWrapper {
 
     // #endregion test setW3F.
 
+    // #region test setModule.
+
+    function testSetModuleOnlyOwnerOrW3F() public {
+        address notOwner =
+            vm.addr(uint256(keccak256(abi.encode("Not Owner"))));
+        address module =
+            vm.addr(uint256(keccak256(abi.encode("Module"))));
+        bytes[] memory payloads = new bytes[](0);
+
+        vm.expectRevert(IHOTExecutor.OnlyOwnerOrW3F.selector);
+        vm.prank(notOwner);
+        executor.setModule(vault, module, payloads);
+    }
+
+    function testSetModule() public {
+        address notOwner =
+            vm.addr(uint256(keccak256(abi.encode("Not Owner"))));
+        address module =
+            vm.addr(uint256(keccak256(abi.encode("Module"))));
+        bytes[] memory payloads = new bytes[](0);
+
+        vm.prank(owner);
+        executor.setModule(vault, module, payloads);
+    }
+
+    function testSetModuleBis() public {
+        address notOwner =
+            vm.addr(uint256(keccak256(abi.encode("Not Owner"))));
+        address module =
+            vm.addr(uint256(keccak256(abi.encode("Module"))));
+        bytes[] memory payloads = new bytes[](0);
+
+        vm.prank(w3f);
+        executor.setModule(vault, module, payloads);
+    }
+
+    // #endregion test setModule.
+
     // #region test rebalance.
 
     function testRebalanceOnlyW3F() public {
@@ -100,7 +138,7 @@ contract HOTExecutorTest is TestWrapper {
         bool zeroForOne = true;
 
         vm.prank(caller);
-        vm.expectRevert(IHOTExecutor.OnlyW3F.selector);
+        vm.expectRevert(IHOTExecutor.OnlyOwnerOrW3F.selector);
         executor.rebalance(
             vault, payloads, expectedReservesAmounts, zeroForOne
         );
@@ -131,7 +169,7 @@ contract HOTExecutorTest is TestWrapper {
         uint256 expectedReservesAmounts = 1 ether;
         bool zeroForOne = false;
 
-        vm.prank(w3f);
+        vm.prank(owner);
         vm.expectRevert(
             IHOTExecutor.UnexpectedReservesAmount1.selector
         );

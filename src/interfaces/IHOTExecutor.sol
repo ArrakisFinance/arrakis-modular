@@ -8,7 +8,7 @@ interface IHOTExecutor {
     error SameW3f();
     error UnexpectedReservesAmount0();
     error UnexpectedReservesAmount1();
-    error OnlyW3F();
+    error OnlyOwnerOrW3F();
 
     // #endregion errors.
 
@@ -19,6 +19,8 @@ interface IHOTExecutor {
     // #endregion events.
 
     function setW3f(address newW3f_) external;
+
+    function setModule(address vault_, address module_, bytes[] calldata payloads_) external;
 
     function rebalance(
         address vault_,

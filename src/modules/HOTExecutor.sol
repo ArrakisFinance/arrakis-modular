@@ -15,6 +15,13 @@ contract HOTExecutor is IHOTExecutor, Ownable {
 
     address public w3f;
 
+    modifier onlyOwnerOrW3F() {
+        if (msg.sender != owner() && msg.sender != w3f) {
+            revert OnlyOwnerOrW3F();
+        }
+        _;
+    }
+
     constructor(address manager_, address w3f_, address owner_) {
         if (
             manager_ == address(0) || w3f_ == address(0)
@@ -30,7 +37,9 @@ contract HOTExecutor is IHOTExecutor, Ownable {
         emit LogSetW3f(w3f_);
     }
 
-    function setW3f(address newW3f_) external onlyOwner {
+    function setW3f(
+        address newW3f_
+    ) external onlyOwner {
         if (newW3f_ == address(0)) {
             revert AddressZero();
         }
@@ -44,16 +53,22 @@ contract HOTExecutor is IHOTExecutor, Ownable {
         emit LogSetW3f(newW3f_);
     }
 
+    function setModule(
+        address vault_,
+        address module_,
+        bytes[] calldata payloads_
+    ) external onlyOwnerOrW3F {
+        IArrakisStandardManager(manager).setModule(
+            vault_, module_, payloads_
+        );
+    }
+
     function rebalance(
         address vault_,
         bytes[] calldata payloads_,
         uint256 expectedReservesAmount_,
         bool zeroToOne_
-    ) external {
-        if (msg.sender != w3f) {
-            revert OnlyW3F();
-        }
-
+    ) external onlyOwnerOrW3F {
         uint256 length = payloads_.length;
         for (uint256 i; i < length; i++) {
             bytes4 selector = bytes4(payloads_[i][0:4]);
