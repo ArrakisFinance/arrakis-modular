@@ -52,15 +52,15 @@ NOTE : deployed on mainnet, arbitrum, base and sepolia.
 ##### Structs
 
 __AddLiquidityData__ :
-- amount0Max : maximum amount of token0 user want to use to add liquidity into the vault.
-- amount1Max : maximum amount of token1 user want to use to add liquidity into the vault.
-- amount0Min : amount of token0 needed to mint shares should be higher or equal to this number.
-- amount1Min : amount of token1 needed to mint shares should be higher or equal to this number.
-- amountSharesMin : amount of shares of vault token minted should be higher or equal to this number.
-- vault : address of the vault where user want to mint shares.
-- receiver : address that will receive the shares of vault tokens.
+- `amount0Max` : maximum amount of token0 user want to use to add liquidity into the vault.
+- `amount1Max` : maximum amount of token1 user want to use to add liquidity into the vault.
+- `amount0Min` : amount of token0 needed to mint shares should be higher or equal to this number.
+- `amount1Min` : amount of token1 needed to mint shares should be higher or equal to this number.
+- `amountSharesMin` : amount of shares of vault token minted should be higher or equal to this number.
+- `vault` : address of the vault where user want to mint shares.
+- `receiver` : address that will receive the shares of vault tokens.
 
-__amount0Min__, __amount1Min__ and __amountSharesMin__ will help us to protect against vault's underlying tokens ratio manipulation by an attacker. In the same time, it's also possible that the ratio change a bit between our view call to __getMintAmounts__ and the router __addLiquidity__ function call, due to normal activity of others user. So these three values __amount0Min__, __amount1Min__ and __amountSharesMin__ should be wisely choosen.
+`amount0Min`, `amount1Min` and `amountSharesMin` will help us to protect against vault's underlying tokens ratio manipulation by an attacker. In the same time, it's also possible that the ratio change a bit between our view call to __getMintAmounts__ and the router __addLiquidity__ function call, due to normal activity of others user. So these three values `amount0Min`, `amount1Min` and `amountSharesMin` should be wisely choosen.
 
 ##### Step 1 : Call getMintAmounts
 
@@ -71,7 +71,7 @@ The function __getMintAmounts__ will give back three values :
 - amount0ToDeposit : amount of token0 to deposit into the vault.
 - amount1ToDeposit : amount of token1 to deposit into the vault.
 
-##### Step 2 : Construct __AddLiquidityData__
+##### Step 2 : Construct AddLiquidityData
 
 We need now to construct __AddLiquidityData__ struct to call __addLiquidity__ function of the router. 
 - `amount0Max` will be equal to `amount0` inputed by user.
