@@ -336,11 +336,11 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         IArrakisPublicVaultRouterV2(router).addLiquidity(
             AddLiquidityData({
-                amount0Max: amount0,
-                amount1Max: amount1,
+                amount0Max: init0 / 3,
+                amount1Max: init1,
                 amount0Min: amount0 * 99 / 100,
                 amount1Min: amount1 * 99 / 100,
-                amountSharesMin: sharesToMint,
+                amountSharesMin: sharesToMint * 99 / 100,
                 vault: vault,
                 receiver: user
             })
