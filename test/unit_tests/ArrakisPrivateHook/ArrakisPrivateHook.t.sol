@@ -8,7 +8,7 @@ import {TestWrapper} from "../../utils/TestWrapper.sol";
 
 import {IArrakisPrivateHook} from
     "../../../src/interfaces/IArrakisPrivateHook.sol";
-import {ArrakisPrivateHook} from
+import {ArrakisPrivateHook, LPFeeLibrary} from
     "../../../src/hooks/ArrakisPrivateHook.sol";
 import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
@@ -40,8 +40,8 @@ contract ArrakisPrivateHookTest is TestWrapper {
     address public module;
     address public vault;
     address public manager;
-    uint24 public fee;
-    address public poolManager;
+    uint24 public zeroForOneFee;
+    uint24 public oneForZeroFee;
     address public executor;
     // #endregion constant properties.
 
@@ -53,10 +53,6 @@ contract ArrakisPrivateHookTest is TestWrapper {
         ArrakisStandardManagerMock(manager).setExecutor(executor);
         // #endregion setup manager.
 
-        // #region setup poolManager.
-        poolManager = address(new PoolManagerMock());
-        // #endregion setup poolManager.
-
         // #region setup vault.
         vault = address(new ArrakisMetaVaultMock());
         ArrakisMetaVaultMock(vault).setManager(manager);
@@ -67,7 +63,7 @@ contract ArrakisPrivateHookTest is TestWrapper {
         ArrakisLPModuleMock(module).setVault(vault);
         // #endregion setup module.
 
-        hook = address(new ArrakisPrivateHook(module, poolManager));
+        hook = address(new ArrakisPrivateHook(module));
     }
 
     // #region test constructor.
@@ -75,25 +71,12 @@ contract ArrakisPrivateHookTest is TestWrapper {
     function testConstructorModuleAddressZero() public {
         vm.expectRevert(IArrakisPrivateHook.AddressZero.selector);
         hook =
-            address(new ArrakisPrivateHook(address(0), poolManager));
-    }
-
-    function testConstructorPoolManagerAddressZero() public {
-        vm.expectRevert(IArrakisPrivateHook.AddressZero.selector);
-        hook = address(new ArrakisPrivateHook(module, address(0)));
-    }
-
-    function testConstructorPoolManagerAndModuleAddressZeros()
-        public
-    {
-        vm.expectRevert(IArrakisPrivateHook.AddressZero.selector);
-        hook = address(new ArrakisPrivateHook(address(0), address(0)));
+            address(new ArrakisPrivateHook(address(0)));
     }
 
     function testConstructor() public {
         assertEq(IArrakisPrivateHook(hook).module(), module);
         assertEq(IArrakisPrivateHook(hook).manager(), manager);
-        assertEq(IArrakisPrivateHook(hook).poolManager(), poolManager);
         assertEq(IArrakisPrivateHook(hook).vault(), vault);
     }
 
@@ -239,10 +222,47 @@ contract ArrakisPrivateHookTest is TestWrapper {
         IPoolManager.SwapParams memory params;
         bytes memory hookData;
 
-        vm.expectRevert(IArrakisPrivateHook.NotImplemented.selector);
-        IHooks(hook).beforeSwap(
+        params.zeroForOne = true;
+
+        // #region set fees.
+
+        zeroForOneFee = 1_000;
+        oneForZeroFee = 100_000;
+
+        vm.prank(executor);
+        IArrakisPrivateHook(hook).setFees(zeroForOneFee, oneForZeroFee);
+
+        // #endregion set fees.
+        
+        (,,uint24 lpFeeOverride) = IHooks(hook).beforeSwap(
             sender, key, params, hookData
         );
+
+        assertEq(lpFeeOverride, zeroForOneFee | LPFeeLibrary.OVERRIDE_FEE_FLAG);
+    }
+
+    function testBeforeSwapBis() public {
+        address sender =
+            vm.addr(uint256(keccak256(abi.encode("Sender"))));
+        PoolKey memory key;
+        IPoolManager.SwapParams memory params;
+        bytes memory hookData;
+
+        // #region set fees.
+
+        zeroForOneFee = 1_000;
+        oneForZeroFee = 100_000;
+
+        vm.prank(executor);
+        IArrakisPrivateHook(hook).setFees(zeroForOneFee, oneForZeroFee);
+
+        // #endregion set fees.
+        
+        (,,uint24 lpFeeOverride) = IHooks(hook).beforeSwap(
+            sender, key, params, hookData
+        );
+
+        assertEq(lpFeeOverride, oneForZeroFee | LPFeeLibrary.OVERRIDE_FEE_FLAG);
     }
 
     // #endregion test beforeSwap.
@@ -301,29 +321,48 @@ contract ArrakisPrivateHookTest is TestWrapper {
 
     // #endregion test afterDonate.
 
-    // #region set fee.
+    // #region set fees.
 
-    function testSetFeeOnlyExecutor() public {
+    function testSetFeesOnlyExecutor() public {
         address notExecutor = vm.addr(uint256(keccak256(abi.encode("Not Executor"))));
-        fee = 1000;
-
-        PoolKey memory key;
+        zeroForOneFee = 1_000;
+        oneForZeroFee = 10_000;
 
         vm.prank(notExecutor);
         vm.expectRevert(IArrakisPrivateHook.OnlyVaultExecutor.selector);
-        IArrakisPrivateHook(hook).setFee(key, fee);
+        IArrakisPrivateHook(hook).setFees(zeroForOneFee, oneForZeroFee);
     }
 
-    function testSetFee() public {
-        fee = 1000;
+    function testSetFeesZeroForOneFeeNotValid() public {
+        zeroForOneFee = 1_000_010;
+        oneForZeroFee = 1_000;
+
+        vm.prank(executor);
+        vm.expectRevert(abi.encodeWithSelector(LPFeeLibrary.LPFeeTooLarge.selector, zeroForOneFee));
+        IArrakisPrivateHook(hook).setFees(zeroForOneFee, oneForZeroFee);
+    }
+
+    function testSetFeesOneForZeroFeeNotValid() public {
+        zeroForOneFee = 1_000;
+        oneForZeroFee = 1_000_001;
+
+        vm.prank(executor);
+        vm.expectRevert(abi.encodeWithSelector(LPFeeLibrary.LPFeeTooLarge.selector, oneForZeroFee));
+        IArrakisPrivateHook(hook).setFees(zeroForOneFee, oneForZeroFee);
+    }
+
+    function testSetFees() public {
+        zeroForOneFee = 1_000;
+        oneForZeroFee = 100_000;
 
         PoolKey memory key;
 
         vm.prank(executor);
-        IArrakisPrivateHook(hook).setFee(key, fee);
+        IArrakisPrivateHook(hook).setFees(zeroForOneFee, oneForZeroFee);
 
-        assertEq(PoolManagerMock(poolManager).fee(), fee);
+        assertEq(IArrakisPrivateHook(hook).zeroForOneFee(), zeroForOneFee);
+        assertEq(IArrakisPrivateHook(hook).oneForZeroFee(), oneForZeroFee);
     }
  
-    // #endregion set fee.
+    // #endregion set fees.
 }

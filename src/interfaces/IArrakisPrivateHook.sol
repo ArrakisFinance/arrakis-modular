@@ -15,13 +15,13 @@ interface IArrakisPrivateHook {
 
     // #region events.
 
-    event SetFee(uint24 fee);
+    event SetFees(uint24 zeroForOneFee, uint24 oneForZeroFee);
 
     // #endregion events.
 
-    function setFee(
-        PoolKey calldata poolKey_,
-        uint24 fee_
+    function setFees(
+        uint24 zeroForOneFee_,
+        uint24 oneForZeroFee_
     ) external;
 
     // #region view functions.
@@ -29,8 +29,8 @@ interface IArrakisPrivateHook {
     function module() external view returns (address);
     function vault() external view returns (address);
     function manager() external view returns (address);
-    function fee() external view returns (uint24);
-    function poolManager() external view returns (address);
+    function zeroForOneFee() external view returns (uint24);
+    function oneForZeroFee() external view returns (uint24);
 
     // #endregion view functions.
 }

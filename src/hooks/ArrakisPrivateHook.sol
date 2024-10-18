@@ -17,27 +17,29 @@ import {BalanceDelta} from
 import {BeforeSwapDelta} from
     "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
+import {LPFeeLibrary} from "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
 
 contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
+
+    using LPFeeLibrary for uint24;
 
     // #region immutable properties.
 
     address public immutable module;
-    address public immutable poolManager;
     address public immutable vault;
     address public immutable manager;
 
     // #endregion immutable properties.
 
-    uint24 public fee;
+    uint24 internal _zeroForOneFee;
+    uint24 internal _oneForZeroFee;
 
-    constructor(address module_, address poolManager_) {
-        if (module_ == address(0) || poolManager_ == address(0)) {
+    constructor(address module_) {
+        if (module_ == address(0)) {
             revert AddressZero();
         }
 
         module = module_;
-        poolManager = poolManager_;
 
         IArrakisMetaVault _vault =
             IArrakisLPModule(module).metaVault();
@@ -45,9 +47,9 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
         manager = _vault.manager();
     }
 
-    function setFee(
-        PoolKey calldata poolKey_,
-        uint24 fee_
+    function setFees(
+        uint24 zeroForOneFee_,
+        uint24 oneForZeroFee_
     ) external {
         (,,,, address executor,,,) =
             IArrakisStandardManager(manager).vaultInfo(vault);
@@ -56,10 +58,19 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
             revert OnlyVaultExecutor();
         }
 
-        fee = fee_;
-        IPoolManager(poolManager).updateDynamicLPFee(poolKey_, fee_);
+        // #region checks if fees are valid.
 
-        emit SetFee(fee_);
+        zeroForOneFee_.validate();
+        oneForZeroFee_.validate();
+
+        // #endregion checks if fees are valid.
+
+        _zeroForOneFee = zeroForOneFee_ | LPFeeLibrary.OVERRIDE_FEE_FLAG;
+        _oneForZeroFee = oneForZeroFee_ | LPFeeLibrary.OVERRIDE_FEE_FLAG;
+
+        // IPoolManager(poolManager).updateDynamicLPFee(poolKey_, fee_);
+
+        emit SetFees(zeroForOneFee_, oneForZeroFee_);
     }
 
     /// @notice The hook called before the state of a pool is initialized.
@@ -146,10 +157,11 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
     function beforeSwap(
         address,
         PoolKey calldata,
-        IPoolManager.SwapParams calldata,
+        IPoolManager.SwapParams calldata swapParams_,
         bytes calldata
-    ) external virtual returns (bytes4, BeforeSwapDelta, uint24) {
-        revert NotImplemented();
+    ) external virtual returns (bytes4 funcSelector, BeforeSwapDelta, uint24 lpFeeOverride) {
+        funcSelector = IHooks.beforeSwap.selector;
+        lpFeeOverride = swapParams_.zeroForOne ? _zeroForOneFee : _oneForZeroFee;
     }
 
     /// @notice The hook called after a swap.
@@ -187,4 +199,16 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
     ) external virtual returns (bytes4) {
         revert NotImplemented();
     }
+
+    // #region view functions.
+
+    function zeroForOneFee() external view returns (uint24) {
+        return _zeroForOneFee.removeOverrideFlag();
+    }
+
+    function oneForZeroFee() external view returns (uint24) {
+        return _oneForZeroFee.removeOverrideFlag();
+    }
+
+    // #endregion view functions.
 }
