@@ -76,6 +76,18 @@ contract HOTCoordinator is IHOTCoordinator, Ownable {
         uint256 maxToken0VolumeToQuote_,
         uint256 maxToken1VolumeToQuote_
     ) external onlyResponder {
+        (
+            uint256 maxToken0VolumeToQuote,
+            uint256 maxToken1VolumeToQuote
+        ) = IHOT(hot_).maxTokenVolumes();
+
+        if (
+            maxToken0VolumeToQuote_ >= maxToken0VolumeToQuote
+                || maxToken1VolumeToQuote_ >= maxToken1VolumeToQuote
+        ) {
+            revert IncreaseMaxVolume();
+        }
+
         IHOT(hot_).setMaxTokenVolumes(
             maxToken0VolumeToQuote_, maxToken1VolumeToQuote_
         );

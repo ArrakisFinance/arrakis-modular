@@ -9,6 +9,7 @@ interface IHOTCoordinator {
     error SameResponder();
     error EmptyData();
     error CallFailed();
+    error IncreaseMaxVolume();
 
     // #endregion errors.
 
@@ -30,10 +31,7 @@ interface IHOTCoordinator {
         uint256 maxToken0VolumeToQuote_,
         uint256 maxToken1VolumeToQuote_
     ) external;
-    function setPause(
-        address hot_,
-        bool value_
-    ) external;
+    function setPause(address hot_, bool value_) external;
 
     // #endregion functions.
 
