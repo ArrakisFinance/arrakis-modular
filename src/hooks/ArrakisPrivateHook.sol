@@ -16,7 +16,6 @@ import {BalanceDelta} from
     "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {BeforeSwapDelta} from
     "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
-import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {LPFeeLibrary} from "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
 
 contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
