@@ -82,8 +82,8 @@ contract HOTCoordinator is IHOTCoordinator, Ownable {
         ) = IHOT(hot_).maxTokenVolumes();
 
         if (
-            maxToken0VolumeToQuote_ >= maxToken0VolumeToQuote
-                || maxToken1VolumeToQuote_ >= maxToken1VolumeToQuote
+            maxToken0VolumeToQuote_ > maxToken0VolumeToQuote
+                || maxToken1VolumeToQuote_ > maxToken1VolumeToQuote
         ) {
             revert IncreaseMaxVolume();
         }

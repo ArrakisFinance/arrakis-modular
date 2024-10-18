@@ -136,18 +136,12 @@ contract HOTCoordinatorTest is TestWrapper {
         HOTCoordinator(hotCoordinator).setMaxTokenVolumes(hot, 0, 0);
     }
 
-    function testSetMaxTokenVolumesIncreaseMaxVolume() public {
-        vm.prank(responder);
-        vm.expectRevert(IHOTCoordinator.IncreaseMaxVolume.selector);
-        HOTCoordinator(hotCoordinator).setMaxTokenVolumes(hot, 0, 0);
-    }
-
     function testSetMaxTokenVolumesIncreaseMaxVolumeBis() public {
         HOTMock(hot).setTokenVolumes(1000, 0);
 
         vm.prank(responder);
         vm.expectRevert(IHOTCoordinator.IncreaseMaxVolume.selector);
-        HOTCoordinator(hotCoordinator).setMaxTokenVolumes(hot, 0, 0);
+        HOTCoordinator(hotCoordinator).setMaxTokenVolumes(hot, 10000, 0);
     }
 
     function testSetMaxTokenVolumesIncreaseMaxVolume2Bis() public {
@@ -155,7 +149,7 @@ contract HOTCoordinatorTest is TestWrapper {
 
         vm.prank(responder);
         vm.expectRevert(IHOTCoordinator.IncreaseMaxVolume.selector);
-        HOTCoordinator(hotCoordinator).setMaxTokenVolumes(hot, 0, 0);
+        HOTCoordinator(hotCoordinator).setMaxTokenVolumes(hot, 0, 2000);
     }
 
     function testSetMaxTokenVolumes() public {
