@@ -19,18 +19,15 @@ interface IUniV4StandardModule {
     error Currency0DtToken1(address currency0, address token1);
     error SqrtPriceZero();
     error OnlyPoolManager();
-    error OnlyModuleCaller();
     error InvalidCurrencyDelta();
     error RangeShouldBeActive(int24 tickLower, int24 tickUpper);
     error OverBurning();
     error TicksMisordered(int24 tickLower, int24 tickUpper);
     error TickLowerOutOfBounds(int24 tickLower);
     error TickUpperOutOfBounds(int24 tickUpper);
-    error OnlyMetaVaultOrManager();
     error SamePool();
     error NoRemoveLiquidityHooks();
     error OverMaxDeviation();
-    error CallBackNotSupported();
     error NativeCoinCannotBeToken1();
     error MaxSlippageGtTenPercent();
     error ExpectedMinReturnTooLow();

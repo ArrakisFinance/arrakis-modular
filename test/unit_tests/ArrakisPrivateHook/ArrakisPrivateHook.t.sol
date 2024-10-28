@@ -167,26 +167,14 @@ contract ArrakisPrivateHookTest is TestWrapper {
 
     // #region test beforeRemoveLiquidity.
 
-    function testBeforeRemoveLiquidityOnlyModule() public {
+    function testBeforeRemoveLiquidityNotImplemented() public {
         address sender =
             vm.addr(uint256(keccak256(abi.encode("Sender"))));
         PoolKey memory key;
         IPoolManager.ModifyLiquidityParams memory params;
         bytes memory hookData;
 
-        vm.expectRevert(IArrakisPrivateHook.OnlyModule.selector);
-        IHooks(hook).beforeRemoveLiquidity(
-            sender, key, params, hookData
-        );
-    }
-
-    function testBeforeRemoveLiquidity() public {
-        address sender = module;
-        PoolKey memory key;
-        IPoolManager.ModifyLiquidityParams memory params;
-        bytes memory hookData;
-
-        vm.prank(module);
+        vm.expectRevert(IArrakisPrivateHook.NotImplemented.selector);
         IHooks(hook).beforeRemoveLiquidity(
             sender, key, params, hookData
         );
