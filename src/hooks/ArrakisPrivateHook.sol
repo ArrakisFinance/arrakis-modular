@@ -124,7 +124,6 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
     }
 
     /// @notice The hook called before liquidity is removed.
-    /// @param sender The initial msg.sender for the remove liquidity call.
     function beforeRemoveLiquidity(
         address,
         PoolKey calldata,

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
-import {UniV4StandardModule} from
-    "../abstracts/UniV4StandardModule.sol";
+import {UniV4StandardModuleRFQ} from
+    "../abstracts/UniV4StandardModuleRFQ.sol";
 import {IArrakisLPModulePrivate} from
     "../interfaces/IArrakisLPModulePrivate.sol";
 
@@ -25,8 +25,9 @@ import {SafeERC20} from
 
 /// @notice this module can only set uni v4 pool that have generic hook,
 /// that don't require specific action to become liquidity provider.
-contract UniV4StandardModulePrivate is
-    UniV4StandardModule,
+/// and can use is left over for rfq.
+contract UniV4StandardModuleRFQPrivate is
+    UniV4StandardModuleRFQ,
     IArrakisLPModulePrivate
 {
     using PoolIdLibrary for PoolKey;
@@ -34,18 +35,14 @@ contract UniV4StandardModulePrivate is
     using Address for address payable;
     using SafeERC20 for IERC20Metadata;
 
-    // #region public constants.
-
-    /// @dev id = keccak256(abi.encode("UniV4StandardModulePrivate"))
+    /// @dev id = keccak256(abi.encode("UniV4StandardModuleRFQPrivate"))
     bytes32 public constant id =
-        0xae9c8e22b1f7ab201e144775cd6f848c3c1b0a82315571de8c67ce32ca9a7d44;
-
-    // #endregion public constants.
+        0xd317c9fb3bb799edd5a682eb238b339a5777fe7d1fa37c6aa468f53005ac9876;
 
     constructor(
         address poolManager_,
         address guardian_
-    ) UniV4StandardModule(poolManager_, guardian_) {}
+    ) UniV4StandardModuleRFQ(poolManager_, guardian_) {}
 
     /// @notice fund function for private vault.
     /// @param depositor_ address that will provide the tokens.
@@ -73,6 +70,18 @@ contract UniV4StandardModulePrivate is
 
         (uint256 amount0, uint256 amount1) =
             abi.decode(result, (uint256, uint256));
+
+        if(poolKey.currency0.isAddressZero()) {
+            if(isInversed) {
+                if(amount1 != msg.value) {
+                    revert("Invalid msg.value");
+                }
+            } else {
+                if(amount0 != msg.value) {
+                    revert("Invalid msg.value");
+                }
+            }
+        }
 
         emit LogFund(depositor_, amount0, amount1);
     }
@@ -115,60 +124,18 @@ contract UniV4StandardModulePrivate is
             // #region get how much left over we have on poolManager and mint.
 
             if (amount0_ > 0) {
-                address _token0 = address(token0);
-                Currency currency0;
-                if (_token0 == NATIVE_COIN) {
-                    currency0 = Currency.wrap(address(0));
-                } else {
-                    currency0 = Currency.wrap(_token0);
-                }
-
-                poolManager.mint(
-                    address(this), currency0.toId(), amount0_
-                );
-
-                poolManager.sync(currency0);
-                if (currency0.isAddressZero()) {
-                    poolManager.settle{value: amount0_}();
-                    uint256 ethLeftBalance = address(this).balance;
-                    if (ethLeftBalance > 0) {
-                        payable(depositor_).sendValue(ethLeftBalance);
-                    }
-                } else {
-                    IERC20Metadata(Currency.unwrap(currency0))
-                        .safeTransferFrom(
-                        depositor_, address(poolManager), amount0_
+                if(address(token0) != NATIVE_COIN) {
+                    token0.safeTransferFrom(
+                        depositor_, address(this), amount0_
                     );
-                    poolManager.settle();
                 }
             }
 
             if (amount1_ > 0) {
-                address _token1 = address(token1);
-                Currency currency1;
-                if (_token1 == NATIVE_COIN) {
-                    currency1 = Currency.wrap(address(0));
-                } else {
-                    currency1 = Currency.wrap(_token1);
-                }
-
-                poolManager.mint(
-                    address(this), currency1.toId(), amount1_
-                );
-
-                poolManager.sync(currency1);
-                if (currency1.isAddressZero()) {
-                    poolManager.settle{value: amount1_}();
-                    uint256 ethLeftBalance = address(this).balance;
-                    if (ethLeftBalance > 0) {
-                        payable(depositor_).sendValue(ethLeftBalance);
-                    }
-                } else {
-                    IERC20Metadata(Currency.unwrap(currency1))
-                        .safeTransferFrom(
-                        depositor_, address(poolManager), amount1_
+                if(address(token1) != NATIVE_COIN) {
+                    token1.safeTransferFrom(
+                        depositor_, address(this), amount1_
                     );
-                    poolManager.settle();
                 }
             }
 

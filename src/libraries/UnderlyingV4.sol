@@ -67,24 +67,11 @@ library UnderlyingV4 {
             }
         }
 
-        uint256 leftOver0 = underlyingPayload_.poolManager.balanceOf(
-            underlyingPayload_.self,
-            IUniV4ModuleBase(underlyingPayload_.self).poolKey()
-                .currency0
-                .toId()
-        );
-        uint256 leftOver1 = underlyingPayload_.poolManager.balanceOf(
-            underlyingPayload_.self,
-            IUniV4ModuleBase(underlyingPayload_.self).poolKey()
-                .currency1
-                .toId()
-        );
-
         amount0 += FullMath.mulDivRoundingUp(
-            proportion_, fee0 + leftOver0, BASE
+            proportion_, fee0 + underlyingPayload_.leftOver0, BASE
         );
         amount1 += FullMath.mulDivRoundingUp(
-            proportion_, fee1 + leftOver1, BASE
+            proportion_, fee1 + underlyingPayload_.leftOver1, BASE
         );
     }
 
@@ -385,16 +372,7 @@ library UnderlyingV4 {
             }
         }
 
-        uint256 leftOver0 = underlyingPayload_.poolManager.balanceOf(
-            underlyingPayload_.self,
-            Currency.wrap(underlyingPayload_.token0).toId()
-        );
-        uint256 leftOver1 = underlyingPayload_.poolManager.balanceOf(
-            underlyingPayload_.self,
-            Currency.wrap(underlyingPayload_.token1).toId()
-        );
-
-        amount0 += fee0 + leftOver0;
-        amount1 += fee1 + leftOver1;
+        amount0 += fee0 + underlyingPayload_.leftOver0;
+        amount1 += fee1 + underlyingPayload_.leftOver1;
     }
 }

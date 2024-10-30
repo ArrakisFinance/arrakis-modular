@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
-import {UniV4StandardModule} from
-    "../abstracts/UniV4StandardModule.sol";
+import {UniV4StandardModuleRFQ} from
+    "../abstracts/UniV4StandardModuleRFQ.sol";
 import {IArrakisLPModulePublic} from
     "../interfaces/IArrakisLPModulePublic.sol";
 
@@ -40,8 +40,9 @@ import {SafeERC20} from
 
 /// @notice this module can only set uni v4 pool that have generic hook,
 /// that don't require specific action to become liquidity provider.
-contract UniV4StandardModulePublic is
-    UniV4StandardModule,
+/// and can use is left over for rfq.
+contract UniV4StandardModuleRFQPublic is
+    UniV4StandardModuleRFQ,
     IArrakisLPModulePublic
 {
     using PoolIdLibrary for PoolKey;
@@ -50,18 +51,18 @@ contract UniV4StandardModulePublic is
     using Address for address payable;
     using SafeERC20 for IERC20Metadata;
 
-    // #region public constants.
+    // #region constants.
 
-    /// @dev id = keccak256(abi.encode("UniV4StandardModulePublic"))
+    /// @dev id = keccak256(abi.encode("UniV4StandardModuleRFQPublic"))
     bytes32 public constant id =
-        0x22f7eb8a1e047f6c492e05813f6e9c6cb1563d057a61278b8e0ae7977af1ac3f;
+        0xaae76f081eb3a4966fde1f3eb45d4c79db9e6b66bfa1261892c86435d0dcbae7;
 
-    // #endregion public constants.
+    // #endregion constants.
 
     constructor(
-        address poolManager_,
+        address poolManager,
         address guardian_
-    ) UniV4StandardModule(poolManager_, guardian_) {}
+    ) UniV4StandardModuleRFQ(poolManager, guardian_) {}
 
     /// @notice function used by metaVault to deposit tokens into the strategy.
     /// @param depositor_ address that will provide the tokens.
@@ -93,6 +94,18 @@ contract UniV4StandardModulePublic is
         bytes memory result = poolManager.unlock(data);
 
         (amount0, amount1) = abi.decode(result, (uint256, uint256));
+
+        if(poolKey.currency0.isAddressZero()) {
+            if(isInversed) {
+                if(amount1 != msg.value) {
+                    revert("Invalid msg.value");
+                }
+            } else {
+                if(amount0 != msg.value) {
+                    revert("Invalid msg.value");
+                }
+            }
+        }
 
         emit LogDeposit(depositor_, proportion_, amount0, amount1);
     }
@@ -187,16 +200,16 @@ contract UniV4StandardModulePublic is
                 uint256 extraCollect1 = fee1 - managerFee1;
 
                 if (extraCollect0 > 0) {
-                    poolManager.mint(
+                    poolManager.take(
+                        _poolKey.currency0,
                         address(this),
-                        CurrencyLibrary.toId(_poolKey.currency0),
                         extraCollect0
                     );
                 }
                 if (extraCollect1 > 0) {
-                    poolManager.mint(
+                    poolManager.take(
+                        _poolKey.currency1,
                         address(this),
-                        CurrencyLibrary.toId(_poolKey.currency1),
                         extraCollect1
                     );
                 }
@@ -245,6 +258,9 @@ contract UniV4StandardModulePublic is
             }
         }
 
+        uint256 leftOver0ToMint;
+        uint256 leftOver1ToMint;
+
         // #endregion get liquidity for each positions and mint.
         {
             // #region get how much left over we have on poolManager and mint.
@@ -258,26 +274,26 @@ contract UniV4StandardModulePublic is
             }
 
             // rounding up during mint only.
-            uint256 leftOver0ToMint = FullMath.mulDivRoundingUp(
+            leftOver0ToMint = FullMath.mulDivRoundingUp(
                 leftOver0, proportion_, BASE
             );
-            uint256 leftOver1ToMint = FullMath.mulDivRoundingUp(
+            leftOver1ToMint = FullMath.mulDivRoundingUp(
                 leftOver1, proportion_, BASE
             );
 
             if (leftOver0ToMint > 0) {
-                poolManager.mint(
-                    address(this),
-                    CurrencyLibrary.toId(_poolKey.currency0),
-                    leftOver0ToMint
-                );
+                if(!_poolKey.currency0.isAddressZero()) {
+                    IERC20Metadata(Currency.unwrap(_poolKey.currency0))
+                    .safeTransferFrom(
+                    depositor_, address(this), leftOver0ToMint
+                    );
+                }
             }
 
             if (leftOver1ToMint > 0) {
-                poolManager.mint(
-                    address(this),
-                    CurrencyLibrary.toId(_poolKey.currency1),
-                    leftOver1ToMint
+                IERC20Metadata(Currency.unwrap(_poolKey.currency1))
+                    .safeTransferFrom(
+                    depositor_, address(this), leftOver1ToMint
                 );
             }
 
@@ -296,10 +312,6 @@ contract UniV4StandardModulePublic is
             if (_poolKey.currency0.isAddressZero()) {
                 /// @dev no need to use Address lib for PoolManager.
                 poolManager.settle{value: amount0}();
-                uint256 ethLeftBalance = address(this).balance;
-                if (ethLeftBalance > 0) {
-                    payable(depositor_).sendValue(ethLeftBalance);
-                }
             } else {
                 IERC20Metadata(Currency.unwrap(_poolKey.currency0))
                     .safeTransferFrom(
@@ -321,6 +333,9 @@ contract UniV4StandardModulePublic is
         }
 
         // #endregion settle.
+
+        amount0 = amount0 + leftOver0ToMint;
+        amount1 = amount1 + leftOver1ToMint;
 
         return isInversed
             ? abi.encode(amount1, amount0)
