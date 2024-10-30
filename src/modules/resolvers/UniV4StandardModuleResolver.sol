@@ -18,6 +18,7 @@ import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {StateLibrary} from
     "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 
@@ -112,13 +113,14 @@ contract UniV4StandardModuleResolver is
         UnderlyingPayload memory underlyingPayload;
 
         {
-            uint256 leftOver0 = IPoolManager(poolManager).balanceOf(
-                module, poolKey.currency0.toId()
-            );
-
-            uint256 leftOver1 = IPoolManager(poolManager).balanceOf(
-                module, poolKey.currency1.toId()
-            );
+            uint256 leftOver0 = poolKey.currency0.isAddressZero()
+                ? module.balance
+                : IERC20(Currency.unwrap(poolKey.currency0)).balanceOf(
+                    module
+                );
+            uint256 leftOver1 = IERC20(
+                Currency.unwrap(poolKey.currency1)
+            ).balanceOf(module);
 
             underlyingPayload = UnderlyingPayload({
                 ranges: poolRanges,

@@ -9,6 +9,7 @@ import {IArrakisLPModuleID} from
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
+import {IOwnable} from "../interfaces/IOwnable.sol";
 import {
     PIPS,
     BASE,
@@ -65,8 +66,7 @@ import {TransientStateLibrary} from
     "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
 import {
     BalanceDelta,
-    BalanceDeltaLibrary,
-    toBalanceDelta
+    BalanceDeltaLibrary
 } from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 
 /// @notice this module can only set uni v4 pool that have generic hook,
@@ -97,7 +97,6 @@ abstract contract UniV4StandardModule is
     enum Action {
         WITHDRAW,
         REBALANCE,
-        INITIALIZE_POSITION,
         DEPOSIT_FUND
     }
 
@@ -271,16 +270,30 @@ abstract contract UniV4StandardModule is
 
     /// @notice function used to initialize the module
     /// when a module switch happen
-    /// @dev this function will deposit fund as left over on poolManager.
     function initializePosition(
         bytes calldata
     ) external virtual onlyMetaVault {
-        /// @dev put tokens into poolManager
-        bytes memory data =
-            abi.encode(Action.INITIALIZE_POSITION, bytes(""));
-
-        poolManager.unlock(data);
+        /// @dev left over will sit on the module.
     }
+
+    // #region vault owner functions.
+
+    function approve(
+        address spender_,
+        uint256 amount0_,
+        uint256 amount1_
+    ) external nonReentrant {
+        if (msg.sender == IOwnable(address(metaVault)).owner()) {
+            revert OnlyMetaVaultOwner();
+        }
+
+        token0.forceApprove(spender_, amount0_);
+        token1.forceApprove(spender_, amount1_);
+
+        emit LogApproval(spender_, amount0_, amount1_);
+    }
+
+    // #endregion vault owner functions.
 
     // #region only manager functions.
 
@@ -383,7 +396,8 @@ abstract contract UniV4StandardModule is
         address receiver_,
         uint256 proportion_
     )
-        external
+        public
+        virtual
         onlyMetaVault
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
@@ -761,10 +775,6 @@ abstract contract UniV4StandardModule is
             ) = abi.decode(data_, (LiquidityRange[], SwapPayload));
             return _rebalance(liquidityRanges, swapPayload);
         }
-        /// @dev initialize position.
-        if (action_ == Action.INITIALIZE_POSITION) {
-            return _initializePosition();
-        }
     }
 
     function _withdraw(
@@ -865,29 +875,25 @@ abstract contract UniV4StandardModule is
                 );
 
                 if (leftOver0ToBurn > 0) {
-                    poolManager.burn(
-                        address(this),
-                        CurrencyLibrary.toId(_poolKey.currency0),
-                        leftOver0ToBurn
-                    );
+                    if (_poolKey.currency0.isAddressZero()) {
+                        payable(withdraw_.receiver).sendValue(
+                            leftOver0ToBurn
+                        );
+                    } else {
+                        IERC20Metadata(
+                            Currency.unwrap(_poolKey.currency0)
+                        ).safeTransfer(
+                            withdraw_.receiver, leftOver0ToBurn
+                        );
+                    }
                 }
                 if (leftOver1ToBurn > 0) {
-                    poolManager.burn(
-                        address(this),
-                        CurrencyLibrary.toId(_poolKey.currency1),
-                        leftOver1ToBurn
+                    IERC20Metadata(
+                        Currency.unwrap(_poolKey.currency1)
+                    ).safeTransfer(
+                        withdraw_.receiver, leftOver1ToBurn
                     );
                 }
-
-                delta = delta
-                    + toBalanceDelta(
-                        SafeCast.toInt128(
-                            SafeCast.toInt256(leftOver0ToBurn)
-                        ),
-                        SafeCast.toInt128(
-                            SafeCast.toInt256(leftOver1ToBurn)
-                        )
-                    );
 
                 withdraw_.amount0 =
                     SafeCast.toUint256(int256(delta.amount0()));
@@ -901,6 +907,7 @@ abstract contract UniV4StandardModule is
 
         /// @dev if receiver is a smart contract, the sm should implement receive
         /// fallback function.
+
         {
             {
                 uint256 managerFee0 = FullMath.mulDiv(
@@ -1008,17 +1015,13 @@ abstract contract UniV4StandardModule is
         uint256 amount1_
     ) internal virtual {
         if (amount0_ > 0) {
-            poolManager.mint(
-                address(this),
-                CurrencyLibrary.toId(poolKey_.currency0),
-                amount0_
+            poolManager.take(
+                poolKey_.currency0, address(this), amount0_
             );
         }
         if (amount1_ > 0) {
-            poolManager.mint(
-                address(this),
-                CurrencyLibrary.toId(poolKey_.currency1),
-                amount1_
+            poolManager.take(
+                poolKey_.currency1, address(this), amount1_
             );
         }
     }
@@ -1395,91 +1398,44 @@ abstract contract UniV4StandardModule is
         int256 amount1_
     ) internal virtual {
         if (amount0_ > 0) {
-            poolManager.mint(
+            poolManager.take(
+                poolKey_.currency0,
                 address(this),
-                CurrencyLibrary.toId(poolKey_.currency0),
                 SafeCast.toUint256(amount0_)
             );
         } else if (amount0_ < 0) {
-            poolManager.burn(
-                address(this),
-                CurrencyLibrary.toId(poolKey_.currency0),
-                SafeCast.toUint256(-amount0_)
-            );
+            uint256 valueToSend;
+
+            poolManager.sync(poolKey_.currency0);
+
+            if (poolKey_.currency0.isAddressZero()) {
+                valueToSend = SafeCast.toUint256(-amount0_);
+            } else {
+                IERC20Metadata(Currency.unwrap(poolKey_.currency0))
+                    .safeTransfer(
+                    address(poolManager),
+                    SafeCast.toUint256(-amount0_)
+                );
+            }
+
+            poolManager.settle{value: valueToSend}();
         }
         if (amount1_ > 0) {
-            poolManager.mint(
+            poolManager.take(
+                poolKey_.currency1,
                 address(this),
-                CurrencyLibrary.toId(poolKey_.currency1),
                 SafeCast.toUint256(amount1_)
             );
         } else if (amount1_ < 0) {
-            poolManager.burn(
-                address(this),
-                CurrencyLibrary.toId(poolKey_.currency1),
-                SafeCast.toUint256(-amount1_)
-            );
-        }
-    }
+            poolManager.sync(poolKey_.currency1);
 
-    function _initializePosition()
-        internal
-        virtual
-        returns (bytes memory result)
-    {
-        PoolKey memory _poolKey = poolKey;
-
-        bool isCurrency0Native = _poolKey.currency0.isAddressZero();
-
-        // #region get current balances.
-        uint256 amountCurrency0 = isCurrency0Native
-            ? address(this).balance
-            : IERC20Metadata(Currency.unwrap(_poolKey.currency0))
-                .balanceOf(address(this));
-        uint256 amountCurrency1 = IERC20Metadata(
-            Currency.unwrap(_poolKey.currency1)
-        ).balanceOf(address(this));
-        // #endregion get current balances.
-
-        // #region mint into poolManager.
-
-        if (amountCurrency0 > 0) {
-            // Mint
-            poolManager.mint(
-                address(this),
-                CurrencyLibrary.toId(_poolKey.currency0),
-                amountCurrency0
+            IERC20Metadata(Currency.unwrap(poolKey_.currency1))
+                .safeTransfer(
+                address(poolManager), SafeCast.toUint256(-amount1_)
             );
 
-            // Sync and settle
-            poolManager.sync(_poolKey.currency0);
-            if (isCurrency0Native) {
-                /// @dev no need to use Address lib for PoolManager.
-                poolManager.settle{value: amountCurrency0}();
-            } else {
-                IERC20Metadata(Currency.unwrap(_poolKey.currency0))
-                    .safeTransfer(address(poolManager), amountCurrency0);
-                poolManager.settle();
-            }
-        }
-        if (amountCurrency1 > 0) {
-            // Mint
-            poolManager.mint(
-                address(this),
-                CurrencyLibrary.toId(_poolKey.currency1),
-                amountCurrency1
-            );
-            poolManager.sync(_poolKey.currency1);
-            IERC20Metadata(Currency.unwrap(_poolKey.currency1))
-                .safeTransfer(address(poolManager), amountCurrency1);
             poolManager.settle();
         }
-
-        // #endregion mint into poolManager.
-
-        return isInversed
-            ? abi.encode(amountCurrency1, amountCurrency0)
-            : abi.encode(amountCurrency0, amountCurrency1);
     }
 
     function _collectFee(
@@ -1812,13 +1768,13 @@ abstract contract UniV4StandardModule is
         virtual
         returns (uint256 leftOver0, uint256 leftOver1)
     {
-        leftOver0 = poolManager.balanceOf(
-            address(this), poolKey_.currency0.toId()
-        );
-
-        leftOver1 = poolManager.balanceOf(
-            address(this), poolKey_.currency1.toId()
-        );
+        leftOver0 = Currency.unwrap(poolKey_.currency0) == address(0)
+            ? address(this).balance
+            : IERC20Metadata(Currency.unwrap(poolKey_.currency0))
+                .balanceOf(address(this));
+        leftOver1 = IERC20Metadata(
+            Currency.unwrap(poolKey_.currency1)
+        ).balanceOf(address(this));
     }
 
     // #region view functions.

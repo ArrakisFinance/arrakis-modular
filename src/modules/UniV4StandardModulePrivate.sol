@@ -62,6 +62,22 @@ contract UniV4StandardModulePrivate is
 
         if (amount0_ == 0 && amount1_ == 0) revert DepositZero();
 
+        if (poolKey.currency0.isAddressZero()) {
+            if (isInversed) {
+                if (amount1_ > msg.value) {
+                    revert InvalidMsgValue();
+                } else if (amount1_ < msg.value) {
+                    payable(depositor_).sendValue(msg.value - amount1_);
+                }
+            } else {
+                if (amount0_ > msg.value) {
+                    revert InvalidMsgValue();
+                } else if (amount0_ < msg.value) {
+                    payable(depositor_).sendValue( msg.value - amount0_);
+                }
+            }
+        }
+
         // #endregion checks.
 
         bytes memory data = abi.encode(
@@ -115,60 +131,18 @@ contract UniV4StandardModulePrivate is
             // #region get how much left over we have on poolManager and mint.
 
             if (amount0_ > 0) {
-                address _token0 = address(token0);
-                Currency currency0;
-                if (_token0 == NATIVE_COIN) {
-                    currency0 = Currency.wrap(address(0));
-                } else {
-                    currency0 = Currency.wrap(_token0);
-                }
-
-                poolManager.mint(
-                    address(this), currency0.toId(), amount0_
-                );
-
-                poolManager.sync(currency0);
-                if (currency0.isAddressZero()) {
-                    poolManager.settle{value: amount0_}();
-                    uint256 ethLeftBalance = address(this).balance;
-                    if (ethLeftBalance > 0) {
-                        payable(depositor_).sendValue(ethLeftBalance);
-                    }
-                } else {
-                    IERC20Metadata(Currency.unwrap(currency0))
-                        .safeTransferFrom(
-                        depositor_, address(poolManager), amount0_
+                if(address(token0) != NATIVE_COIN) {
+                    token0.safeTransferFrom(
+                        depositor_, address(this), amount0_
                     );
-                    poolManager.settle();
                 }
             }
 
             if (amount1_ > 0) {
-                address _token1 = address(token1);
-                Currency currency1;
-                if (_token1 == NATIVE_COIN) {
-                    currency1 = Currency.wrap(address(0));
-                } else {
-                    currency1 = Currency.wrap(_token1);
-                }
-
-                poolManager.mint(
-                    address(this), currency1.toId(), amount1_
-                );
-
-                poolManager.sync(currency1);
-                if (currency1.isAddressZero()) {
-                    poolManager.settle{value: amount1_}();
-                    uint256 ethLeftBalance = address(this).balance;
-                    if (ethLeftBalance > 0) {
-                        payable(depositor_).sendValue(ethLeftBalance);
-                    }
-                } else {
-                    IERC20Metadata(Currency.unwrap(currency1))
-                        .safeTransferFrom(
-                        depositor_, address(poolManager), amount1_
+                if(address(token1) != NATIVE_COIN) {
+                    token1.safeTransferFrom(
+                        depositor_, address(this), amount1_
                     );
-                    poolManager.settle();
                 }
             }
 

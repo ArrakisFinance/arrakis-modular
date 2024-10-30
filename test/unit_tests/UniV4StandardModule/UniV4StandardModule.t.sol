@@ -3544,6 +3544,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             zeroForOne: false
         });
 
+        deal(address(poolManager), 0.26 ether);
+
         vm.prank(manager);
         module.rebalance(liquidityRanges, swapPayload);
 
@@ -3706,6 +3708,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             expectedMinReturn: 0.25 ether,
             zeroForOne: true
         });
+
+        deal(USDC, address(poolManager), 656_625_000);
 
         vm.prank(manager);
         module.rebalance(liquidityRanges, swapPayload);
@@ -5882,7 +5886,10 @@ contract UniV4StandardModuleTest is TestWrapper {
         IERC20Metadata(WETH).transferFrom(
             msg.sender, address(this), 0.25 ether
         );
-        deal(USDC, msg.sender, 656_625_000);
+
+        uint256 balance = IERC20Metadata(USDC).balanceOf(msg.sender);
+
+        deal(USDC, msg.sender, 656_625_000 + balance);
     }
 
     function swapUSDT() external {
@@ -5908,11 +5915,14 @@ contract UniV4StandardModuleTest is TestWrapper {
             msg.sender, address(this), 661_625_000
         );
 
-        deal(msg.sender, 0.25 ether);
+        uint256 balance = msg.sender.balance;
+
+        deal(msg.sender, 0.25 ether + balance);
     }
 
     function swapOne() external payable {
-        deal(USDC, msg.sender, 656_625_000);
+        uint256 balance = IERC20Metadata(USDC).balanceOf(msg.sender);
+        deal(USDC, msg.sender, 656_625_000 + balance);
     }
 
     function swapOneNative() external payable {
@@ -5920,7 +5930,9 @@ contract UniV4StandardModuleTest is TestWrapper {
             msg.sender, address(this), 656_625_000
         );
 
-        deal(msg.sender, 0.25 ether);
+        uint256 balance = msg.sender.balance;
+
+        deal(msg.sender, 0.25 ether + balance);
     }
 
     // #endregion swap functions.
