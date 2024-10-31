@@ -283,7 +283,7 @@ abstract contract UniV4StandardModule is
         uint256 amount0_,
         uint256 amount1_
     ) external nonReentrant {
-        if (msg.sender == IOwnable(address(metaVault)).owner()) {
+        if (msg.sender != IOwnable(address(metaVault)).owner()) {
             revert OnlyMetaVaultOwner();
         }
 

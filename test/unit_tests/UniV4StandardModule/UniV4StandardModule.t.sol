@@ -947,6 +947,39 @@ contract UniV4StandardModuleTest is TestWrapper {
 
     // #endregion test initializePosition.
 
+    // #region test approve.
+
+    function testApproveOnlyMetaVaultOwner() public {
+        address notMetaVaultOwner =
+            vm.addr(uint256(keccak256(abi.encode("notMetaVaultOwner"))));
+
+        address spender = vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        vm.expectRevert(
+            IUniV4StandardModule.OnlyMetaVaultOwner.selector
+        );
+        vm.prank(notMetaVaultOwner);
+        module.approve(spender, 3000e6, 1e18);
+    }
+
+    function testApprove() public {
+        address spender = vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        vm.prank(owner);
+        module.approve(spender, 3000e6, 1e18);
+
+        assertEq(
+            IERC20Metadata(USDC).allowance(address(module), spender),
+            3000e6
+        );
+        assertEq(
+            IERC20Metadata(WETH).allowance(address(module), spender),
+            1e18
+        );
+    }
+
+    // #endregion test approve.
+
     // #region test set pool.
 
     function testSetPoolOnlyManager() public {
