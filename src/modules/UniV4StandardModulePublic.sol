@@ -78,6 +78,7 @@ contract UniV4StandardModulePublic is
         payable
         onlyMetaVault
         nonReentrant
+        whenNotPaused
         returns (uint256 amount0, uint256 amount1)
     {
         // #region checks.
@@ -312,7 +313,7 @@ contract UniV4StandardModulePublic is
                             Currency.unwrap(_poolKey.currency0)
                         ).safeTransfer(manager, leftOver0); 
                 }
-                if (leftOver0 > 0) {
+                if (leftOver1 > 0) {
                     IERC20Metadata(Currency.unwrap(_poolKey.currency1))
                         .safeTransfer(manager, leftOver1);
                 }

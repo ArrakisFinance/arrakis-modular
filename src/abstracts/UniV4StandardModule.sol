@@ -30,7 +30,6 @@ import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
@@ -43,8 +42,6 @@ import {ReentrancyGuardUpgradeable} from
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
-import {IERC6909Claims} from
-    "@uniswap/v4-core/src/interfaces/external/IERC6909Claims.sol";
 import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
@@ -282,7 +279,7 @@ abstract contract UniV4StandardModule is
         address spender_,
         uint256 amount0_,
         uint256 amount1_
-    ) external nonReentrant {
+    ) external nonReentrant whenNotPaused {
         if (msg.sender != IOwnable(address(metaVault)).owner()) {
             revert OnlyMetaVaultOwner();
         }
@@ -305,7 +302,7 @@ abstract contract UniV4StandardModule is
         PoolKey calldata poolKey_,
         LiquidityRange[] calldata liquidityRanges_,
         SwapPayload calldata swapPayload_
-    ) external onlyManager nonReentrant {
+    ) external onlyManager nonReentrant whenNotPaused {
         address _token0 = address(token0);
         address _token1 = address(token1);
         PoolKey memory _poolKey = poolKey;
@@ -437,6 +434,7 @@ abstract contract UniV4StandardModule is
         public
         onlyManager
         nonReentrant
+        whenNotPaused
         returns (
             uint256 amount0Minted,
             uint256 amount1Minted,
@@ -453,6 +451,7 @@ abstract contract UniV4StandardModule is
     function withdrawManagerBalance()
         external
         nonReentrant
+        whenNotPaused
         returns (uint256 amount0, uint256 amount1)
     {
         uint256 length = _ranges.length;
@@ -492,7 +491,7 @@ abstract contract UniV4StandardModule is
     /// @param newFeePIPS_ new fee that will be applied.
     function setManagerFeePIPS(
         uint256 newFeePIPS_
-    ) external onlyManager {
+    ) external onlyManager whenNotPaused {
         uint256 _managerFeePIPS = managerFeePIPS;
         if (_managerFeePIPS == newFeePIPS_) revert SameManagerFee();
         if (newFeePIPS_ > PIPS) revert NewFeesGtPIPS(newFeePIPS_);
@@ -1245,6 +1244,10 @@ abstract contract UniV4StandardModule is
                         balances.actual0 = _token0.balanceOf(
                             address(this)
                         ) - balances.initBalance0;
+
+                        _token0.forceApprove(
+                            swapPayload_.router, swapPayload_.amountIn
+                        );
                     }
                 } else {
                     if (isToken1Native) {
@@ -1266,19 +1269,11 @@ abstract contract UniV4StandardModule is
                         balances.actual1 = _token1.balanceOf(
                             address(this)
                         ) - balances.initBalance1;
-                    }
-                }
 
-                if (swapPayload_.zeroForOne && !isToken0Native) {
-                    _token0.forceApprove(
-                        swapPayload_.router, swapPayload_.amountIn
-                    );
-                } else if (
-                    !swapPayload_.zeroForOne && !isToken1Native
-                ) {
-                    _token1.forceApprove(
-                        swapPayload_.router, swapPayload_.amountIn
-                    );
+                        _token1.forceApprove(
+                            swapPayload_.router, swapPayload_.amountIn
+                        );
+                    }
                 }
 
                 if (swapPayload_.router == address(metaVault)) {

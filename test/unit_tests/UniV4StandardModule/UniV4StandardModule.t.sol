@@ -1339,6 +1339,28 @@ contract UniV4StandardModuleTest is TestWrapper {
         module.deposit(depositor, BASE);
     }
 
+    function testDepositAfterDonation() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        IERC20Metadata(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        deal(USDC, address(module), 3000e6);
+        deal(WETH, address(module), 1e18);
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+    }
+
     function testDepositActiveRange() public {
         uint256 init0 = 3000e6;
         uint256 init1 = 1e18;
@@ -1860,6 +1882,135 @@ contract UniV4StandardModuleTest is TestWrapper {
         module.deposit{value: 1 ether}(depositor, BASE);
     }
 
+    function testDepositNativeInvalidMsgValue() public {
+        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO; // NATIVE COIN
+        Currency currency1 = Currency.wrap(USDC);
+
+        ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
+
+        poolManager.unlock(abi.encode(2));
+
+        // #region create uni v4 module.
+
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address implementation = address(
+            new UniV4StandardModulePublic(
+                address(poolManager), guardian
+            )
+        );
+
+        bytes memory data = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            true,
+            poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
+            metaVault
+        );
+
+        module = UniV4StandardModulePublic(
+            payable(address(new ERC1967Proxy(implementation, data)))
+        );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
+
+        // #endregion create uni v4 module.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(USDC, depositor, init0);
+        deal(metaVault, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        vm.expectRevert(IUniV4StandardModule.InvalidMsgValue.selector);
+        module.deposit{value: 0.5 ether}(depositor, BASE);
+    }
+
+    function testDepositNativeAfterDonation() public {
+        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO; // NATIVE COIN
+        Currency currency1 = Currency.wrap(USDC);
+
+        ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
+
+        poolManager.unlock(abi.encode(2));
+
+        // #region create uni v4 module.
+
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address implementation = address(
+            new UniV4StandardModulePublic(
+                address(poolManager), guardian
+            )
+        );
+
+        bytes memory data = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            true,
+            poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
+            metaVault
+        );
+
+        module = UniV4StandardModulePublic(
+            payable(address(new ERC1967Proxy(implementation, data)))
+        );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
+
+        // #endregion create uni v4 module.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(USDC, depositor, init0);
+        deal(metaVault, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        vm.stopPrank();
+
+        deal(address(module), 1e18);
+
+        vm.prank(metaVault);
+        module.deposit{value: 1 ether}(depositor, BASE);
+    }
+
     function testDepositNativeActiveRange() public {
         Currency currency0 = CurrencyLibrary.ADDRESS_ZERO;
         Currency currency1 = Currency.wrap(USDC);
@@ -2044,6 +2195,133 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.prank(metaVault);
         module.deposit{value: 2 ether}(depositor, BASE);
+    }
+
+    function testDepositNativeOverSentEtherAsToken0() public {
+        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO;
+        Currency currency1 = Currency.wrap(USDC);
+
+        ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
+
+        poolManager.unlock(abi.encode(2));
+
+        // #region create uni v4 module.
+
+        uint256 init0 = 1e18;
+        uint256 init1 = 3000e6;
+
+        address implementation = address(
+            new UniV4StandardModulePublic(
+                address(poolManager), guardian
+            )
+        );
+
+        bytes memory data = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            false,
+            poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
+            metaVault
+        );
+
+        module = UniV4StandardModulePublic(
+            payable(address(new ERC1967Proxy(implementation, data)))
+        );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
+
+        // #endregion create uni v4 module.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(metaVault, 2 ether);
+        deal(USDC, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit{value: 2 ether}(depositor, BASE);
+    }
+
+    function testDepositNativeUnderSentEtherAsToken0() public {
+        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO;
+        Currency currency1 = Currency.wrap(USDC);
+
+        ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
+
+        poolManager.unlock(abi.encode(2));
+
+        // #region create uni v4 module.
+
+        uint256 init0 = 1e18;
+        uint256 init1 = 3000e6;
+
+        address implementation = address(
+            new UniV4StandardModulePublic(
+                address(poolManager), guardian
+            )
+        );
+
+        bytes memory data = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            false,
+            poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
+            metaVault
+        );
+
+        module = UniV4StandardModulePublic(
+            payable(address(new ERC1967Proxy(implementation, data)))
+        );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
+
+        // #endregion create uni v4 module.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(metaVault, 2 ether);
+        deal(USDC, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        vm.expectRevert(IUniV4StandardModule.InvalidMsgValue.selector);
+        module.deposit{value: 0.5 ether}(depositor, BASE);
     }
 
     // #endregion test deposit.
