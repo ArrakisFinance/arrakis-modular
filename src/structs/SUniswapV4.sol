@@ -8,9 +8,9 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 struct UnderlyingPayload {
     Range[] ranges;
     IPoolManager poolManager;
-    address token0;
-    address token1;
     address self;
+    uint256 leftOver0;
+    uint256 leftOver1;
 }
 
 struct RangeData {
@@ -64,7 +64,6 @@ struct PositionUnderlying {
 }
 
 struct Withdraw {
-    IPoolManager poolManager;
     address receiver;
     uint256 proportion;
     uint256 amount0;

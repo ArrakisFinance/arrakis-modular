@@ -33,6 +33,8 @@ interface IUniV4StandardModule {
     error ExpectedMinReturnTooLow();
     error WrongRouter();
     error SlippageTooHigh();
+    error OnlyMetaVaultOwner();
+    error InvalidMsgValue();
 
     // #endregion errors.
 
@@ -47,6 +49,12 @@ interface IUniV4StandardModule {
         Range range;
         int128 liquidity;
     }
+
+    event LogApproval(
+        address indexed spender,
+        uint256 amount0,
+        uint256 amount1
+    );
 
     // #endregion structs.
 
@@ -85,6 +93,16 @@ interface IUniV4StandardModule {
         IOracleWrapper oracle_,
         uint24 maxSlippage_,
         address metaVault_
+    ) external;
+
+    // #endregion only meta vault owner functions.
+
+    // #region only meta vault owner functions.
+
+    function approve(
+        address spender_,
+        uint256 amount0_,
+        uint256 amount1_
     ) external;
 
     // #endregion only meta vault owner functions.

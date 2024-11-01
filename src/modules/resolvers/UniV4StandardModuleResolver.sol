@@ -18,6 +18,9 @@ import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {StateLibrary} from
+    "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -25,13 +28,17 @@ contract UniV4StandardModuleResolver is
     IResolver,
     IUniV4StandardModuleResolver
 {
+    using StateLibrary for IPoolManager;
+
     // #region immutable variables.
 
     address public immutable poolManager;
 
     // #endregion immutable vairable.
 
-    constructor(address poolManager_) {
+    constructor(
+        address poolManager_
+    ) {
         if (poolManager_ == address(0)) {
             revert AddressZero();
         }
@@ -63,13 +70,14 @@ contract UniV4StandardModuleResolver is
         uint256 totalSupply;
         address module;
 
+        PoolKey memory poolKey;
         {
             totalSupply = IERC20(vault_).totalSupply();
             module = address(IArrakisMetaVault(vault_).module());
 
             IUniV4StandardModule.Range[] memory _ranges =
                 IUniV4StandardModule(module).getRanges();
-            
+
             uint256 numberOfRanges = _ranges.length;
 
             if (
@@ -84,7 +92,6 @@ contract UniV4StandardModuleResolver is
 
             poolRanges = new PoolRange[](_ranges.length);
 
-            PoolKey memory poolKey;
             (
                 poolKey.currency0,
                 poolKey.currency1,
@@ -105,15 +112,24 @@ contract UniV4StandardModuleResolver is
 
         UnderlyingPayload memory underlyingPayload;
 
-        {address token0 = address(IArrakisLPModule(module).token0());
-        address token1 = address(IArrakisLPModule(module).token1());
-        underlyingPayload = UnderlyingPayload({
-            ranges: poolRanges,
-            poolManager: IPoolManager(poolManager),
-            token0: token0,
-            token1: token1,
-            self: module
-        });}
+        {
+            uint256 leftOver0 = poolKey.currency0.isAddressZero()
+                ? module.balance
+                : IERC20(Currency.unwrap(poolKey.currency0)).balanceOf(
+                    module
+                );
+            uint256 leftOver1 = IERC20(
+                Currency.unwrap(poolKey.currency1)
+            ).balanceOf(module);
+
+            underlyingPayload = UnderlyingPayload({
+                ranges: poolRanges,
+                poolManager: IPoolManager(poolManager),
+                self: module,
+                leftOver0: leftOver0,
+                leftOver1: leftOver1
+            });
+        }
 
         if (totalSupply > 0) {
             (uint256 current0, uint256 current1) = UnderlyingV4
@@ -131,7 +147,8 @@ contract UniV4StandardModuleResolver is
             (amount0ToDeposit, amount1ToDeposit) = UnderlyingV4
                 .totalUnderlyingForMint(underlyingPayload, proportion);
         } else {
-            (uint256 init0, uint256 init1) = IArrakisLPModule(module).getInits();
+            (uint256 init0, uint256 init1) =
+                IArrakisLPModule(module).getInits();
             shareToMint = computeMintAmounts(
                 init0, init1, BASE, maxAmount0_, maxAmount1_
             );

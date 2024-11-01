@@ -500,11 +500,8 @@ contract ArrakisMetaVaultPrivateTest is
 
         RenderController(renderController).initialize(owner);
 
-        console.logString("TOTO");
         vm.prank(owner);
         IRenderController(renderController).setRenderer(renderer);
-
-        console.logString("TITI");
 
         // test tokenURI
         console.log(

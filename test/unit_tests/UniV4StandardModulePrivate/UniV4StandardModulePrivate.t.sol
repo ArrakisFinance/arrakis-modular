@@ -377,6 +377,70 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
         module.fund{value: 2 ether}(depositor, init0, init1);
     }
 
+    function testFundNativeUnderPay() public {
+        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO; // NATIVE COIN
+        Currency currency1 = Currency.wrap(USDC);
+
+        ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
+
+        poolManager.unlock(abi.encode(2));
+
+        // #region create uni v4 module.
+
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address implementation = address(
+            new UniV4StandardModulePrivate(
+                address(poolManager), guardian
+            )
+        );
+
+        bytes memory data = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            true,
+            poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
+            metaVault
+        );
+
+        module = UniV4StandardModulePrivate(
+            payable(address(new ERC1967Proxy(implementation, data)))
+        );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
+
+        // #endregion create uni v4 module.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(USDC, depositor, init0);
+        deal(metaVault, 2 ether);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        vm.expectRevert(IUniV4StandardModule.InvalidMsgValue.selector);
+        module.fund{value: 0.5 ether}(depositor, init0, init1);
+    }
+
     function testFundNativeIsToken0() public {
         Currency currency0 = CurrencyLibrary.ADDRESS_ZERO; // NATIVE COIN
         Currency currency1 = Currency.wrap(USDT);
@@ -507,6 +571,73 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         vm.prank(metaVault);
         module.fund{value: 2 ether}(depositor, init0, init1);
+    }
+
+    function testFundNativeIsToken0UnderPay() public {
+        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO; // NATIVE COIN
+        Currency currency1 = Currency.wrap(USDT);
+
+        ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDT);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
+
+        poolManager.unlock(abi.encode(2));
+
+        // #region create uni v4 module.
+
+        uint256 init0 = 1e18;
+        uint256 init1 = 3000e6;
+
+        address implementation = address(
+            new UniV4StandardModulePrivate(
+                address(poolManager), guardian
+            )
+        );
+
+        bytes memory data = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            false,
+            poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
+            metaVault
+        );
+
+        module = UniV4StandardModulePrivate(
+            payable(address(new ERC1967Proxy(implementation, data)))
+        );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
+
+        // #endregion create uni v4 module.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        address binanceHotWallet = 0xF977814e90dA44bFA03b6295A0616a897441aceC;
+        vm.prank(binanceHotWallet);
+        IERC20USDT(USDT).transfer(depositor, init1);
+        deal(metaVault, 2 ether);
+
+        vm.startPrank(depositor);
+        IERC20USDT(USDT).approve(address(module), 0);
+        IERC20USDT(USDT).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        vm.expectRevert(IUniV4StandardModule.InvalidMsgValue.selector);
+        module.fund{value: 0.5 ether}(depositor, init0, init1);
     }
 
     // #endregion test fund.
