@@ -25,6 +25,12 @@ import {
     SwapBalances
 } from "../structs/SUniswapV4.sol";
 import {UnderlyingV4} from "../libraries/UnderlyingV4.sol";
+import {
+    EthFlowData,
+    Data,
+    SignatureData,
+    IERC20
+} from "../structs/SCowswap.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -33,6 +39,12 @@ import {IERC20Metadata} from
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {IERC1271} from
+    "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import {EIP712} from
+    "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {SignatureChecker} from
+    "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -75,10 +87,12 @@ import {
 abstract contract UniV4StandardModule is
     ReentrancyGuardUpgradeable,
     PausableUpgradeable,
+    EIP712,
     IArrakisLPModule,
     IArrakisLPModuleID,
     IUniV4StandardModule,
-    IUnlockCallback
+    IUnlockCallback,
+    IERC1271
 {
     using SafeERC20 for IERC20Metadata;
     using PoolIdLibrary for PoolKey;
@@ -88,6 +102,7 @@ abstract contract UniV4StandardModule is
     using StateLibrary for IPoolManager;
     using TransientStateLibrary for IPoolManager;
     using BalanceDeltaLibrary for BalanceDelta;
+    using SignatureChecker for address;
 
     // #region enum.
 
@@ -98,6 +113,18 @@ abstract contract UniV4StandardModule is
     }
 
     // #endregion enum.
+
+    // #region constants.
+
+    bytes32 public constant DATA_TYPEHASH = keccak256(
+        "Data(IERC20 sellToken,IERC20 buyToken,address receiver,uint256 sellAmount,uint256 buyAmount,uint32 validTo,bytes32 appData,uint256 feeAmount,bytes32 kind,bool partiallyFillable,bytes32 sellTokenBalance,bytes32 buyTokenBalance,uint256 signedTimestamp,uint256 nonce,bytes32 orderHash)"
+    );
+
+    bytes32 public constant ETHFLOWDATA_TYPEHASH = keccak256(
+        "Data(IERC20 buyToken,address receiver,uint256 sellAmount,uint256 buyAmount,bytes32 appData,uint256 feeAmount,uint32 validTo,bool partiallyFillable,int64 quoteId,uint256 signedTimestamp,uint256 nonce,bytes32 orderHash)"
+    );
+
+    // #endregion constants.
 
     // #region immutable properties.
 
@@ -130,6 +157,8 @@ abstract contract UniV4StandardModule is
     uint24 public maxSlippage;
     /// @notice pool's key of the module.
     PoolKey public poolKey;
+    /// @notice cowswap intent signer.
+    address public cowswapSigner;
 
     // #endregion public properties.
 
@@ -169,7 +198,10 @@ abstract contract UniV4StandardModule is
 
     // #endregion modifiers.
 
-    constructor(address poolManager_, address guardian_) {
+    constructor(
+        address poolManager_,
+        address guardian_
+    ) EIP712("UniswapV4StandardModule", "1.0.0") {
         // #region checks.
         if (poolManager_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
@@ -288,6 +320,104 @@ abstract contract UniV4StandardModule is
         token1.forceApprove(spender_, amount1_);
 
         emit LogApproval(spender_, amount0_, amount1_);
+    }
+
+    function isValidSignature(
+        bytes32 hash_,
+        bytes memory signature_
+    ) external view returns (bytes4 magicValue) {
+        // NOTE : we add oracle checks here to prevent front running attacks.
+
+        SignatureData memory signatureData;
+        (
+            signatureData.isEthFlow,
+            signatureData.signedTimestamp,
+            signatureData.nonce,
+            signatureData.orderHash,
+            signatureData.order,
+            signatureData.signature
+        ) = abi.decode(
+            signature_,
+            (bool, uint256, uint256, bytes32, bytes, bytes)
+        );
+
+        if (signatureData.orderHash != hash_) {
+            revert InvalidOrderHash();
+        }
+
+        bytes32 dataStructHash;
+        if (signatureData.isEthFlow) {
+            EthFlowData memory data =
+                abi.decode(signatureData.order, (EthFlowData));
+
+            if (
+                data.validTo < block.timestamp
+                    || signatureData.signedTimestamp > block.timestamp
+            ) {
+                return 0x0;
+            }
+
+            dataStructHash = keccak256(
+                abi.encode(
+                    ETHFLOWDATA_TYPEHASH,
+                    data.buyToken,
+                    data.receiver,
+                    data.sellAmount,
+                    data.buyAmount,
+                    data.appData,
+                    data.feeAmount,
+                    data.validTo,
+                    data.partiallyFillable,
+                    data.quoteId,
+                    signatureData.signedTimestamp,
+                    signatureData.nonce,
+                    signatureData.orderHash
+                )
+            );
+        } else {
+            Data memory data = abi.decode(signatureData.order, (Data));
+
+            if (
+                data.validTo < block.timestamp
+                    || signatureData.signedTimestamp > block.timestamp
+            ) {
+                return 0x0;
+            }
+
+            dataStructHash = keccak256(
+                abi.encode(
+                    abi.encode(
+                        DATA_TYPEHASH,
+                        data.sellToken,
+                        data.buyToken,
+                        data.receiver,
+                        data.sellAmount,
+                        data.buyAmount,
+                        data.validTo,
+                        data.appData,
+                        data.feeAmount,
+                        data.kind,
+                        data.partiallyFillable,
+                        data.sellTokenBalance,
+                        data.buyTokenBalance
+                    ),
+                    signatureData.signedTimestamp,
+                    signatureData.nonce,
+                    signatureData.orderHash
+                )
+            );
+        }
+
+        if (
+            !cowswapSigner.isValidSignatureNow(
+                _hashTypedDataV4(dataStructHash),
+                signatureData.signature
+            )
+        ) {
+            revert InvalidSignature();
+        }
+
+        return 0x1626ba7e;
     }
 
     // #endregion vault owner functions.
@@ -443,6 +573,20 @@ abstract contract UniV4StandardModule is
         )
     {
         _internalRebalance(liquidityRanges_, swapPayload_);
+    }
+
+    function setCowSwapSigner(
+        address cowSwapSigner_
+    ) external onlyManager whenNotPaused {
+        address _cowSwapSigner = cowswapSigner;
+        if (cowSwapSigner_ == address(0)) revert AddressZero();
+        if (_cowSwapSigner == cowSwapSigner_) {
+            revert SameCowSwapSigner();
+        }
+
+        cowswapSigner = cowSwapSigner_;
+
+        emit LogSetCowSwapSigner(_cowSwapSigner, cowSwapSigner_);
     }
 
     /// @notice function used by metaVault or manager to get manager fees.
