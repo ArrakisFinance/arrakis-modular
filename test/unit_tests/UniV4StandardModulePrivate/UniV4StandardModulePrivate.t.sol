@@ -68,9 +68,13 @@ import {SimpleHook} from "./mocks/SimpleHook.sol";
 // #endregion mock contracts.
 
 interface IERC20USDT {
-    function transfer(address _to, uint _value) external;
-    function approve(address spender, uint value) external;
-    function transferFrom(address from, address to, uint value) external;
+    function transfer(address _to, uint256 _value) external;
+    function approve(address spender, uint256 value) external;
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) external;
 }
 
 contract UniV4StandardModulePrivateTest is TestWrapper {
@@ -85,6 +89,8 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
         0xdAC17F958D2ee523a2206206994597C13D831ec7;
     address public constant WETH =
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant COW_SWAP_ETH_FLOW =
+        0x40A50cf069e992AA4536211B23F286eF88752187;
 
     // #endregion constants.
 
@@ -161,7 +167,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, COW_SWAP_ETH_FLOW
             )
         );
 
@@ -276,7 +282,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, COW_SWAP_ETH_FLOW
             )
         );
 
@@ -339,7 +345,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, COW_SWAP_ETH_FLOW
             )
         );
 
@@ -402,7 +408,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, COW_SWAP_ETH_FLOW
             )
         );
 
@@ -466,7 +472,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, COW_SWAP_ETH_FLOW
             )
         );
 
@@ -493,7 +499,8 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        address binanceHotWallet = 0xF977814e90dA44bFA03b6295A0616a897441aceC;
+        address binanceHotWallet =
+            0xF977814e90dA44bFA03b6295A0616a897441aceC;
         vm.prank(binanceHotWallet);
         IERC20USDT(USDT).transfer(depositor, init1);
         deal(metaVault, init0);
@@ -532,7 +539,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, COW_SWAP_ETH_FLOW
             )
         );
 
@@ -559,7 +566,8 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        address binanceHotWallet = 0xF977814e90dA44bFA03b6295A0616a897441aceC;
+        address binanceHotWallet =
+            0xF977814e90dA44bFA03b6295A0616a897441aceC;
         vm.prank(binanceHotWallet);
         IERC20USDT(USDT).transfer(depositor, init1);
         deal(metaVault, 2 ether);
@@ -598,7 +606,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, COW_SWAP_ETH_FLOW
             )
         );
 
@@ -625,7 +633,8 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        address binanceHotWallet = 0xF977814e90dA44bFA03b6295A0616a897441aceC;
+        address binanceHotWallet =
+            0xF977814e90dA44bFA03b6295A0616a897441aceC;
         vm.prank(binanceHotWallet);
         IERC20USDT(USDT).transfer(depositor, init1);
         deal(metaVault, 2 ether);

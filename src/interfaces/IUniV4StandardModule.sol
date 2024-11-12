@@ -9,6 +9,8 @@ import {IPoolManager} from
 
 import {SwapPayload} from "../structs/SUniswapV4.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
+import {ICowSwapEthFlow} from "../interfaces/ICowSwapEthFlow.sol";
+import {EthFlowData} from "../structs/SCowswap.sol";
 
 interface IUniV4StandardModule {
     // #region errors.
@@ -38,6 +40,9 @@ interface IUniV4StandardModule {
     error InvalidSignature();
     error InvalidOrderHash();
     error SameCowSwapSigner();
+    error InvalidOrder();
+    error InvalidReceiver();
+    error InvalidTokens();
 
     // #endregion errors.
 
@@ -72,6 +77,9 @@ interface IUniV4StandardModule {
         uint256 amount1Burned
     );
     event LogSetCowSwapSigner(address oldCowSwapSigner, address newCowSwapSigner);
+    event LogEthFlowOrderCreated(
+        bytes32 orderHash
+    );
 
     // #endregion events.
 
@@ -108,6 +116,12 @@ interface IUniV4StandardModule {
         uint256 amount0_,
         uint256 amount1_
     ) external;
+
+    function createEthFlowOrder(EthFlowData calldata order)
+        external
+        returns (bytes32 orderHash);
+
+    function invalidateEthFlowOrder(EthFlowData calldata order) external;
 
     // #endregion only meta vault owner functions.
 
@@ -148,6 +162,8 @@ interface IUniV4StandardModule {
 
     // #region view functions.
 
+    function cowSwapEthFlow() external view returns (ICowSwapEthFlow);
+
     /// @notice function used to get the list of active ranges.
     /// @return ranges active ranges
     function getRanges() external view returns (Range[] memory ranges);
@@ -183,6 +199,9 @@ interface IUniV4StandardModule {
     /// @notice function used to get the oracle that
     /// will be used to proctect rebalances.
     function oracle() external view returns (IOracleWrapper);
+
+    /// @notice function used to get the ERC712's type hash
+    function DATA_TYPEHASH() external view returns (bytes32);
 
     // #endregion view functions.
 }

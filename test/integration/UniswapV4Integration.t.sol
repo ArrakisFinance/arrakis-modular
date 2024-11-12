@@ -50,6 +50,8 @@ import {IUniV4StandardModule} from
 import {IOracleWrapper} from "../../src/interfaces/IOracleWrapper.sol";
 import {IUniV4StandardModuleResolver} from
     "../../src/interfaces/IUniV4StandardModuleResolver.sol";
+import {Data, SignatureData} from "../../src/structs/SCowswap.sol";
+import {IERC20} from "../../src/interfaces/ICowSwapERC20.sol";
 
 // #endregion interfaces.
 
@@ -94,6 +96,18 @@ import {OracleWrapper} from "./mocks/OracleWrapper.sol";
 
 // #endregion valantis mocks.
 
+// #region utils.
+
+import {ICowSwapSettlement} from "../utils/ICowSwapSettlement.sol";
+import {IVault} from "../utils/IVault.sol";
+import {ICowSwapAuthentication} from
+    "../utils/ICowSwapAuthentication.sol";
+import {OrderLib} from "../utils/OrderLib.sol";
+import {Trade} from "../utils/Trade.sol";
+import {GPv2Interaction} from "../utils/GPv2Interaction.sol";
+
+// #endregion utils.
+
 contract UniswapV4IntegrationTest is TestWrapper {
     using SafeERC20 for IERC20Metadata;
     using CurrencyLibrary for Currency;
@@ -130,6 +144,22 @@ contract UniswapV4IntegrationTest is TestWrapper {
         0x000000000022D473030F116dDEE9F6B43aC78BA3;
     address public constant weth =
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+
+    // #region cowswap.
+    address public constant COW_SWAP_ETH_FLOW =
+        0x40A50cf069e992AA4536211B23F286eF88752187;
+    address public constant COW_SWAP_SETTLEMENT =
+        0x9008D19f58AAbD9eD0D60971565AA8510560ab41;
+    address public constant COW_SWAP_RELAYER =
+        0xC92E8bdf79f0507f65a392b0ab4667716BFE0110;
+    bytes32 public constant DOMAIN_SEPARATOR =
+        0xc078f884a2676e1345748b1feace7b0abee5d00ecadb6e574dcdd109a63e8943;
+    address public constant SOLVER =
+        0xc10D4DfDA62227d9EC23Ab0010E2942e48338A60;
+    bytes32 internal constant KIND_SELL =
+        hex"f3b277728b3fee749481eb3e0b3b48980dbbab78658fc419025cb16eee346775";
+    // #endregion cowswap.
+
     // #endregion arrakis modular contracts.
 
     address public owner;
@@ -166,6 +196,13 @@ contract UniswapV4IntegrationTest is TestWrapper {
     address public deployer;
 
     // #endregion mocks.
+
+    // #region cowswap signer.
+
+    address public signer;
+    uint256 public signerPrivateKey;
+
+    // #endregion cowswap signer.
 
     // #region vault infos.
 
@@ -208,6 +245,16 @@ contract UniswapV4IntegrationTest is TestWrapper {
         oracle = address(new OracleWrapper());
 
         // #endregion create an oracle.
+
+        // #region cowswap.
+
+        signerPrivateKey = 1234;
+
+        signer = vm.addr(signerPrivateKey);
+
+        vm.makePersistent(signer);
+
+        // #endregion cowswap.
 
         // #endregion setup.
 
@@ -349,6 +396,181 @@ contract UniswapV4IntegrationTest is TestWrapper {
         vm.stopPrank();
 
         // #endregion add liquidity.
+    }
+
+    function test_addLiquidity_then_do_cowswap() public {
+        {
+            (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
+            IArrakisPublicVaultRouterV2(router).getMintAmounts(
+                vault, init0 / 3, init1
+            );
+
+            address user =
+                vm.addr(uint256(keccak256(abi.encode("User"))));
+
+            deal(WETH, user, amount1);
+
+            deal(USDC, user, amount0);
+
+            // #region approve router.
+
+            vm.startPrank(user);
+
+            IERC20Metadata(USDC).approve(router, amount0);
+            IERC20Metadata(WETH).approve(router, amount1);
+
+            // #endregion approve router.
+
+            // #region add liquidity.
+
+            IArrakisPublicVaultRouterV2(router).addLiquidity(
+                AddLiquidityData({
+                    amount0Max: amount0,
+                    amount1Max: amount1,
+                    amount0Min: amount0 * 99 / 100,
+                    amount1Min: amount1 * 99 / 100,
+                    amountSharesMin: sharesToMint,
+                    vault: vault,
+                    receiver: user
+                })
+            );
+
+            vm.stopPrank();
+
+            // #endregion add liquidity.
+        }
+
+        address module = address(IArrakisMetaVault(vault).module());
+
+        // #region set signer.
+
+        vm.prank(arrakisStandardManager);
+        IUniV4StandardModule(module).setCowSwapSigner(signer);
+
+        // #endregion set signer.
+
+        // #region cowswap approve.
+
+        vm.prank(module);
+        IERC20Metadata(USDC).approve(COW_SWAP_RELAYER, init0 / 3);
+
+        // #endregion cowswap approve.
+
+        // ETH price 1645 USD
+
+        // #region cowswap.
+
+        uint256 amt0 = 66_666_666;
+        uint256 amt1 = 23_491_714_448_813_903;
+
+                Trade.Data[] memory datas = new Trade.Data[](1);
+
+        {
+            uint256 flags = 2 << 5 | 0x04;
+
+            datas[0] = Trade.Data({
+                sellTokenIndex: 0,
+                buyTokenIndex: 1,
+                receiver: module,
+                sellAmount: amt0,
+                buyAmount: amt1,
+                validTo: type(uint32).max,
+                appData: bytes32(0),
+                feeAmount: 0,
+                flags: flags,
+                executedAmount: 0,
+                signature: ""
+            });
+        }
+
+        IERC20[] memory tokens = new IERC20[](2);
+        tokens[0] = IERC20(USDC);
+        tokens[1] = IERC20(WETH);
+
+        Data memory orderData = Data({
+            sellToken: tokens[datas[0].sellTokenIndex],
+            buyToken: tokens[datas[0].buyTokenIndex],
+            receiver: datas[0].receiver,
+            sellAmount: datas[0].sellAmount,
+            buyAmount: datas[0].buyAmount,
+            validTo: datas[0].validTo,
+            appData: datas[0].appData,
+            feeAmount: datas[0].feeAmount,
+            kind: KIND_SELL,
+            partiallyFillable: false,
+            sellTokenBalance: OrderLib.BALANCE_ERC20,
+            buyTokenBalance: OrderLib.BALANCE_ERC20
+        });
+
+        SignatureData memory signatureData;
+        {
+            bytes32 orderHash =
+                OrderLib.hash(orderData, DOMAIN_SEPARATOR);
+
+            bytes memory signature =
+                getEOASignedOrder(orderData, signerPrivateKey, module, block.timestamp, 1, orderHash);
+
+            signatureData = SignatureData({
+                signedTimestamp: block.timestamp,
+                nonce: 1,
+                orderHash: orderHash,
+                order: abi.encode(orderData),
+                signature: signature
+            });
+
+            bytes memory signData = abi.encode(signatureData);
+
+            signData = abi.encodePacked(module, signData);
+    
+            datas[0].signature = signData;
+        }
+
+        deal(WETH, address(this), amt1);
+        IERC20Metadata(WETH).approve(COW_SWAP_SETTLEMENT, amt1);
+
+        GPv2Interaction.Data[][3] memory interactions;
+
+        interactions[1] = new GPv2Interaction.Data[](1);
+        interactions[1][0] = GPv2Interaction.Data({
+            target: WETH,
+            value: 0,
+            callData: abi.encodeWithSelector(
+                IERC20.transferFrom.selector,
+                address(this),
+                COW_SWAP_RELAYER,
+                amt1
+            )
+        });
+
+        interactions[2] = new GPv2Interaction.Data[](1);
+        interactions[2][0] = GPv2Interaction.Data({
+            target: USDC,
+            value: 0,
+            callData: abi.encodeWithSelector(
+                IERC20.transfer.selector, address(this), amt0
+            )
+        });
+
+        uint256 balanceUSDC = IERC20(USDC).balanceOf(module);
+        uint256 balanceWETH = IERC20(WETH).balanceOf(module);
+
+        uint256 amountOutForModule;
+        {
+            uint256[] memory clearingPrices = new uint256[](2);
+            clearingPrices[0] = 1 ether;//352_375_717_084_584;
+            clearingPrices[1] = 2_837_000_000;
+
+            vm.prank(SOLVER);
+            ICowSwapSettlement(COW_SWAP_SETTLEMENT).settle(
+                tokens, clearingPrices, datas, interactions
+            );
+            amountOutForModule = amt0 * clearingPrices[0] / clearingPrices[1];
+        }
+
+        // #endregion cowswap.
+
+        assertEq(IERC20(WETH).balanceOf(module) - balanceWETH - 1, amountOutForModule);
+        assertEq(IERC20(USDC).balanceOf(module), balanceUSDC - amt0);
     }
 
     function test_addLiquidityMaxAmountsTooLow() public {
@@ -941,7 +1163,9 @@ contract UniswapV4IntegrationTest is TestWrapper {
         // #region create uniswap standard module.
 
         uniswapStandardModuleImplementation = address(
-            new UniV4StandardModulePublic(poolManager, guardian)
+            new UniV4StandardModulePublic(
+                poolManager, guardian, COW_SWAP_ETH_FLOW
+            )
         );
         uniswapStandardModuleBeacon = address(
             new UpgradeableBeacon(uniswapStandardModuleImplementation)
@@ -979,6 +1203,56 @@ contract UniswapV4IntegrationTest is TestWrapper {
     function _setupETHUSDCVault() internal returns (address vault) {}
 
     function _setupWETHUSDCVaultForExisting() internal {}
+
+    function getDomainSeparatorV4(
+        uint256 chainId_,
+        address uniV4module_
+    ) public pure returns (bytes32 domainSeparator) {
+        bytes32 typeHash = keccak256(
+            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+        );
+        bytes32 hashedName = keccak256("UniswapV4StandardModule");
+        bytes32 hashedVersion = keccak256("1.0.0");
+        domainSeparator = keccak256(
+            abi.encode(
+                typeHash,
+                hashedName,
+                hashedVersion,
+                chainId_,
+                uniV4module_
+            )
+        );
+    }
+
+    function getEOASignedOrder(
+        Data memory data_,
+        uint256 privateKey_,
+        address uniV4module_,
+        uint256 signedTimestamp_,
+        uint256 nonce_,
+        bytes32 orderHash_
+    ) public view returns (bytes memory signature) {
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                getDomainSeparatorV4(block.chainid, uniV4module_),
+                keccak256(
+                    abi.encode(
+                        IUniV4StandardModule(uniV4module_)
+                            .DATA_TYPEHASH(),
+                        abi.encode(data_),
+                        signedTimestamp_,
+                        nonce_,
+                        orderHash_
+                    )
+                )
+            )
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey_, digest);
+
+        signature = abi.encodePacked(r, s, bytes1(v));
+    }
 
     // #endregion internal functions.
 }

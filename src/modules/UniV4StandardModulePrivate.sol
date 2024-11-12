@@ -44,8 +44,9 @@ contract UniV4StandardModulePrivate is
 
     constructor(
         address poolManager_,
-        address guardian_
-    ) UniV4StandardModule(poolManager_, guardian_) {}
+        address guardian_,
+        address cowSwapEthFlow_
+    ) UniV4StandardModule(poolManager_, guardian_, cowSwapEthFlow_) {}
 
     /// @notice fund function for private vault.
     /// @param depositor_ address that will provide the tokens.
@@ -67,13 +68,17 @@ contract UniV4StandardModulePrivate is
                 if (amount1_ > msg.value) {
                     revert InvalidMsgValue();
                 } else if (amount1_ < msg.value) {
-                    payable(depositor_).sendValue(msg.value - amount1_);
+                    payable(depositor_).sendValue(
+                        msg.value - amount1_
+                    );
                 }
             } else {
                 if (amount0_ > msg.value) {
                     revert InvalidMsgValue();
                 } else if (amount0_ < msg.value) {
-                    payable(depositor_).sendValue( msg.value - amount0_);
+                    payable(depositor_).sendValue(
+                        msg.value - amount0_
+                    );
                 }
             }
         }
@@ -131,7 +136,7 @@ contract UniV4StandardModulePrivate is
             // #region get how much left over we have on poolManager and mint.
 
             if (amount0_ > 0) {
-                if(address(token0) != NATIVE_COIN) {
+                if (address(token0) != NATIVE_COIN) {
                     token0.safeTransferFrom(
                         depositor_, address(this), amount0_
                     );
@@ -139,7 +144,7 @@ contract UniV4StandardModulePrivate is
             }
 
             if (amount1_ > 0) {
-                if(address(token1) != NATIVE_COIN) {
+                if (address(token1) != NATIVE_COIN) {
                     token1.safeTransferFrom(
                         depositor_, address(this), amount1_
                     );

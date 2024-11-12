@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "../interfaces/ICowSwapERC20.sol";
 
 /// @dev taken from https://github.com/cowprotocol/contracts/blob/c15d99a146c8aa428a7fea3167c2f3d933b8f7fd/src/contracts/libraries/GPv2Order.sol#L11-L24
 struct Data {
@@ -33,7 +33,6 @@ struct EthFlowData {
 }
 
 struct SignatureData {
-    bool isEthFlow;
     uint256 signedTimestamp;
     uint256 nonce;
     bytes32 orderHash;

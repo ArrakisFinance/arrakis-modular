@@ -31,6 +31,7 @@ import {
     SignatureData,
     IERC20
 } from "../structs/SCowswap.sol";
+import {ICowSwapEthFlow} from "../interfaces/ICowSwapEthFlow.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -45,6 +46,8 @@ import {EIP712} from
     "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {SignatureChecker} from
     "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import {ECDSA} from
+    "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -117,11 +120,7 @@ abstract contract UniV4StandardModule is
     // #region constants.
 
     bytes32 public constant DATA_TYPEHASH = keccak256(
-        "Data(IERC20 sellToken,IERC20 buyToken,address receiver,uint256 sellAmount,uint256 buyAmount,uint32 validTo,bytes32 appData,uint256 feeAmount,bytes32 kind,bool partiallyFillable,bytes32 sellTokenBalance,bytes32 buyTokenBalance,uint256 signedTimestamp,uint256 nonce,bytes32 orderHash)"
-    );
-
-    bytes32 public constant ETHFLOWDATA_TYPEHASH = keccak256(
-        "Data(IERC20 buyToken,address receiver,uint256 sellAmount,uint256 buyAmount,bytes32 appData,uint256 feeAmount,uint32 validTo,bool partiallyFillable,int64 quoteId,uint256 signedTimestamp,uint256 nonce,bytes32 orderHash)"
+        "Data((IERC20 sellToken,IERC20 buyToken,address receiver,uint256 sellAmount,uint256 buyAmount,uint32 validTo,bytes32 appData,uint256 feeAmount,bytes32 kind,bool partiallyFillable,bytes32 sellTokenBalance,bytes32 buyTokenBalance),uint256 signedTimestamp,uint256 nonce,bytes32 orderHash)"
     );
 
     // #endregion constants.
@@ -130,6 +129,8 @@ abstract contract UniV4StandardModule is
 
     /// @notice function used to get the uniswap v4 pool manager.
     IPoolManager public immutable poolManager;
+    /// @notice function used to get the cowswap eth flow contract.
+    ICowSwapEthFlow public immutable cowSwapEthFlow;
 
     // #endregion immutable properties.
 
@@ -200,16 +201,20 @@ abstract contract UniV4StandardModule is
 
     constructor(
         address poolManager_,
-        address guardian_
+        address guardian_,
+        address cowSwapEthFlow_
     ) EIP712("UniswapV4StandardModule", "1.0.0") {
         // #region checks.
         if (poolManager_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
+        if (cowSwapEthFlow_ == address(0)) revert AddressZero();
         // #endregion checks.
 
         poolManager = IPoolManager(poolManager_);
 
         _guardian = guardian_;
+
+        cowSwapEthFlow = ICowSwapEthFlow(cowSwapEthFlow_);
 
         _disableInitializers();
     }
@@ -322,91 +327,84 @@ abstract contract UniV4StandardModule is
         emit LogApproval(spender_, amount0_, amount1_);
     }
 
+    function createEthFlowOrder(
+        EthFlowData calldata order_
+    ) external onlyManager returns (bytes32 orderHash) {
+        if (order_.receiver != address(this)) {
+            revert InvalidReceiver();
+        }
+
+        if(address(token0) != NATIVE_COIN && address(token1) != NATIVE_COIN) {
+            revert InvalidTokens();
+        }
+
+        bytes32 orderHash = cowSwapEthFlow.createOrder{
+            value: order_.sellAmount + order_.feeAmount
+        }(order_);
+
+        emit LogEthFlowOrderCreated(orderHash);
+    }
+
+    function invalidateEthFlowOrder(
+        EthFlowData calldata order_
+    ) external onlyManager {
+        cowSwapEthFlow.invalidateOrder(order_);
+    }
+
     function isValidSignature(
         bytes32 hash_,
         bytes memory signature_
     ) external view returns (bytes4 magicValue) {
-        // NOTE : we add oracle checks here to prevent front running attacks.
+        // NOTE : we can add oracle checks here to prevent front running attacks.
 
-        SignatureData memory signatureData;
-        (
-            signatureData.isEthFlow,
-            signatureData.signedTimestamp,
-            signatureData.nonce,
-            signatureData.orderHash,
-            signatureData.order,
-            signatureData.signature
-        ) = abi.decode(
-            signature_,
-            (bool, uint256, uint256, bytes32, bytes, bytes)
+        SignatureData memory signatureData = abi.decode(
+            signature_, (SignatureData)
         );
 
         if (signatureData.orderHash != hash_) {
             revert InvalidOrderHash();
         }
 
-        bytes32 dataStructHash;
-        if (signatureData.isEthFlow) {
-            EthFlowData memory data =
-                abi.decode(signatureData.order, (EthFlowData));
+        Data memory data = abi.decode(signatureData.order, (Data));
 
-            if (
-                data.validTo < block.timestamp
-                    || signatureData.signedTimestamp > block.timestamp
-            ) {
-                return 0x0;
-            }
+        if (
+            data.validTo < block.timestamp
+                || signatureData.signedTimestamp > block.timestamp
+        ) {
+            revert InvalidOrder();
+        }
 
-            dataStructHash = keccak256(
+        if (data.receiver != address(this)) {
+            revert InvalidReceiver();
+        }
+
+        bytes32 dataStructHash = keccak256(
+            abi.encode(
+                DATA_TYPEHASH,
                 abi.encode(
-                    ETHFLOWDATA_TYPEHASH,
+                    data.sellToken,
                     data.buyToken,
                     data.receiver,
                     data.sellAmount,
                     data.buyAmount,
+                    data.validTo,
                     data.appData,
                     data.feeAmount,
-                    data.validTo,
+                    data.kind,
                     data.partiallyFillable,
-                    data.quoteId,
-                    signatureData.signedTimestamp,
-                    signatureData.nonce,
-                    signatureData.orderHash
-                )
-            );
-        } else {
-            Data memory data = abi.decode(signatureData.order, (Data));
+                    data.sellTokenBalance,
+                    data.buyTokenBalance
+                ),
+                signatureData.signedTimestamp,
+                signatureData.nonce,
+                signatureData.orderHash
+            )
+        );
 
-            if (
-                data.validTo < block.timestamp
-                    || signatureData.signedTimestamp > block.timestamp
-            ) {
-                return 0x0;
-            }
-
-            dataStructHash = keccak256(
-                abi.encode(
-                    abi.encode(
-                        DATA_TYPEHASH,
-                        data.sellToken,
-                        data.buyToken,
-                        data.receiver,
-                        data.sellAmount,
-                        data.buyAmount,
-                        data.validTo,
-                        data.appData,
-                        data.feeAmount,
-                        data.kind,
-                        data.partiallyFillable,
-                        data.sellTokenBalance,
-                        data.buyTokenBalance
-                    ),
-                    signatureData.signedTimestamp,
-                    signatureData.nonce,
-                    signatureData.orderHash
-                )
-            );
-        }
+        (address recovered, ECDSA.RecoverError error) = ECDSA.tryRecover(
+            _hashTypedDataV4(dataStructHash),
+            signatureData.signature
+        );
 
         if (
             !cowswapSigner.isValidSignatureNow(

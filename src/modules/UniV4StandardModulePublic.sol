@@ -62,8 +62,9 @@ contract UniV4StandardModulePublic is
 
     constructor(
         address poolManager_,
-        address guardian_
-    ) UniV4StandardModule(poolManager_, guardian_) {}
+        address guardian_,
+        address cowSwapEthFlow_
+    ) UniV4StandardModule(poolManager_, guardian_, cowSwapEthFlow_) {}
 
     /// @notice function used by metaVault to deposit tokens into the strategy.
     /// @param depositor_ address that will provide the tokens.
@@ -90,7 +91,8 @@ contract UniV4StandardModulePublic is
         // #endregion checks.
 
         bytes memory data = abi.encode(
-            Action.DEPOSIT_FUND, abi.encode(depositor_, proportion_, msg.value)
+            Action.DEPOSIT_FUND,
+            abi.encode(depositor_, proportion_, msg.value)
         );
 
         bytes memory result = poolManager.unlock(data);
@@ -116,11 +118,9 @@ contract UniV4StandardModulePublic is
         emit LogDeposit(depositor_, proportion_, amount0, amount1);
     }
 
-    function initializePosition(bytes calldata)
-        external
-        override
-        onlyMetaVault
-    {
+    function initializePosition(
+        bytes calldata
+    ) external override onlyMetaVault {
         notFirstDeposit = true;
     }
 
@@ -298,24 +298,26 @@ contract UniV4StandardModulePublic is
             (uint256 leftOver0, uint256 leftOver1) =
                 _getLeftOvers(_poolKey);
 
-            if(_poolKey.currency0.isAddressZero()) {
+            if (_poolKey.currency0.isAddressZero()) {
                 leftOver0 = leftOver0 - value_;
             }
 
-            if(!notFirstDeposit) {
+            if (!notFirstDeposit) {
                 address manager = metaVault.manager();
 
-                if(leftOver0 > 0) {
-                    if(_poolKey.currency0.isAddressZero())
+                if (leftOver0 > 0) {
+                    if (_poolKey.currency0.isAddressZero()) {
                         payable(manager).sendValue(leftOver0);
-                    else
+                    } else {
                         IERC20Metadata(
                             Currency.unwrap(_poolKey.currency0)
-                        ).safeTransfer(manager, leftOver0); 
+                        ).safeTransfer(manager, leftOver0);
+                    }
                 }
                 if (leftOver1 > 0) {
-                    IERC20Metadata(Currency.unwrap(_poolKey.currency1))
-                        .safeTransfer(manager, leftOver1);
+                    IERC20Metadata(
+                        Currency.unwrap(_poolKey.currency1)
+                    ).safeTransfer(manager, leftOver1);
                 }
 
                 leftOver0 = _init0;
