@@ -8,6 +8,7 @@ import {
 } from "../structs/SUniswapV4.sol";
 import {BASE} from "../constants/CArrakis.sol";
 import {IUniV4ModuleBase} from "../interfaces/IUniV4ModuleBase.sol";
+import {IUniV4StandardModule} from "../interfaces/IUniV4StandardModule.sol";
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
@@ -215,6 +216,18 @@ library UnderlyingV4 {
                 feeGrowthInside1X128
             );
         }
+
+        int128 liquidity = SafeCast.toInt128(
+                SafeCast.toInt256(
+                    FullMath.mulDiv(
+                        uint256(positionState.liquidity),
+                        proportion_,
+                        BASE
+                    )
+                )
+            );
+
+        if (liquidity == 0) revert IUniV4StandardModule.TooSmallMint();
 
         // compute current holdings from liquidity
         (amount0Current, amount1Current) = getAmountsForDelta(

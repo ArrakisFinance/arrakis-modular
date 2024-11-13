@@ -387,7 +387,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amount1Max: amount1,
                 amount0Min: amount0 * 99 / 100,
                 amount1Min: amount1 * 99 / 100,
-                amountSharesMin: sharesToMint,
+                amountSharesMin: sharesToMint * 99 / 100,
                 vault: vault,
                 receiver: user
             })
@@ -429,7 +429,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                     amount1Max: amount1,
                     amount0Min: amount0 * 99 / 100,
                     amount1Min: amount1 * 99 / 100,
-                    amountSharesMin: sharesToMint,
+                    amountSharesMin: sharesToMint * 99 / 100,
                     vault: vault,
                     receiver: user
                 })
@@ -463,7 +463,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
         uint256 amt0 = 66_666_666;
         uint256 amt1 = 23_491_714_448_813_903;
 
-                Trade.Data[] memory datas = new Trade.Data[](1);
+        Trade.Data[] memory datas = new Trade.Data[](1);
 
         {
             uint256 flags = 2 << 5 | 0x04;
@@ -644,7 +644,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amount1Max: amount1,
                 amount0Min: amount0 * 99 / 100,
                 amount1Min: amount1 * 99 / 100,
-                amountSharesMin: sharesToMint,
+                amountSharesMin: sharesToMint * 99 / 100,
                 vault: vault,
                 receiver: user
             })
@@ -681,7 +681,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amount1Max: amount1,
                 amount0Min: amount0 * 99 / 100,
                 amount1Min: amount1 * 99 / 100,
-                amountSharesMin: sharesToMint,
+                amountSharesMin: sharesToMint * 99 / 100,
                 vault: vault,
                 receiver: secondUser
             })
@@ -762,7 +762,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amount1Max: amount1,
                 amount0Min: amount0 * 99 / 100,
                 amount1Min: amount1 * 99 / 100,
-                amountSharesMin: sharesToMint,
+                amountSharesMin: sharesToMint * 99 / 100,
                 vault: vault,
                 receiver: user
             })
@@ -799,7 +799,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amount1Max: amount1,
                 amount0Min: amount0 * 99 / 100,
                 amount1Min: amount1 * 99 / 100,
-                amountSharesMin: sharesToMint,
+                amountSharesMin: sharesToMint * 99 / 100,
                 vault: vault,
                 receiver: secondUser
             })
@@ -880,7 +880,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amount1Max: 1,
                 amount0Min: amount0 * 99 / 100,
                 amount1Min: amount1 * 99 / 100,
-                amountSharesMin: sharesToMint,
+                amountSharesMin: sharesToMint * 99 / 100,
                 vault: vault,
                 receiver: user
             })
@@ -917,7 +917,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amount1Max: 1,
                 amount0Min: amount0 * 99 / 100,
                 amount1Min: amount1 * 99 / 100,
-                amountSharesMin: sharesToMint,
+                amountSharesMin: sharesToMint * 99 / 100,
                 vault: vault,
                 receiver: secondUser
             })
@@ -953,15 +953,17 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         IArrakisPublicVaultRouterV2(router).addLiquidity(
             AddLiquidityData({
-                amount0Max: amount0,
-                amount1Max: amount1,
-                amount0Min: amount0 * 99 / 100,
-                amount1Min: amount1 * 99 / 100,
+                amount0Max: init0,
+                amount1Max: init1,
+                amount0Min: amount0,
+                amount1Min: amount1,
                 amountSharesMin: sharesToMint,
                 vault: vault,
                 receiver: user
             })
         );
+
+        (amount0, amount1) = IArrakisMetaVault(vault).totalUnderlying();
 
         vm.stopPrank();
 
@@ -985,8 +987,8 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 sqrtPriceX96,
                 TickMath.getSqrtPriceAtTick(tickLower),
                 TickMath.getSqrtPriceAtTick(tickUpper),
-                init0,
-                init1
+                amount0,
+                amount1
             );
 
             IUniV4StandardModule.LiquidityRange memory liquidityRange =
@@ -1040,7 +1042,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
                 amount1Max: init1 / 3,
                 amount0Min: amount0 * 99 / 100,
                 amount1Min: amount1 * 99 / 100,
-                amountSharesMin: sharesToMint,
+                amountSharesMin: sharesToMint * 99 / 100,
                 vault: vault,
                 receiver: secondUser
             })

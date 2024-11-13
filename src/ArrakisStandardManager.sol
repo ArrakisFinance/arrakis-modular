@@ -247,6 +247,7 @@ contract ArrakisStandardManager is
         address vault_,
         uint24 newFeePIPS_
     ) external onlyOwner onlyWhitelistedVault(vault_) {
+        if (newFeePIPS_ > PIPS) revert FeePIPSGtMax();
         if (pendingFeeIncrease[vault_].submitTimestamp != 0) {
             revert AlreadyPendingIncrease();
         }

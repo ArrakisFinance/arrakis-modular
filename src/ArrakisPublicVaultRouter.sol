@@ -40,6 +40,8 @@ import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 // #endregion solady dependencies.
 
+import {console} from "forge-std/console.sol";
+
 contract ArrakisPublicVaultRouter is
     IArrakisPublicVaultRouter,
     ReentrancyGuard,
@@ -141,6 +143,8 @@ contract ArrakisPublicVaultRouter is
         );
 
         if (sharesReceived == 0) revert NothingToMint();
+
+        console.log("TOTO 1");
 
         if (
             amount0 < params_.amount0Min
@@ -315,6 +319,8 @@ contract ArrakisPublicVaultRouter is
 
         if (sharesReceived == 0) revert NothingToMint();
 
+         console.log("TOTO 2");
+
         if (
             amount0 < params_.addData.amount0Min
                 || amount1 < params_.addData.amount1Min
@@ -457,6 +463,8 @@ contract ArrakisPublicVaultRouter is
         );
 
         if (sharesReceived == 0) revert NothingToMint();
+
+        console.log("TOTO 3");
 
         if (
             amount0 < params_.amount0Min
@@ -682,6 +690,8 @@ contract ArrakisPublicVaultRouter is
         );
 
         if (sharesReceived == 0) revert NothingToMint();
+
+        console.log("TOTO 4");
 
         if (
             amount0 < params_.addData.amount0Min
@@ -960,6 +970,8 @@ contract ArrakisPublicVaultRouter is
         );
 
         if (sharesReceived == 0) revert NothingToMint();
+
+        console.log("TOTO 5");
 
         if (
             amount0 < params_.addData.amount0Min

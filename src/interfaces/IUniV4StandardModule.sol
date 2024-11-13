@@ -28,7 +28,7 @@ interface IUniV4StandardModule {
     error TickLowerOutOfBounds(int24 tickLower);
     error TickUpperOutOfBounds(int24 tickUpper);
     error SamePool();
-    error NoRemoveLiquidityHooks();
+    error NoRemoveOrAddLiquidityHooks();
     error OverMaxDeviation();
     error NativeCoinCannotBeToken1();
     error MaxSlippageGtTenPercent();
@@ -43,6 +43,7 @@ interface IUniV4StandardModule {
     error InvalidOrder();
     error InvalidReceiver();
     error InvalidTokens();
+    error TooSmallMint();
 
     // #endregion errors.
 

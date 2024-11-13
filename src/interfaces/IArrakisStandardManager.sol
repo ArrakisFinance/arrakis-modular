@@ -54,6 +54,7 @@ interface IArrakisStandardManager {
     error SetManagerFeeCallNotAllowed();
     error OnlyStratAnnouncer();
     error PublicVaultTotalSupplyChanged();
+    error FeePIPSGtMax();
 
     // #endregion errors.
 
