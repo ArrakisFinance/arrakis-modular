@@ -17,3 +17,10 @@ struct DopplerData {
     bool isToken0;
     uint256 numPDSlugs;
 }
+
+struct Position {
+    int24 tickLower;
+    int24 tickUpper;
+    uint128 liquidity;
+    uint8 salt;
+}

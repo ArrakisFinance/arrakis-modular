@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
-import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IArrakisLPModulePrivate} from
     "../interfaces/IArrakisLPModulePrivate.sol";
+import {IArrakisLPModule} from
+    "../interfaces/IArrakisLPModule.sol";
 import {IArrakisLPModuleID} from
     "../interfaces/IArrakisLPModuleID.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IDopplerModule} from "../interfaces/IDopplerModule.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
-import {DopplerData} from "../structs/SDoppler.sol";
-import {NATIVE_COIN} from "../constants/CArrakis.sol";
+import {DopplerData, Position} from "../structs/SDoppler.sol";
+import {NATIVE_COIN, BASE} from "../constants/CArrakis.sol";
 import {UnderlyingPayload, Range} from "../structs/SUniswapV4.sol";
 import {UnderlyingV4} from "../libraries/UnderlyingV4.sol";
+import {IDoppler} from "../interfaces/IDoppler.sol";
+import {IDopplerDeployer} from "../interfaces/IDopplerDeployer.sol";
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {
@@ -22,13 +25,16 @@ import {
 } from "@uniswap/v4-core/src/types/PoolId.sol";
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
-import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {
+    Currency,
+    CurrencyLibrary
+} from "@uniswap/v4-core/src/types/Currency.sol";
 import {LPFeeLibrary} from
     "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {SqrtPriceMath} from
     "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
-import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol"; 
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 
 import {SafeCallback} from
     "@uniswap/v4-periphery/src/base/SafeCallback.sol";
@@ -42,13 +48,11 @@ import {SafeERC20} from
 import {IERC20Metadata} from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {Doppler, Position} from "@doppler/src/Doppler.sol";
-
 /// @dev DopplerModule is a module that should only be used by private vault.
 /// should not be whitelisted for public vaults.
-contract DopplerModule is
-    IArrakisLPModule,
+abstract contract DopplerModule is
     IArrakisLPModulePrivate,
+    IArrakisLPModule,
     IArrakisLPModuleID,
     IDopplerModule,
     SafeCallback,
@@ -68,6 +72,7 @@ contract DopplerModule is
     // #region internal variables.
 
     address internal immutable _guardian;
+    IDopplerDeployer internal immutable _dopplerDeployer;
 
     // #endregion internal variables.
 
@@ -81,7 +86,7 @@ contract DopplerModule is
     uint160 public sqrtPriceX96;
     IERC20Metadata public token0;
     IERC20Metadata public token1;
-    Doppler public doppler;
+    IDoppler public doppler;
     PoolKey public poolKey;
 
     // #endregion public properties.
@@ -100,12 +105,16 @@ contract DopplerModule is
         _;
     }
 
-    constructor(address poolManager_, address guardian_) {
-        if (poolManager_ == address(0) || guardian_ == address(0)) {
+    constructor(
+        address poolManager_,
+        address guardian_,
+        address dopplerDeployer_
+    ) SafeCallback(IPoolManager(poolManager_)) {
+        if (guardian_ == address(0) || dopplerDeployer_ == address(0)) {
             revert AddressZero();
         }
-        poolManager = IPoolManager(poolManager_);
         _guardian = guardian_;
+        _dopplerDeployer = IDopplerDeployer(dopplerDeployer_);
     }
 
     // #region guardian functions.
@@ -161,6 +170,12 @@ contract DopplerModule is
         __ReentrancyGuard_init();
     }
 
+    function initializePosition(
+        bytes calldata data_
+    ) external {
+        /// @dev we cannot switch to doppler module.
+    }
+
     function fund(
         address depositor_,
         uint256 amount0_,
@@ -175,8 +190,8 @@ contract DopplerModule is
         // #endregion send token to doppler.
 
         (uint256 amount0, uint256 amount1) = dopplerData.isToken0
-            ? (dopplerData.numTokensToSell, 0)
-            : (0, dopplerData.numTokensToSell);
+            ? (dopplerData.numTokensToSell, uint256(0))
+            : (uint256(0), dopplerData.numTokensToSell);
 
         (amount0, amount1) =
             isInversed ? (amount1, amount0) : (amount0, amount1);
@@ -207,16 +222,19 @@ contract DopplerModule is
 
         // #region send token to receiver.
 
-        emit LogWithdraw(receiver_, amount0, amount1);
+        emit LogWithdraw(receiver_, BASE, amount0, amount1);
     }
 
     function withdrawManagerBalance()
         external
-        returns (uint256 amount0, uint256 amount1) {
-            return (0, 0);
+        returns (uint256 amount0, uint256 amount1)
+    {
+        return (0, 0);
     }
 
-    function setManagerFeePIPS(uint256 newFeePIPS_) external {
+    function setManagerFeePIPS(
+        uint256 newFeePIPS_
+    ) external {
         revert NotImplemented();
     }
 
@@ -239,38 +257,52 @@ contract DopplerModule is
     function getInits()
         external
         view
-        returns (uint256 init0, uint256 init1) {
-            return (0, 0);
-        }
+        returns (uint256 init0, uint256 init1)
+    {
+        return (0, 0);
+    }
 
     function totalUnderlying()
         public
         view
-        returns (uint256 amount0, uint256 amount1) {
-            DopplerData memory _dopplerData = dopplerData;
-            Range[] memory ranges = new Range[](3 + dopplerData.numPDSlugs);
+        returns (uint256 amount0, uint256 amount1)
+    {
+        DopplerData memory _dopplerData = dopplerData;
+        Range[] memory ranges =
+            new Range[](3 + dopplerData.numPDSlugs);
 
-            for(uint256 i; 3 + dopplerData.numPDSlugs; i++) {
-                Position memory position = doppler.positions(bytes32(uint256(i)));
-                ranges[i] = Range({
-                    lowerTick: position.tickLower,
-                    upperTick: position.tickUpper,
-                    poolKey: poolKey
-                });
-            }
+        for (uint256 i; i < 3 + dopplerData.numPDSlugs; i++) {
+            Position memory position;
 
-            (amount0, amount1,,) = UnderlyingV4.totalUnderlyingWithFees(UnderlyingPayload({
+            (
+                position.tickLower,
+                position.tickUpper,
+                position.liquidity,
+                position.salt
+            ) = doppler.positions(bytes32(uint256(i)));
+            ranges[i] = Range({
+                lowerTick: position.tickLower,
+                upperTick: position.tickUpper,
+                poolKey: poolKey
+            });
+        }
+
+        (amount0, amount1,,) = UnderlyingV4.totalUnderlyingWithFees(
+            UnderlyingPayload({
                 ranges: ranges,
                 poolManager: poolManager,
                 self: address(this),
                 leftOver0: 0,
                 leftOver1: 0
-            }));
+            })
+        );
 
-            return isInversed ? (amount1, amount0) : (amount0, amount1);
+        return isInversed ? (amount1, amount0) : (amount0, amount1);
     }
 
-    function totalUnderlyingAtPrice(uint160) external returns (uint256 amount0, uint256 amount1) {
+    function totalUnderlyingAtPrice(
+        uint160
+    ) external view returns (uint256 amount0, uint256 amount1) {
         return totalUnderlying();
     }
 
@@ -280,7 +312,7 @@ contract DopplerModule is
     ) external view {
         /// @dev not implemented.
     }
-        
+
     // #region internal functions.
 
     function _unlockCallback(
@@ -290,36 +322,29 @@ contract DopplerModule is
 
         // #region create doppler hook.
 
-        doppler = new Doppler(
-            poolManager,
-            dopplerData.numTokensToSell,
-            dopplerData.minimumProceeds,
-            dopplerData.maximumProceeds,
-            dopplerData.startingTime,
-            dopplerData.endingTime,
-            dopplerData.startingTick,
-            dopplerData.endingTick,
-            dopplerData.epochLength,
-            dopplerData.gamma,
-            dopplerData.isToken0,
-            dopplerData.numPDSlugs,
-            address(this)
-        );
+        {
+            doppler = IDoppler(_dopplerDeployer.deployDoppler(
+                poolManager,
+                dopplerData,
+                address(this)
+            ));
+        }
 
         // #endregion create doppler hook.
 
         // #region transfer token to doppler through poolManager.
 
         address tokenToSend;
+        bool _isInversed = isInversed;
 
         if (dopplerData.isToken0) {
-            if (isInversed) {
+            if (_isInversed) {
                 tokenToSend = address(token1);
             } else {
                 tokenToSend = address(token0);
             }
         } else {
-            if (isInversed) {
+            if (_isInversed) {
                 tokenToSend = address(token0);
             } else {
                 tokenToSend = address(token1);
@@ -328,12 +353,12 @@ contract DopplerModule is
 
         if (tokenToSend == NATIVE_COIN) {
             poolManager.take(
-                Currency.ADDRESS_ZERO,
+                CurrencyLibrary.ADDRESS_ZERO,
                 address(doppler),
                 dopplerData.numTokensToSell
             );
 
-            poolManager.sync(Currency.ADDRESS_ZERO);
+            poolManager.sync(CurrencyLibrary.ADDRESS_ZERO);
             poolManager.settle{value: dopplerData.numTokensToSell}();
         } else {
             poolManager.take(
@@ -353,8 +378,7 @@ contract DopplerModule is
 
         // #region create pool on poolManager.
 
-        (Currency currency0, Currency currency1) = dopplerData
-            .isInversed
+        (Currency currency0, Currency currency1) = _isInversed
             ? (
                 Currency.wrap(address(token1)),
                 Currency.wrap(address(token0))
