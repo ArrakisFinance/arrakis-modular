@@ -10,6 +10,14 @@ interface IDopplerDeployer {
     function deployDoppler(
         IPoolManager poolManager_,
         DopplerData calldata dopplerData_,
-        address airlock_
+        address airlock_,
+        bytes32 salt_
     ) external returns (address);
+
+    function computeAddress(
+        IPoolManager poolManager_,
+        DopplerData calldata dopplerData_,
+        address airlock_,
+        bytes32 salt_
+    ) external view returns (address);
 }

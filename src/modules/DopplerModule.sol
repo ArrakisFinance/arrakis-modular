@@ -3,8 +3,7 @@ pragma solidity ^0.8.26;
 
 import {IArrakisLPModulePrivate} from
     "../interfaces/IArrakisLPModulePrivate.sol";
-import {IArrakisLPModule} from
-    "../interfaces/IArrakisLPModule.sol";
+import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IArrakisLPModuleID} from
     "../interfaces/IArrakisLPModuleID.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
@@ -50,7 +49,7 @@ import {IERC20Metadata} from
 
 /// @dev DopplerModule is a module that should only be used by private vault.
 /// should not be whitelisted for public vaults.
-abstract contract DopplerModule is
+contract DopplerModule is
     IArrakisLPModulePrivate,
     IArrakisLPModule,
     IArrakisLPModuleID,
@@ -84,6 +83,7 @@ abstract contract DopplerModule is
     uint24 public fee;
     int24 public tickSpacing;
     uint160 public sqrtPriceX96;
+    bytes32 public salt;
     IERC20Metadata public token0;
     IERC20Metadata public token1;
     IDoppler public doppler;
@@ -110,7 +110,10 @@ abstract contract DopplerModule is
         address guardian_,
         address dopplerDeployer_
     ) SafeCallback(IPoolManager(poolManager_)) {
-        if (guardian_ == address(0) || dopplerDeployer_ == address(0)) {
+        if (
+            poolManager_ == address(0) || guardian_ == address(0)
+                || dopplerDeployer_ == address(0)
+        ) {
             revert AddressZero();
         }
         _guardian = guardian_;
@@ -139,7 +142,8 @@ abstract contract DopplerModule is
         address metaVault_,
         uint24 fee_,
         int24 tickSpacing_,
-        uint160 sqrtPriceX96_
+        uint160 sqrtPriceX96_,
+        bytes32 salt_
     ) external initializer {
         if (metaVault_ == address(0)) revert AddressZero();
         if (fee_ > LPFeeLibrary.MAX_LP_FEE) {
@@ -165,6 +169,7 @@ abstract contract DopplerModule is
         fee = fee_;
         tickSpacing = tickSpacing_;
         sqrtPriceX96 = sqrtPriceX96_;
+        salt = salt_;
 
         __Pausable_init();
         __ReentrancyGuard_init();
@@ -202,7 +207,7 @@ abstract contract DopplerModule is
     function withdraw(
         address receiver_,
         uint256 proportion_
-    ) external returns (uint256 amount0, uint256 amount1) {
+    ) external onlyMetaVault whenNotPaused nonReentrant returns (uint256 amount0, uint256 amount1) {
         if (receiver_ == address(0)) revert AddressZero();
 
         // #region withdraw from doppler.
@@ -323,11 +328,11 @@ abstract contract DopplerModule is
         // #region create doppler hook.
 
         {
-            doppler = IDoppler(_dopplerDeployer.deployDoppler(
-                poolManager,
-                dopplerData,
-                address(this)
-            ));
+            doppler = IDoppler(
+                _dopplerDeployer.deployDoppler(
+                    poolManager, dopplerData, address(this), salt
+                )
+            );
         }
 
         // #endregion create doppler hook.
@@ -368,8 +373,10 @@ abstract contract DopplerModule is
             );
 
             poolManager.sync(Currency.wrap(tokenToSend));
-            IERC20Metadata(tokenToSend).safeTransfer(
-                address(poolManager), dopplerData.numTokensToSell
+            IERC20Metadata(tokenToSend).safeTransferFrom(
+                depositor,
+                address(poolManager),
+                dopplerData.numTokensToSell
             );
             poolManager.settle();
         }
