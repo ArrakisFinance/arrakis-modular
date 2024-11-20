@@ -37,13 +37,6 @@ interface IUniV4StandardModule {
     error SlippageTooHigh();
     error OnlyMetaVaultOwner();
     error InvalidMsgValue();
-    error InvalidSignature();
-    error InvalidOrderHash();
-    error SameCowSwapSigner();
-    error InvalidOrder();
-    error InvalidReceiver();
-    error InvalidTokens();
-    error TooSmallMint();
 
     // #endregion errors.
 
@@ -76,10 +69,6 @@ interface IUniV4StandardModule {
         uint256 amount1Minted,
         uint256 amount0Burned,
         uint256 amount1Burned
-    );
-    event LogSetCowSwapSigner(address oldCowSwapSigner, address newCowSwapSigner);
-    event LogEthFlowOrderCreated(
-        bytes32 orderHash
     );
 
     // #endregion events.
@@ -156,8 +145,6 @@ interface IUniV4StandardModule {
             uint256 amount0Burned,
             uint256 amount1Burned
         );
-
-    function setCowSwapSigner(address cowSwapSigner_) external;
 
     // #endregion only manager functions.
 
