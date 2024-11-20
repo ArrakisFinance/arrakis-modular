@@ -227,6 +227,7 @@ abstract contract UniV4StandardModule is
         if (maxSlippage_ > TEN_PERCENT) {
             revert MaxSlippageGtTenPercent();
         }
+        if (init0_ == 0 && init1_ == 0) revert InitsAreZeros();
         // #endregion checks.
 
         metaVault = IArrakisMetaVault(metaVault_);
@@ -624,11 +625,14 @@ abstract contract UniV4StandardModule is
             });
         }
 
+        uint256 fees0;
+        uint256 fees1;
+
         {
             (uint256 leftOver0, uint256 leftOver1) =
                 _getLeftOvers(_poolKey);
 
-            (amount0, amount1,,) = UnderlyingV4
+            (amount0, amount1, fees0, fees1) = UnderlyingV4
                 .totalUnderlyingAtPriceWithFees(
                 UnderlyingPayload({
                     ranges: poolRanges,
@@ -640,6 +644,11 @@ abstract contract UniV4StandardModule is
                 priceX96_
             );
         }
+
+        amount0 =
+            amount0 - FullMath.mulDiv(fees0, managerFeePIPS, PIPS);
+        amount1 =
+            amount1 - FullMath.mulDiv(fees1, managerFeePIPS, PIPS);
 
         if (isInversed) {
             (amount0, amount1) = (amount1, amount0);

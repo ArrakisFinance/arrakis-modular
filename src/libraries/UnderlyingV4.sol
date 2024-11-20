@@ -69,12 +69,17 @@ library UnderlyingV4 {
             }
         }
 
-        uint256 managerFeePIPS =
-            IArrakisLPModule(underlyingPayload_.self).managerFeePIPS();
+        uint256 managerFeePIPS = IArrakisLPModule(underlyingPayload_.self).managerFeePIPS();
+        
+        fee0 = fee0
+            - FullMath.mulDiv(
+                fee0, managerFeePIPS, PIPS
+            );
 
-        fee0 = fee0 - FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
-
-        fee1 = fee1 - FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
+        fee1 = fee1
+            - FullMath.mulDiv(
+                fee1, managerFeePIPS, PIPS
+            );
 
         amount0 += FullMath.mulDivRoundingUp(
             proportion_, fee0 + underlyingPayload_.leftOver0, BASE

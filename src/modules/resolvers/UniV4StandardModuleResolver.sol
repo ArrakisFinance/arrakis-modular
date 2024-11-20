@@ -87,8 +87,12 @@ contract UniV4StandardModuleResolver is
                 revert MaxAmountsTooLow();
             }
 
-            maxAmount0_ = maxAmount0_ > numberOfRanges + 2 ? maxAmount0_ - numberOfRanges - 2 : 0;
-            maxAmount1_ = maxAmount1_ > numberOfRanges + 2 ? maxAmount1_ - numberOfRanges - 2 : 0;
+            maxAmount0_ = maxAmount0_ > numberOfRanges + 2
+                ? maxAmount0_ - numberOfRanges - 2
+                : 0;
+            maxAmount1_ = maxAmount1_ > numberOfRanges + 2
+                ? maxAmount1_ - numberOfRanges - 2
+                : 0;
 
             poolRanges = new PoolRange[](_ranges.length);
 
@@ -142,8 +146,9 @@ contract UniV4StandardModuleResolver is
                 maxAmount0_,
                 maxAmount1_
             );
-            uint256 proportion =
-                FullMath.mulDivRoundingUp(shareToMint, BASE, totalSupply);
+            uint256 proportion = FullMath.mulDivRoundingUp(
+                shareToMint, BASE, totalSupply
+            );
             (amount0ToDeposit, amount1ToDeposit) = UnderlyingV4
                 .totalUnderlyingForMint(underlyingPayload, proportion);
         } else {
