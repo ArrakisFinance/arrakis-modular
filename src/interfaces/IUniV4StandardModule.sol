@@ -35,6 +35,7 @@ interface IUniV4StandardModule {
     error SlippageTooHigh();
     error OnlyMetaVaultOwner();
     error InvalidMsgValue();
+    error TooSmallMint();
 
     // #endregion errors.
 

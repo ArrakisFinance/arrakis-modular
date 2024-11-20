@@ -6,9 +6,11 @@ import {
     PositionUnderlying,
     RangeData
 } from "../structs/SUniswapV4.sol";
-import {BASE} from "../constants/CArrakis.sol";
+import {BASE, PIPS} from "../constants/CArrakis.sol";
 import {IUniV4ModuleBase} from "../interfaces/IUniV4ModuleBase.sol";
-import {IUniV4StandardModule} from "../interfaces/IUniV4StandardModule.sol";
+import {IUniV4StandardModule} from
+    "../interfaces/IUniV4StandardModule.sol";
+import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
@@ -32,8 +34,7 @@ import {TransientStateLibrary} from
 
 import {LiquidityAmounts} from
     "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
-import {SqrtPriceMath} from
-    "@v3-lib-0.8/contracts/SqrtPriceMath.sol";
+import {SqrtPriceMath} from "@v3-lib-0.8/contracts/SqrtPriceMath.sol";
 
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -67,6 +68,13 @@ library UnderlyingV4 {
                 fee1 += f1;
             }
         }
+
+        uint256 managerFeePIPS =
+            IArrakisLPModule(underlyingPayload_.self).managerFeePIPS();
+
+        fee0 = fee0 - FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
+
+        fee1 = fee1 - FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
 
         amount0 += FullMath.mulDivRoundingUp(
             proportion_, fee0 + underlyingPayload_.leftOver0, BASE
@@ -218,16 +226,18 @@ library UnderlyingV4 {
         }
 
         int128 liquidity = SafeCast.toInt128(
-                SafeCast.toInt256(
-                    FullMath.mulDiv(
-                        uint256(positionState.liquidity),
-                        proportion_,
-                        BASE
-                    )
+            SafeCast.toInt256(
+                FullMath.mulDiv(
+                    uint256(positionState.liquidity),
+                    proportion_,
+                    BASE
                 )
-            );
+            )
+        );
 
-        if (liquidity == 0) revert IUniV4StandardModule.TooSmallMint();
+        if (liquidity == 0) {
+            revert IUniV4StandardModule.TooSmallMint();
+        }
 
         // compute current holdings from liquidity
         (amount0Current, amount1Current) = getAmountsForDelta(
