@@ -171,6 +171,7 @@ contract UniV4StandardModulePublic is
     ) internal returns (bytes memory) {
         PoolKey memory _poolKey = poolKey;
         uint256 length = _ranges.length;
+        uint256 _managerFeePIPS = managerFeePIPS;
 
         // #region get liquidity for each positions and mint.
 
@@ -201,9 +202,9 @@ contract UniV4StandardModulePublic is
 
                 address manager = metaVault.manager();
                 uint256 managerFee0 =
-                    FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
+                    FullMath.mulDiv(fee0, _managerFeePIPS, PIPS);
                 uint256 managerFee1 =
-                    FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
+                    FullMath.mulDiv(fee1, _managerFeePIPS, PIPS);
 
                 if (managerFee0 > 0) {
                     poolManager.take(

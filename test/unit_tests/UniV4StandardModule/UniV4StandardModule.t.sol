@@ -3728,16 +3728,18 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #endregion change ranges.
 
+        (amount0, amount1) = module.totalUnderlying();
+
         // #region withdraw.
 
         vm.prank(metaVault);
         module.withdraw(receiver, BASE);
 
         assertEq(
-            IERC20Metadata(USDC).balanceOf(receiver), amount0 - 1
+            IERC20Metadata(USDC).balanceOf(receiver), amount0
         );
         assertEq(
-            IERC20Metadata(WETH).balanceOf(receiver), amount1 - 1
+            IERC20Metadata(WETH).balanceOf(receiver), amount1
         );
 
         // #endregion withdraw.
@@ -6536,7 +6538,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         balance1 = module.managerBalance1();
 
-        assertEq(balance1, 29_641_691_633_406);
+        assertEq(balance1, 29641691633406);
     }
 
     // #endregion test managerBalance0.
