@@ -9,8 +9,6 @@ import {IPoolManager} from
 
 import {SwapPayload} from "../structs/SUniswapV4.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
-import {ICowSwapEthFlow} from "../interfaces/ICowSwapEthFlow.sol";
-import {EthFlowData} from "../structs/SCowswap.sol";
 
 interface IUniV4StandardModule {
     // #region errors.
@@ -28,7 +26,7 @@ interface IUniV4StandardModule {
     error TickLowerOutOfBounds(int24 tickLower);
     error TickUpperOutOfBounds(int24 tickUpper);
     error SamePool();
-    error NoRemoveLiquidityHooks();
+    error NoRemoveOrAddLiquidityHooks();
     error OverMaxDeviation();
     error NativeCoinCannotBeToken1();
     error MaxSlippageGtTenPercent();
@@ -37,12 +35,9 @@ interface IUniV4StandardModule {
     error SlippageTooHigh();
     error OnlyMetaVaultOwner();
     error InvalidMsgValue();
-    error InvalidSignature();
-    error InvalidOrderHash();
-    error SameCowSwapSigner();
-    error InvalidOrder();
-    error InvalidReceiver();
-    error InvalidTokens();
+    error TooSmallMint();
+    error InsufficientFunds();
+    error AmountZero();
 
     // #endregion errors.
 
@@ -75,10 +70,6 @@ interface IUniV4StandardModule {
         uint256 amount1Minted,
         uint256 amount0Burned,
         uint256 amount1Burned
-    );
-    event LogSetCowSwapSigner(address oldCowSwapSigner, address newCowSwapSigner);
-    event LogEthFlowOrderCreated(
-        bytes32 orderHash
     );
 
     // #endregion events.
@@ -117,12 +108,6 @@ interface IUniV4StandardModule {
         uint256 amount1_
     ) external;
 
-    function createEthFlowOrder(EthFlowData calldata order)
-        external
-        returns (bytes32 orderHash);
-
-    function invalidateEthFlowOrder(EthFlowData calldata order) external;
-
     // #endregion only meta vault owner functions.
 
     // #region only manager functions.
@@ -156,13 +141,17 @@ interface IUniV4StandardModule {
             uint256 amount1Burned
         );
 
-    function setCowSwapSigner(address cowSwapSigner_) external;
+    /// @notice function used to withdraw eth from the module.
+    /// @dev these fund will be used to swap eth to the other token
+    /// of the currencyPair to rebalance the inventory inside a single tx.
+    function withdrawEth(uint256 amount_) external;
 
     // #endregion only manager functions.
 
     // #region view functions.
 
-    function cowSwapEthFlow() external view returns (ICowSwapEthFlow);
+    /// @notice function used to get eth withdrawers allowances.
+    function ethWithdrawers(address) external view returns (uint256);
 
     /// @notice function used to get the list of active ranges.
     /// @return ranges active ranges
@@ -199,9 +188,6 @@ interface IUniV4StandardModule {
     /// @notice function used to get the oracle that
     /// will be used to proctect rebalances.
     function oracle() external view returns (IOracleWrapper);
-
-    /// @notice function used to get the ERC712's type hash
-    function DATA_TYPEHASH() external view returns (bytes32);
 
     // #endregion view functions.
 }

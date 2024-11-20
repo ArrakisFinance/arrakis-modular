@@ -25,13 +25,6 @@ import {
     SwapBalances
 } from "../structs/SUniswapV4.sol";
 import {UnderlyingV4} from "../libraries/UnderlyingV4.sol";
-import {
-    EthFlowData,
-    Data,
-    SignatureData,
-    IERC20
-} from "../structs/SCowswap.sol";
-import {ICowSwapEthFlow} from "../interfaces/ICowSwapEthFlow.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -40,14 +33,6 @@ import {IERC20Metadata} from
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {IERC1271} from
-    "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import {EIP712} from
-    "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import {SignatureChecker} from
-    "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
-import {ECDSA} from
-    "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -90,12 +75,10 @@ import {
 abstract contract UniV4StandardModule is
     ReentrancyGuardUpgradeable,
     PausableUpgradeable,
-    EIP712,
     IArrakisLPModule,
     IArrakisLPModuleID,
     IUniV4StandardModule,
-    IUnlockCallback,
-    IERC1271
+    IUnlockCallback
 {
     using SafeERC20 for IERC20Metadata;
     using PoolIdLibrary for PoolKey;
@@ -105,7 +88,6 @@ abstract contract UniV4StandardModule is
     using StateLibrary for IPoolManager;
     using TransientStateLibrary for IPoolManager;
     using BalanceDeltaLibrary for BalanceDelta;
-    using SignatureChecker for address;
 
     // #region enum.
 
@@ -117,20 +99,10 @@ abstract contract UniV4StandardModule is
 
     // #endregion enum.
 
-    // #region constants.
-
-    bytes32 public constant DATA_TYPEHASH = keccak256(
-        "Data((IERC20 sellToken,IERC20 buyToken,address receiver,uint256 sellAmount,uint256 buyAmount,uint32 validTo,bytes32 appData,uint256 feeAmount,bytes32 kind,bool partiallyFillable,bytes32 sellTokenBalance,bytes32 buyTokenBalance),uint256 signedTimestamp,uint256 nonce,bytes32 orderHash)"
-    );
-
-    // #endregion constants.
-
     // #region immutable properties.
 
     /// @notice function used to get the uniswap v4 pool manager.
     IPoolManager public immutable poolManager;
-    /// @notice function used to get the cowswap eth flow contract.
-    ICowSwapEthFlow public immutable cowSwapEthFlow;
 
     // #endregion immutable properties.
 
@@ -158,8 +130,8 @@ abstract contract UniV4StandardModule is
     uint24 public maxSlippage;
     /// @notice pool's key of the module.
     PoolKey public poolKey;
-    /// @notice cowswap intent signer.
-    address public cowswapSigner;
+    /// @notice list of allowed addresses to withdraw eth.
+    mapping(address => uint256) public ethWithdrawers;
 
     // #endregion public properties.
 
@@ -199,22 +171,15 @@ abstract contract UniV4StandardModule is
 
     // #endregion modifiers.
 
-    constructor(
-        address poolManager_,
-        address guardian_,
-        address cowSwapEthFlow_
-    ) EIP712("UniswapV4StandardModule", "1.0.0") {
+    constructor(address poolManager_, address guardian_) {
         // #region checks.
         if (poolManager_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
-        if (cowSwapEthFlow_ == address(0)) revert AddressZero();
         // #endregion checks.
 
         poolManager = IPoolManager(poolManager_);
 
         _guardian = guardian_;
-
-        cowSwapEthFlow = ICowSwapEthFlow(cowSwapEthFlow_);
 
         _disableInitializers();
     }
@@ -312,6 +277,18 @@ abstract contract UniV4StandardModule is
 
     // #region vault owner functions.
 
+    function withdrawEth(
+        uint256 amount_
+    ) external nonReentrant whenNotPaused {
+        if (amount_ == 0) revert AmountZero();
+        if (ethWithdrawers[msg.sender] < amount_) {
+            revert InsufficientFunds();
+        }
+
+        ethWithdrawers[msg.sender] -= amount_;
+        payable(msg.sender).sendValue(amount_);
+    }
+
     function approve(
         address spender_,
         uint256 amount0_,
@@ -321,101 +298,21 @@ abstract contract UniV4StandardModule is
             revert OnlyMetaVaultOwner();
         }
 
-        token0.forceApprove(spender_, amount0_);
-        token1.forceApprove(spender_, amount1_);
+        IERC20Metadata _token0 = token0;
+        IERC20Metadata _token1 = token1;
+
+        if (address(_token0) != NATIVE_COIN) {
+            _token0.forceApprove(spender_, amount0_);
+        } else {
+            ethWithdrawers[spender_] = amount0_;
+        }
+        if (address(_token1) != NATIVE_COIN) {
+            _token1.forceApprove(spender_, amount1_);
+        } else {
+            ethWithdrawers[spender_] = amount1_;
+        }
 
         emit LogApproval(spender_, amount0_, amount1_);
-    }
-
-    function createEthFlowOrder(
-        EthFlowData calldata order_
-    ) external onlyManager returns (bytes32 orderHash) {
-        if (order_.receiver != address(this)) {
-            revert InvalidReceiver();
-        }
-
-        if(address(token0) != NATIVE_COIN && address(token1) != NATIVE_COIN) {
-            revert InvalidTokens();
-        }
-
-        bytes32 orderHash = cowSwapEthFlow.createOrder{
-            value: order_.sellAmount + order_.feeAmount
-        }(order_);
-
-        emit LogEthFlowOrderCreated(orderHash);
-    }
-
-    function invalidateEthFlowOrder(
-        EthFlowData calldata order_
-    ) external onlyManager {
-        cowSwapEthFlow.invalidateOrder(order_);
-    }
-
-    function isValidSignature(
-        bytes32 hash_,
-        bytes memory signature_
-    ) external view returns (bytes4 magicValue) {
-        // NOTE : we can add oracle checks here to prevent front running attacks.
-
-        SignatureData memory signatureData = abi.decode(
-            signature_, (SignatureData)
-        );
-
-        if (signatureData.orderHash != hash_) {
-            revert InvalidOrderHash();
-        }
-
-        Data memory data = abi.decode(signatureData.order, (Data));
-
-        if (
-            data.validTo < block.timestamp
-                || signatureData.signedTimestamp > block.timestamp
-        ) {
-            revert InvalidOrder();
-        }
-
-        if (data.receiver != address(this)) {
-            revert InvalidReceiver();
-        }
-
-        bytes32 dataStructHash = keccak256(
-            abi.encode(
-                DATA_TYPEHASH,
-                abi.encode(
-                    data.sellToken,
-                    data.buyToken,
-                    data.receiver,
-                    data.sellAmount,
-                    data.buyAmount,
-                    data.validTo,
-                    data.appData,
-                    data.feeAmount,
-                    data.kind,
-                    data.partiallyFillable,
-                    data.sellTokenBalance,
-                    data.buyTokenBalance
-                ),
-                signatureData.signedTimestamp,
-                signatureData.nonce,
-                signatureData.orderHash
-            )
-        );
-
-        (address recovered, ECDSA.RecoverError error) = ECDSA.tryRecover(
-            _hashTypedDataV4(dataStructHash),
-            signatureData.signature
-        );
-
-        if (
-            !cowswapSigner.isValidSignatureNow(
-                _hashTypedDataV4(dataStructHash),
-                signatureData.signature
-            )
-        ) {
-            revert InvalidSignature();
-        }
-
-        return 0x1626ba7e;
     }
 
     // #endregion vault owner functions.
@@ -573,25 +470,11 @@ abstract contract UniV4StandardModule is
         _internalRebalance(liquidityRanges_, swapPayload_);
     }
 
-    function setCowSwapSigner(
-        address cowSwapSigner_
-    ) external onlyManager whenNotPaused {
-        address _cowSwapSigner = cowswapSigner;
-        if (cowSwapSigner_ == address(0)) revert AddressZero();
-        if (_cowSwapSigner == cowSwapSigner_) {
-            revert SameCowSwapSigner();
-        }
-
-        cowswapSigner = cowSwapSigner_;
-
-        emit LogSetCowSwapSigner(_cowSwapSigner, cowSwapSigner_);
-    }
-
     /// @notice function used by metaVault or manager to get manager fees.
     /// @return amount0 amount of token0 sent to manager.
     /// @return amount1 amount of token1 sent to manager.
     function withdrawManagerBalance()
-        external
+        public
         nonReentrant
         whenNotPaused
         returns (uint256 amount0, uint256 amount1)
@@ -637,6 +520,9 @@ abstract contract UniV4StandardModule is
         uint256 _managerFeePIPS = managerFeePIPS;
         if (_managerFeePIPS == newFeePIPS_) revert SameManagerFee();
         if (newFeePIPS_ > PIPS) revert NewFeesGtPIPS(newFeePIPS_);
+
+        withdrawManagerBalance();
+
         managerFeePIPS = newFeePIPS_;
         emit LogSetManagerFeePIPS(_managerFeePIPS, newFeePIPS_);
     }
@@ -932,8 +818,10 @@ abstract contract UniV4StandardModule is
                 PoolId poolId = _poolKey.toId();
                 uint256 length = _ranges.length;
 
+                Range[] memory ranges = _getRanges(length);
+
                 for (uint256 i; i < length; i++) {
-                    Range memory range = _ranges[i];
+                    Range memory range = ranges[i];
 
                     Position.State memory state;
                     (
@@ -1212,25 +1100,6 @@ abstract contract UniV4StandardModule is
 
         uint256 fee0;
         uint256 fee1;
-        {
-            PoolRange[] memory poolRanges =
-                _getPoolRanges(_ranges.length);
-
-            {
-                (uint256 leftOver0, uint256 leftOver1) =
-                    _getLeftOvers(_poolKey);
-
-                (,, fee0, fee1) = UnderlyingV4.totalUnderlyingWithFees(
-                    UnderlyingPayload({
-                        ranges: poolRanges,
-                        poolManager: poolManager,
-                        self: address(this),
-                        leftOver0: leftOver0,
-                        leftOver1: leftOver1
-                    })
-                );
-            }
-        }
 
         // #endregion fees computations.
 
@@ -1246,8 +1115,12 @@ abstract contract UniV4StandardModule is
 
             for (uint256 i; i < length; i++) {
                 LiquidityRange memory lrange = liquidityRanges_[i];
+
                 if (lrange.liquidity > 0) {
-                    (uint256 amt0, uint256 amt1) = _addLiquidity(
+                    (
+                        BalanceDelta callerDelta,
+                        BalanceDelta feesAccrued
+                    ) = _addLiquidity(
                         _poolKey,
                         poolId,
                         SafeCast.toUint128(
@@ -1257,10 +1130,28 @@ abstract contract UniV4StandardModule is
                         lrange.range.tickUpper
                     );
 
-                    amount0Minted += amt0;
-                    amount1Minted += amt1;
+                    BalanceDelta principalDelta =
+                        callerDelta - feesAccrued;
+
+                    /// @dev principalDelta has negative values.
+                    amount0Minted += SafeCast.toUint256(
+                        int256(-principalDelta.amount0())
+                    );
+                    amount1Minted += SafeCast.toUint256(
+                        int256(-principalDelta.amount1())
+                    );
+
+                    fee0 += SafeCast.toUint256(
+                        int256(feesAccrued.amount0())
+                    );
+                    fee1 += SafeCast.toUint256(
+                        int256(feesAccrued.amount1())
+                    );
                 } else if (lrange.liquidity < 0) {
-                    (uint256 amt0, uint256 amt1) = _removeLiquidity(
+                    (
+                        BalanceDelta callerDelta,
+                        BalanceDelta feesAccrued
+                    ) = _removeLiquidity(
                         _poolKey,
                         poolId,
                         SafeCast.toUint128(
@@ -1270,14 +1161,35 @@ abstract contract UniV4StandardModule is
                         lrange.range.tickUpper
                     );
 
-                    amount0Burned += amt0;
-                    amount1Burned += amt1;
+                    BalanceDelta principalDelta =
+                        callerDelta - feesAccrued;
+
+                    amount0Burned += SafeCast.toUint256(
+                        int256(principalDelta.amount0())
+                    );
+                    amount1Burned += SafeCast.toUint256(
+                        int256(principalDelta.amount1())
+                    );
+
+                    fee0 += SafeCast.toUint256(
+                        int256(feesAccrued.amount0())
+                    );
+                    fee1 += SafeCast.toUint256(
+                        int256(feesAccrued.amount1())
+                    );
                 } else {
-                    _collectFee(
+                    BalanceDelta feesAccrued = _collectFee(
                         _poolKey,
                         poolId,
                         lrange.range.tickLower,
                         lrange.range.tickUpper
+                    );
+
+                    fee0 += SafeCast.toUint256(
+                        int256(feesAccrued.amount0())
+                    );
+                    fee1 += SafeCast.toUint256(
+                        int256(feesAccrued.amount1())
                     );
                 }
             }
@@ -1580,7 +1492,7 @@ abstract contract UniV4StandardModule is
         PoolId poolId_,
         int24 tickLower_,
         int24 tickUpper_
-    ) internal {
+    ) internal returns (BalanceDelta feesAccrued) {
         _checkTicks(tickLower_, tickUpper_);
 
         bytes32 positionId =
@@ -1590,7 +1502,7 @@ abstract contract UniV4StandardModule is
             revert RangeShouldBeActive(tickLower_, tickUpper_);
         }
 
-        poolManager.modifyLiquidity(
+        (, feesAccrued) = poolManager.modifyLiquidity(
             poolKey_,
             IPoolManager.ModifyLiquidityParams({
                 liquidityDelta: 0,
@@ -1608,7 +1520,10 @@ abstract contract UniV4StandardModule is
         uint128 liquidityToAdd_,
         int24 tickLower_,
         int24 tickUpper_
-    ) internal returns (uint256 amount0, uint256 amount1) {
+    )
+        internal
+        returns (BalanceDelta callerDelta, BalanceDelta feesAccrued)
+    {
         // #region checks.
 
         _checkTicks(tickLower_, tickUpper_);
@@ -1629,7 +1544,7 @@ abstract contract UniV4StandardModule is
         // #endregion effects.
         // #region interactions.
 
-        (BalanceDelta delta,) = poolManager.modifyLiquidity(
+        (callerDelta, feesAccrued) = poolManager.modifyLiquidity(
             poolKey_,
             IPoolManager.ModifyLiquidityParams({
                 liquidityDelta: SafeCast.toInt256(
@@ -1642,10 +1557,6 @@ abstract contract UniV4StandardModule is
             ""
         );
 
-        (amount0, amount1) = _checkCurrencyDelta(
-            int256(delta.amount0()), int256(delta.amount1())
-        );
-
         // #endregion interactions.
     }
 
@@ -1655,7 +1566,10 @@ abstract contract UniV4StandardModule is
         uint128 liquidityToRemove_,
         int24 tickLower_,
         int24 tickUpper_
-    ) internal returns (uint256 amount0, uint256 amount1) {
+    )
+        internal
+        returns (BalanceDelta callerDelta, BalanceDelta feesAccrued)
+    {
         // #region get liqudity.
 
         Position.State memory state;
@@ -1695,7 +1609,7 @@ abstract contract UniV4StandardModule is
 
         // #region interactions.
 
-        (BalanceDelta delta,) = poolManager.modifyLiquidity(
+        (callerDelta, feesAccrued) = poolManager.modifyLiquidity(
             poolKey_,
             IPoolManager.ModifyLiquidityParams({
                 liquidityDelta: -SafeCast.toInt256(uint256(liquidityToRemove_)),
@@ -1705,10 +1619,6 @@ abstract contract UniV4StandardModule is
             }),
             ""
         );
-
-        amount0 = SafeCast.toUint256(delta.amount0());
-
-        amount1 = SafeCast.toUint256(delta.amount1());
 
         // #endregion interactions.
     }
@@ -1773,6 +1683,15 @@ abstract contract UniV4StandardModule is
                 upperTick: range.tickUpper,
                 poolKey: poolKey
             });
+        }
+    }
+
+    function _getRanges(
+        uint256 length_
+    ) internal view returns (Range[] memory ranges) {
+        ranges = new Range[](length_);
+        for (uint256 i; i < length_; i++) {
+            ranges[i] = _ranges[i];
         }
     }
 
@@ -1866,7 +1785,10 @@ abstract contract UniV4StandardModule is
                 || poolKey_.hooks.hasPermission(
                     Hooks.AFTER_REMOVE_LIQUIDITY_FLAG
                 )
-        ) revert NoRemoveLiquidityHooks();
+                || poolKey_.hooks.hasPermission(
+                    Hooks.AFTER_ADD_LIQUIDITY_FLAG
+                )
+        ) revert NoRemoveOrAddLiquidityHooks();
     }
 
     function _checkMinReturn(
