@@ -130,6 +130,8 @@ abstract contract UniV4StandardModule is
     uint24 public maxSlippage;
     /// @notice pool's key of the module.
     PoolKey public poolKey;
+    /// @notice list of allowed addresses to withdraw eth.
+    mapping(address => uint256) public ethWithdrawers;
 
     // #endregion public properties.
 
@@ -275,6 +277,18 @@ abstract contract UniV4StandardModule is
 
     // #region vault owner functions.
 
+    function withdrawEth(
+        uint256 amount_
+    ) external nonReentrant whenNotPaused {
+        if (amount_ == 0) revert AmountZero();
+        if (ethWithdrawers[msg.sender] < amount_) {
+            revert InsufficientFunds();
+        }
+
+        ethWithdrawers[msg.sender] -= amount_;
+        payable(msg.sender).sendValue(amount_);
+    }
+
     function approve(
         address spender_,
         uint256 amount0_,
@@ -284,8 +298,19 @@ abstract contract UniV4StandardModule is
             revert OnlyMetaVaultOwner();
         }
 
-        token0.forceApprove(spender_, amount0_);
-        token1.forceApprove(spender_, amount1_);
+        IERC20Metadata _token0 = token0;
+        IERC20Metadata _token1 = token1;
+
+        if (address(_token0) != NATIVE_COIN) {
+            _token0.forceApprove(spender_, amount0_);
+        } else {
+            ethWithdrawers[spender_] = amount0_;
+        }
+        if (address(_token1) != NATIVE_COIN) {
+            _token1.forceApprove(spender_, amount1_);
+        } else {
+            ethWithdrawers[spender_] = amount1_;
+        }
 
         emit LogApproval(spender_, amount0_, amount1_);
     }

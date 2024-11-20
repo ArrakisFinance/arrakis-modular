@@ -36,6 +36,8 @@ interface IUniV4StandardModule {
     error OnlyMetaVaultOwner();
     error InvalidMsgValue();
     error TooSmallMint();
+    error InsufficientFunds();
+    error AmountZero();
 
     // #endregion errors.
 
@@ -139,9 +141,17 @@ interface IUniV4StandardModule {
             uint256 amount1Burned
         );
 
+    /// @notice function used to withdraw eth from the module.
+    /// @dev these fund will be used to swap eth to the other token
+    /// of the currencyPair to rebalance the inventory inside a single tx.
+    function withdrawEth(uint256 amount_) external;
+
     // #endregion only manager functions.
 
     // #region view functions.
+
+    /// @notice function used to get eth withdrawers allowances.
+    function ethWithdrawers(address) external view returns (uint256);
 
     /// @notice function used to get the list of active ranges.
     /// @return ranges active ranges

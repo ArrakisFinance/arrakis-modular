@@ -978,7 +978,234 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
     }
 
+    function testApproveToken0Native() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        Currency currency0 = Currency.wrap(address(0));
+        Currency currency1 = Currency.wrap(USDC);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 20,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
+
+        poolManager.unlock(abi.encode(2));
+
+        ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
+
+        {
+            address implementation = address(
+                new UniV4StandardModulePublic(
+                    address(poolManager), guardian
+                )
+            );
+
+            bytes memory data = abi.encodeWithSelector(
+                IUniV4StandardModule.initialize.selector,
+                init0,
+                init1,
+                true,
+                poolKey,
+                IOracleWrapper(address(oracle)),
+                TEN_PERCENT,
+                metaVault
+            );
+
+            module = UniV4StandardModulePublic(
+                payable(
+                    address(new ERC1967Proxy(implementation, data))
+                )
+            );
+        }
+
+        address spender = vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        vm.prank(owner);
+        module.approve(spender, 3000e6, 1e18);
+
+        assertEq(
+            IERC20Metadata(USDC).allowance(address(module), spender),
+            3000e6
+        );
+        assertEq(
+            module.ethWithdrawers(spender),
+            1e18
+        );
+    }
+
+    function testApproveToken1Native() public {
+        uint256 init0 = 1e18;
+        uint256 init1 = 3000e6;
+
+        Currency currency0 = Currency.wrap(address(0));
+        Currency currency1 = Currency.wrap(USDC);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 20,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
+
+        poolManager.unlock(abi.encode(2));
+
+        ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
+
+        {
+            address implementation = address(
+                new UniV4StandardModulePublic(
+                    address(poolManager), guardian
+                )
+            );
+
+            bytes memory data = abi.encodeWithSelector(
+                IUniV4StandardModule.initialize.selector,
+                init0,
+                init1,
+                false,
+                poolKey,
+                IOracleWrapper(address(oracle)),
+                TEN_PERCENT,
+                metaVault
+            );
+
+            module = UniV4StandardModulePublic(
+                payable(
+                    address(new ERC1967Proxy(implementation, data))
+                )
+            );
+        }
+
+        address spender = vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        vm.prank(owner);
+        module.approve(spender, 1e18, 3000e6);
+
+        assertEq(
+            IERC20Metadata(USDC).allowance(address(module), spender),
+            3000e6
+        );
+        assertEq(
+            module.ethWithdrawers(spender),
+            1e18
+        );
+    }
+
     // #endregion test approve.
+
+    // #region test withdrawEth.
+
+    function testWithdrawEthAmountZero() public {
+        address to = vm.addr(uint256(keccak256(abi.encode("To"))));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IUniV4StandardModule.AmountZero.selector
+            )
+        );
+
+        vm.prank(to);
+        module.withdrawEth(0);
+    }
+
+    function testWithdrawEthInsufficientFunds() public {
+        address to = vm.addr(uint256(keccak256(abi.encode("To"))));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IUniV4StandardModule.InsufficientFunds.selector
+            )
+        );
+
+        vm.prank(to);
+        module.withdrawEth(1);
+    }
+
+    function testWithdrawEth() public {
+        address spender = vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        // #region approve.
+
+        uint256 init0 = 1e18;
+        uint256 init1 = 3000e6;
+
+        Currency currency0 = Currency.wrap(address(0));
+        Currency currency1 = Currency.wrap(USDC);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 20,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
+
+        poolManager.unlock(abi.encode(2));
+
+        ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
+
+        {
+            address implementation = address(
+                new UniV4StandardModulePublic(
+                    address(poolManager), guardian
+                )
+            );
+
+            bytes memory data = abi.encodeWithSelector(
+                IUniV4StandardModule.initialize.selector,
+                init0,
+                init1,
+                false,
+                poolKey,
+                IOracleWrapper(address(oracle)),
+                TEN_PERCENT,
+                metaVault
+            );
+
+            module = UniV4StandardModulePublic(
+                payable(
+                    address(new ERC1967Proxy(implementation, data))
+                )
+            );
+        }
+
+        vm.prank(owner);
+        module.approve(spender, 1e18, 3000e6);
+
+        assertEq(
+            IERC20Metadata(USDC).allowance(address(module), spender),
+            3000e6
+        );
+        assertEq(
+            module.ethWithdrawers(spender),
+            1e18
+        );
+
+        // #endregion approve.
+
+        deal(address(module), 1e18);
+
+        assertEq(spender.balance, 0);
+
+        vm.prank(spender);
+        module.withdrawEth(1e18);
+
+        assertEq(spender.balance, 1e18);
+        assertEq(module.ethWithdrawers(spender), 0);
+    }
+
+    // #endregion test withdrawEth.
 
     // #region test set pool.
 
