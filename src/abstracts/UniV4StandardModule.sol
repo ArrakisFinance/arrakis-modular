@@ -103,8 +103,6 @@ abstract contract UniV4StandardModule is
 
     /// @notice function used to get the uniswap v4 pool manager.
     IPoolManager public immutable poolManager;
-    /// @notice function used to get the cowswap eth flow contract.
-    ICowSwapEthFlow public immutable cowSwapEthFlow;
 
     // #endregion immutable properties.
 
@@ -175,14 +173,11 @@ abstract contract UniV4StandardModule is
         // #region checks.
         if (poolManager_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
-        if (cowSwapEthFlow_ == address(0)) revert AddressZero();
         // #endregion checks.
 
         poolManager = IPoolManager(poolManager_);
 
         _guardian = guardian_;
-
-        cowSwapEthFlow = ICowSwapEthFlow(cowSwapEthFlow_);
 
         _disableInitializers();
     }

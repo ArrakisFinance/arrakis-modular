@@ -23,8 +23,6 @@ import {
     NATIVE_COIN
 } from "../../../src/constants/CArrakis.sol";
 import {SwapPayload} from "../../../src/structs/SUniswapV4.sol";
-import {EthFlowData, Data, SignatureData} from "../../../src/structs/SCowswap.sol";
-import {IERC20} from "../../../src/interfaces/ICowSwapERC20.sol";
 // #endregion Uniswap Module.
 
 // #region openzeppelin.
@@ -67,12 +65,6 @@ import {OracleMock} from "./mocks/OracleWrapperMock.sol";
 import {SimpleHook} from "./mocks/SimpleHook.sol";
 // #endregion mock contracts.
 
-// #region utils.
-
-import {OrderLib} from "../../utils/OrderLib.sol";
-
-// #endregion utils.
-
 interface IERC20USDT {
     function transfer(address _to, uint256 _value) external;
     function approve(address spender, uint256 value) external;
@@ -95,10 +87,6 @@ contract UniV4StandardModuleTest is TestWrapper {
         0xdAC17F958D2ee523a2206206994597C13D831ec7;
     address public constant WETH =
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant COW_SWAP_ETH_FLOW =
-        0x40A50cf069e992AA4536211B23F286eF88752187;
-    bytes32 public constant DOMAIN_SEPARATOR =
-        0xc078f884a2676e1345748b1feace7b0abee5d00ecadb6e574dcdd109a63e8943;
 
     // #endregion constants.
 
@@ -175,7 +163,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -301,9 +289,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
     function testConstructorPoolManagerAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        new UniV4StandardModulePublic(
-            address(0), guardian, COW_SWAP_ETH_FLOW
-        );
+        new UniV4StandardModulePublic(address(0), guardian);
     }
 
     function testConstructorMetaVaultAddressZero() public {
@@ -312,7 +298,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -336,14 +322,7 @@ contract UniV4StandardModuleTest is TestWrapper {
     function testConstructorGuardianAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         new UniV4StandardModulePublic(
-            address(poolManager), address(0), COW_SWAP_ETH_FLOW
-        );
-    }
-
-    function testConstructorCowSwapEthFlowAddressZero() public {
-        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        new UniV4StandardModulePublic(
-            address(poolManager), guardian, address(0)
+            address(poolManager), address(0)
         );
     }
 
@@ -366,7 +345,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -414,7 +393,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -460,7 +439,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -506,7 +485,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -554,7 +533,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -602,7 +581,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -650,7 +629,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -694,7 +673,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -745,7 +724,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -794,7 +773,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolManager.unlock(abi.encode(2));
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -835,7 +814,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -866,7 +845,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -938,7 +917,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -971,12 +950,10 @@ contract UniV4StandardModuleTest is TestWrapper {
     // #region test approve.
 
     function testApproveOnlyMetaVaultOwner() public {
-        address notMetaVaultOwner = vm.addr(
-            uint256(keccak256(abi.encode("notMetaVaultOwner")))
-        );
+        address notMetaVaultOwner =
+            vm.addr(uint256(keccak256(abi.encode("notMetaVaultOwner"))));
 
-        address spender =
-            vm.addr(uint256(keccak256(abi.encode("Spender"))));
+        address spender = vm.addr(uint256(keccak256(abi.encode("Spender"))));
 
         vm.expectRevert(
             IUniV4StandardModule.OnlyMetaVaultOwner.selector
@@ -986,8 +963,7 @@ contract UniV4StandardModuleTest is TestWrapper {
     }
 
     function testApprove() public {
-        address spender =
-            vm.addr(uint256(keccak256(abi.encode("Spender"))));
+        address spender = vm.addr(uint256(keccak256(abi.encode("Spender"))));
 
         vm.prank(owner);
         module.approve(spender, 3000e6, 1e18);
@@ -1003,553 +979,6 @@ contract UniV4StandardModuleTest is TestWrapper {
     }
 
     // #endregion test approve.
-
-    // #region create eth flow order.
-
-    function testCreateEthFlowOrderOnlyManager() public {
-        address notManager = vm.addr(
-            uint256(keccak256(abi.encode("NotManager")))
-        );
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IArrakisLPModule.OnlyManager.selector,
-                notManager,
-                manager
-            )
-        );
-
-        vm.prank(notManager);
-        module.createEthFlowOrder(EthFlowData({
-            buyToken: IERC20(USDC),
-            receiver: address(module),
-            sellAmount: 1 ether,
-            buyAmount: 1645_000_000,
-            appData: bytes32(0),
-            feeAmount: 0,
-            validTo: type(uint32).max,
-            partiallyFillable: false,
-            quoteId: 0
-        }));
-    }
-
-    function testCreateEthFlowOrderInvalidReceiver() public {
-        vm.expectRevert(
-            IUniV4StandardModule.InvalidReceiver.selector
-        );
-
-        vm.prank(manager);
-        module.createEthFlowOrder(EthFlowData({
-            buyToken: IERC20(USDC),
-            receiver: address(this),
-            sellAmount: 1 ether,
-            buyAmount: 1645_000_000,
-            appData: bytes32(0),
-            feeAmount: 0,
-            validTo: type(uint32).max,
-            partiallyFillable: false,
-            quoteId: 0
-        }));
-    }
-
-    function testCreateEthFlowOrderInvalidTokens() public {
-        deal(address(module), 1.1 ether);
-
-        vm.prank(manager);
-        vm.expectRevert(IUniV4StandardModule.InvalidTokens.selector);
-        module.createEthFlowOrder(EthFlowData({
-            buyToken: IERC20(USDC),
-            receiver: address(module),
-            sellAmount: 1 ether,
-            buyAmount: 1645_000_000,
-            appData: bytes32(0),
-            feeAmount: 0.1 ether,
-            validTo: type(uint32).max,
-            partiallyFillable: false,
-            quoteId: 0
-        }));
-    }
-
-    function testCreateEthFlowOrder() public {
-        Currency currency0 = Currency.wrap(address(0));
-        Currency currency1 = Currency.wrap(USDC);
-
-        poolKey = PoolKey({
-            currency0: currency0,
-            currency1: currency1,
-            fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
-        });
-
-        sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
-
-        poolManager.unlock(abi.encode(2));
-
-        uint256 init0 = 3000e6;
-        uint256 init1 = 1e18;
-
-        address implementation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
-            )
-        );
-
-        bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
-            init0,
-            init1,
-            true,
-            poolKey,
-            IOracleWrapper(address(oracle)),
-            TEN_PERCENT,
-            metaVault
-        );
-
-        ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
-
-        module = UniV4StandardModulePublic(
-            payable(address(new ERC1967Proxy(implementation, data)))
-        );
-
-        deal(address(module), 1.1 ether);
-
-        vm.prank(manager);
-        module.createEthFlowOrder(EthFlowData({
-            buyToken: IERC20(USDC),
-            receiver: address(module),
-            sellAmount: 1 ether,
-            buyAmount: 1645_000_000,
-            appData: bytes32(0),
-            feeAmount: 0.1 ether,
-            validTo: type(uint32).max,
-            partiallyFillable: false,
-            quoteId: 0
-        }));
-    }
-
-    // #endregion create eth flow order.
-
-    // #region invalidate eth flow order.
-
-    function testInvalidateEthFlowOrderOnlyManager() public {
-        address notManager = vm.addr(
-            uint256(keccak256(abi.encode("NotManager")))
-        );
-
-        EthFlowData memory data = EthFlowData({
-            buyToken: IERC20(USDC),
-            receiver: address(module),
-            sellAmount: 1 ether,
-            buyAmount: 1645_000_000,
-            appData: bytes32(0),
-            feeAmount: 0.1 ether,
-            validTo: type(uint32).max,
-            partiallyFillable: false,
-            quoteId: 0
-        });
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IArrakisLPModule.OnlyManager.selector,
-                notManager,
-                manager
-            )
-        );
-
-        vm.prank(notManager);
-        module.invalidateEthFlowOrder(data);
-    }
-
-    function testInvalidateEthFlowOrder() public {
-        // #region create eth flow order.
-
-        Currency currency0 = Currency.wrap(address(0));
-        Currency currency1 = Currency.wrap(USDC);
-
-        poolKey = PoolKey({
-            currency0: currency0,
-            currency1: currency1,
-            fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
-        });
-
-        sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
-
-        poolManager.unlock(abi.encode(2));
-
-        uint256 init0 = 3000e6;
-        uint256 init1 = 1e18;
-
-        address implementation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
-            )
-        );
-
-        bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
-            init0,
-            init1,
-            true,
-            poolKey,
-            IOracleWrapper(address(oracle)),
-            TEN_PERCENT,
-            metaVault
-        );
-
-        ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
-
-        module = UniV4StandardModulePublic(
-            payable(address(new ERC1967Proxy(implementation, data)))
-        );
-
-        EthFlowData memory ethFlowData = EthFlowData({
-            buyToken: IERC20(USDC),
-            receiver: address(module),
-            sellAmount: 1 ether,
-            buyAmount: 1645_000_000,
-            appData: bytes32(0),
-            feeAmount: 0.1 ether,
-            validTo: type(uint32).max,
-            partiallyFillable: false,
-            quoteId: 0
-        });
-
-        deal(address(module), 1.1 ether);
-
-        vm.prank(manager);
-        module.createEthFlowOrder(ethFlowData);
-
-        // #endregion create eth flow order.
-
-        vm.prank(manager);
-        module.invalidateEthFlowOrder(ethFlowData);
-    }
-
-    // #endregion invalidate eth flow order.
-
-    // #region test setCowSwapSigner.
-
-    function testSetCowSwapSignerOnlyManager() public {
-        address notManager = vm.addr(
-            uint256(keccak256(abi.encode("NotManager")))
-        );
-
-        (address signerAddr, ) = makeAddrAndKey("Signer");
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IArrakisLPModule.OnlyManager.selector,
-                notManager,
-                manager
-            )
-        );
-
-        vm.prank(notManager);
-        module.setCowSwapSigner(signerAddr);
-    }
-
-    function testSetCowSwapSignerAddresZero() public {
-        vm.expectRevert(
-            IArrakisLPModule.AddressZero.selector
-        );
-
-        vm.prank(manager);
-        module.setCowSwapSigner(address(0));
-    }
-
-    function testSetCowSwapSignerSame() public {
-        (address signerAddr, ) = makeAddrAndKey("Signer");
-
-        vm.prank(manager);
-        module.setCowSwapSigner(signerAddr);
-
-        vm.expectRevert(
-            IUniV4StandardModule.SameCowSwapSigner.selector
-        );
-
-        vm.prank(manager);
-        module.setCowSwapSigner(signerAddr);
-    }
-
-    function testSetCowSwapSigner() public {
-        (address signerAddr, ) = makeAddrAndKey("Signer");
-
-        vm.prank(manager);
-        module.setCowSwapSigner(signerAddr);
-    }
-
-    // #endregion test setCowSwapSigner.
-
-    // #region test isValidSignature.
-
-    function testIsValidSignatureInvalidOrderHash() public {
-        uint256 amount0 = 1645e6;
-        uint256 amount1 = 1e18;
-
-        // #region set cowSwapSigner.
-
-        uint256 signerKey = 123;
-
-        address signerAddr = vm.addr(signerKey);
-
-        vm.prank(manager);
-        module.setCowSwapSigner(signerAddr);
-
-        // #endregion set cowSwapSigner.
-
-        Data memory orderData = Data({
-            sellToken: IERC20(USDC),
-            buyToken: IERC20(WETH),
-            receiver: address(module),
-            sellAmount: amount0/10,
-            buyAmount: amount1/10,
-            validTo: type(uint32).max,
-            appData: bytes32(0),
-            feeAmount: 0,
-            kind: bytes32(0),
-            partiallyFillable: false,
-            sellTokenBalance: OrderLib.BALANCE_ERC20,
-            buyTokenBalance: OrderLib.BALANCE_ERC20
-        });
-
-        bytes32 orderHash = OrderLib.hash(orderData, DOMAIN_SEPARATOR);
-
-        SignatureData memory signatureData = SignatureData({
-            signedTimestamp: block.timestamp,
-            nonce: 1,
-            orderHash: orderHash,
-            order: abi.encode(orderData),
-            signature: ""
-        });
-
-        bytes memory signature = getEOASignedOrder(orderData, signerKey, address(module), signatureData.signedTimestamp, signatureData.nonce, signatureData.orderHash);
-
-        signatureData.signature = signature;
-
-        bytes memory signData = abi.encode(signatureData);
-
-        orderData.sellAmount -= 1;
-        orderHash = OrderLib.hash(orderData, DOMAIN_SEPARATOR);
-
-        vm.expectRevert(
-            IUniV4StandardModule.InvalidOrderHash.selector
-        );
-        module.isValidSignature(orderHash, signData);
-    }
-
-    function testIsValidSignatureInvalidOrder() public {
-        uint256 amount0 = 1645e6;
-        uint256 amount1 = 1e18;
-
-        // #region set cowSwapSigner.
-
-        uint256 signerKey = 123;
-
-        address signerAddr = vm.addr(signerKey);
-
-        vm.prank(manager);
-        module.setCowSwapSigner(signerAddr);
-
-        // #endregion set cowSwapSigner.
-
-        Data memory orderData = Data({
-            sellToken: IERC20(USDC),
-            buyToken: IERC20(WETH),
-            receiver: address(module),
-            sellAmount: amount0/10,
-            buyAmount: amount1/10,
-            validTo: uint32(block.timestamp - 3600),
-            appData: bytes32(0),
-            feeAmount: 0,
-            kind: bytes32(0),
-            partiallyFillable: false,
-            sellTokenBalance: OrderLib.BALANCE_ERC20,
-            buyTokenBalance: OrderLib.BALANCE_ERC20
-        });
-
-        bytes32 orderHash = OrderLib.hash(orderData, DOMAIN_SEPARATOR);
-
-        SignatureData memory signatureData = SignatureData({
-            signedTimestamp: uint32(block.timestamp - 7200),
-            nonce: 1,
-            orderHash: orderHash,
-            order: abi.encode(orderData),
-            signature: ""
-        });
-
-        bytes memory signature = getEOASignedOrder(orderData, signerKey, address(module), signatureData.signedTimestamp, signatureData.nonce, signatureData.orderHash);
-
-        signatureData.signature = signature;
-
-        bytes memory signData = abi.encode(signatureData);
-
-        vm.expectRevert(
-            IUniV4StandardModule.InvalidOrder.selector
-        );
-        module.isValidSignature(orderHash, signData);
-    }
-
-    function testIsValidSignatureInvalidReceiver() public {
-        uint256 amount0 = 1645e6;
-        uint256 amount1 = 1e18;
-
-        // #region set cowSwapSigner.
-
-        uint256 signerKey = 123;
-
-        address signerAddr = vm.addr(signerKey);
-
-        vm.prank(manager);
-        module.setCowSwapSigner(signerAddr);
-
-        // #endregion set cowSwapSigner.
-
-        Data memory orderData = Data({
-            sellToken: IERC20(USDC),
-            buyToken: IERC20(WETH),
-            receiver: address(0),
-            sellAmount: amount0/10,
-            buyAmount: amount1/10,
-            validTo: type(uint32).max,
-            appData: bytes32(0),
-            feeAmount: 0,
-            kind: bytes32(0),
-            partiallyFillable: false,
-            sellTokenBalance: OrderLib.BALANCE_ERC20,
-            buyTokenBalance: OrderLib.BALANCE_ERC20
-        });
-
-        bytes32 orderHash = OrderLib.hash(orderData, DOMAIN_SEPARATOR);
-
-        SignatureData memory signatureData = SignatureData({
-            signedTimestamp: block.timestamp,
-            nonce: 1,
-            orderHash: orderHash,
-            order: abi.encode(orderData),
-            signature: ""
-        });
-
-        bytes memory signature = getEOASignedOrder(orderData, signerKey, address(module), signatureData.signedTimestamp, signatureData.nonce, signatureData.orderHash);
-
-        signatureData.signature = signature;
-
-        bytes memory signData = abi.encode(signatureData);
-
-        vm.expectRevert(
-            IUniV4StandardModule.InvalidReceiver.selector
-        );
-        module.isValidSignature(orderHash, signData);
-    }
-
-    function testIsValidSignatureInvalidSignature() public {
-        uint256 amount0 = 1645e6;
-        uint256 amount1 = 1e18;
-
-        // #region set cowSwapSigner.
-
-        uint256 signerKey = 123;
-
-        address signerAddr = vm.addr(signerKey);
-
-        vm.prank(manager);
-        module.setCowSwapSigner(signerAddr);
-
-        // #endregion set cowSwapSigner.
-
-        Data memory orderData = Data({
-            sellToken: IERC20(USDC),
-            buyToken: IERC20(WETH),
-            receiver: address(module),
-            sellAmount: amount0/10,
-            buyAmount: amount1/10,
-            validTo: type(uint32).max,
-            appData: bytes32(0),
-            feeAmount: 0,
-            kind: bytes32(0),
-            partiallyFillable: false,
-            sellTokenBalance: OrderLib.BALANCE_ERC20,
-            buyTokenBalance: OrderLib.BALANCE_ERC20
-        });
-
-        bytes32 orderHash = OrderLib.hash(orderData, DOMAIN_SEPARATOR);
-
-        SignatureData memory signatureData = SignatureData({
-            signedTimestamp: block.timestamp,
-            nonce: 1,
-            orderHash: orderHash,
-            order: abi.encode(orderData),
-            signature: ""
-        });
-
-        bytes memory signature = getEOASignedOrder(orderData, signerKey, address(module), signatureData.signedTimestamp, signatureData.nonce, signatureData.orderHash);
-
-        signatureData.signature = signature;
-        signatureData.signedTimestamp -= 1;
-
-        bytes memory signData = abi.encode(signatureData);
-
-        vm.expectRevert(
-            IUniV4StandardModule.InvalidSignature.selector
-        );
-        module.isValidSignature(orderHash, signData);
-    }
-
-    function testIsValidSignature() public {
-        uint256 amount0 = 1645e6;
-        uint256 amount1 = 1e18;
-
-        // #region set cowSwapSigner.
-
-        uint256 signerKey = 123;
-
-        address signerAddr = vm.addr(signerKey);
-
-        vm.prank(manager);
-        module.setCowSwapSigner(signerAddr);
-
-        // #endregion set cowSwapSigner.
-
-        Data memory orderData = Data({
-            sellToken: IERC20(USDC),
-            buyToken: IERC20(WETH),
-            receiver: address(module),
-            sellAmount: amount0/10,
-            buyAmount: amount1/10,
-            validTo: type(uint32).max,
-            appData: bytes32(0),
-            feeAmount: 0,
-            kind: bytes32(0),
-            partiallyFillable: false,
-            sellTokenBalance: OrderLib.BALANCE_ERC20,
-            buyTokenBalance: OrderLib.BALANCE_ERC20
-        });
-
-        bytes32 orderHash = OrderLib.hash(orderData, DOMAIN_SEPARATOR);
-
-        SignatureData memory signatureData = SignatureData({
-            signedTimestamp: block.timestamp,
-            nonce: 1,
-            orderHash: orderHash,
-            order: abi.encode(orderData),
-            signature: ""
-        });
-
-        bytes memory signature = getEOASignedOrder(orderData, signerKey, address(module), signatureData.signedTimestamp, signatureData.nonce, signatureData.orderHash);
-
-        signatureData.signature = signature;
-
-        bytes memory signData = abi.encode(signatureData);
-
-        assertEq(
-            module.isValidSignature(orderHash, signData),
-            bytes4(0x1626ba7e)
-        );
-    }
-
-    // #endregion test isValidSignature.
 
     // #region test set pool.
 
@@ -2538,7 +1967,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -2601,7 +2030,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -2665,7 +2094,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -2730,7 +2159,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -2853,7 +2282,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -2916,7 +2345,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -2979,7 +2408,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -4111,7 +3540,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                    address(poolManager), guardian
                 )
             );
 
@@ -4274,7 +3703,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                    address(poolManager), guardian
                 )
             );
 
@@ -4429,7 +3858,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                    address(poolManager), guardian
                 )
             );
 
@@ -4594,7 +4023,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                    address(poolManager), guardian
                 )
             );
 
@@ -4759,7 +4188,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                    address(poolManager), guardian
                 )
             );
 
@@ -5156,7 +4585,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                    address(poolManager), guardian
                 )
             );
 
@@ -5325,7 +4754,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                    address(poolManager), guardian
                 )
             );
 
@@ -5484,7 +4913,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                    address(poolManager), guardian
                 )
             );
 
@@ -5652,7 +5081,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                    address(poolManager), guardian
                 )
             );
 
@@ -5820,7 +5249,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                    address(poolManager), guardian
                 )
             );
 
@@ -6010,7 +5439,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                    address(poolManager), guardian
                 )
             );
 
@@ -6263,7 +5692,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                    address(poolManager), guardian
                 )
             );
 
@@ -6484,7 +5913,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                    address(poolManager), guardian
                 )
             );
 
@@ -6647,7 +6076,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian, COW_SWAP_ETH_FLOW
+                address(poolManager), guardian
             )
         );
 
@@ -6941,40 +6370,6 @@ contract UniV4StandardModuleTest is TestWrapper {
     }
 
     // #endregion swap functions.
-
-    // #region view functions.
-
-    function getDomainSeparatorV4(uint256 chainId_, address uniV4module_) public pure returns (bytes32 domainSeparator) {
-        bytes32 typeHash = keccak256(
-            'EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'
-        );
-        bytes32 hashedName = keccak256("UniswapV4StandardModule");
-        bytes32 hashedVersion = keccak256("1.0.0");
-        domainSeparator = keccak256(abi.encode(typeHash, hashedName, hashedVersion, chainId_, uniV4module_));
-    }
-
-    function getEOASignedOrder(
-        Data memory data_,
-        uint256 privateKey_,
-        address uniV4module_,
-        uint256 timestamp_,
-        uint256 nonce_,
-        bytes32 orderHash_
-    ) public view returns (bytes memory signature) {
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                '\x19\x01',
-                getDomainSeparatorV4(block.chainid, uniV4module_),
-                keccak256(abi.encode(IUniV4StandardModule(uniV4module_).DATA_TYPEHASH(), abi.encode(data_), timestamp_, nonce_, orderHash_))
-            )
-        );
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey_, digest);
-
-        signature = abi.encodePacked(r, s, bytes1(v));
-    }
-
-    // #endregion view functions.
 
     // #region internal functions.
 
