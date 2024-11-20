@@ -87,8 +87,8 @@ contract UniV4StandardModuleResolver is
                 revert MaxAmountsTooLow();
             }
 
-            maxAmount0_ = maxAmount0_ - numberOfRanges;
-            maxAmount1_ = maxAmount1_ - numberOfRanges;
+            maxAmount0_ = maxAmount0_ > numberOfRanges + 2 ? maxAmount0_ - numberOfRanges - 2 : 0;
+            maxAmount1_ = maxAmount1_ > numberOfRanges + 2 ? maxAmount1_ - numberOfRanges - 2 : 0;
 
             poolRanges = new PoolRange[](_ranges.length);
 
@@ -143,7 +143,7 @@ contract UniV4StandardModuleResolver is
                 maxAmount1_
             );
             uint256 proportion =
-                FullMath.mulDiv(shareToMint, BASE, totalSupply);
+                FullMath.mulDivRoundingUp(shareToMint, BASE, totalSupply);
             (amount0ToDeposit, amount1ToDeposit) = UnderlyingV4
                 .totalUnderlyingForMint(underlyingPayload, proportion);
         } else {
@@ -159,6 +159,12 @@ contract UniV4StandardModuleResolver is
             amount1ToDeposit =
                 FullMath.mulDivRoundingUp(shareToMint, init1, BASE);
         }
+
+        (amount0ToDeposit, amount1ToDeposit) = IUniV4StandardModule(
+            module
+        ).isInversed()
+            ? (amount1ToDeposit, amount0ToDeposit)
+            : (amount0ToDeposit, amount1ToDeposit);
     }
 
     function computeMintAmounts(

@@ -996,6 +996,83 @@ contract ArrakisStandardManagerTest is TestWrapper {
         );
     }
 
+    function testSubmitIncreaseManagerFeePIPSFeePIPSGtMax() public {
+        // #region init management.
+
+        uint24 maxDeviation = TEN_PERCENT; // 10%
+        uint256 cooldownPeriod = 60; // 60 seconds.
+        address executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        address stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        uint24 maxSlippagePIPS = TEN_PERCENT;
+
+        // #region create module.
+
+        LpModuleMock module = new LpModuleMock();
+
+        // #endregion create module.
+
+        // #region create vault.
+
+        ArrakisMetaVaultMock vault = new ArrakisMetaVaultMock();
+        vault.setManager(address(manager));
+        vault.setModule(address(module));
+        vault.setTokenOAndToken1(USDC, WETH);
+
+        // #endregion create vault.
+
+        // #region create oracle.
+
+        address oracle =
+            vm.addr(uint256(keccak256(abi.encode("Oracle"))));
+
+        // #endregion create oracle.
+
+        // #region set params.
+
+        SetupParams memory params = SetupParams({
+            vault: address(vault),
+            oracle: IOracleWrapper(oracle),
+            maxDeviation: maxDeviation,
+            cooldownPeriod: cooldownPeriod,
+            executor: executor,
+            stratAnnouncer: stratAnnouncer,
+            maxSlippagePIPS: maxSlippagePIPS
+        });
+
+        // #endregion set params.
+
+        // #region call through the factory initManagement.
+
+        vm.prank(factory);
+        manager.initManagement(params);
+
+        // #endregion call through the factory initManagement.
+
+        // #endregion init management.
+
+        address usdcReceiver =
+            vm.addr(uint256(keccak256(abi.encode("USDC Receiver"))));
+
+        assertEq(manager.receiversByToken(USDC), address(0));
+
+        vm.prank(owner);
+
+        manager.setReceiverByToken(address(vault), true, usdcReceiver);
+
+        assertEq(manager.receiversByToken(USDC), usdcReceiver);
+
+        vm.prank(owner);
+        vm.expectRevert(
+            IArrakisStandardManager.FeePIPSGtMax.selector
+        );
+        manager.submitIncreaseManagerFeePIPS(
+            address(vault), SafeCast.toUint24(PIPS + 1)
+        );
+    }
+
     function testSubmitIncreaseManagerFeePIPSAlreadyPending()
         public
     {

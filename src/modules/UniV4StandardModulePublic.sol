@@ -273,6 +273,8 @@ contract UniV4StandardModulePublic is
                     uint256(state.liquidity), proportion_, BASE
                 );
 
+                if (liquidity == 0) revert TooSmallMint();
+
                 if (liquidity > 0) {
                     poolManager.modifyLiquidity(
                         _poolKey,
