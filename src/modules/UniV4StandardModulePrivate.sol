@@ -62,6 +62,22 @@ contract UniV4StandardModulePrivate is
 
         if (amount0_ == 0 && amount1_ == 0) revert DepositZero();
 
+        if (poolKey.currency0.isAddressZero()) {
+            if (isInversed) {
+                if (amount1_ > msg.value) {
+                    revert InvalidMsgValue();
+                } else if (amount1_ < msg.value) {
+                    payable(depositor_).sendValue(msg.value - amount1_);
+                }
+            } else {
+                if (amount0_ > msg.value) {
+                    revert InvalidMsgValue();
+                } else if (amount0_ < msg.value) {
+                    payable(depositor_).sendValue( msg.value - amount0_);
+                }
+            }
+        }
+
         // #endregion checks.
 
         bytes memory data = abi.encode(
@@ -83,8 +99,7 @@ contract UniV4StandardModulePrivate is
     function unlockCallback(
         bytes calldata data_
     ) public virtual returns (bytes memory) {
-        IPoolManager _poolManager = poolManager;
-        if (msg.sender != address(_poolManager)) {
+        if (msg.sender != address(poolManager)) {
             revert OnlyPoolManager();
         }
 
@@ -96,23 +111,19 @@ contract UniV4StandardModulePrivate is
         if (Action(action) == Action.DEPOSIT_FUND) {
             (address depositor, uint256 amount0, uint256 amount1) =
                 abi.decode(data, (address, uint256, uint256));
-            return _fund(_poolManager, depositor, amount0, amount1);
+            return _fund(depositor, amount0, amount1);
         }
 
-        return _unlockCallback(_poolManager, Action(action), data);
+        return _unlockCallback(Action(action), data);
     }
 
     // #region internal functions.
 
     function _fund(
-        IPoolManager poolManager_,
         address depositor_,
         uint256 amount0_,
         uint256 amount1_
     ) internal returns (bytes memory) {
-        PoolKey memory _poolKey = poolKey;
-        uint256 length = _ranges.length;
-
         // #region get liquidity for each positions and mint.
 
         // #endregion get liquidity for each positions and mint.
@@ -120,60 +131,18 @@ contract UniV4StandardModulePrivate is
             // #region get how much left over we have on poolManager and mint.
 
             if (amount0_ > 0) {
-                address _token0 = address(token0);
-                Currency currency0;
-                if (_token0 == NATIVE_COIN) {
-                    currency0 = Currency.wrap(address(0));
-                } else {
-                    currency0 = Currency.wrap(_token0);
-                }
-
-                poolManager_.mint(
-                    address(this), currency0.toId(), amount0_
-                );
-
-                poolManager_.sync(currency0);
-                if (currency0.isAddressZero()) {
-                    poolManager_.settle{value: amount0_}();
-                    uint256 ethLeftBalance = address(this).balance;
-                    if (ethLeftBalance > 0) {
-                        payable(depositor_).sendValue(ethLeftBalance);
-                    }
-                } else {
-                    IERC20Metadata(Currency.unwrap(currency0))
-                        .safeTransferFrom(
-                        depositor_, address(poolManager_), amount0_
+                if(address(token0) != NATIVE_COIN) {
+                    token0.safeTransferFrom(
+                        depositor_, address(this), amount0_
                     );
-                    poolManager_.settle();
                 }
             }
 
             if (amount1_ > 0) {
-                address _token1 = address(token1);
-                Currency currency1;
-                if (_token1 == NATIVE_COIN) {
-                    currency1 = Currency.wrap(address(0));
-                } else {
-                    currency1 = Currency.wrap(_token1);
-                }
-
-                poolManager_.mint(
-                    address(this), currency1.toId(), amount1_
-                );
-
-                poolManager_.sync(currency1);
-                if (currency1.isAddressZero()) {
-                    poolManager_.settle{value: amount1_}();
-                    uint256 ethLeftBalance = address(this).balance;
-                    if (ethLeftBalance > 0) {
-                        payable(depositor_).sendValue(ethLeftBalance);
-                    }
-                } else {
-                    IERC20Metadata(Currency.unwrap(currency1))
-                        .safeTransferFrom(
-                        depositor_, address(poolManager_), amount1_
+                if(address(token1) != NATIVE_COIN) {
+                    token1.safeTransferFrom(
+                        depositor_, address(this), amount1_
                     );
-                    poolManager_.settle();
                 }
             }
 

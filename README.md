@@ -44,3 +44,41 @@ forge test -vv
 | Valantis Private Module Implementation          | 0x7E2fc9b2D37EA3E771b6F2375915b87CcA9E55bc |
 
 NOTE : deployed on mainnet, arbitrum, base and sepolia.
+
+### Arrakis Router Integration
+
+#### Add Liquidity
+
+##### Structs
+
+__AddLiquidityData__ :
+- `amount0Max` : maximum amount of token0 user want to use to add liquidity into the vault.
+- `amount1Max` : maximum amount of token1 user want to use to add liquidity into the vault.
+- `amount0Min` : amount of token0 needed to mint shares should be higher or equal to this number.
+- `amount1Min` : amount of token1 needed to mint shares should be higher or equal to this number.
+- `amountSharesMin` : amount of shares of vault token minted should be higher or equal to this number.
+- `vault` : address of the vault where user want to mint shares.
+- `receiver` : address that will receive the shares of vault tokens.
+
+`amount0Min`, `amount1Min` and `amountSharesMin` will help us to protect against vault's underlying tokens ratio manipulation by an attacker. In the same time, it's also possible that the ratio change a bit between our view call to __getMintAmounts__ and the router __addLiquidity__ function call, due to normal activity of other users. So these three values `amount0Min`, `amount1Min` and `amountSharesMin` should be wisely choosen.
+
+##### Step 1 : Call getMintAmounts
+
+Once we know how much `amount0` of token0 and `amount1` of token1 user want to provide as liquidity on the selected `vault`, we can call __getMintAmounts__ of __ArrakisPublicVaultRouter__. 
+
+The function __getMintAmounts__ will give back three values :
+- shareToMint : amount of shares of vault receiver will get for `amount0ToDeposit` and `amount0ToDeposit`.
+- amount0ToDeposit : amount of token0 to deposit into the vault.
+- amount1ToDeposit : amount of token1 to deposit into the vault.
+
+##### Step 2 : Construct AddLiquidityData
+
+We need now to construct __AddLiquidityData__ struct to call __addLiquidity__ function of the router. 
+- `amount0Max` will be equal to `amount0` inputed by user.
+- `amount1Max` will be equal to `amount1` inputed by user.
+- `amount0Min` will be equal to `amount0ToDeposit` minus a little delta (for example that can be 99% of `amount0ToDeposit` value).
+- `amount1Min` will be equal to `amount1ToDeposit` minus a little delta (for example that can be 99% of `amount1ToDeposit` value).
+- `amountSharesMin` will be equal to `shareToMint` minus a little delta (for example that can be 99% of `shareToMint` value).
+- `vault` will be equal to the vault address.
+- `receiver` will be equal to the address that will receive vault's token.
+

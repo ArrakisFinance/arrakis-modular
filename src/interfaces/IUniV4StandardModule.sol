@@ -19,23 +19,25 @@ interface IUniV4StandardModule {
     error Currency0DtToken1(address currency0, address token1);
     error SqrtPriceZero();
     error OnlyPoolManager();
-    error OnlyModuleCaller();
     error InvalidCurrencyDelta();
     error RangeShouldBeActive(int24 tickLower, int24 tickUpper);
     error OverBurning();
     error TicksMisordered(int24 tickLower, int24 tickUpper);
     error TickLowerOutOfBounds(int24 tickLower);
     error TickUpperOutOfBounds(int24 tickUpper);
-    error OnlyMetaVaultOrManager();
     error SamePool();
-    error NoRemoveLiquidityHooks();
+    error NoRemoveOrAddLiquidityHooks();
     error OverMaxDeviation();
-    error CallBackNotSupported();
     error NativeCoinCannotBeToken1();
     error MaxSlippageGtTenPercent();
     error ExpectedMinReturnTooLow();
     error WrongRouter();
     error SlippageTooHigh();
+    error OnlyMetaVaultOwner();
+    error InvalidMsgValue();
+    error TooSmallMint();
+    error InsufficientFunds();
+    error AmountZero();
 
     // #endregion errors.
 
@@ -50,6 +52,12 @@ interface IUniV4StandardModule {
         Range range;
         int128 liquidity;
     }
+
+    event LogApproval(
+        address indexed spender,
+        uint256 amount0,
+        uint256 amount1
+    );
 
     // #endregion structs.
 
@@ -92,6 +100,16 @@ interface IUniV4StandardModule {
 
     // #endregion only meta vault owner functions.
 
+    // #region only meta vault owner functions.
+
+    function approve(
+        address spender_,
+        uint256 amount0_,
+        uint256 amount1_
+    ) external;
+
+    // #endregion only meta vault owner functions.
+
     // #region only manager functions.
 
     /// @notice function used to set the pool for the module.
@@ -123,9 +141,17 @@ interface IUniV4StandardModule {
             uint256 amount1Burned
         );
 
+    /// @notice function used to withdraw eth from the module.
+    /// @dev these fund will be used to swap eth to the other token
+    /// of the currencyPair to rebalance the inventory inside a single tx.
+    function withdrawEth(uint256 amount_) external;
+
     // #endregion only manager functions.
 
     // #region view functions.
+
+    /// @notice function used to get eth withdrawers allowances.
+    function ethWithdrawers(address) external view returns (uint256);
 
     /// @notice function used to get the list of active ranges.
     /// @return ranges active ranges

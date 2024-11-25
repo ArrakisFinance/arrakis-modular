@@ -89,11 +89,10 @@ contract ArrakisPrivateHookTest is TestWrapper {
             vm.addr(uint256(keccak256(abi.encode("Sender"))));
         PoolKey memory key;
         uint160 sqrtPriceX96;
-        bytes memory hookData;
 
         vm.expectRevert(IArrakisPrivateHook.NotImplemented.selector);
         IHooks(hook).beforeInitialize(
-            sender, key, sqrtPriceX96, hookData
+            sender, key, sqrtPriceX96
         );
     }
 
@@ -107,11 +106,10 @@ contract ArrakisPrivateHookTest is TestWrapper {
         PoolKey memory key;
         uint160 sqrtPriceX96;
         int24 tick;
-        bytes memory hookData;
 
         vm.expectRevert(IArrakisPrivateHook.NotImplemented.selector);
         IHooks(hook).afterInitialize(
-            sender, key, sqrtPriceX96, tick, hookData
+            sender, key, sqrtPriceX96, tick
         );
     }
 
@@ -167,26 +165,14 @@ contract ArrakisPrivateHookTest is TestWrapper {
 
     // #region test beforeRemoveLiquidity.
 
-    function testBeforeRemoveLiquidityOnlyModule() public {
+    function testBeforeRemoveLiquidityNotImplemented() public {
         address sender =
             vm.addr(uint256(keccak256(abi.encode("Sender"))));
         PoolKey memory key;
         IPoolManager.ModifyLiquidityParams memory params;
         bytes memory hookData;
 
-        vm.expectRevert(IArrakisPrivateHook.OnlyModule.selector);
-        IHooks(hook).beforeRemoveLiquidity(
-            sender, key, params, hookData
-        );
-    }
-
-    function testBeforeRemoveLiquidity() public {
-        address sender = module;
-        PoolKey memory key;
-        IPoolManager.ModifyLiquidityParams memory params;
-        bytes memory hookData;
-
-        vm.prank(module);
+        vm.expectRevert(IArrakisPrivateHook.NotImplemented.selector);
         IHooks(hook).beforeRemoveLiquidity(
             sender, key, params, hookData
         );

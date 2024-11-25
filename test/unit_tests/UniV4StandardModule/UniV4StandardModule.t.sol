@@ -127,7 +127,11 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do a poolManager deployment.
 
-        poolManager = new PoolManager();
+        address poolManagerOwner = vm.addr(
+            uint256(keccak256(abi.encode("PoolManagerOwner")))
+        );
+
+        poolManager = new PoolManager(poolManagerOwner);
 
         // #region create a pool.
 
@@ -200,7 +204,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             _lockAcquiredSwap();
         }
         if (typeOfLockAcquired == 2) {
-            poolManager.initialize(poolKey, sqrtPriceX96, "");
+            poolManager.initialize(poolKey, sqrtPriceX96);
         }
 
         if (typeOfLockAcquired == 3) {
@@ -740,7 +744,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
 
         vm.expectRevert(
-            IUniV4StandardModule.NoRemoveLiquidityHooks.selector
+            IUniV4StandardModule.NoRemoveOrAddLiquidityHooks.selector
         );
         module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
@@ -789,7 +793,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
 
         vm.expectRevert(
-            IUniV4StandardModule.NoRemoveLiquidityHooks.selector
+            IUniV4StandardModule.NoRemoveOrAddLiquidityHooks.selector
         );
         module = UniV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
@@ -947,6 +951,266 @@ contract UniV4StandardModuleTest is TestWrapper {
 
     // #endregion test initializePosition.
 
+    // #region test approve.
+
+    function testApproveOnlyMetaVaultOwner() public {
+        address notMetaVaultOwner =
+            vm.addr(uint256(keccak256(abi.encode("notMetaVaultOwner"))));
+
+        address spender = vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        vm.expectRevert(
+            IUniV4StandardModule.OnlyMetaVaultOwner.selector
+        );
+        vm.prank(notMetaVaultOwner);
+        module.approve(spender, 3000e6, 1e18);
+    }
+
+    function testApprove() public {
+        address spender = vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        vm.prank(owner);
+        module.approve(spender, 3000e6, 1e18);
+
+        assertEq(
+            IERC20Metadata(USDC).allowance(address(module), spender),
+            3000e6
+        );
+        assertEq(
+            IERC20Metadata(WETH).allowance(address(module), spender),
+            1e18
+        );
+    }
+
+    function testApproveToken0Native() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        Currency currency0 = Currency.wrap(address(0));
+        Currency currency1 = Currency.wrap(USDC);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 20,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
+
+        poolManager.unlock(abi.encode(2));
+
+        ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
+
+        {
+            address implementation = address(
+                new UniV4StandardModulePublic(
+                    address(poolManager), guardian
+                )
+            );
+
+            bytes memory data = abi.encodeWithSelector(
+                IUniV4StandardModule.initialize.selector,
+                init0,
+                init1,
+                true,
+                poolKey,
+                IOracleWrapper(address(oracle)),
+                TEN_PERCENT,
+                metaVault
+            );
+
+            module = UniV4StandardModulePublic(
+                payable(
+                    address(new ERC1967Proxy(implementation, data))
+                )
+            );
+        }
+
+        address spender = vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        vm.prank(owner);
+        module.approve(spender, 3000e6, 1e18);
+
+        assertEq(
+            IERC20Metadata(USDC).allowance(address(module), spender),
+            3000e6
+        );
+        assertEq(
+            module.ethWithdrawers(spender),
+            1e18
+        );
+    }
+
+    function testApproveToken1Native() public {
+        uint256 init0 = 1e18;
+        uint256 init1 = 3000e6;
+
+        Currency currency0 = Currency.wrap(address(0));
+        Currency currency1 = Currency.wrap(USDC);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 20,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
+
+        poolManager.unlock(abi.encode(2));
+
+        ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
+
+        {
+            address implementation = address(
+                new UniV4StandardModulePublic(
+                    address(poolManager), guardian
+                )
+            );
+
+            bytes memory data = abi.encodeWithSelector(
+                IUniV4StandardModule.initialize.selector,
+                init0,
+                init1,
+                false,
+                poolKey,
+                IOracleWrapper(address(oracle)),
+                TEN_PERCENT,
+                metaVault
+            );
+
+            module = UniV4StandardModulePublic(
+                payable(
+                    address(new ERC1967Proxy(implementation, data))
+                )
+            );
+        }
+
+        address spender = vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        vm.prank(owner);
+        module.approve(spender, 1e18, 3000e6);
+
+        assertEq(
+            IERC20Metadata(USDC).allowance(address(module), spender),
+            3000e6
+        );
+        assertEq(
+            module.ethWithdrawers(spender),
+            1e18
+        );
+    }
+
+    // #endregion test approve.
+
+    // #region test withdrawEth.
+
+    function testWithdrawEthAmountZero() public {
+        address to = vm.addr(uint256(keccak256(abi.encode("To"))));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IUniV4StandardModule.AmountZero.selector
+            )
+        );
+
+        vm.prank(to);
+        module.withdrawEth(0);
+    }
+
+    function testWithdrawEthInsufficientFunds() public {
+        address to = vm.addr(uint256(keccak256(abi.encode("To"))));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IUniV4StandardModule.InsufficientFunds.selector
+            )
+        );
+
+        vm.prank(to);
+        module.withdrawEth(1);
+    }
+
+    function testWithdrawEth() public {
+        address spender = vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        // #region approve.
+
+        uint256 init0 = 1e18;
+        uint256 init1 = 3000e6;
+
+        Currency currency0 = Currency.wrap(address(0));
+        Currency currency1 = Currency.wrap(USDC);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 20,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
+
+        poolManager.unlock(abi.encode(2));
+
+        ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
+
+        {
+            address implementation = address(
+                new UniV4StandardModulePublic(
+                    address(poolManager), guardian
+                )
+            );
+
+            bytes memory data = abi.encodeWithSelector(
+                IUniV4StandardModule.initialize.selector,
+                init0,
+                init1,
+                false,
+                poolKey,
+                IOracleWrapper(address(oracle)),
+                TEN_PERCENT,
+                metaVault
+            );
+
+            module = UniV4StandardModulePublic(
+                payable(
+                    address(new ERC1967Proxy(implementation, data))
+                )
+            );
+        }
+
+        vm.prank(owner);
+        module.approve(spender, 1e18, 3000e6);
+
+        assertEq(
+            IERC20Metadata(USDC).allowance(address(module), spender),
+            3000e6
+        );
+        assertEq(
+            module.ethWithdrawers(spender),
+            1e18
+        );
+
+        // #endregion approve.
+
+        deal(address(module), 1e18);
+
+        assertEq(spender.balance, 0);
+
+        vm.prank(spender);
+        module.withdrawEth(1e18);
+
+        assertEq(spender.balance, 1e18);
+        assertEq(module.ethWithdrawers(spender), 0);
+    }
+
+    // #endregion test withdrawEth.
+
     // #region test set pool.
 
     function testSetPoolOnlyManager() public {
@@ -1048,7 +1312,38 @@ contract UniV4StandardModuleTest is TestWrapper {
         SwapPayload memory swapPayload;
 
         vm.expectRevert(
-            IUniV4StandardModule.NoRemoveLiquidityHooks.selector
+            IUniV4StandardModule.NoRemoveOrAddLiquidityHooks.selector
+        );
+        vm.prank(manager);
+        module.setPool(poolKey, liquidityRange, swapPayload);
+    }
+
+    function testSetPoolNoRemoveOrAddLiquidityHooks() public {
+        SimpleHook hook = SimpleHook(
+            address(uint160(Hooks.AFTER_ADD_LIQUIDITY_FLAG))
+        );
+
+        SimpleHook implementation = new SimpleHook();
+
+        vm.etch(address(hook), address(implementation).code);
+
+        poolKey = PoolKey({
+            currency0: Currency.wrap(USDC),
+            currency1: Currency.wrap(WETH),
+            fee: 3000,
+            tickSpacing: 10,
+            hooks: IHooks(address(hook))
+        });
+
+        poolManager.unlock(abi.encode(2));
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
+            new IUniV4StandardModule.LiquidityRange[](0);
+
+        SwapPayload memory swapPayload;
+
+        vm.expectRevert(
+            IUniV4StandardModule.NoRemoveOrAddLiquidityHooks.selector
         );
         vm.prank(manager);
         module.setPool(poolKey, liquidityRange, swapPayload);
@@ -1306,6 +1601,28 @@ contract UniV4StandardModuleTest is TestWrapper {
         module.deposit(depositor, BASE);
     }
 
+    function testDepositAfterDonation() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        IERC20Metadata(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        deal(USDC, address(module), 3000e6);
+        deal(WETH, address(module), 1e18);
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+    }
+
     function testDepositActiveRange() public {
         uint256 init0 = 3000e6;
         uint256 init1 = 1e18;
@@ -1467,6 +1784,95 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         (uint256 amount0, uint256 amount1) = module.totalUnderlying();
 
+        amount0 = (amount0 / 2) + 1;
+        amount1 = (amount1 / 2) + 1;
+
+        deal(USDC, secondDepositor, amount0);
+        deal(WETH, secondDepositor, amount1);
+
+        vm.startPrank(secondDepositor);
+        IERC20Metadata(USDC).approve(address(module), amount0);
+        IERC20Metadata(WETH).approve(address(module), amount1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(secondDepositor, BASE / 3);
+
+        // #endregion second deposit.
+    }
+
+    function testDepositActiveRangeTooSmallMint() public {
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        // #region deposit.
+
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        IERC20Metadata(WETH).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit(depositor, BASE);
+
+        // #endregion deposit.
+
+        assertEq(IERC20Metadata(USDC).balanceOf(depositor), 0);
+        assertEq(IERC20Metadata(WETH).balanceOf(depositor), 0);
+
+        // #region do rebalance.
+
+        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+        int24 tickLower = (tick / 10) * 10 - (2 * 10);
+        int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+        IUniV4StandardModule.Range memory range = IUniV4StandardModule
+            .Range({tickLower: tickLower, tickUpper: tickUpper});
+
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            100,
+            100
+        );
+
+        IUniV4StandardModule.LiquidityRange memory liquidityRange =
+        IUniV4StandardModule.LiquidityRange({
+            range: range,
+            liquidity: SafeCast.toInt128(
+                SafeCast.toInt256(uint256(liquidity))
+            )
+        });
+
+        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
+            new IUniV4StandardModule.LiquidityRange[](1);
+
+        liquidityRanges[0] = liquidityRange;
+
+        SwapPayload memory swapPayload;
+
+        vm.prank(manager);
+        module.rebalance(liquidityRanges, swapPayload);
+
+        // #endregion do rebalance.
+
+        // #region second deposit.
+
+        address secondDepositor =
+            vm.addr(uint256(keccak256(abi.encode("Second deposit"))));
+
+        (uint256 amount0, uint256 amount1) = module.totalUnderlying();
+
         amount0 = (amount0 / 10) + 1;
         amount1 = (amount1 / 10) + 1;
 
@@ -1479,6 +1885,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.stopPrank();
 
         vm.prank(metaVault);
+        vm.expectRevert(
+            IUniV4StandardModule.TooSmallMint.selector
+        );
         module.deposit(secondDepositor, BASE / 10);
 
         // #endregion second deposit.
@@ -1827,6 +2236,135 @@ contract UniV4StandardModuleTest is TestWrapper {
         module.deposit{value: 1 ether}(depositor, BASE);
     }
 
+    function testDepositNativeInvalidMsgValue() public {
+        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO; // NATIVE COIN
+        Currency currency1 = Currency.wrap(USDC);
+
+        ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
+
+        poolManager.unlock(abi.encode(2));
+
+        // #region create uni v4 module.
+
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address implementation = address(
+            new UniV4StandardModulePublic(
+                address(poolManager), guardian
+            )
+        );
+
+        bytes memory data = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            true,
+            poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
+            metaVault
+        );
+
+        module = UniV4StandardModulePublic(
+            payable(address(new ERC1967Proxy(implementation, data)))
+        );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
+
+        // #endregion create uni v4 module.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(USDC, depositor, init0);
+        deal(metaVault, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        vm.expectRevert(IUniV4StandardModule.InvalidMsgValue.selector);
+        module.deposit{value: 0.5 ether}(depositor, BASE);
+    }
+
+    function testDepositNativeAfterDonation() public {
+        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO; // NATIVE COIN
+        Currency currency1 = Currency.wrap(USDC);
+
+        ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
+
+        poolManager.unlock(abi.encode(2));
+
+        // #region create uni v4 module.
+
+        uint256 init0 = 3000e6;
+        uint256 init1 = 1e18;
+
+        address implementation = address(
+            new UniV4StandardModulePublic(
+                address(poolManager), guardian
+            )
+        );
+
+        bytes memory data = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            true,
+            poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
+            metaVault
+        );
+
+        module = UniV4StandardModulePublic(
+            payable(address(new ERC1967Proxy(implementation, data)))
+        );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
+
+        // #endregion create uni v4 module.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(USDC, depositor, init0);
+        deal(metaVault, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init0);
+        vm.stopPrank();
+
+        deal(address(module), 1e18);
+
+        vm.prank(metaVault);
+        module.deposit{value: 1 ether}(depositor, BASE);
+    }
+
     function testDepositNativeActiveRange() public {
         Currency currency0 = CurrencyLibrary.ADDRESS_ZERO;
         Currency currency1 = Currency.wrap(USDC);
@@ -2011,6 +2549,133 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.prank(metaVault);
         module.deposit{value: 2 ether}(depositor, BASE);
+    }
+
+    function testDepositNativeOverSentEtherAsToken0() public {
+        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO;
+        Currency currency1 = Currency.wrap(USDC);
+
+        ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
+
+        poolManager.unlock(abi.encode(2));
+
+        // #region create uni v4 module.
+
+        uint256 init0 = 1e18;
+        uint256 init1 = 3000e6;
+
+        address implementation = address(
+            new UniV4StandardModulePublic(
+                address(poolManager), guardian
+            )
+        );
+
+        bytes memory data = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            false,
+            poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
+            metaVault
+        );
+
+        module = UniV4StandardModulePublic(
+            payable(address(new ERC1967Proxy(implementation, data)))
+        );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
+
+        // #endregion create uni v4 module.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(metaVault, 2 ether);
+        deal(USDC, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        module.deposit{value: 2 ether}(depositor, BASE);
+    }
+
+    function testDepositNativeUnderSentEtherAsToken0() public {
+        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO;
+        Currency currency1 = Currency.wrap(USDC);
+
+        ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 10_000,
+            tickSpacing: 10,
+            hooks: IHooks(address(0))
+        });
+
+        sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
+
+        poolManager.unlock(abi.encode(2));
+
+        // #region create uni v4 module.
+
+        uint256 init0 = 1e18;
+        uint256 init1 = 3000e6;
+
+        address implementation = address(
+            new UniV4StandardModulePublic(
+                address(poolManager), guardian
+            )
+        );
+
+        bytes memory data = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            false,
+            poolKey,
+            IOracleWrapper(address(oracle)),
+            TEN_PERCENT,
+            metaVault
+        );
+
+        module = UniV4StandardModulePublic(
+            payable(address(new ERC1967Proxy(implementation, data)))
+        );
+
+        vm.prank(address(manager));
+        module.setManagerFeePIPS(10_000);
+
+        // #endregion create uni v4 module.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        deal(metaVault, 2 ether);
+        deal(USDC, depositor, init1);
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(address(module), init1);
+        vm.stopPrank();
+
+        vm.prank(metaVault);
+        vm.expectRevert(IUniV4StandardModule.InvalidMsgValue.selector);
+        module.deposit{value: 0.5 ether}(depositor, BASE);
     }
 
     // #endregion test deposit.
@@ -3067,16 +3732,18 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #endregion change ranges.
 
+        (amount0, amount1) = module.totalUnderlying();
+
         // #region withdraw.
 
         vm.prank(metaVault);
         module.withdraw(receiver, BASE);
 
         assertEq(
-            IERC20Metadata(USDC).balanceOf(receiver), amount0 - 1
+            IERC20Metadata(USDC).balanceOf(receiver), amount0
         );
         assertEq(
-            IERC20Metadata(WETH).balanceOf(receiver), amount1 - 1
+            IERC20Metadata(WETH).balanceOf(receiver), amount1
         );
 
         // #endregion withdraw.
@@ -3544,6 +4211,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             zeroForOne: false
         });
 
+        deal(address(poolManager), 0.26 ether);
+
         vm.prank(manager);
         module.rebalance(liquidityRanges, swapPayload);
 
@@ -3706,6 +4375,8 @@ contract UniV4StandardModuleTest is TestWrapper {
             expectedMinReturn: 0.25 ether,
             zeroForOne: true
         });
+
+        deal(USDC, address(poolManager), 656_625_000);
 
         vm.prank(manager);
         module.rebalance(liquidityRanges, swapPayload);
@@ -5871,7 +6542,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         balance1 = module.managerBalance1();
 
-        assertEq(balance1, 29_641_691_633_406);
+        assertEq(balance1, 29641691633406);
     }
 
     // #endregion test managerBalance0.
@@ -5882,7 +6553,10 @@ contract UniV4StandardModuleTest is TestWrapper {
         IERC20Metadata(WETH).transferFrom(
             msg.sender, address(this), 0.25 ether
         );
-        deal(USDC, msg.sender, 656_625_000);
+
+        uint256 balance = IERC20Metadata(USDC).balanceOf(msg.sender);
+
+        deal(USDC, msg.sender, 656_625_000 + balance);
     }
 
     function swapUSDT() external {
@@ -5908,11 +6582,14 @@ contract UniV4StandardModuleTest is TestWrapper {
             msg.sender, address(this), 661_625_000
         );
 
-        deal(msg.sender, 0.25 ether);
+        uint256 balance = msg.sender.balance;
+
+        deal(msg.sender, 0.25 ether + balance);
     }
 
     function swapOne() external payable {
-        deal(USDC, msg.sender, 656_625_000);
+        uint256 balance = IERC20Metadata(USDC).balanceOf(msg.sender);
+        deal(USDC, msg.sender, 656_625_000 + balance);
     }
 
     function swapOneNative() external payable {
@@ -5920,7 +6597,9 @@ contract UniV4StandardModuleTest is TestWrapper {
             msg.sender, address(this), 656_625_000
         );
 
-        deal(msg.sender, 0.25 ether);
+        uint256 balance = msg.sender.balance;
+
+        deal(msg.sender, 0.25 ether + balance);
     }
 
     // #endregion swap functions.

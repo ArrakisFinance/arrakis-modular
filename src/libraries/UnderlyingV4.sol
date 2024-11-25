@@ -6,8 +6,11 @@ import {
     PositionUnderlying,
     RangeData
 } from "../structs/SUniswapV4.sol";
-import {BASE} from "../constants/CArrakis.sol";
+import {BASE, PIPS} from "../constants/CArrakis.sol";
 import {IUniV4ModuleBase} from "../interfaces/IUniV4ModuleBase.sol";
+import {IUniV4StandardModule} from
+    "../interfaces/IUniV4StandardModule.sol";
+import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
@@ -31,8 +34,7 @@ import {TransientStateLibrary} from
 
 import {LiquidityAmounts} from
     "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
-import {SqrtPriceMath} from
-    "@v3-lib-0.8/contracts/SqrtPriceMath.sol";
+import {SqrtPriceMath} from "@v3-lib-0.8/contracts/SqrtPriceMath.sol";
 
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -67,24 +69,23 @@ library UnderlyingV4 {
             }
         }
 
-        uint256 leftOver0 = underlyingPayload_.poolManager.balanceOf(
-            underlyingPayload_.self,
-            IUniV4ModuleBase(underlyingPayload_.self).poolKey()
-                .currency0
-                .toId()
-        );
-        uint256 leftOver1 = underlyingPayload_.poolManager.balanceOf(
-            underlyingPayload_.self,
-            IUniV4ModuleBase(underlyingPayload_.self).poolKey()
-                .currency1
-                .toId()
-        );
+        uint256 managerFeePIPS = IArrakisLPModule(underlyingPayload_.self).managerFeePIPS();
+        
+        fee0 = fee0
+            - FullMath.mulDiv(
+                fee0, managerFeePIPS, PIPS
+            );
+
+        fee1 = fee1
+            - FullMath.mulDiv(
+                fee1, managerFeePIPS, PIPS
+            );
 
         amount0 += FullMath.mulDivRoundingUp(
-            proportion_, fee0 + leftOver0, BASE
+            proportion_, fee0 + underlyingPayload_.leftOver0, BASE
         );
         amount1 += FullMath.mulDivRoundingUp(
-            proportion_, fee1 + leftOver1, BASE
+            proportion_, fee1 + underlyingPayload_.leftOver1, BASE
         );
     }
 
@@ -227,6 +228,20 @@ library UnderlyingV4 {
                 feeGrowthInside0X128,
                 feeGrowthInside1X128
             );
+        }
+
+        int128 liquidity = SafeCast.toInt128(
+            SafeCast.toInt256(
+                FullMath.mulDiv(
+                    uint256(positionState.liquidity),
+                    proportion_,
+                    BASE
+                )
+            )
+        );
+
+        if (liquidity == 0) {
+            revert IUniV4StandardModule.TooSmallMint();
         }
 
         // compute current holdings from liquidity
@@ -385,16 +400,7 @@ library UnderlyingV4 {
             }
         }
 
-        uint256 leftOver0 = underlyingPayload_.poolManager.balanceOf(
-            underlyingPayload_.self,
-            Currency.wrap(underlyingPayload_.token0).toId()
-        );
-        uint256 leftOver1 = underlyingPayload_.poolManager.balanceOf(
-            underlyingPayload_.self,
-            Currency.wrap(underlyingPayload_.token1).toId()
-        );
-
-        amount0 += fee0 + leftOver0;
-        amount1 += fee1 + leftOver1;
+        amount0 += fee0 + underlyingPayload_.leftOver0;
+        amount1 += fee1 + underlyingPayload_.leftOver1;
     }
 }

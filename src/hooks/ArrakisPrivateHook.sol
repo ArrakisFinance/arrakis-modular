@@ -77,8 +77,7 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
     function beforeInitialize(
         address,
         PoolKey calldata,
-        uint160,
-        bytes calldata
+        uint160
     ) external virtual returns (bytes4) {
         revert NotImplemented();
     }
@@ -89,8 +88,7 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
         address,
         PoolKey calldata,
         uint160,
-        int24,
-        bytes calldata
+        int24
     ) external virtual returns (bytes4) {
         revert NotImplemented();
     }
@@ -124,18 +122,13 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
     }
 
     /// @notice The hook called before liquidity is removed.
-    /// @param sender The initial msg.sender for the remove liquidity call.
     function beforeRemoveLiquidity(
-        address sender,
+        address,
         PoolKey calldata,
         IPoolManager.ModifyLiquidityParams calldata,
         bytes calldata
     ) external virtual returns (bytes4) {
-        if (sender != module) {
-            revert OnlyModule();
-        }
-
-        return IHooks.beforeRemoveLiquidity.selector;
+        revert NotImplemented();
     }
 
     /// @notice The hook called after liquidity is removed.
