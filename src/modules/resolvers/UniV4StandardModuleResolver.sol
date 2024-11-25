@@ -78,20 +78,20 @@ contract UniV4StandardModuleResolver is
             IUniV4StandardModule.Range[] memory _ranges =
                 IUniV4StandardModule(module).getRanges();
 
-            uint256 numberOfRanges = _ranges.length;
+            uint256 buffer = 2 * _ranges.length;
 
             if (
-                numberOfRanges >= maxAmount0_
-                    || numberOfRanges >= maxAmount1_
+                buffer >= maxAmount0_
+                    || buffer >= maxAmount1_
             ) {
                 revert MaxAmountsTooLow();
             }
 
-            maxAmount0_ = maxAmount0_ > numberOfRanges + 2
-                ? maxAmount0_ - numberOfRanges - 2
+            maxAmount0_ = maxAmount0_ > buffer
+                ? maxAmount0_ - buffer
                 : 0;
-            maxAmount1_ = maxAmount1_ > numberOfRanges + 2
-                ? maxAmount1_ - numberOfRanges - 2
+            maxAmount1_ = maxAmount1_ > buffer
+                ? maxAmount1_ - buffer
                 : 0;
 
             poolRanges = new PoolRange[](_ranges.length);
