@@ -282,7 +282,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         if (typeOfLockAcquired == 0) {
             IPoolManager(poolManager).initialize(
-                poolKey, sqrtPriceX96, ""
+                poolKey, sqrtPriceX96
             );
         }
     }
@@ -923,7 +923,11 @@ contract UniswapV4IntegrationTest is TestWrapper {
     }
 
     function _deployPoolManager() internal returns (address pm) {
-        pm = address(new PoolManager());
+        address poolManagerOwner = vm.addr(
+            uint256(keccak256(abi.encode("Pool Manager Owner")))
+        );
+
+        pm = address(new PoolManager(poolManagerOwner));
     }
 
     function _deployBunkerModule() internal {

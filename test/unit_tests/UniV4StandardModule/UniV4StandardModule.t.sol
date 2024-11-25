@@ -127,7 +127,11 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do a poolManager deployment.
 
-        poolManager = new PoolManager();
+        address poolManagerOwner = vm.addr(
+            uint256(keccak256(abi.encode("PoolManagerOwner")))
+        );
+
+        poolManager = new PoolManager(poolManagerOwner);
 
         // #region create a pool.
 
@@ -200,7 +204,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             _lockAcquiredSwap();
         }
         if (typeOfLockAcquired == 2) {
-            poolManager.initialize(poolKey, sqrtPriceX96, "");
+            poolManager.initialize(poolKey, sqrtPriceX96);
         }
 
         if (typeOfLockAcquired == 3) {

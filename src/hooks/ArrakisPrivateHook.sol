@@ -77,8 +77,7 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
     function beforeInitialize(
         address,
         PoolKey calldata,
-        uint160,
-        bytes calldata
+        uint160
     ) external virtual returns (bytes4) {
         revert NotImplemented();
     }
@@ -89,8 +88,7 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
         address,
         PoolKey calldata,
         uint160,
-        int24,
-        bytes calldata
+        int24
     ) external virtual returns (bytes4) {
         revert NotImplemented();
     }

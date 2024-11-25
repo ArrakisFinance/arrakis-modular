@@ -20,8 +20,7 @@ contract SimpleHook is IHooks {
     function beforeInitialize(
         address sender,
         PoolKey calldata key,
-        uint160 sqrtPriceX96,
-        bytes calldata hookData
+        uint160 sqrtPriceX96
     ) external returns (bytes4) {
         revert NotImplemented();
     }
@@ -30,8 +29,7 @@ contract SimpleHook is IHooks {
         address sender,
         PoolKey calldata key,
         uint160 sqrtPriceX96,
-        int24 tick,
-        bytes calldata hookData
+        int24 tick
     ) external returns (bytes4) {
         revert NotImplemented();
     }
