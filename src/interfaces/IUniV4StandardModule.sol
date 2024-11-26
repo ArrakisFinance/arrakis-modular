@@ -38,6 +38,10 @@ interface IUniV4StandardModule {
     error TooSmallMint();
     error InsufficientFunds();
     error AmountZero();
+    error BurnToken0();
+    error BurnToken1();
+    error MintToken0();
+    error MintToken1();
 
     // #endregion errors.
 
@@ -116,22 +120,38 @@ interface IUniV4StandardModule {
     /// @param poolKey_ pool key of the uniswap v4 pool that will be used by the module.
     /// @param liquidityRanges_ list of liquidity ranges to be used by the module on the new pool.
     /// @param swapPayload_ swap payload to be used during rebalance.
+    /// @param minBurn0_ minimum amount of token0 to burn.
+    /// @param minBurn1_ minimum amount of token1 to burn.
+    /// @param minDeposit0_ minimum amount of token0 to deposit.
+    /// @param minDeposit1_ minimum amount of token1 to deposit.
     function setPool(
         PoolKey calldata poolKey_,
         LiquidityRange[] calldata liquidityRanges_,
-        SwapPayload calldata swapPayload_
+        SwapPayload calldata swapPayload_,
+        uint256 minBurn0_,
+        uint256 minBurn1_,
+        uint256 minDeposit0_,
+        uint256 minDeposit1_
     ) external;
 
     /// @notice function used to rebalance the inventory of the module.
     /// @param liquidityRanges_ list of liquidity ranges to be used by the module.
     /// @param swapPayload_ swap payload to be used during rebalance.
+    /// @param minBurn0_ minimum amount of token0 to burn.
+    /// @param minBurn1_ minimum amount of token1 to burn.
+    /// @param minDeposit0_ minimum amount of token0 to deposit.
+    /// @param minDeposit1_ minimum amount of token1 to deposit.
     /// @return amount0Minted amount of token0 minted.
     /// @return amount1Minted amount of token1 minted.
     /// @return amount0Burned amount of token0 burned.
     /// @return amount1Burned amount of token1 burned.
     function rebalance(
         LiquidityRange[] calldata liquidityRanges_,
-        SwapPayload memory swapPayload_
+        SwapPayload memory swapPayload_,
+        uint256 minBurn0_,
+        uint256 minBurn1_,
+        uint256 minDeposit0_,
+        uint256 minDeposit1_
     )
         external
         returns (

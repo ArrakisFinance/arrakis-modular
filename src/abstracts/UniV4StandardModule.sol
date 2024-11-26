@@ -324,16 +324,24 @@ abstract contract UniV4StandardModule is
     /// @param poolKey_ pool key of the uniswap v4 pool that will be used by the module.
     /// @param liquidityRanges_ list of liquidity ranges to be used by the module on the new pool.
     /// @param swapPayload_ swap payload to be used during rebalance.
+    /// @param minBurn0_ minimum amount of token0 to burn.
+    /// @param minBurn1_ minimum amount of token1 to burn.
+    /// @param minDeposit0_ minimum amount of token0 to deposit.
+    /// @param minDeposit1_ minimum amount of token1 to deposit.
     function setPool(
         PoolKey calldata poolKey_,
         LiquidityRange[] calldata liquidityRanges_,
-        SwapPayload calldata swapPayload_
+        SwapPayload calldata swapPayload_,
+        uint256 minBurn0_,
+        uint256 minBurn1_,
+        uint256 minDeposit0_,
+        uint256 minDeposit1_
     ) external onlyManager nonReentrant whenNotPaused {
-        address _token0 = address(token0);
-        address _token1 = address(token1);
         PoolKey memory _poolKey = poolKey;
 
-        _checkTokens(poolKey_, _token0, _token1, isInversed);
+        _checkTokens(
+            poolKey_, address(token0), address(token1), isInversed
+        );
         _checkPermissions(poolKey_);
 
         if (
@@ -352,39 +360,50 @@ abstract contract UniV4StandardModule is
 
         // #region get liquidities and remove.
 
-        uint256 length = _ranges.length;
+        LiquidityRange[] memory liquidityRanges;
 
-        PoolId currentPoolId = _poolKey.toId();
-        LiquidityRange[] memory liquidityRanges =
-            new LiquidityRange[](length);
+        {
+            uint256 length = _ranges.length;
 
-        for (uint256 i; i < length; i++) {
-            Range memory range = _ranges[i];
+            PoolId currentPoolId = _poolKey.toId();
+            liquidityRanges = new LiquidityRange[](length);
 
-            (uint128 liquidityToRemove,,) = poolManager
-                .getPositionInfo(
-                currentPoolId,
-                address(this),
-                range.tickLower,
-                range.tickUpper,
-                bytes32(0)
-            );
+            for (uint256 i; i < length; i++) {
+                Range memory range = _ranges[i];
 
-            liquidityRanges[i] = LiquidityRange({
-                liquidity: -SafeCast.toInt128(
-                    SafeCast.toInt256(uint256(liquidityToRemove))
-                ),
-                range: Range({
-                    tickLower: range.tickLower,
-                    tickUpper: range.tickUpper
-                })
-            });
+                (uint128 liquidityToRemove,,) = poolManager
+                    .getPositionInfo(
+                    currentPoolId,
+                    address(this),
+                    range.tickLower,
+                    range.tickUpper,
+                    bytes32(0)
+                );
+
+                liquidityRanges[i] = LiquidityRange({
+                    liquidity: -SafeCast.toInt128(
+                        SafeCast.toInt256(uint256(liquidityToRemove))
+                    ),
+                    range: Range({
+                        tickLower: range.tickLower,
+                        tickUpper: range.tickUpper
+                    })
+                });
+            }
         }
 
         {
             // no swap happens here.
-            SwapPayload memory swapPayload;
-            _internalRebalance(liquidityRanges, swapPayload);
+            uint256 amount0Burned;
+            uint256 amount1Burned;
+            {
+                SwapPayload memory swapPayload;
+                (,, amount0Burned, amount1Burned) =
+                    _internalRebalance(liquidityRanges, swapPayload);
+            }
+
+            if (minBurn0_ > amount0Burned) revert BurnToken0();
+            if (minBurn1_ > amount1Burned) revert BurnToken1();
         }
 
         // #endregion get liquidities and remove.
@@ -400,7 +419,11 @@ abstract contract UniV4StandardModule is
         // #region add liquidity on the new pool.
 
         if (liquidityRanges_.length > 0) {
-            _internalRebalance(liquidityRanges_, swapPayload_);
+            (uint256 amount0Minted, uint256 amount1Minted,,) =
+                _internalRebalance(liquidityRanges_, swapPayload_);
+
+            if (minDeposit0_ > amount0Minted) revert MintToken0();
+            if (minDeposit1_ > amount1Minted) revert MintToken1();
         }
 
         // #endregion add liquidity on the new pool.
@@ -448,14 +471,22 @@ abstract contract UniV4StandardModule is
 
     /// @notice function used to rebalance the inventory of the module.
     /// @param liquidityRanges_ list of liquidity ranges to be used by the module.
-    /// @param swapPayload_ swap payload to be used during rebalance.
+    /// @param swapPayload_ swap payload to be used during rebalance..
+    /// @param minBurn0_ minimum amount of token0 to burn.
+    /// @param minBurn1_ minimum amount of token1 to burn.
+    /// @param minDeposit0_ minimum amount of token0 to deposit.
+    /// @param minDeposit1_ minimum amount of token1 to deposit.
     /// @return amount0Minted amount of token0 minted.
     /// @return amount1Minted amount of token1 minted.
     /// @return amount0Burned amount of token0 burned.
     /// @return amount1Burned amount of token1 burned.
     function rebalance(
         LiquidityRange[] memory liquidityRanges_,
-        SwapPayload memory swapPayload_
+        SwapPayload memory swapPayload_,
+        uint256 minBurn0_,
+        uint256 minBurn1_,
+        uint256 minDeposit0_,
+        uint256 minDeposit1_
     )
         public
         onlyManager
@@ -468,7 +499,13 @@ abstract contract UniV4StandardModule is
             uint256 amount1Burned
         )
     {
-        _internalRebalance(liquidityRanges_, swapPayload_);
+        (amount0Minted, amount1Minted, amount0Burned, amount1Burned) =
+            _internalRebalance(liquidityRanges_, swapPayload_);
+
+        if (minDeposit0_ > amount0Minted) revert MintToken0();
+        if (minDeposit1_ > amount1Minted) revert MintToken1();
+        if (minBurn0_ > amount0Burned) revert BurnToken0();
+        if (minBurn1_ > amount1Burned) revert BurnToken1();
     }
 
     /// @notice function used by metaVault or manager to get manager fees.
