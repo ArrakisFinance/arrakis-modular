@@ -23,18 +23,15 @@ import {
     PoolIdLibrary,
     PoolId
 } from "@uniswap/v4-core/src/types/PoolId.sol";
-import {
-    Currency,
-    CurrencyLibrary
-} from "@uniswap/v4-core/src/types/Currency.sol";
 import {StateLibrary} from
     "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TransientStateLibrary} from
     "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
+import {SqrtPriceMath} from
+    "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
 
 import {LiquidityAmounts} from
     "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
-import {SqrtPriceMath} from "@v3-lib-0.8/contracts/SqrtPriceMath.sol";
 
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -42,7 +39,6 @@ import {SafeCast} from
 library UnderlyingV4 {
     using StateLibrary for IPoolManager;
     using TransientStateLibrary for IPoolManager;
-    using CurrencyLibrary for Currency;
 
     // solhint-disable-next-line function-max-lines
     function totalUnderlyingForMint(
@@ -69,17 +65,12 @@ library UnderlyingV4 {
             }
         }
 
-        uint256 managerFeePIPS = IArrakisLPModule(underlyingPayload_.self).managerFeePIPS();
-        
-        fee0 = fee0
-            - FullMath.mulDiv(
-                fee0, managerFeePIPS, PIPS
-            );
+        uint256 managerFeePIPS =
+            IArrakisLPModule(underlyingPayload_.self).managerFeePIPS();
 
-        fee1 = fee1
-            - FullMath.mulDiv(
-                fee1, managerFeePIPS, PIPS
-            );
+        fee0 = fee0 - FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
+
+        fee1 = fee1 - FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
 
         amount0 += FullMath.mulDivRoundingUp(
             proportion_, fee0 + underlyingPayload_.leftOver0, BASE
@@ -249,15 +240,7 @@ library UnderlyingV4 {
             positionUnderlying_.sqrtPriceX96,
             TickMath.getSqrtPriceAtTick(positionUnderlying_.lowerTick),
             TickMath.getSqrtPriceAtTick(positionUnderlying_.upperTick),
-            SafeCast.toInt128(
-                SafeCast.toInt256(
-                    FullMath.mulDiv(
-                        uint256(positionState.liquidity),
-                        proportion_,
-                        BASE
-                    )
-                )
-            )
+            liquidity
         );
     }
 
@@ -325,24 +308,24 @@ library UnderlyingV4 {
 
         if (sqrtRatioX96 < sqrtRatioAX96) {
             amount0 = SafeCast.toUint256(
-                SqrtPriceMath.getAmount0Delta(
+                -SqrtPriceMath.getAmount0Delta(
                     sqrtRatioAX96, sqrtRatioBX96, liquidity
                 )
             );
         } else if (sqrtRatioX96 < sqrtRatioBX96) {
             amount0 = SafeCast.toUint256(
-                SqrtPriceMath.getAmount0Delta(
+                -SqrtPriceMath.getAmount0Delta(
                     sqrtRatioX96, sqrtRatioBX96, liquidity
                 )
             );
             amount1 = SafeCast.toUint256(
-                SqrtPriceMath.getAmount1Delta(
+                -SqrtPriceMath.getAmount1Delta(
                     sqrtRatioAX96, sqrtRatioX96, liquidity
                 )
             );
         } else {
             amount1 = SafeCast.toUint256(
-                SqrtPriceMath.getAmount1Delta(
+                -SqrtPriceMath.getAmount1Delta(
                     sqrtRatioAX96, sqrtRatioBX96, liquidity
                 )
             );

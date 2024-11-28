@@ -66,73 +66,78 @@ contract UniV4StandardModuleResolver is
             uint256 amount1ToDeposit
         )
     {
-        PoolRange[] memory poolRanges;
         uint256 totalSupply;
         address module;
+        bool isInversed;
 
         PoolKey memory poolKey;
-        {
-            totalSupply = IERC20(vault_).totalSupply();
-            module = address(IArrakisMetaVault(vault_).module());
-
-            IUniV4StandardModule.Range[] memory _ranges =
-                IUniV4StandardModule(module).getRanges();
-
-            uint256 buffer = 2 * _ranges.length;
-
-            if (
-                buffer >= maxAmount0_
-                    || buffer >= maxAmount1_
-            ) {
-                revert MaxAmountsTooLow();
-            }
-
-            maxAmount0_ = maxAmount0_ > buffer
-                ? maxAmount0_ - buffer
-                : 0;
-            maxAmount1_ = maxAmount1_ > buffer
-                ? maxAmount1_ - buffer
-                : 0;
-
-            poolRanges = new PoolRange[](_ranges.length);
-
-            (
-                poolKey.currency0,
-                poolKey.currency1,
-                poolKey.fee,
-                poolKey.tickSpacing,
-                poolKey.hooks
-            ) = IUniV4StandardModule(module).poolKey();
-
-            for (uint256 i; i < _ranges.length; i++) {
-                IUniV4StandardModule.Range memory range = _ranges[i];
-                poolRanges[i] = PoolRange({
-                    lowerTick: range.tickLower,
-                    upperTick: range.tickUpper,
-                    poolKey: poolKey
-                });
-            }
-        }
-
         UnderlyingPayload memory underlyingPayload;
 
         {
-            uint256 leftOver0 = poolKey.currency0.isAddressZero()
-                ? module.balance
-                : IERC20(Currency.unwrap(poolKey.currency0)).balanceOf(
-                    module
-                );
-            uint256 leftOver1 = IERC20(
-                Currency.unwrap(poolKey.currency1)
-            ).balanceOf(module);
+            PoolRange[] memory poolRanges;
 
-            underlyingPayload = UnderlyingPayload({
-                ranges: poolRanges,
-                poolManager: IPoolManager(poolManager),
-                self: module,
-                leftOver0: leftOver0,
-                leftOver1: leftOver1
-            });
+            {
+                totalSupply = IERC20(vault_).totalSupply();
+                module = address(IArrakisMetaVault(vault_).module());
+
+                isInversed = IUniV4StandardModule(module).isInversed();
+
+                IUniV4StandardModule.Range[] memory _ranges =
+                    IUniV4StandardModule(module).getRanges();
+
+                uint256 buffer = 2 * _ranges.length;
+
+                if (buffer >= maxAmount0_ || buffer >= maxAmount1_) {
+                    revert MaxAmountsTooLow();
+                }
+
+                (maxAmount0_, maxAmount1_) = isInversed
+                    ? (maxAmount1_, maxAmount0_)
+                    : (maxAmount0_, maxAmount1_);
+
+                maxAmount0_ =
+                    maxAmount0_ > buffer ? maxAmount0_ - buffer : 0;
+                maxAmount1_ =
+                    maxAmount1_ > buffer ? maxAmount1_ - buffer : 0;
+
+                poolRanges = new PoolRange[](_ranges.length);
+
+                (
+                    poolKey.currency0,
+                    poolKey.currency1,
+                    poolKey.fee,
+                    poolKey.tickSpacing,
+                    poolKey.hooks
+                ) = IUniV4StandardModule(module).poolKey();
+
+                for (uint256 i; i < _ranges.length; i++) {
+                    IUniV4StandardModule.Range memory range =
+                        _ranges[i];
+                    poolRanges[i] = PoolRange({
+                        lowerTick: range.tickLower,
+                        upperTick: range.tickUpper,
+                        poolKey: poolKey
+                    });
+                }
+            }
+            {
+                uint256 leftOver0 = poolKey.currency0.isAddressZero()
+                    ? module.balance
+                    : IERC20(Currency.unwrap(poolKey.currency0)).balanceOf(
+                        module
+                    );
+                uint256 leftOver1 = IERC20(
+                    Currency.unwrap(poolKey.currency1)
+                ).balanceOf(module);
+
+                underlyingPayload = UnderlyingPayload({
+                    ranges: poolRanges,
+                    poolManager: IPoolManager(poolManager),
+                    self: module,
+                    leftOver0: leftOver0,
+                    leftOver1: leftOver1
+                });
+            }
         }
 
         if (totalSupply > 0) {
@@ -154,6 +159,10 @@ contract UniV4StandardModuleResolver is
         } else {
             (uint256 init0, uint256 init1) =
                 IArrakisLPModule(module).getInits();
+
+            (init0, init1) =
+                isInversed ? (init1, init0) : (init0, init1);
+
             shareToMint = computeMintAmounts(
                 init0, init1, BASE, maxAmount0_, maxAmount1_
             );
@@ -165,9 +174,7 @@ contract UniV4StandardModuleResolver is
                 FullMath.mulDivRoundingUp(shareToMint, init1, BASE);
         }
 
-        (amount0ToDeposit, amount1ToDeposit) = IUniV4StandardModule(
-            module
-        ).isInversed()
+        (amount0ToDeposit, amount1ToDeposit) = isInversed
             ? (amount1ToDeposit, amount0ToDeposit)
             : (amount0ToDeposit, amount1ToDeposit);
     }
