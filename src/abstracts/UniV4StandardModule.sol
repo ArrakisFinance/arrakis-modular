@@ -1319,13 +1319,6 @@ abstract contract UniV4StandardModule is
 
             SwapBalances memory balances;
             {
-                balances.initBalance0 = isToken0Native
-                    ? address(this).balance
-                    : _token0.balanceOf(address(this));
-                balances.initBalance1 = isToken1Native
-                    ? address(this).balance
-                    : _token1.balanceOf(address(this));
-
                 uint256 ethToSend;
 
                 if (swapPayload_.zeroForOne) {
@@ -1338,8 +1331,8 @@ abstract contract UniV4StandardModule is
 
                         ethToSend = swapPayload_.amountIn;
 
-                        balances.actual0 = address(this).balance
-                            - balances.initBalance0;
+                        balances.initBalance =
+                            _token1.balanceOf(address(this));
                     } else {
                         poolManager.take(
                             Currency.wrap(address(_token0)),
@@ -1347,9 +1340,9 @@ abstract contract UniV4StandardModule is
                             swapPayload_.amountIn
                         );
 
-                        balances.actual0 = _token0.balanceOf(
-                            address(this)
-                        ) - balances.initBalance0;
+                        balances.initBalance = isToken1Native
+                            ? address(this).balance
+                            : _token1.balanceOf(address(this));
 
                         _token0.forceApprove(
                             swapPayload_.router, swapPayload_.amountIn
@@ -1364,17 +1357,17 @@ abstract contract UniV4StandardModule is
                         );
 
                         ethToSend = swapPayload_.amountIn;
-                        balances.actual1 = address(this).balance
-                            - balances.initBalance1;
+                        balances.initBalance =
+                            _token0.balanceOf(address(this));
                     } else {
                         poolManager.take(
                             Currency.wrap(address(_token1)),
                             address(this),
                             swapPayload_.amountIn
                         );
-                        balances.actual1 = _token1.balanceOf(
-                            address(this)
-                        ) - balances.initBalance1;
+                        balances.initBalance = isToken0Native
+                            ? address(this).balance
+                            : _token0.balanceOf(address(this));
 
                         _token1.forceApprove(
                             swapPayload_.router, swapPayload_.amountIn
@@ -1392,64 +1385,28 @@ abstract contract UniV4StandardModule is
                     );
                 }
 
-                if (swapPayload_.zeroForOne && !isToken0Native) {
-                    _token0.forceApprove(swapPayload_.router, 0);
-                } else if (
-                    !swapPayload_.zeroForOne && !isToken1Native
-                ) {
-                    _token1.forceApprove(swapPayload_.router, 0);
-                }
-
-                balances.balance0 = (
-                    isToken0Native
-                        ? address(this).balance
-                        : _token0.balanceOf(address(this))
-                ) - balances.initBalance0;
-                balances.balance1 = (
-                    isToken1Native
-                        ? address(this).balance
-                        : _token1.balanceOf(address(this))
-                ) - balances.initBalance1;
-
                 if (swapPayload_.zeroForOne) {
-                    if (
-                        balances.actual1
-                            + swapPayload_.expectedMinReturn
-                            > balances.balance1
-                    ) {
-                        revert SlippageTooHigh();
-                    }
-                } else {
-                    if (
-                        balances.actual0
-                            + swapPayload_.expectedMinReturn
-                            > balances.balance0
-                    ) {
-                        revert SlippageTooHigh();
-                    }
-                }
+                    balances.balance = (
+                        isToken1Native
+                            ? address(this).balance
+                            : _token1.balanceOf(address(this))
+                    ) - balances.initBalance;
 
-                {
-                    if (balances.balance0 > 0) {
-                        if (isToken0Native) {
-                            poolManager.settle{
-                                value: balances.balance0
-                            }();
-                        } else {
-                            poolManager.sync(
-                                Currency.wrap(address(_token0))
-                            );
-                            _token0.safeTransfer(
-                                address(poolManager),
-                                balances.balance0
-                            );
-                            poolManager.settle();
-                        }
+                    if (!isToken0Native) {
+                        _token0.forceApprove(swapPayload_.router, 0);
                     }
-                    if (balances.balance1 > 0) {
+
+                    if (
+                        swapPayload_.expectedMinReturn
+                            > balances.balance
+                    ) {
+                        revert SlippageTooHigh();
+                    }
+
+                    if (balances.balance > 0) {
                         if (isToken1Native) {
                             poolManager.settle{
-                                value: balances.balance1
+                                value: balances.balance
                             }();
                         } else {
                             poolManager.sync(
@@ -1457,7 +1414,41 @@ abstract contract UniV4StandardModule is
                             );
                             _token1.safeTransfer(
                                 address(poolManager),
-                                balances.balance1
+                                balances.balance
+                            );
+                            poolManager.settle();
+                        }
+                    }
+                } else {
+                    balances.balance = (
+                        isToken0Native
+                            ? address(this).balance
+                            : _token0.balanceOf(address(this))
+                    ) - balances.initBalance;
+
+                    if (!isToken1Native) {
+                        _token1.forceApprove(swapPayload_.router, 0);
+                    }
+
+                    if (
+                        swapPayload_.expectedMinReturn
+                            > balances.balance
+                    ) {
+                        revert SlippageTooHigh();
+                    }
+
+                    if (balances.balance > 0) {
+                        if (isToken0Native) {
+                            poolManager.settle{
+                                value: balances.balance
+                            }();
+                        } else {
+                            poolManager.sync(
+                                Currency.wrap(address(_token0))
+                            );
+                            _token0.safeTransfer(
+                                address(poolManager),
+                                balances.balance
                             );
                             poolManager.settle();
                         }
