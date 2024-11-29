@@ -26,7 +26,10 @@ import {
 } from "@uniswap/v4-core/src/types/Currency.sol";
 import {StateLibrary} from
     "@uniswap/v4-core/src/libraries/StateLibrary.sol";
-import {BalanceDeltaLibrary, BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {
+    BalanceDeltaLibrary,
+    BalanceDelta
+} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 
@@ -141,11 +144,6 @@ contract UniV4StandardModulePublic is
         if (balance0 > 0 || balance1 > 0) {
             notFirstDeposit = true;
         }
-
-        if (_ranges.length > 0) {
-            address manager = metaVault.manager();
-            withdraw(manager, BASE);
-        }
     }
 
     /// @notice function used by metaVault to withdraw tokens from the strategy.
@@ -210,23 +208,25 @@ contract UniV4StandardModulePublic is
             for (uint256 i; i < length; i++) {
                 Range memory range = _ranges[i];
 
-                uint128 positionLiquidity = poolManager.getPositionLiquidity(
+                uint128 positionLiquidity = poolManager
+                    .getPositionLiquidity(
                     poolId,
-                    Position.calculatePositionKey(address(this),
-                    range.tickLower,
-                    range.tickUpper,
-                    "")
+                    Position.calculatePositionKey(
+                        address(this),
+                        range.tickLower,
+                        range.tickUpper,
+                        ""
+                    )
                 );
 
                 /// @dev no need to rounding up because uni v4 should do it during minting.
-                uint256 liquidity = FullMath.mulDiv(
+                uint256 liquidity = FullMath.mulDivRoundingUp(
                     uint256(positionLiquidity), proportion_, BASE
                 );
 
-                if (liquidity == 0) revert TooSmallMint();
-
                 if (liquidity > 0) {
-                    (, BalanceDelta feesAccrued) =poolManager.modifyLiquidity(
+                    (, BalanceDelta feesAccrued) = poolManager
+                        .modifyLiquidity(
                         _poolKey,
                         IPoolManager.ModifyLiquidityParams({
                             tickLower: range.tickLower,
@@ -300,6 +300,12 @@ contract UniV4StandardModulePublic is
             }
         }
 
+        // #region get how much we should settle with poolManager.
+
+        (uint256 amount0, uint256 amount1) = _checkCurrencyBalances();
+
+        // #endregion get how much we should settle with poolManager.
+
         uint256 leftOver0ToMint;
         uint256 leftOver1ToMint;
 
@@ -307,68 +313,68 @@ contract UniV4StandardModulePublic is
         {
             // #region get how much left over we have on poolManager and mint.
 
-            (uint256 leftOver0, uint256 leftOver1) =
-                _getLeftOvers(_poolKey);
+            {
+                (uint256 leftOver0, uint256 leftOver1) =
+                    _getLeftOvers(_poolKey);
 
-            if (_poolKey.currency0.isAddressZero()) {
-                leftOver0 = leftOver0 - value_;
-            }
+                if (_poolKey.currency0.isAddressZero()) {
+                    leftOver0 = leftOver0 - value_;
+                }
 
-            if (!notFirstDeposit) {
-                address manager = metaVault.manager();
+                if (!notFirstDeposit) {
+                    address manager = metaVault.manager();
 
-                if (leftOver0 > 0) {
-                    if (_poolKey.currency0.isAddressZero()) {
-                        payable(manager).sendValue(leftOver0);
-                    } else {
-                        IERC20Metadata(
-                            Currency.unwrap(_poolKey.currency0)
-                        ).safeTransfer(manager, leftOver0);
+                    if (leftOver0 > 0) {
+                        if (_poolKey.currency0.isAddressZero()) {
+                            payable(manager).sendValue(leftOver0);
+                        } else {
+                            IERC20Metadata(
+                                Currency.unwrap(_poolKey.currency0)
+                            ).safeTransfer(manager, leftOver0);
+                        }
                     }
-                }
-                if (leftOver1 > 0) {
-                    IERC20Metadata(
-                        Currency.unwrap(_poolKey.currency1)
-                    ).safeTransfer(manager, leftOver1);
+                    if (leftOver1 > 0) {
+                        IERC20Metadata(
+                            Currency.unwrap(_poolKey.currency1)
+                        ).safeTransfer(manager, leftOver1);
+                    }
+
+                    leftOver0 = _init0;
+                    leftOver1 = _init1;
+                    notFirstDeposit = true;
                 }
 
-                leftOver0 = _init0;
-                leftOver1 = _init1;
-                notFirstDeposit = true;
+                // rounding up during mint only.
+                leftOver0ToMint = FullMath.mulDivRoundingUp(
+                    leftOver0, proportion_, BASE
+                );
+                leftOver1ToMint = FullMath.mulDivRoundingUp(
+                    leftOver1, proportion_, BASE
+                );
             }
 
-            // rounding up during mint only.
-            leftOver0ToMint = FullMath.mulDivRoundingUp(
-                leftOver0, proportion_, BASE
-            );
-            leftOver1ToMint = FullMath.mulDivRoundingUp(
-                leftOver1, proportion_, BASE
-            );
+            uint256 amount0ToTransfer = amount0 + leftOver0ToMint;
+            uint256 amount1ToTransfer = amount1 + leftOver1ToMint;
 
-            if (leftOver0ToMint > 0) {
+            if (amount0ToTransfer > 0) {
                 if (!_poolKey.currency0.isAddressZero()) {
                     IERC20Metadata(
                         Currency.unwrap(_poolKey.currency0)
                     ).safeTransferFrom(
-                        depositor_, address(this), leftOver0ToMint
+                        depositor_, address(this), amount0ToTransfer
                     );
                 }
             }
 
-            if (leftOver1ToMint > 0) {
+            if (amount1ToTransfer > 0) {
                 IERC20Metadata(Currency.unwrap(_poolKey.currency1))
                     .safeTransferFrom(
-                    depositor_, address(this), leftOver1ToMint
+                    depositor_, address(this), amount1ToTransfer
                 );
             }
 
             // #endregion get how much left over we have on poolManager and mint.
         }
-        // #region get how much we should settle with poolManager.
-
-        (uint256 amount0, uint256 amount1) = _checkCurrencyBalances();
-
-        // #endregion get how much we should settle with poolManager.
 
         // #region settle.
 
@@ -379,9 +385,7 @@ contract UniV4StandardModulePublic is
                 poolManager.settle{value: amount0}();
             } else {
                 IERC20Metadata(Currency.unwrap(_poolKey.currency0))
-                    .safeTransferFrom(
-                    depositor_, address(poolManager), amount0
-                );
+                    .safeTransfer(address(poolManager), amount0);
                 poolManager.settle();
             }
         }
@@ -389,11 +393,8 @@ contract UniV4StandardModulePublic is
         if (amount1 > 0) {
             /// @dev currency1 cannot be native coin because address(0).
             poolManager.sync(_poolKey.currency1);
-
             IERC20Metadata(Currency.unwrap(_poolKey.currency1))
-                .safeTransferFrom(
-                depositor_, address(poolManager), amount1
-            );
+                .safeTransfer(address(poolManager), amount1);
             poolManager.settle();
         }
 

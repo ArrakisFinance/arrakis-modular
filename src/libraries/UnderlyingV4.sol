@@ -223,17 +223,13 @@ library UnderlyingV4 {
 
         int128 liquidity = SafeCast.toInt128(
             SafeCast.toInt256(
-                FullMath.mulDiv(
+                FullMath.mulDivRoundingUp(
                     uint256(positionState.liquidity),
                     proportion_,
                     BASE
                 )
             )
         );
-
-        if (liquidity == 0) {
-            revert IUniV4StandardModule.TooSmallMint();
-        }
 
         // compute current holdings from liquidity
         (amount0Current, amount1Current) = getAmountsForDelta(
