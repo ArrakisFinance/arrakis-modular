@@ -53,7 +53,6 @@ contract ArrakisMetaVaultPrivate is
         uint256 amount0_,
         uint256 amount1_
     ) external payable {
-        // NOTE: should we also allow owner to be a depositor by default?
         if (!_depositors.contains(msg.sender)) revert OnlyDepositor();
         _deposit(amount0_, amount1_);
 

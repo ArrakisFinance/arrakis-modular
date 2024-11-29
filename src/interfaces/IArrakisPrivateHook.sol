@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 
 interface IArrakisPrivateHook {
     // #region errors.
@@ -33,4 +34,13 @@ interface IArrakisPrivateHook {
     function oneForZeroFee() external view returns (uint24);
 
     // #endregion view functions.
+
+    // #region pure functions.
+
+    function getHookPermissions()
+        external
+        pure
+        returns (Hooks.Permissions memory);
+
+    // #endregion pure functions.
 }

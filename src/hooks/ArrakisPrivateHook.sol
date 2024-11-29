@@ -16,10 +16,11 @@ import {BalanceDelta} from
     "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {BeforeSwapDelta} from
     "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
-import {LPFeeLibrary} from "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
+import {LPFeeLibrary} from
+    "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 
 contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
-
     using LPFeeLibrary for uint24;
 
     // #region immutable properties.
@@ -33,10 +34,14 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
     uint24 internal _zeroForOneFee;
     uint24 internal _oneForZeroFee;
 
-    constructor(address module_) {
+    constructor(
+        address module_
+    ) {
         if (module_ == address(0)) {
             revert AddressZero();
         }
+
+        _validateHookAddress(this);
 
         module = module_;
 
@@ -64,8 +69,10 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
 
         // #endregion checks if fees are valid.
 
-        _zeroForOneFee = zeroForOneFee_ | LPFeeLibrary.OVERRIDE_FEE_FLAG;
-        _oneForZeroFee = oneForZeroFee_ | LPFeeLibrary.OVERRIDE_FEE_FLAG;
+        _zeroForOneFee =
+            zeroForOneFee_ | LPFeeLibrary.OVERRIDE_FEE_FLAG;
+        _oneForZeroFee =
+            oneForZeroFee_ | LPFeeLibrary.OVERRIDE_FEE_FLAG;
 
         // IPoolManager(poolManager).updateDynamicLPFee(poolKey_, fee_);
 
@@ -151,9 +158,18 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
         PoolKey calldata,
         IPoolManager.SwapParams calldata swapParams_,
         bytes calldata
-    ) external virtual returns (bytes4 funcSelector, BeforeSwapDelta, uint24 lpFeeOverride) {
+    )
+        external
+        virtual
+        returns (
+            bytes4 funcSelector,
+            BeforeSwapDelta,
+            uint24 lpFeeOverride
+        )
+    {
         funcSelector = IHooks.beforeSwap.selector;
-        lpFeeOverride = swapParams_.zeroForOne ? _zeroForOneFee : _oneForZeroFee;
+        lpFeeOverride =
+            swapParams_.zeroForOne ? _zeroForOneFee : _oneForZeroFee;
     }
 
     /// @notice The hook called after a swap.
@@ -203,4 +219,34 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
     }
 
     // #endregion view functions.
+
+    function getHookPermissions()
+        public
+        pure
+        virtual
+        returns (Hooks.Permissions memory)
+    {
+        return Hooks.Permissions({
+            beforeInitialize: false,
+            afterInitialize: false,
+            beforeAddLiquidity: true,
+            afterAddLiquidity: false,
+            beforeRemoveLiquidity: false,
+            afterRemoveLiquidity: false,
+            beforeSwap: true,
+            afterSwap: false,
+            beforeDonate: false,
+            afterDonate: false,
+            beforeSwapReturnDelta: false,
+            afterSwapReturnDelta: false,
+            afterAddLiquidityReturnDelta: false,
+            afterRemoveLiquidityReturnDelta: false
+        });
+    }
+
+    function _validateHookAddress(
+        IHooks _this
+    ) internal pure virtual {
+        Hooks.validateHookPermissions(_this, getHookPermissions());
+    }
 }

@@ -35,7 +35,6 @@ interface IUniV4StandardModule {
     error SlippageTooHigh();
     error OnlyMetaVaultOwner();
     error InvalidMsgValue();
-    error TooSmallMint();
     error InsufficientFunds();
     error AmountZero();
     error BurnToken0();
