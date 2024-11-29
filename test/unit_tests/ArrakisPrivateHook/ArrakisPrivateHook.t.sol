@@ -8,8 +8,11 @@ import {TestWrapper} from "../../utils/TestWrapper.sol";
 
 import {IArrakisPrivateHook} from
     "../../../src/interfaces/IArrakisPrivateHook.sol";
-import {ArrakisPrivateHook, LPFeeLibrary} from
-    "../../../src/hooks/ArrakisPrivateHook.sol";
+import {
+    ArrakisPrivateHook,
+    LPFeeLibrary,
+    Hooks
+} from "../../../src/hooks/ArrakisPrivateHook.sol";
 import {IArrakisMetaVault} from
     "../../../src/interfaces/IArrakisMetaVault.sol";
 import {IArrakisStandardManager} from
@@ -31,6 +34,8 @@ import {ArrakisMetaVaultMock} from "./mocks/ArrakisMetaVaultMock.sol";
 import {ArrakisStandardManagerMock} from
     "./mocks/ArrakisStandardManagerMock.sol";
 import {PoolManagerMock} from "./mocks/PoolManagerMock.sol";
+import {ArrakisPrivateHookImplementation} from
+    "./mocks/ArrakisPrivateHookImplementation.sol";
 
 // #endregion mocks.
 
@@ -63,15 +68,29 @@ contract ArrakisPrivateHookTest is TestWrapper {
         ArrakisLPModuleMock(module).setVault(vault);
         // #endregion setup module.
 
-        hook = address(new ArrakisPrivateHook(module));
+        ArrakisPrivateHook privateHook = ArrakisPrivateHook(
+            address(
+                uint160(
+                    Hooks.BEFORE_ADD_LIQUIDITY_FLAG
+                        | Hooks.BEFORE_SWAP_FLAG
+                )
+            )
+        );
+
+        hook = address(privateHook);
+
+        vm.record();
+        ArrakisPrivateHookImplementation impl =
+            new ArrakisPrivateHookImplementation(module, privateHook);
+        (, bytes32[] memory writes) = vm.accesses(address(impl));
+        vm.etch(address(privateHook), address(impl).code);
     }
 
     // #region test constructor.
 
     function testConstructorModuleAddressZero() public {
         vm.expectRevert(IArrakisPrivateHook.AddressZero.selector);
-        hook =
-            address(new ArrakisPrivateHook(address(0)));
+        hook = address(new ArrakisPrivateHook(address(0)));
     }
 
     function testConstructor() public {
@@ -91,9 +110,7 @@ contract ArrakisPrivateHookTest is TestWrapper {
         uint160 sqrtPriceX96;
 
         vm.expectRevert(IArrakisPrivateHook.NotImplemented.selector);
-        IHooks(hook).beforeInitialize(
-            sender, key, sqrtPriceX96
-        );
+        IHooks(hook).beforeInitialize(sender, key, sqrtPriceX96);
     }
 
     // #endregion test beforeInitialize.
@@ -108,9 +125,7 @@ contract ArrakisPrivateHookTest is TestWrapper {
         int24 tick;
 
         vm.expectRevert(IArrakisPrivateHook.NotImplemented.selector);
-        IHooks(hook).afterInitialize(
-            sender, key, sqrtPriceX96, tick
-        );
+        IHooks(hook).afterInitialize(sender, key, sqrtPriceX96, tick);
     }
 
     // #endregion test afterInitialize.
@@ -125,9 +140,7 @@ contract ArrakisPrivateHookTest is TestWrapper {
         bytes memory hookData;
 
         vm.expectRevert(IArrakisPrivateHook.OnlyModule.selector);
-        IHooks(hook).beforeAddLiquidity(
-            sender, key, params, hookData
-        );
+        IHooks(hook).beforeAddLiquidity(sender, key, params, hookData);
     }
 
     function testBeforeAddLiquidity() public {
@@ -137,9 +150,7 @@ contract ArrakisPrivateHookTest is TestWrapper {
         bytes memory hookData;
 
         vm.prank(module);
-        IHooks(hook).beforeAddLiquidity(
-            sender, key, params, hookData
-        );
+        IHooks(hook).beforeAddLiquidity(sender, key, params, hookData);
     }
 
     // #endregion test beforeAddLiquidity.
@@ -212,19 +223,23 @@ contract ArrakisPrivateHookTest is TestWrapper {
 
         // #region set fees.
 
-        zeroForOneFee = 1_000;
+        zeroForOneFee = 1000;
         oneForZeroFee = 100_000;
 
         vm.prank(executor);
-        IArrakisPrivateHook(hook).setFees(zeroForOneFee, oneForZeroFee);
-
-        // #endregion set fees.
-        
-        (,,uint24 lpFeeOverride) = IHooks(hook).beforeSwap(
-            sender, key, params, hookData
+        IArrakisPrivateHook(hook).setFees(
+            zeroForOneFee, oneForZeroFee
         );
 
-        assertEq(lpFeeOverride, zeroForOneFee | LPFeeLibrary.OVERRIDE_FEE_FLAG);
+        // #endregion set fees.
+
+        (,, uint24 lpFeeOverride) =
+            IHooks(hook).beforeSwap(sender, key, params, hookData);
+
+        assertEq(
+            lpFeeOverride,
+            zeroForOneFee | LPFeeLibrary.OVERRIDE_FEE_FLAG
+        );
     }
 
     function testBeforeSwapBis() public {
@@ -236,19 +251,23 @@ contract ArrakisPrivateHookTest is TestWrapper {
 
         // #region set fees.
 
-        zeroForOneFee = 1_000;
+        zeroForOneFee = 1000;
         oneForZeroFee = 100_000;
 
         vm.prank(executor);
-        IArrakisPrivateHook(hook).setFees(zeroForOneFee, oneForZeroFee);
-
-        // #endregion set fees.
-        
-        (,,uint24 lpFeeOverride) = IHooks(hook).beforeSwap(
-            sender, key, params, hookData
+        IArrakisPrivateHook(hook).setFees(
+            zeroForOneFee, oneForZeroFee
         );
 
-        assertEq(lpFeeOverride, oneForZeroFee | LPFeeLibrary.OVERRIDE_FEE_FLAG);
+        // #endregion set fees.
+
+        (,, uint24 lpFeeOverride) =
+            IHooks(hook).beforeSwap(sender, key, params, hookData);
+
+        assertEq(
+            lpFeeOverride,
+            oneForZeroFee | LPFeeLibrary.OVERRIDE_FEE_FLAG
+        );
     }
 
     // #endregion test beforeSwap.
@@ -264,9 +283,7 @@ contract ArrakisPrivateHookTest is TestWrapper {
         bytes memory hookData;
 
         vm.expectRevert(IArrakisPrivateHook.NotImplemented.selector);
-        IHooks(hook).afterSwap(
-            sender, key, params, delta, hookData
-        );
+        IHooks(hook).afterSwap(sender, key, params, delta, hookData);
     }
 
     // #endregion test afterSwap.
@@ -310,45 +327,68 @@ contract ArrakisPrivateHookTest is TestWrapper {
     // #region set fees.
 
     function testSetFeesOnlyExecutor() public {
-        address notExecutor = vm.addr(uint256(keccak256(abi.encode("Not Executor"))));
-        zeroForOneFee = 1_000;
+        address notExecutor =
+            vm.addr(uint256(keccak256(abi.encode("Not Executor"))));
+        zeroForOneFee = 1000;
         oneForZeroFee = 10_000;
 
         vm.prank(notExecutor);
-        vm.expectRevert(IArrakisPrivateHook.OnlyVaultExecutor.selector);
-        IArrakisPrivateHook(hook).setFees(zeroForOneFee, oneForZeroFee);
+        vm.expectRevert(
+            IArrakisPrivateHook.OnlyVaultExecutor.selector
+        );
+        IArrakisPrivateHook(hook).setFees(
+            zeroForOneFee, oneForZeroFee
+        );
     }
 
     function testSetFeesZeroForOneFeeNotValid() public {
         zeroForOneFee = 1_000_010;
-        oneForZeroFee = 1_000;
+        oneForZeroFee = 1000;
 
         vm.prank(executor);
-        vm.expectRevert(abi.encodeWithSelector(LPFeeLibrary.LPFeeTooLarge.selector, zeroForOneFee));
-        IArrakisPrivateHook(hook).setFees(zeroForOneFee, oneForZeroFee);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                LPFeeLibrary.LPFeeTooLarge.selector, zeroForOneFee
+            )
+        );
+        IArrakisPrivateHook(hook).setFees(
+            zeroForOneFee, oneForZeroFee
+        );
     }
 
     function testSetFeesOneForZeroFeeNotValid() public {
-        zeroForOneFee = 1_000;
+        zeroForOneFee = 1000;
         oneForZeroFee = 1_000_001;
 
         vm.prank(executor);
-        vm.expectRevert(abi.encodeWithSelector(LPFeeLibrary.LPFeeTooLarge.selector, oneForZeroFee));
-        IArrakisPrivateHook(hook).setFees(zeroForOneFee, oneForZeroFee);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                LPFeeLibrary.LPFeeTooLarge.selector, oneForZeroFee
+            )
+        );
+        IArrakisPrivateHook(hook).setFees(
+            zeroForOneFee, oneForZeroFee
+        );
     }
 
     function testSetFees() public {
-        zeroForOneFee = 1_000;
+        zeroForOneFee = 1000;
         oneForZeroFee = 100_000;
 
         PoolKey memory key;
 
         vm.prank(executor);
-        IArrakisPrivateHook(hook).setFees(zeroForOneFee, oneForZeroFee);
+        IArrakisPrivateHook(hook).setFees(
+            zeroForOneFee, oneForZeroFee
+        );
 
-        assertEq(IArrakisPrivateHook(hook).zeroForOneFee(), zeroForOneFee);
-        assertEq(IArrakisPrivateHook(hook).oneForZeroFee(), oneForZeroFee);
+        assertEq(
+            IArrakisPrivateHook(hook).zeroForOneFee(), zeroForOneFee
+        );
+        assertEq(
+            IArrakisPrivateHook(hook).oneForZeroFee(), oneForZeroFee
+        );
     }
- 
+
     // #endregion set fees.
 }

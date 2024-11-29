@@ -787,7 +787,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
             vm.startPrank(arrakisStandardManager);
             IUniV4StandardModule(
                 address(IArrakisMetaVault(vault).module())
-            ).rebalance(liquidityRanges, swapPayload);
+            ).rebalance(liquidityRanges, swapPayload, 0, 0, 0, 0);
             vm.stopPrank();
 
             // #endregion rebalance.
