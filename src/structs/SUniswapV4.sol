@@ -72,6 +72,28 @@ struct Withdraw {
     uint256 fee1;
 }
 
+struct Deposit {
+    address depositor;
+    uint256 proportion;
+    uint256 value;
+    bool notFirstDeposit;
+    uint256 fee0;
+    uint256 fee1;
+    uint256 leftOverToMint0;
+    uint256 leftOverToMint1;
+}
+
+struct RebalanceResult {
+        uint256 amount0Minted;
+        uint256 amount1Minted;
+        uint256 amount0Burned;
+        uint256 amount1Burned;
+        uint256 fee0;
+        uint256 fee1;
+        uint256 managerFee0;
+        uint256 managerFee1;
+}
+
 struct SwapPayload {
     bytes payload;
     address router;
