@@ -258,7 +258,7 @@ contract ArrakisPrivateVaultRouter is
         // #endregion interactions.
 
         (amount0Diff, amount1Diff) =
-        _swapAndAddLiquiditySendBackLeftOver(params_, token0, token1);
+        _swapAndAddLiquidity(params_, token0, token1);
     }
 
     /// @notice addLiquidityPermit2 adds liquidity to public vault of interest (mints LP tokens)
@@ -303,6 +303,21 @@ contract ArrakisPrivateVaultRouter is
             token0,
             token1
         );
+
+        if (msg.value > 0) {
+            if (token0 == nativeToken && msg.value > params_.addData.amount0)
+            {
+                payable(msg.sender).sendValue(
+                    msg.value - params_.addData.amount0
+                );
+            } else if (
+                token1 == nativeToken && msg.value > params_.addData.amount1
+            ) {
+                payable(msg.sender).sendValue(
+                    msg.value - params_.addData.amount1
+                );
+            }
+        }
     }
 
     /// @notice swapAndAddLiquidityPermit2 transfer tokens to and calls RouterSwapExecutor
@@ -337,7 +352,7 @@ contract ArrakisPrivateVaultRouter is
         _permit2SwapAndAddLengthOneOrTwo(params_, token0, token1);
 
         (amount0Diff, amount1Diff) =
-        _swapAndAddLiquiditySendBackLeftOver(
+        _swapAndAddLiquidity(
             params_.swapAndAddData, token0, token1
         );
     }
@@ -485,7 +500,7 @@ contract ArrakisPrivateVaultRouter is
             _swapAndAddLiquidity(params_, token0, token1);
     }
 
-    /// @notice wrapAndAddLiquidityPermit2 wrap eth and adds liquidity to public vault of interest (mints LP tokens)
+    /// @notice wrapAndAddLiquidityPermit2 wrap eth and adds liquidity to private vault of interest (mints LP tokens)
     /// @param params_ AddLiquidityPermit2Data struct containing data for adding liquidity
     function wrapAndAddLiquidityPermit2(
         AddLiquidityPermit2Data memory params_
@@ -742,15 +757,6 @@ contract ArrakisPrivateVaultRouter is
             token0_,
             token1_
         );
-    }
-
-    function _swapAndAddLiquiditySendBackLeftOver(
-        SwapAndAddData memory params_,
-        address token0_,
-        address token1_
-    ) internal returns (uint256 amount0Diff, uint256 amount1Diff) {
-        (amount0Diff, amount1Diff) =
-            _swapAndAddLiquidity(params_, token0_, token1_);
     }
 
     function _permit2AddLengthOne(

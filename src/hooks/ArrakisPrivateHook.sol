@@ -152,7 +152,6 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
     }
 
     /// @notice The hook called before a swap.
-    /// @dev function not implemented, ArrakisPrivateHook will not support this hook.
     function beforeSwap(
         address,
         PoolKey calldata,
