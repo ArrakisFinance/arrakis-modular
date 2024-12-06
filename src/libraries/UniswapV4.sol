@@ -844,12 +844,9 @@ library UniswapV4 {
                         )
                     );
                     activeRanges_[positionId] = false;
-                    (uint256 indexToRemove, uint256 l) =
-                    _getRangeIndex(
-                        ranges_, range.tickLower, range.tickUpper
-                    );
+                    uint256 l = ranges_.length;
 
-                    ranges_[indexToRemove] = ranges_[l - 1];
+                    ranges_[i] = ranges_[l - 1];
                     ranges_.pop();
                 }
             }
