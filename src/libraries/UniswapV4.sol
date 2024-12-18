@@ -812,12 +812,9 @@ library UniswapV4 {
     ) internal returns (BalanceDelta delta, BalanceDelta fees) {
         uint256 length = ranges_.length;
 
-        IUniV4StandardModule.Range[] memory ranges =
-            UniswapV4._getRanges(ranges_);
-
         for (uint256 i; i < length; i++) {
             IUniV4StandardModule.Range memory range =
-                ranges[length - 1 - i];
+                ranges_[length - 1 - i];
 
             uint256 liquidity;
             {
@@ -847,12 +844,9 @@ library UniswapV4 {
                         )
                     );
                     activeRanges_[positionId] = false;
-                    (uint256 indexToRemove, uint256 l) =
-                    _getRangeIndex(
-                        ranges_, range.tickLower, range.tickUpper
-                    );
+                    uint256 l = ranges_.length;
 
-                    ranges_[indexToRemove] = ranges_[l - 1];
+                    ranges_[length - 1 - i] = ranges_[l - 1];
                     ranges_.pop();
                 }
             }
@@ -1287,20 +1281,6 @@ library UniswapV4 {
     ) internal view returns (address _token0, address _token1) {
         _token0 = Currency.unwrap(poolKey_.currency0);
         _token1 = Currency.unwrap(poolKey_.currency1);
-    }
-
-    function _getRanges(
-        IUniV4StandardModule.Range[] storage ranges_
-    )
-        internal
-        view
-        returns (IUniV4StandardModule.Range[] memory ranges)
-    {
-        uint256 length = ranges_.length;
-        ranges = new IUniV4StandardModule.Range[](length);
-        for (uint256 i; i < length; i++) {
-            ranges[i] = ranges_[i];
-        }
     }
 
     function _getPoolRanges(
