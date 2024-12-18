@@ -907,26 +907,5 @@ abstract contract UniV4StandardModule is
         );
     }
 
-    // #region view functions.
-
-    function _getRangeIndex(
-        int24 tickLower_,
-        int24 tickUpper_
-    ) internal view returns (uint256, uint256) {
-        uint256 length = _ranges.length;
-
-        for (uint256 i; i < length; i++) {
-            Range memory range = _ranges[i];
-            if (
-                range.tickLower == tickLower_
-                    && range.tickUpper == tickUpper_
-            ) {
-                return (i, length);
-            }
-        }
-    }
-
-    // #endregion view functions.
-
     // #endregion internal functions.
 }

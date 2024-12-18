@@ -846,7 +846,7 @@ library UniswapV4 {
                     activeRanges_[positionId] = false;
                     uint256 l = ranges_.length;
 
-                    ranges_[i] = ranges_[l - 1];
+                    ranges_[length - 1 - i] = ranges_[l - 1];
                     ranges_.pop();
                 }
             }
