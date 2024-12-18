@@ -926,7 +926,7 @@ abstract contract UniV4StandardModule is
         }
     }
 
-    // #region view functions.
+    // #endregion view functions.
 
     // #endregion internal functions.
 }
