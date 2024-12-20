@@ -437,7 +437,7 @@ contract AerodromeStandardModulePrivate is
             int24 tickSpacing;
             (,,,, tickSpacing,,, liquidity,,,,) =
                 nftPositionManager.positions(tokenId_);
-            address pool = _computeAddress(
+            address pool = UnderlyingNFTV3.computeAddress(
                 factory,
                 address(token0_),
                 address(token1_),
@@ -679,7 +679,7 @@ contract AerodromeStandardModulePrivate is
             _tickSpacings.add(SafeCast.toUint256(int256(tickSpacing)));
         }
 
-        address pool = _computeAddress(
+        address pool = UnderlyingNFTV3.computeAddress(
             address(factory), token0_, token1_, tickSpacing
         );
 
@@ -812,7 +812,7 @@ contract AerodromeStandardModulePrivate is
             int24 tickSpacing =
                 SafeCast.toInt24(SafeCast.toInt256((tickSpacings[i])));
 
-            address pool = _computeAddress(
+            address pool = UnderlyingNFTV3.computeAddress(
                 address(factory),
                 address(_token0),
                 address(_token1),
@@ -894,7 +894,7 @@ contract AerodromeStandardModulePrivate is
             (,,,, tickSpacing,,,,,,,) =
                 nftPositionManager.positions(tokenId);
 
-            address pool = _computeAddress(
+            address pool = UnderlyingNFTV3.computeAddress(
                 address(factory),
                 address(token0),
                 address(token1),
@@ -967,7 +967,7 @@ contract AerodromeStandardModulePrivate is
             (,,,, tickSpacing,,,,,,,) =
                 nftPositionManager.positions(tokenId);
 
-            address pool = _computeAddress(
+            address pool = UnderlyingNFTV3.computeAddress(
                 address(factory),
                 address(token0),
                 address(token1),
@@ -1021,7 +1021,7 @@ contract AerodromeStandardModulePrivate is
             (,,,, tickSpacing,,,,,,,) =
                 nftPositionManager.positions(tokenId);
 
-            address pool = _computeAddress(
+            address pool = UnderlyingNFTV3.computeAddress(
                 address(factory),
                 address(token0),
                 address(token1),
@@ -1067,17 +1067,6 @@ contract AerodromeStandardModulePrivate is
                     )
             ) revert ExpectedMinReturnTooLow();
         }
-    }
-
-    function _computeAddress(
-        address factory,
-        address token0,
-        address token1,
-        int24 tickSpacing
-    ) internal view returns (address pool) {
-        return IUniswapV3Factory(factory).getPool(
-            token0, token1, tickSpacing
-        );
     }
 
     // #endregion view functions.
