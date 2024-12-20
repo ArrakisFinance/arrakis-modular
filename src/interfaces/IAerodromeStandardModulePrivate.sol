@@ -3,7 +3,8 @@ pragma solidity ^0.8.19;
 
 import {IUniswapV3Factory} from "./IUniswapV3Factory.sol";
 import {INonfungiblePositionManager} from "./INonfungiblePositionManager.sol";
-import {Range} from "../structs/SUniswapV3.sol";
+import {IOracleWrapper} from "./IOracleWrapper.sol";
+import {Range, RebalanceParams} from "../structs/SUniswapV3.sol";
 
 interface IAerodromeStandardModulePrivate {
 
@@ -25,6 +26,7 @@ interface IAerodromeStandardModulePrivate {
     error WrongRouter();
     error SlippageTooHigh();
     error OverMaxDeviation();
+    error SameReceiver();
 
     // #endregion errors.
 
@@ -65,7 +67,18 @@ interface IAerodromeStandardModulePrivate {
         uint256 aeroAmount
     );
 
+    event LogSetReceiver(address oldReceiver, address newReceiver);
+
     // #endregion events.
+
+    function initialize(
+        IOracleWrapper oracle_,
+        uint24 maxSlippage_,
+        address aeroReceiver_,
+        address metaVault_
+    ) external;
+
+    function rebalance(RebalanceParams calldata params_) external;
 
     // #region view functions.
 

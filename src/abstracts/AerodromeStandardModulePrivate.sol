@@ -88,11 +88,12 @@ contract AerodromeStandardModulePrivate is
     IOracleWrapper public oracle;
     uint256 public managerFeePIPS;
     uint24 public maxSlippage;
+    address public aeroReceiver;
 
     // #region internal state variables.
 
     EnumerableSet.UintSet internal _tokenIds;
-    EnumerableSet.UintSet internal _fees;
+    EnumerableSet.UintSet internal _tickSpacings;
     uint256 internal _aeroManagerBalance;
 
     // #endregion internal state variables.
@@ -173,12 +174,14 @@ contract AerodromeStandardModulePrivate is
     function initialize(
         IOracleWrapper oracle_,
         uint24 maxSlippage_,
+        address aeroReceiver_,
         address metaVault_
-    ) external {
+    ) external initializer {
         // #region checks.
 
         if (
             metaVault_ == address(0) || address(oracle_) == address(0)
+            || aeroReceiver_ == address(0)
         ) revert AddressZero();
         if (maxSlippage_ > TEN_PERCENT) {
             revert MaxSlippageGtTenPercent();
@@ -189,6 +192,7 @@ contract AerodromeStandardModulePrivate is
         metaVault = IArrakisMetaVault(metaVault_);
         oracle = oracle_;
         maxSlippage = maxSlippage_;
+        aeroReceiver = aeroReceiver_;
 
         address _token0 = IArrakisMetaVault(metaVault_).token0();
         address _token1 = IArrakisMetaVault(metaVault_).token1();
@@ -342,7 +346,7 @@ contract AerodromeStandardModulePrivate is
             uint256 aeroAmountCollected
         )
     {
-        (uint256 amount0, uint256 amount1,,) = UnderlyingNFTV3
+        (uint256 amount0, uint256 amount1) = UnderlyingNFTV3
             .underlying(
             modifyPosition_.tokenId,
             address(nftPositionManager),
@@ -430,11 +434,14 @@ contract AerodromeStandardModulePrivate is
         // #region get rewards.
 
         {
-            uint24 fee;
-            (,,,, fee,,, liquidity,,,,) =
+            int24 tickSpacing;
+            (,,,, tickSpacing,,, liquidity,,,,) =
                 nftPositionManager.positions(tokenId_);
-            address pool = UnderlyingNFTV3.computeAddress(
-                factory, address(token0_), address(token1_), fee
+            address pool = _computeAddress(
+                factory,
+                address(token0_),
+                address(token1_),
+                tickSpacing
             );
 
             gauge = voter.gauges(pool);
@@ -457,7 +464,7 @@ contract AerodromeStandardModulePrivate is
 
     function rebalance(
         RebalanceParams calldata params_
-    ) external {
+    ) external onlyManager {
         // #region modify postitions.
 
         uint256 length = params_.modifyPositions.length;
@@ -627,26 +634,58 @@ contract AerodromeStandardModulePrivate is
             revert Token1Mismatch();
         }
 
+        // #region approves.
+
+        if (params_.amount0Desired > 0) {
+            IERC20Metadata(token0_).forceApprove(
+                address(nftPositionManager), params_.amount0Desired
+            );
+        }
+        if (params_.amount1Desired > 0) {
+            IERC20Metadata(token1_).forceApprove(
+                address(nftPositionManager), params_.amount1Desired
+            );
+        }
+
+        // #endregion approves.
+
         (tokenId,, amount0, amount1) =
             nftPositionManager.mint(params_);
+
+        if (params_.amount0Desired > 0) {
+            IERC20Metadata(token0_).forceApprove(
+                address(nftPositionManager), 0
+            );
+        }
+        if (params_.amount1Desired > 0) {
+            IERC20Metadata(token1_).forceApprove(
+                address(nftPositionManager), 0
+            );
+        }
 
         _tokenIds.add(tokenId);
 
         // #region stake.
 
-        uint24 fee;
-        (,,,, fee,,,,,,,) = nftPositionManager.positions(tokenId);
+        int24 tickSpacing;
+        (,,,, tickSpacing,,,,,,,) =
+            nftPositionManager.positions(tokenId);
 
-        if (!_fees.contains(uint256(fee))) {
-            _fees.add(uint256(fee));
+        if (
+            !_tickSpacings.contains(
+                SafeCast.toUint256(int256(tickSpacing))
+            )
+        ) {
+            _tickSpacings.add(SafeCast.toUint256(int256(tickSpacing)));
         }
 
-        address pool = UnderlyingNFTV3.computeAddress(
-            address(factory), token0_, token1_, fee
+        address pool = _computeAddress(
+            address(factory), token0_, token1_, tickSpacing
         );
 
         address gauge = voter.gauges(pool);
 
+        nftPositionManager.approve(gauge, tokenId);
         ICLGauge(gauge).deposit(tokenId);
 
         // #endregion stake.
@@ -705,7 +744,7 @@ contract AerodromeStandardModulePrivate is
         uint256 length = _tokenIds.length();
 
         for (uint256 i; i < length;) {
-            (uint256 amt0, uint256 amt1,,) = UnderlyingNFTV3
+            (uint256 amt0, uint256 amt1) = UnderlyingNFTV3
                 .underlying(
                 _tokenIds.at(i),
                 address(nftPositionManager),
@@ -733,7 +772,7 @@ contract AerodromeStandardModulePrivate is
         uint256 length = _tokenIds.length();
 
         for (uint256 i; i < length;) {
-            (uint256 amt0, uint256 amt1,,) = UnderlyingNFTV3
+            (uint256 amt0, uint256 amt1) = UnderlyingNFTV3
                 .underlying(
                 _tokenIds.at(i),
                 address(nftPositionManager),
@@ -759,7 +798,7 @@ contract AerodromeStandardModulePrivate is
         IOracleWrapper oracle_,
         uint24 maxDeviation_
     ) external view {
-        uint256[] memory fs = _fees.values();
+        uint256[] memory tickSpacings = _tickSpacings.values();
 
         IERC20Metadata _token0 = token0;
         IERC20Metadata _token1 = token1;
@@ -769,18 +808,18 @@ contract AerodromeStandardModulePrivate is
 
         uint256 oraclePrice = oracle_.getPrice0();
 
-        for (uint256 i; i < fs.length;) {
-            uint24 fee = uint24(fs[i]);
+        for (uint256 i; i < tickSpacings.length;) {
+            int24 tickSpacing =
+                SafeCast.toInt24(SafeCast.toInt256((tickSpacings[i])));
 
-            address pool = UnderlyingNFTV3.computeAddress(
+            address pool = _computeAddress(
                 address(factory),
                 address(_token0),
                 address(_token1),
-                fee
+                tickSpacing
             );
 
-            (uint160 sqrtPriceX96,,,,,,) =
-                IUniswapV3Pool(pool).slot0();
+            (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
 
             uint256 poolPrice;
 
@@ -851,14 +890,15 @@ contract AerodromeStandardModulePrivate is
         for (uint256 i; i < length;) {
             uint256 tokenId = _tokenIds.at(i);
 
-            uint24 fee;
-            (,,,, fee,,,,,,,) = nftPositionManager.positions(tokenId);
+            int24 tickSpacing;
+            (,,,, tickSpacing,,,,,,,) =
+                nftPositionManager.positions(tokenId);
 
-            address pool = UnderlyingNFTV3.computeAddress(
+            address pool = _computeAddress(
                 address(factory),
                 address(token0),
                 address(token1),
-                fee
+                tickSpacing
             );
 
             address gauge = voter.gauges(pool);
@@ -899,9 +939,22 @@ contract AerodromeStandardModulePrivate is
         emit LogClaim(receiver_, aeroToClaim);
     }
 
-    function claimManager(
-        address receiver_
-    ) external onlyManager {
+    function setReceiver(address newReceiver_) external onlyManager {
+        address oldReceiver = aeroReceiver;
+        if (newReceiver_ == address(0)) {
+            revert AddressZero();
+        }
+
+        if(oldReceiver == newReceiver_) {
+            revert SameReceiver();
+        }
+
+        aeroReceiver = newReceiver_;
+
+        emit LogSetReceiver(oldReceiver, newReceiver_);
+    }
+
+    function claimManager() external {
         uint256 length = _tokenIds.length();
 
         uint256 aeroBalance;
@@ -910,14 +963,15 @@ contract AerodromeStandardModulePrivate is
         for (uint256 i; i < length;) {
             uint256 tokenId = _tokenIds.at(i);
 
-            uint24 fee;
-            (,,,, fee,,,,,,,) = nftPositionManager.positions(tokenId);
+            int24 tickSpacing;
+            (,,,, tickSpacing,,,,,,,) =
+                nftPositionManager.positions(tokenId);
 
-            address pool = UnderlyingNFTV3.computeAddress(
+            address pool = _computeAddress(
                 address(factory),
                 address(token0),
                 address(token1),
-                fee
+                tickSpacing
             );
 
             address gauge = voter.gauges(pool);
@@ -947,11 +1001,13 @@ contract AerodromeStandardModulePrivate is
 
         // #endregion take the manager share.
 
+        address _aeroReceiver = aeroReceiver;
+
         IERC20Metadata(rewardToken).safeTransfer(
-            receiver_, _aeroManagerBalance
+            _aeroReceiver, _aeroManagerBalance
         );
 
-        emit LogManagerClaim(receiver_, _aeroManagerBalance);
+        emit LogManagerClaim(_aeroReceiver, _aeroManagerBalance);
     }
 
     function aeroManagerBalance() external view returns (uint256) {
@@ -961,14 +1017,15 @@ contract AerodromeStandardModulePrivate is
         for (uint256 i; i < length;) {
             uint256 tokenId = _tokenIds.at(i);
 
-            uint24 fee;
-            (,,,, fee,,,,,,,) = nftPositionManager.positions(tokenId);
+            int24 tickSpacing;
+            (,,,, tickSpacing,,,,,,,) =
+                nftPositionManager.positions(tokenId);
 
-            address pool = UnderlyingNFTV3.computeAddress(
+            address pool = _computeAddress(
                 address(factory),
                 address(token0),
                 address(token1),
-                fee
+                tickSpacing
             );
 
             address gauge = voter.gauges(pool);
@@ -1010,6 +1067,17 @@ contract AerodromeStandardModulePrivate is
                     )
             ) revert ExpectedMinReturnTooLow();
         }
+    }
+
+    function _computeAddress(
+        address factory,
+        address token0,
+        address token1,
+        int24 tickSpacing
+    ) internal view returns (address pool) {
+        return IUniswapV3Factory(factory).getPool(
+            token0, token1, tickSpacing
+        );
     }
 
     // #endregion view functions.

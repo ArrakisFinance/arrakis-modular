@@ -5,6 +5,6 @@ interface IUniswapV3Factory {
     function getPool(
         address tokenA,
         address tokenB,
-        uint24 fee
+        int24 tickSpacing
     ) external view returns (address pool);
 }
