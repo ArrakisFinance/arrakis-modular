@@ -78,9 +78,7 @@ interface INonfungiblePositionManager {
         uint256 tokenId
     ) external payable;
 
-    function positions(
-        uint256 tokenId
-    )
+    function positions(uint256 tokenId)
         external
         view
         returns (
@@ -88,7 +86,7 @@ interface INonfungiblePositionManager {
             address operator,
             address token0,
             address token1,
-            uint24 fee,
+            int24 tickSpacing,
             int24 tickLower,
             int24 tickUpper,
             uint128 liquidity,
@@ -97,4 +95,6 @@ interface INonfungiblePositionManager {
             uint128 tokensOwed0,
             uint128 tokensOwed1
         );
+
+    function approve(address to, uint256 tokenId) external;
 }
