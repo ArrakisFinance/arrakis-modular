@@ -27,6 +27,8 @@ interface IAerodromeStandardModulePrivate {
     error SlippageTooHigh();
     error OverMaxDeviation();
     error SameReceiver();
+    error TickSpacingMismatch();
+    error PoolNotFound();
 
     // #endregion errors.
 
@@ -75,17 +77,17 @@ interface IAerodromeStandardModulePrivate {
         IOracleWrapper oracle_,
         uint24 maxSlippage_,
         address aeroReceiver_,
+        int24 tickSpacing_,
         address metaVault_
     ) external;
-
     function rebalance(RebalanceParams calldata params_) external;
+    function claimRewards(address receiver_) external;
+    function claimManager() external;
 
     // #region view functions.
 
     function nftPositionManager() external view returns (INonfungiblePositionManager);
-
     function factory() external view returns (IUniswapV3Factory);
-
     function tokenIds() external view returns (uint256[] memory);
 
     // #endregion view functions.

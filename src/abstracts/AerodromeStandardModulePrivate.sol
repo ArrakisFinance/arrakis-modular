@@ -18,21 +18,21 @@ import {IUniswapV3Pool} from "../interfaces/IUniswapV3Pool.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IOwnable} from "../interfaces/IOwnable.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
-import {Range} from "../structs/SUniswapV3.sol";
 import {
     TEN_PERCENT,
     NATIVE_COIN,
     BASE,
     PIPS
 } from "../constants/CArrakis.sol";
-import {UnderlyingNFTV3} from "../libraries/UnderlyingNFTV3.sol";
 import {
     RebalanceParams,
-    ModifyPosition,
-    SwapPayload
+    ModifyPosition
 } from "../structs/SUniswapV3.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
+import {LiquidityAmounts} from
+    "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
+import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
 
 import {EnumerableSet} from
     "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -47,12 +47,15 @@ import {IERC20Metadata} from
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {IERC721Receiver} from
+    "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 contract AerodromeStandardModulePrivate is
     IArrakisLPModule,
     IArrakisLPModulePrivate,
     IAerodromeStandardModulePrivate,
     IArrakisLPModuleID,
+    IERC721Receiver,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable
 {
@@ -65,6 +68,9 @@ contract AerodromeStandardModulePrivate is
     /// @dev id = keccak256(abi.encode("AerodromeStandardModulePrivate"))
     bytes32 public constant id =
         0x491defc0794897991a8e5e9fa49dcbed24fe84ee079750b1db3f4df77fb17cb5;
+
+    address public constant AERO =
+        0x940181a94A35A4569E4529A3CDfB74e38FD98631;
 
     // #endregion constant internal variables.
 
@@ -89,11 +95,11 @@ contract AerodromeStandardModulePrivate is
     uint256 public managerFeePIPS;
     uint24 public maxSlippage;
     address public aeroReceiver;
+    address public pool;
 
     // #region internal state variables.
 
     EnumerableSet.UintSet internal _tokenIds;
-    EnumerableSet.UintSet internal _tickSpacings;
     uint256 internal _aeroManagerBalance;
 
     // #endregion internal state variables.
@@ -153,6 +159,19 @@ contract AerodromeStandardModulePrivate is
         _disableInitializers();
     }
 
+    // #region ERC721 receiver.
+
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external returns (bytes4) {
+        return IERC721Receiver.onERC721Received.selector;
+    }
+
+    // #endregion ERC721 receiver.
+
     // #region guardian functions.
 
     /// @notice function used to pause the module.
@@ -175,13 +194,14 @@ contract AerodromeStandardModulePrivate is
         IOracleWrapper oracle_,
         uint24 maxSlippage_,
         address aeroReceiver_,
+        int24 tickSpacing_,
         address metaVault_
     ) external initializer {
         // #region checks.
 
         if (
             metaVault_ == address(0) || address(oracle_) == address(0)
-            || aeroReceiver_ == address(0)
+                || aeroReceiver_ == address(0)
         ) revert AddressZero();
         if (maxSlippage_ > TEN_PERCENT) {
             revert MaxSlippageGtTenPercent();
@@ -200,6 +220,15 @@ contract AerodromeStandardModulePrivate is
         if (_token0 == NATIVE_COIN || _token1 == NATIVE_COIN) {
             revert NativeCoinNotSupported();
         }
+
+        address _pool =
+            factory.getPool(_token0, _token1, tickSpacing_);
+
+        if (_pool == address(0)) {
+            revert PoolNotFound();
+        }
+
+        pool = _pool;
 
         token0 = IERC20Metadata(_token0);
         token1 = IERC20Metadata(_token1);
@@ -240,7 +269,7 @@ contract AerodromeStandardModulePrivate is
         address depositor_,
         uint256 amount0_,
         uint256 amount1_
-    ) external payable {
+    ) external payable nonReentrant onlyMetaVault whenNotPaused {
         if (msg.value != 0) {
             revert NativeCoinNotSupported();
         }
@@ -289,6 +318,15 @@ contract AerodromeStandardModulePrivate is
         IERC20Metadata _token0 = token0;
         IERC20Metadata _token1 = token1;
 
+        amount0 = FullMath.mulDiv(
+            _token0.balanceOf(address(this)), proportion_, BASE
+        );
+        amount1 = FullMath.mulDiv(
+            _token1.balanceOf(address(this)), proportion_, BASE
+        );
+
+        (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
+
         for (uint256 i; i < tokenIds.length;) {
             (uint256 amt0, uint256 amt1, uint256 aeroCo) =
             _modifyPosition(
@@ -298,7 +336,8 @@ contract AerodromeStandardModulePrivate is
                     token0: address(_token0),
                     token1: address(_token1),
                     liquidity: 0
-                })
+                }),
+                sqrtPriceX96
             );
 
             amount0 += amt0;
@@ -318,12 +357,6 @@ contract AerodromeStandardModulePrivate is
             aeroAmountCollected, _managerFeePIPS, PIPS
         );
 
-        uint256 leftOver0 = _token0.balanceOf(address(this));
-        uint256 leftOver1 = _token1.balanceOf(address(this));
-
-        amount0 += FullMath.mulDiv(leftOver0, proportion_, BASE);
-        amount1 += FullMath.mulDiv(leftOver1, proportion_, BASE);
-
         // #endregion take the manager share.
 
         if (amount0 > 0) {
@@ -336,135 +369,106 @@ contract AerodromeStandardModulePrivate is
         emit LogWithdraw(receiver_, proportion_, amount0, amount1);
     }
 
-    function _modifyPosition(
-        ModifyPosition memory modifyPosition_
-    )
-        internal
-        returns (
-            uint256 amount0ToSend,
-            uint256 amount1ToSend,
-            uint256 aeroAmountCollected
-        )
-    {
-        (uint256 amount0, uint256 amount1) = UnderlyingNFTV3
-            .underlying(
-            modifyPosition_.tokenId,
-            address(nftPositionManager),
-            address(factory),
-            0
-        );
+    function claimRewards(
+        address receiver_
+    ) external onlyMetaVaultOwner {
+        uint256 length = _tokenIds.length();
+        address gauge = voter.gauges(pool);
 
-        // #region unstake position.
+        uint256 aeroBalance;
 
-        address gauge;
-        uint128 liquidity;
-        {
-            uint256 aeroAmountCo;
+        for (uint256 i; i < length;) {
+            uint256 tokenId = _tokenIds.at(i);
 
-            (aeroAmountCo, gauge, liquidity) = _unstake(
-                address(factory),
-                modifyPosition_.token0,
-                modifyPosition_.token1,
-                modifyPosition_.tokenId
-            );
+            uint256 balance =
+                IERC20Metadata(AERO).balanceOf(address(this));
 
-            aeroAmountCollected += aeroAmountCo;
-        }
+            ICLGauge(gauge).getReward(tokenId);
 
-        // #region unstake position.
+            aeroBalance += IERC20Metadata(AERO).balanceOf(
+                address(this)
+            ) - balance;
 
-        if (modifyPosition_.liquidity > 0) {
-            if (modifyPosition_.liquidity > liquidity) {
-                revert OverBurn();
+            unchecked {
+                i += 1;
             }
-            liquidity = modifyPosition_.liquidity;
-        } else {
-            liquidity = SafeCast.toUint128(
-                FullMath.mulDiv(
-                    liquidity, modifyPosition_.proportion, BASE
-                )
-            );
         }
 
-        amount0 =
-            FullMath.mulDiv(amount0, modifyPosition_.proportion, BASE);
-        amount1 =
-            FullMath.mulDiv(amount1, modifyPosition_.proportion, BASE);
+        // #region take the manager share.
 
-        INonfungiblePositionManager.DecreaseLiquidityParams memory
-            params = INonfungiblePositionManager
-                .DecreaseLiquidityParams({
-                tokenId: modifyPosition_.tokenId,
-                liquidity: liquidity,
-                amount0Min: amount0 - 1,
-                /// @dev 1 less than amount0, for rounding, need to check if it's really needed.
-                amount1Min: amount1 - 1,
-                /// @dev 1 less than amount0, for rounding, need to check if it's really needed.
-                deadline: type(uint256).max
-            });
+        _aeroManagerBalance +=
+            FullMath.mulDiv(aeroBalance, managerFeePIPS, PIPS);
 
-        (uint256 amt0, uint256 amt1) =
-            nftPositionManager.decreaseLiquidity(params);
+        // #endregion take the manager share.
 
-        if (modifyPosition_.proportion == BASE) {
-            nftPositionManager.burn(modifyPosition_.tokenId);
+        uint256 aeroToClaim = IERC20Metadata(AERO).balanceOf(
+            address(this)
+        ) - _aeroManagerBalance;
 
-            _tokenIds.remove(modifyPosition_.tokenId);
-        } else {
-            ICLGauge(gauge).deposit(modifyPosition_.tokenId);
-        }
+        IERC20Metadata(AERO).safeTransfer(receiver_, aeroToClaim);
 
-        amount0ToSend += amt0;
-        amount1ToSend += amt1;
+        emit LogClaim(receiver_, aeroToClaim);
     }
 
-    function _unstake(
-        address factory,
-        address token0_,
-        address token1_,
-        uint256 tokenId_
-    )
-        internal
-        returns (
-            uint256 aeroAmountCollected,
-            address gauge,
-            uint128 liquidity
-        )
-    {
-        // #region get rewards.
-
-        {
-            int24 tickSpacing;
-            (,,,, tickSpacing,,, liquidity,,,,) =
-                nftPositionManager.positions(tokenId_);
-            address pool = UnderlyingNFTV3.computeAddress(
-                factory,
-                address(token0_),
-                address(token1_),
-                tickSpacing
-            );
-
-            gauge = voter.gauges(pool);
+    function setReceiver(
+        address newReceiver_
+    ) external onlyManager {
+        address oldReceiver = aeroReceiver;
+        if (newReceiver_ == address(0)) {
+            revert AddressZero();
         }
 
-        address aero = ICLGauge(gauge).rewardToken();
+        if (oldReceiver == newReceiver_) {
+            revert SameReceiver();
+        }
 
-        uint256 aeroBalance =
-            IERC20Metadata(aero).balanceOf(address(this));
+        aeroReceiver = newReceiver_;
 
-        ICLGauge(gauge).withdraw(tokenId_);
+        emit LogSetReceiver(oldReceiver, newReceiver_);
+    }
 
-        aeroAmountCollected += (
-            IERC20Metadata(aero).balanceOf(address(this))
-                - aeroBalance
+    function claimManager() public {
+        uint256 length = _tokenIds.length();
+        address gauge = voter.gauges(pool);
+
+        uint256 aeroBalance;
+
+        for (uint256 i; i < length;) {
+            uint256 tokenId = _tokenIds.at(i);
+
+            uint256 balance =
+                IERC20Metadata(AERO).balanceOf(address(this));
+
+            ICLGauge(gauge).getReward(tokenId);
+
+            aeroBalance += IERC20Metadata(AERO).balanceOf(
+                address(this)
+            ) - balance;
+
+            unchecked {
+                i += 1;
+            }
+        }
+
+        // #region take the manager share.
+
+        _aeroManagerBalance +=
+            FullMath.mulDiv(aeroBalance, managerFeePIPS, PIPS);
+
+        // #endregion take the manager share.
+
+        address _aeroReceiver = aeroReceiver;
+
+        IERC20Metadata(AERO).safeTransfer(
+            _aeroReceiver, _aeroManagerBalance
         );
 
-        // #endregion get rewards.
+        emit LogManagerClaim(_aeroReceiver, _aeroManagerBalance);
     }
 
     function rebalance(
         RebalanceParams calldata params_
-    ) external onlyManager {
+    ) external nonReentrant whenNotPaused onlyManager {
         // #region modify postitions.
 
         uint256 length = params_.modifyPositions.length;
@@ -474,6 +478,8 @@ contract AerodromeStandardModulePrivate is
 
         if (length > 0) {
             uint256 aeroAmountCollected;
+
+            (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
 
             for (uint256 i; i < length;) {
                 if (
@@ -485,7 +491,9 @@ contract AerodromeStandardModulePrivate is
                 }
 
                 (uint256 amt0, uint256 amt1, uint256 aeroCo) =
-                    _modifyPosition(params_.modifyPositions[i]);
+                _modifyPosition(
+                    params_.modifyPositions[i], sqrtPriceX96
+                );
 
                 burn0 += amt0;
                 burn1 += amt1;
@@ -620,77 +628,6 @@ contract AerodromeStandardModulePrivate is
         emit LogRebalance(burn0, burn1, mint0, mint1);
     }
 
-    function _mint(
-        INonfungiblePositionManager.MintParams calldata params_,
-        address token0_,
-        address token1_
-    ) internal returns (uint256 amount0, uint256 amount1) {
-        uint256 tokenId;
-
-        if (params_.token0 != token0_) {
-            revert Token0Mismatch();
-        }
-        if (params_.token1 != token1_) {
-            revert Token1Mismatch();
-        }
-
-        // #region approves.
-
-        if (params_.amount0Desired > 0) {
-            IERC20Metadata(token0_).forceApprove(
-                address(nftPositionManager), params_.amount0Desired
-            );
-        }
-        if (params_.amount1Desired > 0) {
-            IERC20Metadata(token1_).forceApprove(
-                address(nftPositionManager), params_.amount1Desired
-            );
-        }
-
-        // #endregion approves.
-
-        (tokenId,, amount0, amount1) =
-            nftPositionManager.mint(params_);
-
-        if (params_.amount0Desired > 0) {
-            IERC20Metadata(token0_).forceApprove(
-                address(nftPositionManager), 0
-            );
-        }
-        if (params_.amount1Desired > 0) {
-            IERC20Metadata(token1_).forceApprove(
-                address(nftPositionManager), 0
-            );
-        }
-
-        _tokenIds.add(tokenId);
-
-        // #region stake.
-
-        int24 tickSpacing;
-        (,,,, tickSpacing,,,,,,,) =
-            nftPositionManager.positions(tokenId);
-
-        if (
-            !_tickSpacings.contains(
-                SafeCast.toUint256(int256(tickSpacing))
-            )
-        ) {
-            _tickSpacings.add(SafeCast.toUint256(int256(tickSpacing)));
-        }
-
-        address pool = UnderlyingNFTV3.computeAddress(
-            address(factory), token0_, token1_, tickSpacing
-        );
-
-        address gauge = voter.gauges(pool);
-
-        nftPositionManager.approve(gauge, tokenId);
-        ICLGauge(gauge).deposit(tokenId);
-
-        // #endregion stake.
-    }
-
     /// @notice function used by metaVault or manager to get manager fees.
     /// @return amount0 amount of token0 sent to manager.
     /// @return amount1 amount of token1 sent to manager.
@@ -705,9 +642,16 @@ contract AerodromeStandardModulePrivate is
     /// @param newFeePIPS_ new fee that will be applied.
     function setManagerFeePIPS(
         uint256 newFeePIPS_
-    ) external onlyManager whenNotPaused {}
+    ) external onlyManager whenNotPaused {
+        uint256 _managerFeePIPS = managerFeePIPS;
+        if (_managerFeePIPS == newFeePIPS_) revert SameManagerFee();
+        if (newFeePIPS_ > PIPS) revert NewFeesGtPIPS(newFeePIPS_);
 
-    // function getRewards()
+        claimManager();
+
+        managerFeePIPS = newFeePIPS_;
+        emit LogSetManagerFeePIPS(_managerFeePIPS, newFeePIPS_);
+    }
 
     // #region view functions.
 
@@ -743,14 +687,11 @@ contract AerodromeStandardModulePrivate is
     {
         uint256 length = _tokenIds.length();
 
+        (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
+
         for (uint256 i; i < length;) {
-            (uint256 amt0, uint256 amt1) = UnderlyingNFTV3
-                .underlying(
-                _tokenIds.at(i),
-                address(nftPositionManager),
-                address(factory),
-                0
-            );
+            (uint256 amt0, uint256 amt1) =
+                _principal(_tokenIds.at(i), sqrtPriceX96);
 
             amount0 += amt0;
             amount1 += amt1;
@@ -772,13 +713,8 @@ contract AerodromeStandardModulePrivate is
         uint256 length = _tokenIds.length();
 
         for (uint256 i; i < length;) {
-            (uint256 amt0, uint256 amt1) = UnderlyingNFTV3
-                .underlying(
-                _tokenIds.at(i),
-                address(nftPositionManager),
-                address(factory),
-                priceX96_
-            );
+            (uint256 amt0, uint256 amt1) =
+                _principal(_tokenIds.at(i), priceX96_);
 
             amount0 += amt0;
             amount1 += amt1;
@@ -798,8 +734,6 @@ contract AerodromeStandardModulePrivate is
         IOracleWrapper oracle_,
         uint24 maxDeviation_
     ) external view {
-        uint256[] memory tickSpacings = _tickSpacings.values();
-
         IERC20Metadata _token0 = token0;
         IERC20Metadata _token1 = token1;
 
@@ -808,57 +742,41 @@ contract AerodromeStandardModulePrivate is
 
         uint256 oraclePrice = oracle_.getPrice0();
 
-        for (uint256 i; i < tickSpacings.length;) {
-            int24 tickSpacing =
-                SafeCast.toInt24(SafeCast.toInt256((tickSpacings[i])));
+        (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
 
-            address pool = UnderlyingNFTV3.computeAddress(
-                address(factory),
-                address(_token0),
-                address(_token1),
-                tickSpacing
+        uint256 poolPrice;
+
+        if (sqrtPriceX96 <= type(uint128).max) {
+            poolPrice = FullMath.mulDiv(
+                uint256(sqrtPriceX96) * uint256(sqrtPriceX96),
+                10 ** token0Decimals,
+                1 << 192
             );
-
-            (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
-
-            uint256 poolPrice;
-
-            if (sqrtPriceX96 <= type(uint128).max) {
-                poolPrice = FullMath.mulDiv(
-                    uint256(sqrtPriceX96) * uint256(sqrtPriceX96),
-                    10 ** token0Decimals,
-                    1 << 192
-                );
-            } else {
-                poolPrice = FullMath.mulDiv(
-                    FullMath.mulDiv(
-                        uint256(sqrtPriceX96),
-                        uint256(sqrtPriceX96),
-                        1 << 64
-                    ),
-                    10 ** token0Decimals,
-                    1 << 128
-                );
-            }
-
-            uint256 deviation = FullMath.mulDiv(
+        } else {
+            poolPrice = FullMath.mulDiv(
                 FullMath.mulDiv(
-                    poolPrice > oraclePrice
-                        ? poolPrice - oraclePrice
-                        : oraclePrice - poolPrice,
-                    10 ** token1Decimals,
-                    poolPrice
+                    uint256(sqrtPriceX96),
+                    uint256(sqrtPriceX96),
+                    1 << 64
                 ),
-                PIPS,
-                10 ** token1Decimals
+                10 ** token0Decimals,
+                1 << 128
             );
-
-            if (deviation > maxDeviation_) revert OverMaxDeviation();
-
-            unchecked {
-                i += 1;
-            }
         }
+
+        uint256 deviation = FullMath.mulDiv(
+            FullMath.mulDiv(
+                poolPrice > oraclePrice
+                    ? poolPrice - oraclePrice
+                    : oraclePrice - poolPrice,
+                10 ** token1Decimals,
+                poolPrice
+            ),
+            PIPS,
+            10 ** token1Decimals
+        );
+
+        if (deviation > maxDeviation_) revert OverMaxDeviation();
     }
 
     /// @notice function used to get manager token0 balance.
@@ -879,156 +797,14 @@ contract AerodromeStandardModulePrivate is
         returns (uint256 managerFee1)
     {}
 
-    function claimRewards(
-        address receiver_
-    ) external onlyMetaVaultOwner {
-        uint256 length = _tokenIds.length();
-
-        uint256 aeroBalance;
-        address rewardToken;
-
-        for (uint256 i; i < length;) {
-            uint256 tokenId = _tokenIds.at(i);
-
-            int24 tickSpacing;
-            (,,,, tickSpacing,,,,,,,) =
-                nftPositionManager.positions(tokenId);
-
-            address pool = UnderlyingNFTV3.computeAddress(
-                address(factory),
-                address(token0),
-                address(token1),
-                tickSpacing
-            );
-
-            address gauge = voter.gauges(pool);
-
-            if (rewardToken == address(0)) {
-                address rewardToken = ICLGauge(gauge).rewardToken();
-            }
-
-            uint256 balance =
-                IERC20Metadata(rewardToken).balanceOf(address(this));
-
-            ICLGauge(gauge).getReward(tokenId);
-
-            aeroBalance += IERC20Metadata(rewardToken).balanceOf(
-                address(this)
-            ) - balance;
-
-            unchecked {
-                i += 1;
-            }
-        }
-
-        // #region take the manager share.
-
-        _aeroManagerBalance +=
-            FullMath.mulDiv(aeroBalance, managerFeePIPS, PIPS);
-
-        // #endregion take the manager share.
-
-        uint256 aeroToClaim = IERC20Metadata(rewardToken).balanceOf(
-            address(this)
-        ) - _aeroManagerBalance;
-
-        IERC20Metadata(rewardToken).safeTransfer(
-            receiver_, aeroToClaim
-        );
-
-        emit LogClaim(receiver_, aeroToClaim);
-    }
-
-    function setReceiver(address newReceiver_) external onlyManager {
-        address oldReceiver = aeroReceiver;
-        if (newReceiver_ == address(0)) {
-            revert AddressZero();
-        }
-
-        if(oldReceiver == newReceiver_) {
-            revert SameReceiver();
-        }
-
-        aeroReceiver = newReceiver_;
-
-        emit LogSetReceiver(oldReceiver, newReceiver_);
-    }
-
-    function claimManager() external {
-        uint256 length = _tokenIds.length();
-
-        uint256 aeroBalance;
-        address rewardToken;
-
-        for (uint256 i; i < length;) {
-            uint256 tokenId = _tokenIds.at(i);
-
-            int24 tickSpacing;
-            (,,,, tickSpacing,,,,,,,) =
-                nftPositionManager.positions(tokenId);
-
-            address pool = UnderlyingNFTV3.computeAddress(
-                address(factory),
-                address(token0),
-                address(token1),
-                tickSpacing
-            );
-
-            address gauge = voter.gauges(pool);
-
-            if (rewardToken == address(0)) {
-                address rewardToken = ICLGauge(gauge).rewardToken();
-            }
-
-            uint256 balance =
-                IERC20Metadata(rewardToken).balanceOf(address(this));
-
-            ICLGauge(gauge).getReward(tokenId);
-
-            aeroBalance += IERC20Metadata(rewardToken).balanceOf(
-                address(this)
-            ) - balance;
-
-            unchecked {
-                i += 1;
-            }
-        }
-
-        // #region take the manager share.
-
-        _aeroManagerBalance +=
-            FullMath.mulDiv(aeroBalance, managerFeePIPS, PIPS);
-
-        // #endregion take the manager share.
-
-        address _aeroReceiver = aeroReceiver;
-
-        IERC20Metadata(rewardToken).safeTransfer(
-            _aeroReceiver, _aeroManagerBalance
-        );
-
-        emit LogManagerClaim(_aeroReceiver, _aeroManagerBalance);
-    }
-
     function aeroManagerBalance() external view returns (uint256) {
         uint256 aeroBalance;
         uint256 length = _tokenIds.length();
 
+        address gauge = voter.gauges(pool);
+
         for (uint256 i; i < length;) {
             uint256 tokenId = _tokenIds.at(i);
-
-            int24 tickSpacing;
-            (,,,, tickSpacing,,,,,,,) =
-                nftPositionManager.positions(tokenId);
-
-            address pool = UnderlyingNFTV3.computeAddress(
-                address(factory),
-                address(token0),
-                address(token1),
-                tickSpacing
-            );
-
-            address gauge = voter.gauges(pool);
 
             aeroBalance += ICLGauge(gauge).rewards(tokenId);
 
@@ -1039,6 +815,177 @@ contract AerodromeStandardModulePrivate is
 
         return _aeroManagerBalance
             + FullMath.mulDiv(aeroBalance, managerFeePIPS, PIPS);
+    }
+
+    // #endregion view functions.
+
+    function _modifyPosition(
+        ModifyPosition memory modifyPosition_,
+        uint160 sqrtPriceX96_
+    )
+        internal
+        returns (
+            uint256 amount0ToSend,
+            uint256 amount1ToSend,
+            uint256 aeroAmountCollected
+        )
+    {
+        (uint256 amount0, uint256 amount1) =
+            _principal(modifyPosition_.tokenId, sqrtPriceX96_);
+
+        // #region unstake position.
+
+        address gauge;
+        uint128 liquidity;
+        {
+            uint256 aeroAmountCo;
+
+            (aeroAmountCo, gauge, liquidity) = _unstake(
+                modifyPosition_.tokenId
+            );
+
+            aeroAmountCollected += aeroAmountCo;
+        }
+
+        // #region unstake position.
+
+        if (modifyPosition_.liquidity > 0) {
+            if (modifyPosition_.liquidity > liquidity) {
+                revert OverBurn();
+            }
+            liquidity = modifyPosition_.liquidity;
+        } else {
+            liquidity = SafeCast.toUint128(
+                FullMath.mulDiv(
+                    liquidity, modifyPosition_.proportion, BASE
+                )
+            );
+        }
+
+        amount0 =
+            FullMath.mulDiv(amount0, modifyPosition_.proportion, BASE);
+        amount1 =
+            FullMath.mulDiv(amount1, modifyPosition_.proportion, BASE);
+
+        INonfungiblePositionManager.DecreaseLiquidityParams memory
+            params = INonfungiblePositionManager
+                .DecreaseLiquidityParams({
+                tokenId: modifyPosition_.tokenId,
+                liquidity: liquidity,
+                amount0Min: amount0 - 1,
+                /// @dev 1 less than amount0, for rounding, need to check if it's really needed.
+                amount1Min: amount1 - 1,
+                /// @dev 1 less than amount0, for rounding, need to check if it's really needed.
+                deadline: type(uint256).max
+            });
+
+        (uint256 amt0, uint256 amt1) =
+            nftPositionManager.decreaseLiquidity(params);
+
+        if (modifyPosition_.proportion == BASE) {
+            nftPositionManager.burn(modifyPosition_.tokenId);
+
+            _tokenIds.remove(modifyPosition_.tokenId);
+        } else {
+            nftPositionManager.approve(gauge, modifyPosition_.tokenId);
+            ICLGauge(gauge).deposit(modifyPosition_.tokenId);
+        }
+
+        amount0ToSend += amt0;
+        amount1ToSend += amt1;
+    }
+
+    function _unstake(
+        uint256 tokenId_
+    )
+        internal
+        returns (
+            uint256 aeroAmountCollected,
+            address gauge,
+            uint128 liquidity
+        )
+    {
+        // #region get rewards.
+
+        {
+            (,,,,,,, liquidity,,,,) =
+                nftPositionManager.positions(tokenId_);
+
+            gauge = voter.gauges(pool);
+        }
+
+        uint256 aeroBalance =
+            IERC20Metadata(AERO).balanceOf(address(this));
+
+        ICLGauge(gauge).withdraw(tokenId_);
+
+        aeroAmountCollected += (
+            IERC20Metadata(AERO).balanceOf(address(this))
+                - aeroBalance
+        );
+
+        // #endregion get rewards.
+    }
+
+    function _mint(
+        INonfungiblePositionManager.MintParams calldata params_,
+        address token0_,
+        address token1_
+    ) internal returns (uint256 amount0, uint256 amount1) {
+        uint256 tokenId;
+
+        if (params_.token0 != token0_) {
+            revert Token0Mismatch();
+        }
+        if (params_.token1 != token1_) {
+            revert Token1Mismatch();
+        }
+
+        int24 tickSpacing = IUniswapV3Pool(pool).tickSpacing();
+
+        if (params_.tickSpacing != tickSpacing) {
+            revert TickSpacingMismatch();
+        }
+
+        // #region approves.
+
+        if (params_.amount0Desired > 0) {
+            IERC20Metadata(token0_).forceApprove(
+                address(nftPositionManager), params_.amount0Desired
+            );
+        }
+        if (params_.amount1Desired > 0) {
+            IERC20Metadata(token1_).forceApprove(
+                address(nftPositionManager), params_.amount1Desired
+            );
+        }
+
+        // #endregion approves.
+
+        (tokenId,, amount0, amount1) =
+            nftPositionManager.mint(params_);
+
+        if (params_.amount0Desired > 0) {
+            IERC20Metadata(token0_).forceApprove(
+                address(nftPositionManager), 0
+            );
+        }
+        if (params_.amount1Desired > 0) {
+            IERC20Metadata(token1_).forceApprove(
+                address(nftPositionManager), 0
+            );
+        }
+
+        _tokenIds.add(tokenId);
+
+        // #region stake.
+
+        address gauge = voter.gauges(pool);
+
+        nftPositionManager.approve(gauge, tokenId);
+        ICLGauge(gauge).deposit(tokenId);
+
+        // #endregion stake.
     }
 
     function _checkMinReturn(
@@ -1069,5 +1016,29 @@ contract AerodromeStandardModulePrivate is
         }
     }
 
-    // #endregion view functions.
+    function _principal(
+        uint256 tokenId,
+        uint160 sqrtRatioX96
+    ) internal view returns (uint256 amount0, uint256 amount1) {
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            int24 tickLower,
+            int24 tickUpper,
+            uint128 liquidity,
+            ,
+            ,
+            ,
+        ) = nftPositionManager.positions(tokenId);
+
+        return LiquidityAmounts.getAmountsForLiquidity(
+            sqrtRatioX96,
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
+            liquidity
+        );
+    }
 }
