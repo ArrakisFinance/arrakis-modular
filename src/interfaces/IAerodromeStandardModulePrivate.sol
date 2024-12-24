@@ -29,23 +29,11 @@ interface IAerodromeStandardModulePrivate {
     error SameReceiver();
     error TickSpacingMismatch();
     error PoolNotFound();
+    error AmountsZero();
 
     // #endregion errors.
 
     // #region events.
-
-    event LogDeposit(
-        address indexed depositor,
-        uint256 amount0In,
-        uint256 amount1In
-    );
-
-    event LogWithdraw(
-        address indexed receiver,
-        uint256 amount0Out,
-        uint256 amount1Out
-    );
-
     event LogApproval(
         address indexed spender,
         uint256 amount0,
@@ -83,12 +71,21 @@ interface IAerodromeStandardModulePrivate {
     function rebalance(RebalanceParams calldata params_) external;
     function claimRewards(address receiver_) external;
     function claimManager() external;
+    function approve(
+        address spender_,
+        uint256 amount0_,
+        uint256 amount1_
+    ) external;
+    function setReceiver(
+        address newReceiver_
+    ) external;
 
     // #region view functions.
-
     function nftPositionManager() external view returns (INonfungiblePositionManager);
     function factory() external view returns (IUniswapV3Factory);
     function tokenIds() external view returns (uint256[] memory);
-
+    function maxSlippage() external view returns (uint24);
+    function aeroReceiver() external view returns (address);
+    function pool() external view returns (address);
     // #endregion view functions.
 }

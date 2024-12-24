@@ -274,6 +274,10 @@ contract AerodromeStandardModulePrivate is
             revert NativeCoinNotSupported();
         }
 
+        if (amount0_ == 0 && amount1_ == 0) {
+            revert AmountsZero();
+        }
+
         if (amount0_ > 0) {
             token0.safeTransferFrom(
                 depositor_, address(this), amount0_
@@ -840,9 +844,8 @@ contract AerodromeStandardModulePrivate is
         {
             uint256 aeroAmountCo;
 
-            (aeroAmountCo, gauge, liquidity) = _unstake(
-                modifyPosition_.tokenId
-            );
+            (aeroAmountCo, gauge, liquidity) =
+                _unstake(modifyPosition_.tokenId);
 
             aeroAmountCollected += aeroAmountCo;
         }
