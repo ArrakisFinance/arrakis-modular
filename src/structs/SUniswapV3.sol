@@ -49,9 +49,6 @@ struct ComputeFeesPayload {
 struct ModifyPosition {
     uint256 tokenId;
     uint256 proportion;
-    address token0;
-    address token1;
-    uint128 liquidity;
 }
 
 struct SwapPayload {

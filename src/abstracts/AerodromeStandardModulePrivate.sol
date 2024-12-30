@@ -336,10 +336,7 @@ contract AerodromeStandardModulePrivate is
             _modifyPosition(
                 ModifyPosition({
                     tokenId: tokenIds[i],
-                    proportion: proportion_,
-                    token0: address(_token0),
-                    token1: address(_token1),
-                    liquidity: 0
+                    proportion: proportion_
                 }),
                 sqrtPriceX96
             );
@@ -375,7 +372,15 @@ contract AerodromeStandardModulePrivate is
 
     function claimRewards(
         address receiver_
-    ) external onlyMetaVaultOwner {
+    ) external onlyMetaVaultOwner nonReentrant whenNotPaused {
+        // #region checks.
+
+        if (receiver_ == address(0)) {
+            revert AddressZero();
+        }
+
+        // #endregion checks.
+
         uint256 length = _tokenIds.length();
         address gauge = voter.gauges(pool);
 
@@ -416,7 +421,7 @@ contract AerodromeStandardModulePrivate is
 
     function setReceiver(
         address newReceiver_
-    ) external onlyManager {
+    ) external onlyManager whenNotPaused {
         address oldReceiver = aeroReceiver;
         if (newReceiver_ == address(0)) {
             revert AddressZero();
@@ -431,7 +436,7 @@ contract AerodromeStandardModulePrivate is
         emit LogSetReceiver(oldReceiver, newReceiver_);
     }
 
-    function claimManager() public {
+    function claimManager() public nonReentrant whenNotPaused {
         uint256 length = _tokenIds.length();
         address gauge = voter.gauges(pool);
 
@@ -487,7 +492,7 @@ contract AerodromeStandardModulePrivate is
 
             for (uint256 i; i < length;) {
                 if (
-                    _tokenIds.contains(
+                    !_tokenIds.contains(
                         params_.modifyPositions[i].tokenId
                     )
                 ) {
@@ -676,9 +681,7 @@ contract AerodromeStandardModulePrivate is
         external
         view
         returns (uint256 init0, uint256 init1)
-    {
-        return (0, 0);
-    }
+    {}
 
     /// @notice function used to get the amount of token0 and token1 sitting
     /// on the position.
@@ -704,6 +707,13 @@ contract AerodromeStandardModulePrivate is
                 i += 1;
             }
         }
+
+        // #region left over.
+
+        amount0 += token0.balanceOf(address(this));
+        amount1 += token1.balanceOf(address(this));
+
+        // #endregion left over.
     }
 
     /// @notice function used to get the amounts of token0 and token1 sitting
@@ -727,6 +737,13 @@ contract AerodromeStandardModulePrivate is
                 i += 1;
             }
         }
+
+        // #region left over.
+
+        amount0 += token0.balanceOf(address(this));
+        amount1 += token1.balanceOf(address(this));
+
+        // #endregion left over.
     }
 
     /// @notice function used to validate if module state is not manipulated
@@ -811,6 +828,7 @@ contract AerodromeStandardModulePrivate is
             uint256 tokenId = _tokenIds.at(i);
 
             aeroBalance += ICLGauge(gauge).rewards(tokenId);
+            aeroBalance += ICLGauge(gauge).earned(address(this), tokenId);
 
             unchecked {
                 i += 1;
@@ -834,9 +852,6 @@ contract AerodromeStandardModulePrivate is
             uint256 aeroAmountCollected
         )
     {
-        (uint256 amount0, uint256 amount1) =
-            _principal(modifyPosition_.tokenId, sqrtPriceX96_);
-
         // #region unstake position.
 
         address gauge;
@@ -852,33 +867,19 @@ contract AerodromeStandardModulePrivate is
 
         // #region unstake position.
 
-        if (modifyPosition_.liquidity > 0) {
-            if (modifyPosition_.liquidity > liquidity) {
-                revert OverBurn();
-            }
-            liquidity = modifyPosition_.liquidity;
-        } else {
-            liquidity = SafeCast.toUint128(
-                FullMath.mulDiv(
-                    liquidity, modifyPosition_.proportion, BASE
-                )
-            );
-        }
-
-        amount0 =
-            FullMath.mulDiv(amount0, modifyPosition_.proportion, BASE);
-        amount1 =
-            FullMath.mulDiv(amount1, modifyPosition_.proportion, BASE);
+        liquidity = SafeCast.toUint128(
+            FullMath.mulDiv(
+                liquidity, modifyPosition_.proportion, BASE
+            )
+        );
 
         INonfungiblePositionManager.DecreaseLiquidityParams memory
             params = INonfungiblePositionManager
                 .DecreaseLiquidityParams({
                 tokenId: modifyPosition_.tokenId,
                 liquidity: liquidity,
-                amount0Min: amount0 - 1,
-                /// @dev 1 less than amount0, for rounding, need to check if it's really needed.
-                amount1Min: amount1 - 1,
-                /// @dev 1 less than amount0, for rounding, need to check if it's really needed.
+                amount0Min: 0,
+                amount1Min: 0,
                 deadline: type(uint256).max
             });
 
@@ -886,6 +887,15 @@ contract AerodromeStandardModulePrivate is
             nftPositionManager.decreaseLiquidity(params);
 
         if (modifyPosition_.proportion == BASE) {
+            nftPositionManager.collect(
+                INonfungiblePositionManager.CollectParams({
+                    tokenId: modifyPosition_.tokenId,
+                    recipient: address(this),
+                    amount0Max: SafeCast.toUint128(amt0),
+                    amount1Max: SafeCast.toUint128(amt1)
+                })
+            );
+
             nftPositionManager.burn(modifyPosition_.tokenId);
 
             _tokenIds.remove(modifyPosition_.tokenId);

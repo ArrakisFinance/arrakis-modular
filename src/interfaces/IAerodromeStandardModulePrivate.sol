@@ -14,7 +14,6 @@ interface IAerodromeStandardModulePrivate {
     error OnlyMetaVaultOwner();
     error NativeCoinNotSupported();
     error CallbackNotAuthorized();
-    error OverBurn();
     error BurnToken0();
     error BurnToken1();
     error MintToken0();
@@ -87,5 +86,6 @@ interface IAerodromeStandardModulePrivate {
     function maxSlippage() external view returns (uint24);
     function aeroReceiver() external view returns (address);
     function pool() external view returns (address);
+    function aeroManagerBalance() external view returns (uint256);
     // #endregion view functions.
 }

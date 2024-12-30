@@ -152,7 +152,7 @@ contract AerodromeStandardModulePrivateTest is
         // #region reset fork.
         /// @dev base chain.
 
-        _reset(vm.envString("BASE_RPC_URL"), 23_903_700);
+        _reset(vm.envString("BASE_RPC_URL"), 23_903_800);
 
         // #endregion reset fork.
 
@@ -168,6 +168,9 @@ contract AerodromeStandardModulePrivateTest is
         // #region create an oracle.
         oracle = address(new OracleWrapper());
         // #endregion create an oracle.
+
+        OracleWrapper(oracle).setPrice0(3684e6);
+        OracleWrapper(oracle).setPrice1(294_303_750_901_305);
 
         _setup();
 
@@ -657,7 +660,252 @@ contract AerodromeStandardModulePrivateTest is
         IArrakisLPModule(module).withdraw(receiver, BASE + 1);
     }
 
+    function test_withdraw() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        // #region withdraw.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.prank(vault);
+        IArrakisLPModule(module).withdraw(receiver, BASE);
+
+        // #endregion withdraw.
+    }
+
     // #endregion test withdraw.
+
+    // #region test claimRewards.
+
+    function test_claim_rewards_only_meta_vault_owner() public {
+        address notMetaVaultOwner = vm.addr(
+            uint256(keccak256(abi.encode("Not MetaVault Owner")))
+        );
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.prank(notMetaVaultOwner);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate
+                .OnlyMetaVaultOwner
+                .selector
+        );
+        IAerodromeStandardModulePrivate(module).claimRewards(receiver);
+    }
+
+    function test_claim_rewards_receiver_address_zero() public {
+        vm.prank(owner);
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+        IAerodromeStandardModulePrivate(module).claimRewards(
+            address(0)
+        );
+    }
+
+    function test_claim_rewards() public {
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 1 ether;
+        uint256 amount1 = 3850e6;
+
+        deal(WETH, depositor, amount0);
+        deal(USDC, depositor, amount1);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(USDC).approve(module, amount1);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        // #region deposit.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3850e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        uint256 blockNumber = block.number;
+        uint256 timestamp = block.timestamp;
+
+        vm.warp(timestamp + 100);
+        vm.roll(blockNumber + 100);
+
+        // #region do swap.
+
+        address recipient =
+            vm.addr(uint256(keccak256(abi.encode("Recipient"))));
+        bool zeroForOne = true;
+        int256 amountSpecified = 0.5 ether;
+
+        IUniswapV3Pool pool = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        );
+
+        assertEq(IERC20Metadata(USDC).balanceOf(recipient), 0);
+
+        pool.swap(
+            recipient,
+            zeroForOne,
+            amountSpecified,
+            TickMath.MIN_SQRT_RATIO + 1,
+            ""
+        );
+
+        assertGt(IERC20Metadata(USDC).balanceOf(recipient), 0);
+
+        // #endregion do swap.
+
+        blockNumber = block.number;
+        timestamp = block.timestamp;
+
+        vm.warp(timestamp + 100);
+        vm.roll(blockNumber + 100);
+
+        // #region claim rewards.
+
+        assertEq(IERC20Metadata(AERO).balanceOf(owner), 0);
+
+        vm.prank(owner);
+        IAerodromeStandardModulePrivate(module).claimRewards(owner);
+
+        assertGt(IERC20Metadata(AERO).balanceOf(owner), 0);
+
+        // #endregion claim rewards.
+    }
+
+    // #endregion test claimRewards.
 
     // #region test set receiver.
 
@@ -717,6 +965,1990 @@ contract AerodromeStandardModulePrivateTest is
     }
 
     // #endregion test set receiver.
+
+    // #region test claimManager.
+
+    function test_claim_manager() public {
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 1 ether;
+        uint256 amount1 = 3850e6;
+
+        deal(WETH, depositor, amount0);
+        deal(USDC, depositor, amount1);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(USDC).approve(module, amount1);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        // #region deposit.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3850e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        uint256 blockNumber = block.number;
+        uint256 timestamp = block.timestamp;
+
+        vm.warp(timestamp + 100);
+        vm.roll(blockNumber + 100);
+
+        // #region do swap.
+
+        address recipient =
+            vm.addr(uint256(keccak256(abi.encode("Recipient"))));
+        bool zeroForOne = true;
+        int256 amountSpecified = 0.5 ether;
+
+        IUniswapV3Pool pool = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        );
+
+        assertEq(IERC20Metadata(USDC).balanceOf(recipient), 0);
+
+        pool.swap(
+            recipient,
+            zeroForOne,
+            amountSpecified,
+            TickMath.MIN_SQRT_RATIO + 1,
+            ""
+        );
+
+        assertGt(IERC20Metadata(USDC).balanceOf(recipient), 0);
+
+        // #endregion do swap.
+
+        blockNumber = block.number;
+        timestamp = block.timestamp;
+
+        vm.warp(timestamp + 100);
+        vm.roll(blockNumber + 100);
+
+        // #region claim rewards.
+
+        assertEq(IERC20Metadata(AERO).balanceOf(owner), 0);
+
+        vm.prank(owner);
+        IAerodromeStandardModulePrivate(module).claimRewards(owner);
+
+        assertGt(IERC20Metadata(AERO).balanceOf(owner), 0);
+
+        // #endregion claim rewards.
+
+        // #region claim manager rewards.
+
+        assertEq(IERC20Metadata(AERO).balanceOf(aeroReceiver), 0);
+
+        IAerodromeStandardModulePrivate(module).claimManager();
+
+        assertGt(IERC20Metadata(AERO).balanceOf(aeroReceiver), 0);
+
+        // #endregion claim manager rewards.
+    }
+
+    // #endregion test claimManager.
+
+    // #region test setManagerFeePIPS.
+
+    function test_set_manager_fee_pips_only_manager() public {
+        address notManager =
+            vm.addr(uint256(keccak256(abi.encode("Not Manager"))));
+
+        vm.prank(notManager);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisLPModule.OnlyManager.selector,
+                notManager,
+                arrakisStandardManager
+            )
+        );
+        IArrakisLPModule(module).setManagerFeePIPS(10_002);
+    }
+
+    function test_set_manager_fee_pips_same_manager_fee() public {
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(IArrakisLPModule.SameManagerFee.selector);
+        IArrakisLPModule(module).setManagerFeePIPS(10_000);
+    }
+
+    function test_set_manager_fee_new_gt_pips() public {
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisLPModule.NewFeesGtPIPS.selector, PIPS + 1
+            )
+        );
+        IArrakisLPModule(module).setManagerFeePIPS(PIPS + 1);
+    }
+
+    // #endregion test setManagerFeePIPS.
+
+    // #region test rebalance.
+
+    function test_rebalance_with_swap_zero_for_one() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+    }
+
+    function test_rebalance_with_swap_one_for_zero() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 0;
+        uint256 amount1 = 3414e6 * 2;
+
+        deal(USDC, depositor, amount1);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(module, amount1);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 3414e6;
+        swapPayload.expectedMinReturn = 1 ether;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swapOneForZero.selector);
+        swapPayload.zeroForOne = false;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+    }
+
+    function test_rebalance_expected_min_return_too_low() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3014e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate
+                .ExpectedMinReturnTooLow
+                .selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+    }
+
+    function test_rebalance_expected_min_return_too_low_one_for_zero()
+        public
+    {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 0;
+        uint256 amount1 = 3414e6 * 2;
+
+        deal(USDC, depositor, amount1);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(module, amount1);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 3414e6;
+        swapPayload.expectedMinReturn = 0.5 ether;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swapOneForZero.selector);
+        swapPayload.zeroForOne = false;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate
+                .ExpectedMinReturnTooLow
+                .selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+    }
+
+    function test_rebalance_with_swap_wrong_router() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = vault;
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.WrongRouter.selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+    }
+
+    function test_rebalance_with_swap_zero_for_one_slippage_too_high()
+        public
+    {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload = abi.encodeWithSelector(
+            this.swapZeroForOneSlippage.selector
+        );
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.SlippageTooHigh.selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+    }
+
+    function test_rebalance_with_swap_one_for_zero_slippage_too_high()
+        public
+    {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 0;
+        uint256 amount1 = 3414e6 * 2;
+
+        deal(USDC, depositor, amount1);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(USDC).approve(module, amount1);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 3414e6;
+        swapPayload.expectedMinReturn = 1 ether;
+        swapPayload.router = address(this);
+        swapPayload.payload = abi.encodeWithSelector(
+            this.swapOneForZeroSlippage.selector
+        );
+        swapPayload.zeroForOne = false;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.SlippageTooHigh.selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+    }
+
+    function test_rebalance_mint_token_0() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.MintToken0.selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 2 ether,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+    }
+
+    function test_rebalance_mint_token_1() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.MintToken1.selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 3415e6
+            })
+        );
+
+        // #endregion rebalance.
+    }
+
+    function test_rebalance_token_not_found() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        // #region second rebalance to burn position.
+
+        uint256[] memory tokenId =
+            AerodromeStandardModulePrivate(module).tokenIds();
+
+        modifyPositions = new ModifyPosition[](1);
+        SwapPayload memory swapPayload2;
+        mintParams = new INonfungiblePositionManager.MintParams[](0);
+
+        modifyPositions[0] =
+            ModifyPosition({tokenId: 1, proportion: BASE});
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.TokenIdNotFound.selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload2,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion second rebalance to burn position.
+    }
+
+    function test_rebalance_burn_token_0() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        // #region second rebalance to burn position.
+
+        uint256[] memory tokenId =
+            AerodromeStandardModulePrivate(module).tokenIds();
+
+        modifyPositions = new ModifyPosition[](1);
+        SwapPayload memory swapPayload2;
+        mintParams = new INonfungiblePositionManager.MintParams[](0);
+
+        modifyPositions[0] =
+            ModifyPosition({tokenId: tokenId[0], proportion: BASE});
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.BurnToken0.selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload2,
+                mintParams: mintParams,
+                minBurn0: 2 ether,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion second rebalance to burn position.
+    }
+
+    function test_rebalance_burn_token_1() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        // #region second rebalance to burn position.
+
+        uint256[] memory tokenId =
+            AerodromeStandardModulePrivate(module).tokenIds();
+
+        modifyPositions = new ModifyPosition[](1);
+        SwapPayload memory swapPayload2;
+        mintParams = new INonfungiblePositionManager.MintParams[](0);
+
+        modifyPositions[0] =
+            ModifyPosition({tokenId: tokenId[0], proportion: BASE});
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.BurnToken1.selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload2,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 10_000_000_000,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion second rebalance to burn position.
+    }
+
+    function test_rebalance_full_burn() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        // #region second rebalance to burn position.
+
+        uint256[] memory tokenId =
+            AerodromeStandardModulePrivate(module).tokenIds();
+
+        modifyPositions = new ModifyPosition[](1);
+        SwapPayload memory swapPayload2;
+        mintParams = new INonfungiblePositionManager.MintParams[](0);
+
+        modifyPositions[0] =
+            ModifyPosition({tokenId: tokenId[0], proportion: BASE});
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload2,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion second rebalance to burn position.
+    }
+
+    function test_rebalance_partial_burn() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        // #region second rebalance to burn position.
+
+        uint256[] memory tokenId =
+            AerodromeStandardModulePrivate(module).tokenIds();
+
+        modifyPositions = new ModifyPosition[](1);
+        SwapPayload memory swapPayload2;
+        mintParams = new INonfungiblePositionManager.MintParams[](0);
+
+        modifyPositions[0] = ModifyPosition({
+            tokenId: tokenId[0],
+            proportion: BASE / 2
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload2,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion second rebalance to burn position.
+    }
+
+    // function test_rebalance_
+
+    // #endregion test rebalance.
+
+    // #region test get guardian.
+
+    function test_get_guardian() public {
+        address p = IArrakisLPModule(module).guardian();
+
+        assertEq(p, pauser);
+    }
+
+    // #endregion test get guardian.
+
+    // #region test tokenIds.
+
+    function test_tokenIds() public {
+        // #region setup.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 1 ether;
+        uint256 amount1 = 3850e6;
+
+        deal(WETH, depositor, amount0);
+        deal(USDC, depositor, amount1);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(USDC).approve(module, amount1);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        // #region deposit.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](2);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 0.5 ether,
+            amount1Desired: 3850e6 / 2,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+        mintParams[1] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 200),
+            tickUpper: int24(tick - (tick % 100) + 200),
+            amount0Desired: 0.5 ether,
+            amount1Desired: 3850e6 / 2,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        // #endregion setup.
+
+        uint256[] memory tokenIds =
+            IAerodromeStandardModulePrivate(module).tokenIds();
+
+        assertEq(tokenIds.length, 2);
+    }
+
+    // #endregion test tokenIds.
+
+    // #region test total underlying.
+
+    function test_total_underlying() public {
+        // #region setup.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 1 ether;
+        uint256 amount1 = 3850e6;
+
+        deal(WETH, depositor, amount0);
+        deal(USDC, depositor, amount1);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(USDC).approve(module, amount1);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        // #region deposit.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](2);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 0.5 ether,
+            amount1Desired: 3850e6 / 2,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+        mintParams[1] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 200),
+            tickUpper: int24(tick - (tick % 100) + 200),
+            amount0Desired: 0.5 ether,
+            amount1Desired: 3850e6 / 2,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        // #endregion setup.
+
+        (amount0, amount1) =
+            IArrakisLPModule(module).totalUnderlying();
+
+        /// @dev minus 2 wei because, we are minting two positions.
+        assertEq(amount0, 1 ether - 2);
+        assertEq(amount1, 3850e6 - 2);
+    }
+
+    // #endregion test total underlying.
+
+    // #region test total underlying at price.
+
+    function test_total_underlying_at_price() public {
+        // #region setup.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 1 ether;
+        uint256 amount1 = 3850e6;
+
+        deal(WETH, depositor, amount0);
+        deal(USDC, depositor, amount1);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(USDC).approve(module, amount1);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        // #region deposit.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        int24 tickSpacing = 100;
+
+        (uint160 sqrtPriceX96, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](2);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 0.5 ether,
+            amount1Desired: 3850e6 / 2,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+        mintParams[1] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 200),
+            tickUpper: int24(tick - (tick % 100) + 200),
+            amount0Desired: 0.5 ether,
+            amount1Desired: 3850e6 / 2,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        // #endregion setup.
+
+        uint160 priceX96 = (sqrtPriceX96 * 110 / 100);
+
+        (amount0, amount1) =
+            IArrakisLPModule(module).totalUnderlyingAtPrice(priceX96);
+
+        assertEq(amount0, 207);
+        assertEq(amount1, 7_562_297_597);
+    }
+
+    // #endregion test total underlying at price.
+
+    // #region test validate rebalance.
+
+    function test_validate_rebalance_over_max_deviation() public {
+        OracleWrapper(oracle).setPrice0(3000e6);
+
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.OverMaxDeviation.selector
+        );
+        IArrakisLPModule(module).validateRebalance(
+            IOracleWrapper(oracle), 1000
+        );
+    }
+
+    function test_validate_rebalance() public {
+        OracleWrapper(oracle).setPrice0(3684e6);
+
+        IArrakisLPModule(module).validateRebalance(
+            IOracleWrapper(oracle), 3000
+        );
+    }
+
+    // #endregion test validate rebalance.
+
+    // #region test aero manager balance.
+
+    function test_aero_manager_balance() public {
+        uint256 aeroManagerBalance = IAerodromeStandardModulePrivate(
+            module
+        ).aeroManagerBalance();
+
+        assertEq(aeroManagerBalance, 0);
+
+        // #region setup.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 1 ether;
+        uint256 amount1 = 3850e6;
+
+        deal(WETH, depositor, amount0);
+        deal(USDC, depositor, amount1);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(USDC).approve(module, amount1);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        // #region deposit.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3850e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                modifyPositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        uint256 blockNumber = block.number;
+        uint256 timestamp = block.timestamp;
+
+        vm.warp(timestamp + 100);
+        vm.roll(blockNumber + 100);
+
+        // #region do swap.
+
+        address recipient =
+            vm.addr(uint256(keccak256(abi.encode("Recipient"))));
+        bool zeroForOne = true;
+        int256 amountSpecified = 0.5 ether;
+
+        IUniswapV3Pool pool = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        );
+
+        assertEq(IERC20Metadata(USDC).balanceOf(recipient), 0);
+
+        pool.swap(
+            recipient,
+            zeroForOne,
+            amountSpecified,
+            TickMath.MIN_SQRT_RATIO + 1,
+            ""
+        );
+
+        assertGt(IERC20Metadata(USDC).balanceOf(recipient), 0);
+
+        // #endregion do swap.
+
+        blockNumber = block.number;
+        timestamp = block.timestamp;
+
+        vm.warp(timestamp + 100);
+        vm.roll(blockNumber + 100);
+
+        // #endregion setup.
+
+        aeroManagerBalance = IAerodromeStandardModulePrivate(module)
+            .aeroManagerBalance();
+
+        assertGt(aeroManagerBalance, 0);
+    }
+
+    // #endregion test aero manager balance.
 
     // #region tests functions.
 
@@ -917,7 +3149,7 @@ contract AerodromeStandardModulePrivateTest is
         assertEq(IERC20Metadata(USDC).balanceOf(withdrawer2), 0);
 
         vm.prank(address(vault));
-        IArrakisLPModule(module).withdraw(withdrawer2, BASE / 2);
+        IArrakisLPModule(module).withdraw(withdrawer2, BASE);
 
         assertGt(IERC20Metadata(WETH).balanceOf(withdrawer2), 0);
         assertGt(IERC20Metadata(USDC).balanceOf(withdrawer2), 0);
@@ -996,4 +3228,36 @@ contract AerodromeStandardModulePrivateTest is
     }
 
     // #endregion internal functions.
+
+    // #region swap mock functions.
+
+    function swap() public {
+        IERC20Metadata(WETH).transferFrom(
+            msg.sender, address(this), 1 ether
+        );
+        deal(USDC, msg.sender, 3414e6);
+    }
+
+    function swapZeroForOneSlippage() public {
+        IERC20Metadata(WETH).transferFrom(
+            msg.sender, address(this), 1 ether
+        );
+        deal(USDC, msg.sender, 3400e6);
+    }
+
+    function swapOneForZeroSlippage() public {
+        IERC20Metadata(USDC).transferFrom(
+            msg.sender, address(this), 3414e6
+        );
+        deal(WETH, msg.sender, 0.5 ether);
+    }
+
+    function swapOneForZero() public {
+        IERC20Metadata(USDC).transferFrom(
+            msg.sender, address(this), 3414e6
+        );
+        deal(WETH, msg.sender, 1 ether);
+    }
+
+    // #endregion swap mock functions.
 }
