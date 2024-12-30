@@ -7,7 +7,7 @@ import {console} from "forge-std/console.sol";
 // #endregion foundry.
 
 import {AerodromeStandardModulePrivate} from
-    "../../src/abstracts/AerodromeStandardModulePrivate.sol";
+    "../../src/modules/AerodromeStandardModulePrivate.sol";
 import {
     BASE,
     PIPS,
