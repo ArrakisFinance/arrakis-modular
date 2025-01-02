@@ -60,7 +60,8 @@ struct SwapPayload {
 }
 
 struct RebalanceParams {
-    ModifyPosition[] modifyPositions;
+    ModifyPosition[] decreasePositions;
+    ModifyPosition[] increasePositions;
     SwapPayload swapPayload;
     INonfungiblePositionManager.MintParams[] mintParams;
     uint256 minBurn0;

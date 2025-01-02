@@ -331,15 +331,14 @@ contract AerodromeStandardModulePrivate is
 
         (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
 
+        ModifyPosition memory modifyPosition;
+
+        modifyPosition.proportion = proportion_;
+
         for (uint256 i; i < tokenIds.length;) {
+            modifyPosition.tokenId = tokenIds[i];
             (uint256 amt0, uint256 amt1, uint256 aeroCo) =
-            _modifyPosition(
-                ModifyPosition({
-                    tokenId: tokenIds[i],
-                    proportion: proportion_
-                }),
-                sqrtPriceX96
-            );
+                _decreaseLiquidity(modifyPosition, sqrtPriceX96);
 
             amount0 += amt0;
             amount1 += amt1;
@@ -480,7 +479,7 @@ contract AerodromeStandardModulePrivate is
     ) external nonReentrant whenNotPaused onlyManager {
         // #region modify postitions.
 
-        uint256 length = params_.modifyPositions.length;
+        uint256 length = params_.decreasePositions.length;
 
         uint256 burn0;
         uint256 burn1;
@@ -490,18 +489,20 @@ contract AerodromeStandardModulePrivate is
 
             (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
 
+            uint256 _managerFeePIPS = managerFeePIPS;
+
             for (uint256 i; i < length;) {
                 if (
                     !_tokenIds.contains(
-                        params_.modifyPositions[i].tokenId
+                        params_.decreasePositions[i].tokenId
                     )
                 ) {
                     revert TokenIdNotFound();
                 }
 
                 (uint256 amt0, uint256 amt1, uint256 aeroCo) =
-                _modifyPosition(
-                    params_.modifyPositions[i], sqrtPriceX96
+                _decreaseLiquidity(
+                    params_.decreasePositions[i], sqrtPriceX96
                 );
 
                 burn0 += amt0;
@@ -514,8 +515,6 @@ contract AerodromeStandardModulePrivate is
             }
 
             // #region manager fees.
-
-            uint256 _managerFeePIPS = managerFeePIPS;
 
             _aeroManagerBalance += FullMath.mulDiv(
                 aeroAmountCollected, _managerFeePIPS, PIPS
@@ -601,12 +600,57 @@ contract AerodromeStandardModulePrivate is
 
         // #endregion swap.
 
+        uint256 mint0;
+        uint256 mint1;
+
+        // #region increase positions.
+
+        length = params_.increasePositions.length;
+
+        if (length > 0) {
+            uint256 aeroAmountCollected;
+
+            (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
+
+            uint256 _managerFeePIPS = managerFeePIPS;
+
+            for (uint256 i; i < length;) {
+                if (
+                    !_tokenIds.contains(
+                        params_.increasePositions[i].tokenId
+                    )
+                ) {
+                    revert TokenIdNotFound();
+                }
+
+                (uint256 amt0, uint256 amt1, uint256 aeroCo) =
+                _increaseLiquidity(
+                    params_.increasePositions[i], sqrtPriceX96
+                );
+
+                mint0 += amt0;
+                mint1 += amt1;
+                aeroAmountCollected += aeroCo;
+
+                unchecked {
+                    i += 1;
+                }
+            }
+
+            // #region manager fees.
+
+            _aeroManagerBalance += FullMath.mulDiv(
+                aeroAmountCollected, _managerFeePIPS, PIPS
+            );
+
+            // #endregion manager fees.
+        }
+
+        // #endregion increase positions.
+
         // #region mint.
 
         length = params_.mintParams.length;
-
-        uint256 mint0;
-        uint256 mint1;
 
         if (length > 0) {
             address _token0 = address(token0);
@@ -828,7 +872,8 @@ contract AerodromeStandardModulePrivate is
             uint256 tokenId = _tokenIds.at(i);
 
             aeroBalance += ICLGauge(gauge).rewards(tokenId);
-            aeroBalance += ICLGauge(gauge).earned(address(this), tokenId);
+            aeroBalance +=
+                ICLGauge(gauge).earned(address(this), tokenId);
 
             unchecked {
                 i += 1;
@@ -841,7 +886,7 @@ contract AerodromeStandardModulePrivate is
 
     // #endregion view functions.
 
-    function _modifyPosition(
+    function _decreaseLiquidity(
         ModifyPosition memory modifyPosition_,
         uint160 sqrtPriceX96_
     )
@@ -852,6 +897,18 @@ contract AerodromeStandardModulePrivate is
             uint256 aeroAmountCollected
         )
     {
+        // #region principals.
+
+        uint256 amt0;
+        uint256 amt1;
+
+        {
+            (amt0, amt1) =
+                _principal(modifyPosition_.tokenId, sqrtPriceX96_);
+        }
+
+        // #endregion principals.
+
         // #region unstake position.
 
         address gauge;
@@ -865,34 +922,49 @@ contract AerodromeStandardModulePrivate is
             aeroAmountCollected += aeroAmountCo;
         }
 
-        // #region unstake position.
+        // #endregion unstake position.
 
-        liquidity = SafeCast.toUint128(
-            FullMath.mulDiv(
-                liquidity, modifyPosition_.proportion, BASE
-            )
-        );
+        {
+            liquidity = SafeCast.toUint128(
+                FullMath.mulDiv(
+                    liquidity, modifyPosition_.proportion, BASE
+                )
+            );
 
-        INonfungiblePositionManager.DecreaseLiquidityParams memory
-            params = INonfungiblePositionManager
-                .DecreaseLiquidityParams({
-                tokenId: modifyPosition_.tokenId,
-                liquidity: liquidity,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
-            });
+            amt0 = SafeCast.toUint128(
+                FullMath.mulDiv(
+                    amt0, modifyPosition_.proportion, BASE
+                )
+            );
+            amt1 = SafeCast.toUint128(
+                FullMath.mulDiv(
+                    amt1, modifyPosition_.proportion, BASE
+                )
+            );
 
-        (uint256 amt0, uint256 amt1) =
-            nftPositionManager.decreaseLiquidity(params);
+            uint24 _maxSlippage = maxSlippage;
+
+            INonfungiblePositionManager.DecreaseLiquidityParams memory
+                params = INonfungiblePositionManager
+                    .DecreaseLiquidityParams({
+                    tokenId: modifyPosition_.tokenId,
+                    liquidity: liquidity,
+                    amount0Min: FullMath.mulDiv(amt0, _maxSlippage, PIPS),
+                    amount1Min: FullMath.mulDiv(amt1, _maxSlippage, PIPS),
+                    deadline: type(uint256).max
+                });
+
+            (amount0ToSend, amount1ToSend) =
+                nftPositionManager.decreaseLiquidity(params);
+        }
 
         if (modifyPosition_.proportion == BASE) {
             nftPositionManager.collect(
                 INonfungiblePositionManager.CollectParams({
                     tokenId: modifyPosition_.tokenId,
                     recipient: address(this),
-                    amount0Max: SafeCast.toUint128(amt0),
-                    amount1Max: SafeCast.toUint128(amt1)
+                    amount0Max: SafeCast.toUint128(amount0ToSend),
+                    amount1Max: SafeCast.toUint128(amount1ToSend)
                 })
             );
 
@@ -903,10 +975,263 @@ contract AerodromeStandardModulePrivate is
             nftPositionManager.approve(gauge, modifyPosition_.tokenId);
             ICLGauge(gauge).deposit(modifyPosition_.tokenId);
         }
-
-        amount0ToSend += amt0;
-        amount1ToSend += amt1;
     }
+
+    function _increaseLiquidity(
+        ModifyPosition memory modifyPosition_,
+        uint160 sqrtPriceX96_
+    )
+        internal
+        returns (
+            uint256 amount0Sent,
+            uint256 amount1Sent,
+            uint256 aeroAmountCollected
+        )
+    {
+        // #region principals.
+
+        uint256 amt0;
+        uint256 amt1;
+
+        {
+            (amt0, amt1) =
+                _principal(modifyPosition_.tokenId, sqrtPriceX96_);
+        }
+
+        // #endregion principals.
+
+        // #region unstake position.
+
+        address gauge;
+        {
+            uint256 aeroAmountCo;
+
+            (aeroAmountCo, gauge,) = _unstake(modifyPosition_.tokenId);
+
+            aeroAmountCollected += aeroAmountCo;
+        }
+
+        // #endregion unstake position.
+
+        amt0 = SafeCast.toUint128(
+            FullMath.mulDiv(amt0, modifyPosition_.proportion, BASE)
+        );
+        amt1 = SafeCast.toUint128(
+            FullMath.mulDiv(amt1, modifyPosition_.proportion, BASE)
+        );
+
+        {
+            uint24 _maxSlippage = maxSlippage;
+
+            INonfungiblePositionManager.IncreaseLiquidityParams memory
+                params = INonfungiblePositionManager
+                    .IncreaseLiquidityParams({
+                    tokenId: modifyPosition_.tokenId,
+                    amount0Desired: amt0,
+                    amount1Desired: amt1,
+                    amount0Min: FullMath.mulDiv(amt0, _maxSlippage, PIPS),
+                    amount1Min: FullMath.mulDiv(amt1, _maxSlippage, PIPS),
+                    deadline: type(uint256).max
+                });
+
+            // #region approves.
+
+            IERC20Metadata _token0 = token0;
+            IERC20Metadata _token1 = token1;
+
+            if (params.amount0Desired > 0) {
+                _token0.forceApprove(
+                    address(nftPositionManager), params.amount0Desired
+                );
+            }
+            if (params.amount1Desired > 0) {
+                _token1.forceApprove(
+                    address(nftPositionManager), params.amount1Desired
+                );
+            }
+
+            // #endregion approves.
+
+            (, amount0Sent, amount1Sent) =
+                nftPositionManager.increaseLiquidity(params);
+
+            if (params.amount0Desired > 0) {
+                _token0.forceApprove(address(nftPositionManager), 0);
+            }
+            if (params.amount1Desired > 0) {
+                _token1.forceApprove(address(nftPositionManager), 0);
+            }
+        }
+
+        nftPositionManager.approve(gauge, modifyPosition_.tokenId);
+        ICLGauge(gauge).deposit(modifyPosition_.tokenId);
+    }
+
+    // function _modifyPosition(
+    //     ModifyPosition memory modifyPosition_,
+    //     uint160 sqrtPriceX96_
+    // )
+    //     internal
+    //     returns (
+    //         uint256 amount0ToSend,
+    //         uint256 amount1ToSend,
+    //         uint256 amount0Sent,
+    //         uint256 amount1Sent,
+    //         uint256 aeroAmountCollected
+    //     )
+    // {
+    //     // #region principals.
+
+    //     uint256 amt0;
+    //     uint256 amt1;
+
+    //     {
+    //         (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
+
+    //         (amt0, amt1) =
+    //             _principal(modifyPosition_.tokenId, sqrtPriceX96);
+    //     }
+
+    //     // #endregion principals.
+
+    //     // #region unstake position.
+
+    //     address gauge;
+    //     uint128 liquidity;
+    //     {
+    //         uint256 aeroAmountCo;
+
+    //         (aeroAmountCo, gauge, liquidity) =
+    //             _unstake(modifyPosition_.tokenId);
+
+    //         aeroAmountCollected += aeroAmountCo;
+    //     }
+
+    //     // #endregion unstake position.
+
+    //     if (modifyPosition_.proportion < 0) {
+    //         uint256 proportion =
+    //             SafeCast.toUint256(-modifyPosition_.proportion);
+
+    //         {
+    //             liquidity = SafeCast.toUint128(
+    //                 FullMath.mulDiv(liquidity, proportion, BASE)
+    //             );
+
+    //             amt0 = SafeCast.toUint128(
+    //                 FullMath.mulDiv(amt0, proportion, BASE)
+    //             );
+    //             amt1 = SafeCast.toUint128(
+    //                 FullMath.mulDiv(amt1, proportion, BASE)
+    //             );
+
+    //             uint24 _maxSlippage = maxSlippage;
+
+    //             INonfungiblePositionManager.DecreaseLiquidityParams
+    //                 memory params = INonfungiblePositionManager
+    //                     .DecreaseLiquidityParams({
+    //                     tokenId: modifyPosition_.tokenId,
+    //                     liquidity: liquidity,
+    //                     amount0Min: FullMath.mulDiv(
+    //                         amt0, _maxSlippage, PIPS
+    //                     ),
+    //                     amount1Min: FullMath.mulDiv(
+    //                         amt1, _maxSlippage, PIPS
+    //                     ),
+    //                     deadline: type(uint256).max
+    //                 });
+
+    //             (amount0ToSend, amount1ToSend) =
+    //                 nftPositionManager.decreaseLiquidity(params);
+    //         }
+
+    //         if (proportion == BASE) {
+    //             nftPositionManager.collect(
+    //                 INonfungiblePositionManager.CollectParams({
+    //                     tokenId: modifyPosition_.tokenId,
+    //                     recipient: address(this),
+    //                     amount0Max: SafeCast.toUint128(amount0ToSend),
+    //                     amount1Max: SafeCast.toUint128(amount1ToSend)
+    //                 })
+    //             );
+
+    //             nftPositionManager.burn(modifyPosition_.tokenId);
+
+    //             _tokenIds.remove(modifyPosition_.tokenId);
+    //         } else {
+    //             nftPositionManager.approve(
+    //                 gauge, modifyPosition_.tokenId
+    //             );
+    //             ICLGauge(gauge).deposit(modifyPosition_.tokenId);
+    //         }
+    //     } else if (modifyPosition_.proportion > 0) {
+    //         uint256 proportion =
+    //             SafeCast.toUint256(modifyPosition_.proportion);
+
+    //         amt0 = SafeCast.toUint128(
+    //             FullMath.mulDiv(amt0, proportion, BASE)
+    //         );
+    //         amt1 = SafeCast.toUint128(
+    //             FullMath.mulDiv(amt1, proportion, BASE)
+    //         );
+
+    //         {
+    //             uint24 _maxSlippage = maxSlippage;
+
+    //             INonfungiblePositionManager.IncreaseLiquidityParams
+    //                 memory params = INonfungiblePositionManager
+    //                     .IncreaseLiquidityParams({
+    //                     tokenId: modifyPosition_.tokenId,
+    //                     amount0Desired: amt0,
+    //                     amount1Desired: amt1,
+    //                     amount0Min: FullMath.mulDiv(
+    //                         amt0, _maxSlippage, PIPS
+    //                     ),
+    //                     amount1Min: FullMath.mulDiv(
+    //                         amt1, _maxSlippage, PIPS
+    //                     ),
+    //                     deadline: type(uint256).max
+    //                 });
+
+    //             // #region approves.
+
+    //             IERC20Metadata _token0 = token0;
+    //             IERC20Metadata _token1 = token1;
+
+    //             if (params.amount0Desired > 0) {
+    //                 _token0.forceApprove(
+    //                     address(nftPositionManager),
+    //                     params.amount0Desired
+    //                 );
+    //             }
+    //             if (params.amount1Desired > 0) {
+    //                 _token1.forceApprove(
+    //                     address(nftPositionManager),
+    //                     params.amount1Desired
+    //                 );
+    //             }
+
+    //             // #endregion approves.
+
+    //             (, amount0Sent, amount1Sent) =
+    //                 nftPositionManager.increaseLiquidity(params);
+
+    //             if (params.amount0Desired > 0) {
+    //                 _token0.forceApprove(
+    //                     address(nftPositionManager), 0
+    //                 );
+    //             }
+    //             if (params.amount1Desired > 0) {
+    //                 _token1.forceApprove(
+    //                     address(nftPositionManager), 0
+    //                 );
+    //             }
+    //         }
+
+    //         nftPositionManager.approve(gauge, modifyPosition_.tokenId);
+    //         ICLGauge(gauge).deposit(modifyPosition_.tokenId);
+    //     }
+    // }
 
     function _unstake(
         uint256 tokenId_
@@ -921,8 +1246,7 @@ contract AerodromeStandardModulePrivate is
         // #region get rewards.
 
         {
-            (,,,,,,, liquidity,,,,) =
-                nftPositionManager.positions(tokenId_);
+            (,, liquidity) = _getPosition(tokenId_);
 
             gauge = voter.gauges(pool);
         }
@@ -1030,28 +1354,47 @@ contract AerodromeStandardModulePrivate is
     }
 
     function _principal(
-        uint256 tokenId,
-        uint160 sqrtRatioX96
+        uint256 tokenId_,
+        uint160 sqrtRatioX96_
     ) internal view returns (uint256 amount0, uint256 amount1) {
-        (
-            ,
-            ,
-            ,
-            ,
-            ,
-            int24 tickLower,
-            int24 tickUpper,
-            uint128 liquidity,
-            ,
-            ,
-            ,
-        ) = nftPositionManager.positions(tokenId);
+        (int24 tickLower, int24 tickUpper, uint128 liquidity) =
+            _getPosition(tokenId_);
 
         return LiquidityAmounts.getAmountsForLiquidity(
-            sqrtRatioX96,
+            sqrtRatioX96_,
             TickMath.getSqrtRatioAtTick(tickLower),
             TickMath.getSqrtRatioAtTick(tickUpper),
             liquidity
+        );
+    }
+
+    /// @dev trick to workaround stack too deep.
+    function _getPosition(
+        uint256 tokenId_
+    )
+        internal
+        view
+        returns (int24 tickLower, int24 tickUpper, uint128 liquidity)
+    {
+        bytes memory payload = abi.encodeWithSelector(
+            INonfungiblePositionManager.positions.selector, tokenId_
+        );
+
+        bytes memory result =
+            address(nftPositionManager).functionStaticCall(payload);
+
+        (,,,,, tickLower, tickUpper, liquidity) = abi.decode(
+            result,
+            (
+                uint96,
+                address,
+                address,
+                address,
+                int24,
+                int24,
+                int24,
+                uint128
+            )
         );
     }
 }

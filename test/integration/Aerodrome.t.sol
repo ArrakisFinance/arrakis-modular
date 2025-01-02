@@ -58,8 +58,6 @@ import {UpgradeableBeacon} from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {BeaconProxy} from
     "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
-import {SafeCast} from
-    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 // #endregion openzeppelin.
@@ -130,9 +128,7 @@ contract AerodromeStandardModulePrivateTest is
     // #endregion aerodrome.
 
     // #region mocks.
-
     address public oracle;
-
     // #endregion mocks.
 
     // #region vault info.
@@ -492,6 +488,14 @@ contract AerodromeStandardModulePrivateTest is
 
     // #endregion test initialize.
 
+    // #region initialize position.
+
+    function test_initialize_position() public {
+        IArrakisLPModule(module).initializePosition("");
+    }
+
+    // #endregion initialize position.
+
     // #region test approve.
 
     function test_approve_not_vault_owner() public {
@@ -729,7 +733,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -842,7 +847,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -1030,7 +1036,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -1211,7 +1218,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -1293,7 +1301,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -1380,7 +1389,8 @@ contract AerodromeStandardModulePrivateTest is
         );
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -1469,7 +1479,8 @@ contract AerodromeStandardModulePrivateTest is
         );
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -1554,7 +1565,8 @@ contract AerodromeStandardModulePrivateTest is
         );
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -1642,7 +1654,8 @@ contract AerodromeStandardModulePrivateTest is
         );
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -1730,7 +1743,8 @@ contract AerodromeStandardModulePrivateTest is
         );
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -1741,6 +1755,269 @@ contract AerodromeStandardModulePrivateTest is
         );
 
         // #endregion rebalance.
+    }
+
+    function test_rebalance_increase_position() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        // #region second deposit.
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion second deposit.
+
+        // #region second rebalance for increasing positions.
+
+        uint256[] memory tokenIds =
+            IAerodromeStandardModulePrivate(module).tokenIds();
+
+        mintParams = new INonfungiblePositionManager.MintParams[](0);
+        modifyPositions = new ModifyPosition[](1);
+
+        modifyPositions[0].tokenId = tokenIds[0];
+        modifyPositions[0].proportion = BASE;
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                decreasePositions: new ModifyPosition[](0),
+                increasePositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion second rebalance for increasing positions.
+    }
+
+    function test_rebalance_increase_position_token_id_not_found()
+        public
+    {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        // #region second deposit.
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion second deposit.
+
+        // #region second rebalance for increasing positions.
+
+        uint256[] memory tokenIds =
+            IAerodromeStandardModulePrivate(module).tokenIds();
+
+        mintParams = new INonfungiblePositionManager.MintParams[](0);
+        modifyPositions = new ModifyPosition[](1);
+
+        modifyPositions[0].tokenId = tokenIds[0] + 1;
+        modifyPositions[0].proportion = BASE;
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.TokenIdNotFound.selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                decreasePositions: new ModifyPosition[](0),
+                increasePositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion second rebalance for increasing positions.
     }
 
     function test_rebalance_mint_token_0() public {
@@ -1815,7 +2092,8 @@ contract AerodromeStandardModulePrivateTest is
         );
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -1900,7 +2178,268 @@ contract AerodromeStandardModulePrivateTest is
         );
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 3415e6
+            })
+        );
+
+        // #endregion rebalance.
+    }
+
+    function test_rebalance_token_0_mismatch() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: USDC,
+            token1: USDC,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.Token0Mismatch.selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 3415e6
+            })
+        );
+
+        // #endregion rebalance.
+    }
+
+    function test_rebalance_token_1_mismatch() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: WETH,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.Token1Mismatch.selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 3415e6
+            })
+        );
+
+        // #endregion rebalance.
+    }
+
+    function test_rebalance_tick_spacing_mismatch() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 2 ether;
+        uint256 amount1 = 0;
+
+        deal(WETH, depositor, amount0);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount0);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = true;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                WETH, USDC, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: USDC,
+            tickSpacing: tickSpacing + 1,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 1 ether,
+            amount1Desired: 3414e6,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate
+                .TickSpacingMismatch
+                .selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -1982,7 +2521,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -2012,7 +2552,8 @@ contract AerodromeStandardModulePrivateTest is
         );
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: new ModifyPosition[](0),
                 swapPayload: swapPayload2,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -2094,7 +2635,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -2124,7 +2666,8 @@ contract AerodromeStandardModulePrivateTest is
         );
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: new ModifyPosition[](0),
                 swapPayload: swapPayload2,
                 mintParams: mintParams,
                 minBurn0: 2 ether,
@@ -2206,7 +2749,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -2236,7 +2780,8 @@ contract AerodromeStandardModulePrivateTest is
         );
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: new ModifyPosition[](0),
                 swapPayload: swapPayload2,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -2318,7 +2863,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -2345,7 +2891,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: new ModifyPosition[](0),
                 swapPayload: swapPayload2,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -2427,7 +2974,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -2456,7 +3004,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: new ModifyPosition[](0),
                 swapPayload: swapPayload2,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -2563,7 +3112,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -2665,7 +3215,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -2769,7 +3320,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -2889,7 +3441,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
@@ -2949,6 +3502,52 @@ contract AerodromeStandardModulePrivateTest is
     }
 
     // #endregion test aero manager balance.
+
+    // #region test withdraw manager balance.
+
+    function test_withdraw_manager_balance() public {
+        (uint256 amount0, uint256 amount1) =
+            IArrakisLPModule(module).withdrawManagerBalance();
+
+        assertEq(amount0, 0);
+        assertEq(amount1, 0);
+    }
+
+    // #endregion test withdraw manager balance.
+
+    // #region test get inits.
+
+    function test_get_inits() public {
+        (uint256 init0, uint256 init1) =
+            IArrakisLPModule(module).getInits();
+
+        assertEq(init0, 0);
+        assertEq(init1, 0);
+    }
+
+    // #endregion test get inits.
+
+    // #region test manager balance 0.
+
+    function test_manager_balance_0() public {
+        (uint256 managerFee0) =
+            IArrakisLPModule(module).managerBalance0();
+
+        assertEq(managerFee0, 0);
+    }
+
+    // #endregion test manager balance 0.
+
+    // #region test manager balance 1.
+
+    function test_manager_balance_1() public {
+        (uint256 managerFee1) =
+            IArrakisLPModule(module).managerBalance1();
+
+        assertEq(managerFee1, 0);
+    }
+
+    // #endregion test manager balance 1.
 
     // #region tests functions.
 
@@ -3014,7 +3613,8 @@ contract AerodromeStandardModulePrivateTest is
         vm.prank(arrakisStandardManager);
         IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
-                modifyPositions: modifyPositions,
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
                 swapPayload: swapPayload,
                 mintParams: mintParams,
                 minBurn0: 0,
