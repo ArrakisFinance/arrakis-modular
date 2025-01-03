@@ -107,7 +107,6 @@ contract UniswapV4IntegrationTest is TestWrapper {
     // #endregion constant properties.
 
     // #region arrakis modular contracts.
-
     address public constant arrakisStandardManager =
         0x2e6E879648293e939aA68bA4c6c129A1Be733bDA;
     address public constant arrakisTimeLock =

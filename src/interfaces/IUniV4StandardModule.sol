@@ -105,6 +105,10 @@ interface IUniV4StandardModule {
 
     // #region only meta vault owner functions.
 
+    /// @notice function used to approve a spender to use the left over of the module.
+    /// @param spender_ address that will be allowed to use left over.
+    /// @param amount0_ amount of token0 allowed to be used by spender.
+    /// @param amount1_ amount of token1 allowed to be used by spender.
     function approve(
         address spender_,
         uint256 amount0_,
