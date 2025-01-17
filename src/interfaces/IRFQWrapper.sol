@@ -45,11 +45,10 @@ interface IRFQWrapper {
         bool isZeroToOne
     );
     event LogSetMaxTokenVolumeToQuote(
-        uint128 maxToken0VolumeToQuote,
-        uint128 maxToken1VolumeToQuote
+        uint128 maxToken0VolumeToQuote, uint128 maxToken1VolumeToQuote
     );
     event LogSetMaxDelay(uint32 maxDelay);
-    event LogSetMaxDeviation(uint8 maxDeviation);
+    event LogSetMaxDeviation(uint24 maxDeviation);
 
     // #endregion events.
 
@@ -67,7 +66,7 @@ interface IRFQWrapper {
         uint8 maxAllowedQuotes_
     ) external;
     function setMaxDeviation(
-        uint8 maxDeviation_
+        uint24 maxDeviation_
     ) external;
     function rfqSwap(
         RequestForQuote calldata params_,
@@ -79,11 +78,17 @@ interface IRFQWrapper {
     function signer() external view returns (address);
     function guardian() external view returns (address);
     function module() external view returns (address);
-    function maxToken0VolumeToQuote() external view returns (uint128);
-    function maxToken1VolumeToQuote() external view returns (uint128);
+    function maxToken0VolumeToQuote()
+        external
+        view
+        returns (uint128);
+    function maxToken1VolumeToQuote()
+        external
+        view
+        returns (uint128);
     function maxDelay() external view returns (uint32);
     function maxAllowedQuotes() external view returns (uint8);
-    function maxDeviation() external view returns (uint8);
+    function maxDeviation() external view returns (uint24);
 
     // #endregion view public functions.
 }

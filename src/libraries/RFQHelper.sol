@@ -28,7 +28,8 @@ library RFQHelper {
         uint256 rfqState_
     ) internal pure returns (uint32 lastProcessedQuoteTimestamp) {
         unchecked {
-            lastProcessedQuoteTimestamp = uint32(rfqState_ >> 56);
+            lastProcessedQuoteTimestamp =
+                uint32(uint256(rfqState_ >> 56));
         }
     }
 
@@ -36,7 +37,8 @@ library RFQHelper {
         uint256 rfqState_
     ) internal pure returns (uint8 lastProcessedBlockQuoteCount) {
         unchecked {
-            lastProcessedBlockQuoteCount = uint8(rfqState_ >> 88);
+            lastProcessedBlockQuoteCount =
+                uint8(uint256(rfqState_ >> 88));
         }
     }
 
@@ -58,18 +60,18 @@ library RFQHelper {
 
     function getMaxToken0VolumeToQuote(
         uint256 maxVolumeState_
-    ) internal pure returns (uint256 maxToken0VolumeToQuote) {
+    ) internal pure returns (uint128 maxToken0VolumeToQuote) {
         unchecked {
-            maxToken0VolumeToQuote = uint256(uint128(maxVolumeState_));
+            maxToken0VolumeToQuote = uint128(maxVolumeState_);
         }
     }
 
     function getMaxToken1VolumeToQuote(
         uint256 maxVolumeState_
-    ) internal pure returns (uint256 maxToken1VolumeToQuote) {
+    ) internal pure returns (uint128 maxToken1VolumeToQuote) {
         unchecked {
             maxToken1VolumeToQuote =
-                uint256(uint128(maxVolumeState_ >> 128));
+                uint128(uint256(maxVolumeState_ >> 128));
         }
     }
 
@@ -136,21 +138,20 @@ library RFQHelper {
 
     function getMaxDeviation(
         uint256 internalState_
-    ) internal pure returns (uint8 maxDeviation) {
+    ) internal pure returns (uint24 maxDeviation) {
         unchecked {
-            maxDeviation = uint8(internalState_ >> 192);
+            maxDeviation = uint24(internalState_ >> 192);
         }
     }
 
     function setMaxDeviation(
         uint256 internalState_,
-        uint8 maxDeviation_
+        uint24 maxDeviation_
     ) internal pure returns (uint256 internalState) {
         unchecked {
-            internalState = uint256(uint160(internalState_))
-                | (uint256(uint32(internalState_ >> 160) << 160))
+            internalState = uint256((internalState_ << 64) >> 64)
                 | (uint256(maxDeviation_) << 192)
-                | ((internalState_ >> 200) << 200);
+                | ((internalState_ >> 216) << 216);
         }
     }
 
@@ -158,7 +159,7 @@ library RFQHelper {
         uint256 internalState_
     ) internal pure returns (uint8 maxAllowedQuotes) {
         unchecked {
-            maxAllowedQuotes = uint8(internalState_ >> 200);
+            maxAllowedQuotes = uint8(internalState_ >> 216);
         }
     }
 
@@ -167,10 +168,8 @@ library RFQHelper {
         uint8 maxAllowedQuotes_
     ) internal pure returns (uint256 internalState) {
         unchecked {
-            internalState = uint256(uint160(internalState_))
-                | (uint256(uint32(internalState_ >> 160) << 160))
-                | (uint256(uint8(internalState_ >> 192) << 192))
-                | (uint256(maxAllowedQuotes_) << 200);
+            internalState = uint256((internalState_ << 40) >> 40)
+                | (uint256(maxAllowedQuotes_) << 216);
         }
     }
 

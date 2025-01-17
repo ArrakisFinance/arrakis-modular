@@ -5,7 +5,6 @@ import {IRFQWrapper} from "../interfaces/IRFQWrapper.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
-import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {RequestForQuote} from "../structs/SRequestForQuote.sol";
 import {RFQHelper} from "../libraries/RFQHelper.sol";
 import {PIPS, TEN_PERCENT} from "../constants/CArrakis.sol";
@@ -27,6 +26,8 @@ import {Initializable} from
     "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
+
+import {console} from "forge-std/console.sol";
 
 contract RFQWrapper is
     IRFQWrapper,
@@ -110,7 +111,7 @@ contract RFQWrapper is
         uint128 maxToken1VolumeToQuote_,
         uint32 maxDelay_,
         uint8 maxAllowedQuotes_,
-        uint8 maxDeviation_
+        uint24 maxDeviation_
     ) external onlyOwner initializer {
         if (signer_ == address(0)) {
             revert AddressZero();
@@ -223,9 +224,12 @@ contract RFQWrapper is
     }
 
     function setMaxDeviation(
-        uint8 maxDeviation_
+        uint24 maxDeviation_
     ) external onlyOwner whenNotPaused {
-        if (maxDeviation_ == 0 || maxDeviation_ > TEN_PERCENT) {
+        if (maxDeviation_ == 0) {
+            revert ZeroValue();
+        }
+        if (maxDeviation_ > TEN_PERCENT) {
             revert MaxDeviation();
         }
 
@@ -276,6 +280,14 @@ contract RFQWrapper is
         }
 
         // #endregion check authorization.
+
+        // #region check recipient.
+
+        if (params_.authorizedRecipient == address(0)) {
+            revert AddressZero();
+        }
+
+        // #endregion checl recipient.
 
         // #region number of quotes.
 
@@ -450,7 +462,7 @@ contract RFQWrapper is
         view
         returns (uint128)
     {
-        return uint128(_maxVolumeState.getMaxToken0VolumeToQuote());
+        return _maxVolumeState.getMaxToken0VolumeToQuote();
     }
 
     function maxToken1VolumeToQuote()
@@ -458,7 +470,7 @@ contract RFQWrapper is
         view
         returns (uint128)
     {
-        return uint128(_maxVolumeState.getMaxToken1VolumeToQuote());
+        return _maxVolumeState.getMaxToken1VolumeToQuote();
     }
 
     function maxDelay() external view returns (uint32) {
@@ -469,7 +481,7 @@ contract RFQWrapper is
         return _internalState.getMaxAllowedQuotes();
     }
 
-    function maxDeviation() external view returns (uint8) {
+    function maxDeviation() external view returns (uint24) {
         return _internalState.getMaxDeviation();
     }
 
@@ -496,10 +508,6 @@ contract RFQWrapper is
         uint8 nonce_,
         uint56 bitmap_
     ) internal pure returns (uint56) {
-        if (nonce_ > 55) {
-            revert InvalidNonce();
-        }
-
         return (bitmap_ ^ (1 << nonce_)).toUint56();
     }
 

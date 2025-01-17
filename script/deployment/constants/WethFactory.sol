@@ -41,5 +41,9 @@ library WethFactory {
         else if (chainId == 100) {
             return 0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d;
         }
+        // base sepolia
+        else if (chainId == 84_532) {
+            return 0x4200000000000000000000000000000000000006;
+        }
     }
 }

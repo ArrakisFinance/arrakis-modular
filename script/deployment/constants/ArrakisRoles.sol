@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 library ArrakisRoles {
     function getAdmin() internal returns (address) {
@@ -32,6 +32,10 @@ library ArrakisRoles {
         // base goerli
         else if (chainId == 84_531) {
             return 0x0F83FFe2d0779550E74D96B3871216132D527eF5;
+        }
+        // base sepolia
+        else if (chainId == 84_532) {
+            return 0xF7A92fef01aad425C3B47644A56c391De4a37B56;
         }
         // binance
         else if (chainId == 56) {
@@ -69,6 +73,10 @@ library ArrakisRoles {
         // base
         else if (chainId == 8453) {
             return 0x25CF23B54e25daaE3fe9989a74050b953A343823;
+        }
+        // base sepolia
+        else if (chainId == 84_532) {
+            return 0x5C3DF85f6aEb358E5ba9CF9B83C5E16c799c9fF5;
         }
         // base goerli
         else if (chainId == 84_531) {
