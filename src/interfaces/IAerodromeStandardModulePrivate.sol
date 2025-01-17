@@ -51,6 +51,7 @@ interface IAerodromeStandardModulePrivate {
     error PoolNotFound();
     /// @dev triggered when funded amounts are equals to zero.
     error AmountsZero();
+    error OnlyManagerOwner();
 
     // #endregion errors.
 

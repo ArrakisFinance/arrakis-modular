@@ -88,6 +88,8 @@ contract AerodromeStandardModulePrivateTest is
     // #region arrakis modular contracts.
     address public constant arrakisStandardManager =
         0x2e6E879648293e939aA68bA4c6c129A1Be733bDA;
+    address public constant arrakisStandardManagerOwner =
+        0x25CF23B54e25daaE3fe9989a74050b953A343823;
     address public constant arrakisTimeLock =
         0xAf6f9640092cB1236E5DB6E517576355b6C40b7f;
     address public constant factory =
@@ -915,25 +917,22 @@ contract AerodromeStandardModulePrivateTest is
 
     // #region test set receiver.
 
-    function test_set_receiver_only_manager() public {
-        address notManager =
-            vm.addr(uint256(keccak256(abi.encode("Not Manager"))));
+    function test_set_receiver_only_manager_owner() public {
+        address notManagerOwner = vm.addr(
+            uint256(keccak256(abi.encode("Not Manager Owner")))
+        );
         address receiver =
             vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
-        vm.prank(notManager);
+        vm.prank(notManagerOwner);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IArrakisLPModule.OnlyManager.selector,
-                notManager,
-                arrakisStandardManager
-            )
+            IAerodromeStandardModulePrivate.OnlyManagerOwner.selector
         );
         IAerodromeStandardModulePrivate(module).setReceiver(receiver);
     }
 
     function test_set_receiver_same_receiver() public {
-        vm.prank(arrakisStandardManager);
+        vm.prank(arrakisStandardManagerOwner);
         vm.expectRevert(
             IAerodromeStandardModulePrivate.SameReceiver.selector
         );
@@ -943,7 +942,7 @@ contract AerodromeStandardModulePrivateTest is
     }
 
     function test_set_receiver_receiver_address_zero() public {
-        vm.prank(arrakisStandardManager);
+        vm.prank(arrakisStandardManagerOwner);
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         IAerodromeStandardModulePrivate(module).setReceiver(
             address(0)
@@ -959,7 +958,7 @@ contract AerodromeStandardModulePrivateTest is
             aeroReceiver
         );
 
-        vm.prank(arrakisStandardManager);
+        vm.prank(arrakisStandardManagerOwner);
         IAerodromeStandardModulePrivate(module).setReceiver(receiver);
 
         assertEq(
