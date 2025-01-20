@@ -449,6 +449,63 @@ contract AerodromeStandardModulePrivateTest is
         new BeaconProxy(beacon, moduleCreationPayload);
     }
 
+    function test_initialize_aero_not_supported() public {
+        address a = address(new MetaVaultMock());
+
+        MetaVaultMock(a).setTokens(USDC, AERO);
+
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IAerodromeStandardModulePrivate.initialize.selector,
+            IOracleWrapper(oracle),
+            maxSlippage,
+            aeroReceiver,
+            10,
+            a
+        );
+
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate
+                .AEROTokenNotSupported
+                .selector
+        );
+        new BeaconProxy(beacon, moduleCreationPayload);
+    }
+
+    function test_initialize_gauge_killed() public {
+        address a = address(new MetaVaultMock());
+
+        MetaVaultMock(a).setTokens(WETH, USDC);
+
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IAerodromeStandardModulePrivate.initialize.selector,
+            IOracleWrapper(oracle),
+            maxSlippage,
+            aeroReceiver,
+            100,
+            a
+        );
+
+        // #region kill gauge.
+
+        address pool =
+            IUniswapV3Factory(clfactory).getPool(WETH, USDC, 100);
+
+        address gauge = IVoter(voter).gauges(pool);
+
+        vm.prank(IVoter(voter).emergencyCouncil());
+        IVoter(voter).killGauge(gauge);
+
+        // #endregion kill gauge.
+
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate
+                .GaugeKilled
+                .selector
+        );
+        address beacon =
+            address(new BeaconProxy(beacon, moduleCreationPayload));
+    }
+
     function test_initialize() public {
         address a = address(new MetaVaultMock());
 

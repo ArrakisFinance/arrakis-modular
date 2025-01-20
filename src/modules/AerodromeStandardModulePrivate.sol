@@ -42,13 +42,14 @@ import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20Metadata} from
-    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC721Receiver} from
     "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC20Metadata} from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract AerodromeStandardModulePrivate is
     IArrakisLPModule,
@@ -236,6 +237,10 @@ contract AerodromeStandardModulePrivate is
             revert NativeCoinNotSupported();
         }
 
+        if (_token0 == AERO || _token1 == AERO) {
+            revert AEROTokenNotSupported();
+        }
+
         address _pool =
             factory.getPool(_token0, _token1, tickSpacing_);
 
@@ -243,8 +248,14 @@ contract AerodromeStandardModulePrivate is
             revert PoolNotFound();
         }
 
+        address _gauge = voter.gauges(_pool);
+
+        if (!voter.isAlive(_gauge)) {
+            revert GaugeKilled();
+        }
+
         pool = _pool;
-        gauge = voter.gauges(_pool);
+        gauge = _gauge;
 
         token0 = IERC20Metadata(_token0);
         token1 = IERC20Metadata(_token1);
@@ -439,10 +450,9 @@ contract AerodromeStandardModulePrivate is
     function setReceiver(
         address newReceiver_
     ) external whenNotPaused {
-
         address manager = metaVault.manager();
 
-        if(IOwnable(manager).owner() != msg.sender) {
+        if (IOwnable(manager).owner() != msg.sender) {
             revert OnlyManagerOwner();
         }
 
@@ -510,10 +520,27 @@ contract AerodromeStandardModulePrivate is
         uint256 burn0;
         uint256 burn1;
 
+        // #region get sqrtPriceX96 from oracle price.
+
+        uint160 sqrtPriceX96;
+
+        {
+            uint8 decimals0 = token0.decimals();
+            uint256 price = oracle.getPrice0();
+
+            sqrtPriceX96 = SafeCast.toUint160(
+                Math.sqrt(
+                    FullMath.mulDiv(
+                        price, 1 << 192, 10 ** (decimals0)
+                    )
+                )
+            );
+        }
+
+        // #endregion get sqrtPriceX96 from oracle price.
+
         if (length > 0) {
             uint256 aeroAmountCollected;
-
-            (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
 
             uint256 _managerFeePIPS = managerFeePIPS;
 
@@ -595,7 +622,12 @@ contract AerodromeStandardModulePrivate is
                 balance = _token0.balanceOf(address(this));
             }
 
-            if (params_.swapPayload.router == address(metaVault)) {
+            if (
+                params_.swapPayload.router == address(metaVault)
+                    || params_.swapPayload.router
+                        == address(nftPositionManager)
+                    || params_.swapPayload.router == gauge
+            ) {
                 revert WrongRouter();
             }
 
@@ -635,8 +667,6 @@ contract AerodromeStandardModulePrivate is
 
         if (length > 0) {
             uint256 aeroAmountCollected;
-
-            (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
 
             uint256 _managerFeePIPS = managerFeePIPS;
 
@@ -906,6 +936,18 @@ contract AerodromeStandardModulePrivate is
             uint256 aeroAmountCollected
         )
     {
+        // #region principals.
+
+        uint256 amt0;
+        uint256 amt1;
+
+        {
+            (amt0, amt1) =
+                _principal(modifyPosition_.tokenId, sqrtPriceX96_);
+        }
+
+        // #endregion principals.
+
         // #region unstake position.
 
         address _gauge;
@@ -935,8 +977,8 @@ contract AerodromeStandardModulePrivate is
                     .DecreaseLiquidityParams({
                     tokenId: modifyPosition_.tokenId,
                     liquidity: liquidity,
-                    amount0Min: 0,
-                    amount1Min: 0,
+                    amount0Min: FullMath.mulDiv(amt0, _maxSlippage, PIPS),
+                    amount1Min: FullMath.mulDiv(amt1, _maxSlippage, PIPS),
                     deadline: type(uint256).max
                 });
 
@@ -1008,14 +1050,16 @@ contract AerodromeStandardModulePrivate is
         );
 
         {
+            uint24 _maxSlippage = maxSlippage;
+
             INonfungiblePositionManager.IncreaseLiquidityParams memory
                 params = INonfungiblePositionManager
                     .IncreaseLiquidityParams({
                     tokenId: modifyPosition_.tokenId,
                     amount0Desired: amt0,
                     amount1Desired: amt1,
-                    amount0Min: 0,
-                    amount1Min: 0,
+                    amount0Min: FullMath.mulDiv(amt0, _maxSlippage, PIPS),
+                    amount1Min: FullMath.mulDiv(amt1, _maxSlippage, PIPS),
                     deadline: type(uint256).max
                 });
 
@@ -1179,7 +1223,7 @@ contract AerodromeStandardModulePrivate is
         (int24 tickLower, int24 tickUpper, uint128 liquidity) =
             _getPosition(tokenId_);
 
-        return LiquidityAmounts.getAmountsForLiquidity(
+        (amount0, amount1) = LiquidityAmounts.getAmountsForLiquidity(
             sqrtRatioX96_,
             TickMath.getSqrtRatioAtTick(tickLower),
             TickMath.getSqrtRatioAtTick(tickUpper),
@@ -1216,6 +1260,84 @@ contract AerodromeStandardModulePrivate is
             )
         );
     }
+
+    // function _getFeesEarned(
+    //     GetFeesPayload memory feeInfo_
+    // ) internal view returns (uint256 fee0, uint256 fee1) {
+    //     (
+    //         ,
+    //         ,
+    //         ,
+    //         uint256 feeGrowthOutside0Lower,
+    //         uint256 feeGrowthOutside1Lower,
+    //         ,
+    //         ,
+    //         ,
+    //         ,
+    //     ) = feeInfo_.pool.ticks(feeInfo_.lowerTick);
+    //     (
+    //         ,
+    //         ,
+    //         ,
+    //         uint256 feeGrowthOutside0Upper,
+    //         uint256 feeGrowthOutside1Upper,
+    //         ,
+    //         ,
+    //         ,
+    //         ,
+    //     ) = feeInfo_.pool.ticks(feeInfo_.upperTick);
+
+    //     ComputeFeesPayload memory payload = ComputeFeesPayload({
+    //         feeGrowthInsideLast: feeInfo_.feeGrowthInside0Last,
+    //         feeGrowthOutsideLower: feeGrowthOutside0Lower,
+    //         feeGrowthOutsideUpper: feeGrowthOutside0Upper,
+    //         feeGrowthGlobal: feeInfo_.pool.feeGrowthGlobal0X128(),
+    //         pool: feeInfo_.pool,
+    //         liquidity: feeInfo_.liquidity,
+    //         tick: feeInfo_.tick,
+    //         lowerTick: feeInfo_.lowerTick,
+    //         upperTick: feeInfo_.upperTick
+    //     });
+
+    //     fee0 = _computeFeesEarned(payload);
+    //     payload.feeGrowthInsideLast = feeInfo_.feeGrowthInside1Last;
+    //     payload.feeGrowthOutsideLower = feeGrowthOutside1Lower;
+    //     payload.feeGrowthOutsideUpper = feeGrowthOutside1Upper;
+    //     payload.feeGrowthGlobal = feeInfo_.pool.feeGrowthGlobal1X128();
+    //     fee1 = _computeFeesEarned(payload);
+    // }
+
+    // function _computeFeesEarned(
+    //     ComputeFeesPayload memory computeFees_
+    // ) internal pure returns (uint256 fee) {
+    //     unchecked {
+    //         // calculate fee growth below
+    //         uint256 feeGrowthBelow;
+    //         if (computeFees_.tick >= computeFees_.lowerTick) {
+    //             feeGrowthBelow = computeFees_.feeGrowthOutsideLower;
+    //         } else {
+    //             feeGrowthBelow = computeFees_.feeGrowthGlobal
+    //                 - computeFees_.feeGrowthOutsideLower;
+    //         }
+
+    //         // calculate fee growth above
+    //         uint256 feeGrowthAbove;
+    //         if (computeFees_.tick < computeFees_.upperTick) {
+    //             feeGrowthAbove = computeFees_.feeGrowthOutsideUpper;
+    //         } else {
+    //             feeGrowthAbove = computeFees_.feeGrowthGlobal
+    //                 - computeFees_.feeGrowthOutsideUpper;
+    //         }
+
+    //         uint256 feeGrowthInside = computeFees_.feeGrowthGlobal
+    //             - feeGrowthBelow - feeGrowthAbove;
+    //         fee = FullMath.mulDiv(
+    //             computeFees_.liquidity,
+    //             feeGrowthInside - computeFees_.feeGrowthInsideLast,
+    //             0x100000000000000000000000000000000
+    //         );
+    //     }
+    // }
 
     // #endregion internal functions.
 }
