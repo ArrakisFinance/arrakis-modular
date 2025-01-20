@@ -51,6 +51,12 @@ interface IAerodromeStandardModulePrivate {
     error PoolNotFound();
     /// @dev triggered when funded amounts are equals to zero.
     error AmountsZero();
+    /// @dev triggered when caller is not the owner of the manager.
+    error OnlyManagerOwner();
+    /// @dev triggered when aero token is one of the token of the module token pair.
+    error AEROTokenNotSupported();
+    /// @dev triggered when gauge returned by voter is not alive.
+    error GaugeKilled();
 
     // #endregion errors.
 
