@@ -300,40 +300,28 @@ contract AerodromeStandardModulePrivateTest is
     {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         new AerodromeStandardModulePrivate(
-            INonfungiblePositionManager(address(0)),
-            IUniswapV3Factory(clfactory),
-            IVoter(voter),
-            guardian
+            address(0), clfactory, voter, guardian
         );
     }
 
     function test_constructor_factory_is_address_zero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         new AerodromeStandardModulePrivate(
-            INonfungiblePositionManager(nonfungiblePositionManager),
-            IUniswapV3Factory(address(0)),
-            IVoter(voter),
-            guardian
+            nonfungiblePositionManager, address(0), voter, guardian
         );
     }
 
     function test_constructor_voter_is_address_zero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         new AerodromeStandardModulePrivate(
-            INonfungiblePositionManager(nonfungiblePositionManager),
-            IUniswapV3Factory(factory),
-            IVoter(address(0)),
-            guardian
+            nonfungiblePositionManager, factory, address(0), guardian
         );
     }
 
     function test_constructor_guardian_is_address_zero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         new AerodromeStandardModulePrivate(
-            INonfungiblePositionManager(nonfungiblePositionManager),
-            IUniswapV3Factory(factory),
-            IVoter(voter),
-            address(0)
+            nonfungiblePositionManager, factory, voter, address(0)
         );
     }
 
@@ -498,9 +486,7 @@ contract AerodromeStandardModulePrivateTest is
         // #endregion kill gauge.
 
         vm.expectRevert(
-            IAerodromeStandardModulePrivate
-                .GaugeKilled
-                .selector
+            IAerodromeStandardModulePrivate.GaugeKilled.selector
         );
         address beacon =
             address(new BeaconProxy(beacon, moduleCreationPayload));
@@ -3863,12 +3849,7 @@ contract AerodromeStandardModulePrivateTest is
 
         address implementation = address(
             new AerodromeStandardModulePrivate(
-                INonfungiblePositionManager(
-                    nonfungiblePositionManager
-                ),
-                IUniswapV3Factory(clfactory),
-                IVoter(voter),
-                guardian
+                nonfungiblePositionManager, clfactory, voter, guardian
             )
         );
 

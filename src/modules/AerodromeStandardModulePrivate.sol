@@ -154,22 +154,22 @@ contract AerodromeStandardModulePrivate is
     // #endregion modifiers.
 
     constructor(
-        INonfungiblePositionManager nftPositionManager_,
-        IUniswapV3Factory factory_,
-        IVoter voter_,
+        address nftPositionManager_,
+        address factory_,
+        address voter_,
         address guardian_
     ) {
         if (
-            address(nftPositionManager_) == address(0)
-                || address(factory_) == address(0)
-                || address(voter_) == address(0)
+            nftPositionManager_ == address(0)
+                || factory_ == address(0) || voter_ == address(0)
                 || guardian_ == address(0)
         ) {
             revert AddressZero();
         }
-        nftPositionManager = nftPositionManager_;
-        factory = factory_;
-        voter = voter_;
+        nftPositionManager =
+            INonfungiblePositionManager(nftPositionManager_);
+        factory = IUniswapV3Factory(factory_);
+        voter = IVoter(voter_);
         _guardian = guardian_;
 
         _disableInitializers();
@@ -358,7 +358,24 @@ contract AerodromeStandardModulePrivate is
             _token1.balanceOf(address(this)), proportion_, BASE
         );
 
-        (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
+        // #region get sqrtPriceX96 from oracle price.
+
+        uint160 sqrtPriceX96;
+
+        {
+            uint8 decimals0 = token0.decimals();
+            uint256 price = oracle.getPrice0();
+
+            sqrtPriceX96 = SafeCast.toUint160(
+                Math.sqrt(
+                    FullMath.mulDiv(
+                        price, 1 << 192, 10 ** (decimals0)
+                    )
+                )
+            );
+        }
+
+        // #endregion get sqrtPriceX96 from oracle price.
 
         ModifyPosition memory modifyPosition;
 
@@ -627,6 +644,7 @@ contract AerodromeStandardModulePrivate is
                     || params_.swapPayload.router
                         == address(nftPositionManager)
                     || params_.swapPayload.router == gauge
+                    || params_.swapPayload.router == AERO
             ) {
                 revert WrongRouter();
             }
@@ -970,6 +988,17 @@ contract AerodromeStandardModulePrivate is
                 )
             );
 
+            amt0 = SafeCast.toUint128(
+                FullMath.mulDiv(
+                    amt0, modifyPosition_.proportion, BASE
+                )
+            );
+            amt1 = SafeCast.toUint128(
+                FullMath.mulDiv(
+                    amt1, modifyPosition_.proportion, BASE
+                )
+            );
+
             uint24 _maxSlippage = maxSlippage;
 
             INonfungiblePositionManager.DecreaseLiquidityParams memory
@@ -977,8 +1006,12 @@ contract AerodromeStandardModulePrivate is
                     .DecreaseLiquidityParams({
                     tokenId: modifyPosition_.tokenId,
                     liquidity: liquidity,
-                    amount0Min: FullMath.mulDiv(amt0, _maxSlippage, PIPS),
-                    amount1Min: FullMath.mulDiv(amt1, _maxSlippage, PIPS),
+                    amount0Min: FullMath.mulDiv(
+                        amt0, PIPS - _maxSlippage, PIPS
+                    ),
+                    amount1Min: FullMath.mulDiv(
+                        amt1, PIPS - _maxSlippage, PIPS
+                    ),
                     deadline: type(uint256).max
                 });
 
@@ -1031,11 +1064,11 @@ contract AerodromeStandardModulePrivate is
 
         // #region unstake position.
 
-        address gauge;
+        address _gauge;
         {
             uint256 aeroAmountCo;
 
-            (aeroAmountCo, gauge,) = _unstake(modifyPosition_.tokenId);
+            (aeroAmountCo, _gauge,) = _unstake(modifyPosition_.tokenId);
 
             aeroAmountCollected += aeroAmountCo;
         }
@@ -1058,8 +1091,12 @@ contract AerodromeStandardModulePrivate is
                     tokenId: modifyPosition_.tokenId,
                     amount0Desired: amt0,
                     amount1Desired: amt1,
-                    amount0Min: FullMath.mulDiv(amt0, _maxSlippage, PIPS),
-                    amount1Min: FullMath.mulDiv(amt1, _maxSlippage, PIPS),
+                    amount0Min: FullMath.mulDiv(
+                        amt0, PIPS - _maxSlippage, PIPS
+                    ),
+                    amount1Min: FullMath.mulDiv(
+                        amt1, PIPS - _maxSlippage, PIPS
+                    ),
                     deadline: type(uint256).max
                 });
 
@@ -1092,8 +1129,8 @@ contract AerodromeStandardModulePrivate is
             }
         }
 
-        nftPositionManager.approve(gauge, modifyPosition_.tokenId);
-        ICLGauge(gauge).deposit(modifyPosition_.tokenId);
+        nftPositionManager.approve(_gauge, modifyPosition_.tokenId);
+        ICLGauge(_gauge).deposit(modifyPosition_.tokenId);
     }
 
     function _unstake(
@@ -1260,84 +1297,6 @@ contract AerodromeStandardModulePrivate is
             )
         );
     }
-
-    // function _getFeesEarned(
-    //     GetFeesPayload memory feeInfo_
-    // ) internal view returns (uint256 fee0, uint256 fee1) {
-    //     (
-    //         ,
-    //         ,
-    //         ,
-    //         uint256 feeGrowthOutside0Lower,
-    //         uint256 feeGrowthOutside1Lower,
-    //         ,
-    //         ,
-    //         ,
-    //         ,
-    //     ) = feeInfo_.pool.ticks(feeInfo_.lowerTick);
-    //     (
-    //         ,
-    //         ,
-    //         ,
-    //         uint256 feeGrowthOutside0Upper,
-    //         uint256 feeGrowthOutside1Upper,
-    //         ,
-    //         ,
-    //         ,
-    //         ,
-    //     ) = feeInfo_.pool.ticks(feeInfo_.upperTick);
-
-    //     ComputeFeesPayload memory payload = ComputeFeesPayload({
-    //         feeGrowthInsideLast: feeInfo_.feeGrowthInside0Last,
-    //         feeGrowthOutsideLower: feeGrowthOutside0Lower,
-    //         feeGrowthOutsideUpper: feeGrowthOutside0Upper,
-    //         feeGrowthGlobal: feeInfo_.pool.feeGrowthGlobal0X128(),
-    //         pool: feeInfo_.pool,
-    //         liquidity: feeInfo_.liquidity,
-    //         tick: feeInfo_.tick,
-    //         lowerTick: feeInfo_.lowerTick,
-    //         upperTick: feeInfo_.upperTick
-    //     });
-
-    //     fee0 = _computeFeesEarned(payload);
-    //     payload.feeGrowthInsideLast = feeInfo_.feeGrowthInside1Last;
-    //     payload.feeGrowthOutsideLower = feeGrowthOutside1Lower;
-    //     payload.feeGrowthOutsideUpper = feeGrowthOutside1Upper;
-    //     payload.feeGrowthGlobal = feeInfo_.pool.feeGrowthGlobal1X128();
-    //     fee1 = _computeFeesEarned(payload);
-    // }
-
-    // function _computeFeesEarned(
-    //     ComputeFeesPayload memory computeFees_
-    // ) internal pure returns (uint256 fee) {
-    //     unchecked {
-    //         // calculate fee growth below
-    //         uint256 feeGrowthBelow;
-    //         if (computeFees_.tick >= computeFees_.lowerTick) {
-    //             feeGrowthBelow = computeFees_.feeGrowthOutsideLower;
-    //         } else {
-    //             feeGrowthBelow = computeFees_.feeGrowthGlobal
-    //                 - computeFees_.feeGrowthOutsideLower;
-    //         }
-
-    //         // calculate fee growth above
-    //         uint256 feeGrowthAbove;
-    //         if (computeFees_.tick < computeFees_.upperTick) {
-    //             feeGrowthAbove = computeFees_.feeGrowthOutsideUpper;
-    //         } else {
-    //             feeGrowthAbove = computeFees_.feeGrowthGlobal
-    //                 - computeFees_.feeGrowthOutsideUpper;
-    //         }
-
-    //         uint256 feeGrowthInside = computeFees_.feeGrowthGlobal
-    //             - feeGrowthBelow - feeGrowthAbove;
-    //         fee = FullMath.mulDiv(
-    //             computeFees_.liquidity,
-    //             feeGrowthInside - computeFees_.feeGrowthInsideLast,
-    //             0x100000000000000000000000000000000
-    //         );
-    //     }
-    // }
 
     // #endregion internal functions.
 }
