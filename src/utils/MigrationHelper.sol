@@ -1,11 +1,8 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.19;
 
-import {
-    IMigrationHelper,
-    ISafe,
-    Operation
-} from "../interfaces/IMigrationHelper.sol";
+import {IMigrationHelper} from "../interfaces/IMigrationHelper.sol";
+import {ISafe, Operation} from "../interfaces/ISafe.sol";
 import {IPalmTerms} from "../interfaces/IPalmTerms.sol";
 import {
     IArrakisStandardManager,
@@ -21,10 +18,12 @@ import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import {Ownable} from "@solady/contracts/auth/Ownable.sol";
+
 /// @title migration contract that will help migrate from V2 palm vault
 /// to modular private vault.
 /// #@dev this contract intend to be used as a safe module.
-contract MigrationHelper is IMigrationHelper {
+contract MigrationHelper is IMigrationHelper, Ownable {
     // #region immutable.
 
     address public immutable palmTerms;
@@ -36,7 +35,8 @@ contract MigrationHelper is IMigrationHelper {
     constructor(
         address palmTerms_,
         address factory_,
-        address manager_
+        address manager_,
+        address owner_
     ) {
         if (
             palmTerms_ == address(0) || factory_ == address(0)
@@ -47,11 +47,13 @@ contract MigrationHelper is IMigrationHelper {
         palmTerms = palmTerms_;
         factory = factory_;
         manager = manager_;
+
+        _initializeOwner(owner_);
     }
 
     function migrateVault(
         Migration calldata params_
-    ) external returns (address vault) {
+    ) external onlyOwner returns (address vault) {
         // #region close term.
 
         bytes memory payload;
