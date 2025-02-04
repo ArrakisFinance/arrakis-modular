@@ -10,8 +10,8 @@ interface IMigrationHelper {
     struct CloseTerm {
         IArrakisV2 vault;
         // address to, safe will receive the fund.
-        address newOwner_;
-        address newManager_;
+        address newOwner;
+        address newManager;
     }
 
     struct VaultCreation {
@@ -25,17 +25,10 @@ interface IMigrationHelper {
         uint24 maxSlippage;
     }
 
-    struct Deposit {
-        uint256 amount0;
-        uint256 amount1;
-    }
-
     struct Migration {
         address safe;
         CloseTerm closeTerm;
         VaultCreation vaultCreation;
-        address vault;
-        Deposit deposit;
         bytes[] rebalancePayloads;
         address executor;
     }
@@ -46,7 +39,6 @@ interface IMigrationHelper {
 
     error AddressZero();
     error CloseTermsErr();
-    error VaultCreationErr();
     error WhitelistDepositorErr();
     error Approval0Err();
     error Approval1Err();

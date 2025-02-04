@@ -62,13 +62,16 @@ contract MigrationHelper is IMigrationHelper, Ownable {
         address token0 = address(params_.closeTerm.vault.token0());
         address token1 = address(params_.closeTerm.vault.token1());
 
+        uint256 amount0 = IERC20(token0).balanceOf(params_.safe);
+        uint256 amount1 = IERC20(token1).balanceOf(params_.safe);
+
         {
             payload = abi.encodeWithSelector(
                 IPalmTerms.closeTerm.selector,
                 params_.closeTerm.vault,
                 params_.safe,
-                params_.closeTerm.newOwner_,
-                params_.closeTerm.newManager_
+                params_.closeTerm.newOwner,
+                params_.closeTerm.newManager
             );
 
             success = ISafe(params_.safe).execTransactionFromModule(
@@ -79,6 +82,9 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 revert CloseTermsErr();
             }
         }
+
+        amount0 = IERC20(token0).balanceOf(params_.safe) - amount0;
+        amount1 = IERC20(token1).balanceOf(params_.safe) - amount1;
 
         // #endregion close term.
 
@@ -94,8 +100,7 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 params_.vaultCreation.maxSlippage
             );
 
-            payload = abi.encodeWithSelector(
-                IArrakisMetaVaultFactory.deployPrivateVault.selector,
+            vault = IArrakisMetaVaultFactory(factory).deployPrivateVault(
                 params_.vaultCreation.salt,
                 token0,
                 token1,
@@ -104,14 +109,6 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 params_.vaultCreation.moduleCreationPayload,
                 initManagementPayload
             );
-
-            success = ISafe(params_.safe).execTransactionFromModule(
-                factory, 0, payload, Operation.Call
-            );
-
-            if (!success) {
-                revert VaultCreationErr();
-            }
         }
 
         // #endregion create modular vault.
@@ -128,7 +125,7 @@ contract MigrationHelper is IMigrationHelper, Ownable {
             );
 
             success = ISafe(params_.safe).execTransactionFromModule(
-                params_.vault, 0, payload, Operation.Call
+                vault, 0, payload, Operation.Call
             );
 
             if (!success) {
@@ -142,13 +139,11 @@ contract MigrationHelper is IMigrationHelper, Ownable {
 
         {
             address module =
-                address(IArrakisMetaVault(params_.vault).module());
+                address(IArrakisMetaVault(vault).module());
 
-            if (params_.deposit.amount0 > 0) {
+            if (amount0 > 0) {
                 payload = abi.encodeWithSelector(
-                    IERC20.approve.selector,
-                    module,
-                    params_.deposit.amount0
+                    IERC20.approve.selector, module, amount0
                 );
 
                 success = ISafe(params_.safe)
@@ -161,11 +156,9 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 }
             }
 
-            if (params_.deposit.amount1 > 0) {
+            if (amount1 > 0) {
                 payload = abi.encodeWithSelector(
-                    IERC20.approve.selector,
-                    module,
-                    params_.deposit.amount1
+                    IERC20.approve.selector, module, amount1
                 );
 
                 success = ISafe(params_.safe)
@@ -180,12 +173,12 @@ contract MigrationHelper is IMigrationHelper, Ownable {
 
             payload = abi.encodeWithSelector(
                 IArrakisMetaVaultPrivate.deposit.selector,
-                params_.deposit.amount0,
-                params_.deposit.amount1
+                amount0,
+                amount1
             );
 
             success = ISafe(params_.safe).execTransactionFromModule(
-                params_.vault, 0, payload, Operation.Call
+                vault, 0, payload, Operation.Call
             );
 
             if (!success) {
@@ -197,10 +190,10 @@ contract MigrationHelper is IMigrationHelper, Ownable {
 
         // #region rebalance as executor.
 
-        {
+        if (params_.rebalancePayloads.length > 0) {
             payload = abi.encodeWithSelector(
                 IArrakisStandardManager.rebalance.selector,
-                params_.vault,
+                vault,
                 params_.rebalancePayloads
             );
 
@@ -227,11 +220,11 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 address stratAnnouncer,
                 uint24 maxSlippagePIPS,
             ) = IArrakisStandardManager(manager).vaultInfo(
-                params_.vault
+                vault
             );
 
             SetupParams memory setupParams = SetupParams({
-                vault: params_.vault,
+                vault: vault,
                 oracle: oracle,
                 maxDeviation: maxDeviation,
                 cooldownPeriod: cooldownPeriod,
