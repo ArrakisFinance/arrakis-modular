@@ -46,14 +46,18 @@ contract DModuleRegistries is CreateXScript {
 
         vm.startBroadcast(privateKey);
 
+        bytes memory initCode;
+        bytes32 salt;
+        address actualAddr;
+
         // #region public registry.
 
-        bytes memory initCode = abi.encodePacked(
+        initCode = abi.encodePacked(
             type(ModulePublicRegistry).creationCode,
             abi.encode(owner, guardian, arrakisTimeLock)
         );
 
-        bytes32 salt = bytes32(
+        salt = bytes32(
             abi.encodePacked(
                 deployer, hex"00", bytes11(publicVersion)
             )
@@ -64,7 +68,7 @@ contract DModuleRegistries is CreateXScript {
         console.logString("Module Public Registry Address : ");
         console.logAddress(publicRegistry);
 
-        address actualAddr = CreateX.deployCreate3(salt, initCode);
+        actualAddr = CreateX.deployCreate3(salt, initCode);
 
         console.logString("Simulation Module Public Registry Address :");
         console.logAddress(actualAddr);
