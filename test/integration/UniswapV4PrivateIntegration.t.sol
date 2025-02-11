@@ -234,7 +234,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
     function setUp() public {
         // #region reset fork.
 
-        _reset(vm.envString("ETH_RPC_URL"), 20_792_200);
+        _reset(vm.envString("ETH_RPC_URL"), 21_823_411);
 
         // #endregion reset fork.
 
@@ -1283,6 +1283,8 @@ contract UniswapV4PrivateIntegration is TestWrapper {
             PALMTerms,
             factory,
             arrakisStandardManager,
+            poolManager,
+            WETH,
             arrakisTimeLock
         );
 
@@ -1322,20 +1324,33 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         migration.closeTerm.newManager =
             vm.addr(uint256(keccak256(abi.encode("NewManager"))));
 
+        migration.poolCreation.poolKey = PoolKey({
+            currency0: Currency.wrap(token0),
+            currency1: Currency.wrap(token1),
+            fee: 10_000,
+            tickSpacing: 200,
+            hooks: IHooks(address(0))
+        });
+
+        migration.poolCreation.sqrtPriceX96 = 0;
+        migration.poolCreation.createPool = false;
+
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));
         migration.vaultCreation.upgradeableBeacon =
             uniswapStandardModuleBeacon;
-        migration.vaultCreation.moduleCreationPayload = abi
-            .encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
-            1,
-            1,
-            false,
-            poolKey,
-            IOracleWrapper(address(oracleWrapper)),
-            PIPS / 50
-        );
+        migration.vaultCreation.init0 = 1;
+        migration.vaultCreation.init1 = 1;
+        // migration.vaultCreation.moduleCreationPayload = abi
+        //     .encodeWithSelector(
+        //     IUniV4StandardModule.initialize.selector,
+        //     1,
+        //     1,
+        //     false,
+        //     poolKey,
+        //     IOracleWrapper(address(oracleWrapper)),
+        //     PIPS / 50
+        // );
 
         migration.vaultCreation.oracle =
             IOracleWrapper(address(oracleWrapper));

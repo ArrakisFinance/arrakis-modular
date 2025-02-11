@@ -4,8 +4,23 @@ pragma solidity ^0.8.19;
 import {IArrakisV2} from "./IArrakisV2.sol";
 import {IOracleWrapper} from "./IOracleWrapper.sol";
 
+import {
+    PoolKey
+} from "@uniswap/v4-core/src/types/PoolKey.sol";
+
 interface IMigrationHelper {
     //  #region structs.
+
+    struct InternalStruct {
+        bytes payload;
+        bool success;
+        address token0;
+        address token1;
+        uint256 amount0;
+        uint256 amount1;
+        uint256 value;
+        bool isInversed;
+    }
 
     struct CloseTerm {
         IArrakisV2 vault;
@@ -14,10 +29,17 @@ interface IMigrationHelper {
         address newManager;
     }
 
+    struct PoolCreation {
+        PoolKey poolKey;
+        uint160 sqrtPriceX96;
+        bool createPool;
+    }
+
     struct VaultCreation {
         bytes32 salt;
         address upgradeableBeacon;
-        bytes moduleCreationPayload;
+        uint256 init0;
+        uint256 init1;
         IOracleWrapper oracle;
         uint24 maxDeviation;
         uint256 cooldownPeriod;
@@ -28,6 +50,7 @@ interface IMigrationHelper {
     struct Migration {
         address safe;
         CloseTerm closeTerm;
+        PoolCreation poolCreation;
         VaultCreation vaultCreation;
         bytes[] rebalancePayloads;
         address executor;
@@ -45,6 +68,7 @@ interface IMigrationHelper {
     error DepositErr();
     error RebalanceErr();
     error ChangeExecutorErr();
+    error WithdrawETH();
 
     // #endregion errors.
 

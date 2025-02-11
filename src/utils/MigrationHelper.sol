@@ -15,13 +15,24 @@ import {IArrakisMetaVaultPrivate} from
     "../interfaces/IArrakisMetaVaultPrivate.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
+import {IUniV4StandardModule} from
+    "../interfaces/IUniV4StandardModule.sol";
+import {NATIVE_COIN} from "../constants/CArrakis.sol";
+import {IWETH9} from "../interfaces/IWETH9.sol";
+
+import {
+    Currency,
+    CurrencyLibrary
+} from "@uniswap/v4-core/src/types/Currency.sol";
+import {IPoolManager} from
+    "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
 /// @title migration contract that will help migrate from V2 palm vault
-/// to modular private vault.
+/// to modular private vault with uniswap v4 module.
 /// #@dev this contract intend to be used as a safe module.
 contract MigrationHelper is IMigrationHelper, Ownable {
     // #region immutable.
@@ -29,6 +40,8 @@ contract MigrationHelper is IMigrationHelper, Ownable {
     address public immutable palmTerms;
     address public immutable factory;
     address public immutable manager;
+    address public immutable poolManager;
+    address public immutable weth;
 
     // #endregion immutable.
 
@@ -36,17 +49,22 @@ contract MigrationHelper is IMigrationHelper, Ownable {
         address palmTerms_,
         address factory_,
         address manager_,
+        address poolManager_,
+        address weth_,
         address owner_
     ) {
         if (
             palmTerms_ == address(0) || factory_ == address(0)
-                || manager_ == address(0)
+                || poolManager_ == address(0) || manager_ == address(0)
+                || weth_ == address(0)
         ) {
             revert AddressZero();
         }
         palmTerms = palmTerms_;
         factory = factory_;
         manager = manager_;
+        poolManager = poolManager_;
+        weth = weth_;
 
         _initializeOwner(owner_);
     }
@@ -56,17 +74,16 @@ contract MigrationHelper is IMigrationHelper, Ownable {
     ) external onlyOwner returns (address vault) {
         // #region close term.
 
-        bytes memory payload;
-        bool success;
+        InternalStruct memory state;
 
-        address token0 = address(params_.closeTerm.vault.token0());
-        address token1 = address(params_.closeTerm.vault.token1());
+        state.token0 = address(params_.closeTerm.vault.token0());
+        state.token1 = address(params_.closeTerm.vault.token1());
 
-        uint256 amount0 = IERC20(token0).balanceOf(params_.safe);
-        uint256 amount1 = IERC20(token1).balanceOf(params_.safe);
+        state.amount0 = IERC20(state.token0).balanceOf(params_.safe);
+        state.amount1 = IERC20(state.token1).balanceOf(params_.safe);
 
         {
-            payload = abi.encodeWithSelector(
+            state.payload = abi.encodeWithSelector(
                 IPalmTerms.closeTerm.selector,
                 params_.closeTerm.vault,
                 params_.safe,
@@ -74,23 +91,102 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 params_.closeTerm.newManager
             );
 
-            success = ISafe(params_.safe).execTransactionFromModule(
-                palmTerms, 0, payload, Operation.Call
+            state.success = ISafe(params_.safe).execTransactionFromModule(
+                palmTerms, 0, state.payload, Operation.Call
             );
 
-            if (!success) {
+            if (!state.success) {
                 revert CloseTermsErr();
             }
         }
 
-        amount0 = IERC20(token0).balanceOf(params_.safe) - amount0;
-        amount1 = IERC20(token1).balanceOf(params_.safe) - amount1;
+        state.amount0 = IERC20(state.token0).balanceOf(params_.safe) - state.amount0;
+        state.amount1 = IERC20(state.token1).balanceOf(params_.safe) - state.amount1;
 
         // #endregion close term.
+
+        // #region create pool on v4 if needed.
+
+        if (params_.poolCreation.createPool) {
+            IPoolManager(poolManager).initialize(
+                params_.poolCreation.poolKey,
+                params_.poolCreation.sqrtPriceX96
+            );
+        }
+
+        // #endregion create pool on v4 if needed.
+
+        // #region create module payload.
+
+        // bytes memory moduleCreationPayload;
+        {
+            if (
+                params_.poolCreation.poolKey.currency0
+                    == CurrencyLibrary.ADDRESS_ZERO
+            ) {
+                state.payload = "";
+                if (state.token0 == weth && NATIVE_COIN < state.token1) {
+                    if (state.amount0 > 0) {
+                        state.payload = abi.encodeWithSelector(
+                            IWETH9.withdraw.selector, state.amount0
+                        );
+                    }
+                    state.value = state.amount0;
+                    if (NATIVE_COIN < state.token1) {
+                        state.token0 = NATIVE_COIN;
+                    } else {
+                        state.token0 = state.token1;
+                        state.amount0 = state.amount1;
+                        state.token1 = NATIVE_COIN;
+                        state.isInversed = true;
+                    }
+                }
+
+                if (state.token1 == weth) {
+                    if (state.amount1 > 0) {
+                        state.payload = abi.encodeWithSelector(
+                            IWETH9.withdraw.selector, state.amount1
+                        );
+                    }
+                    state.value = state.amount1;
+                    if (NATIVE_COIN < state.token0) {
+                        state.token1 = state.token0;
+                        state.amount1 = state.amount0;
+                        state.token0 = NATIVE_COIN;
+                    } else {
+                        state.token1 = NATIVE_COIN;
+                        state.isInversed = true;
+                    }
+                }
+
+                if (state.payload.length > 0) {
+                    state.success = ISafe(params_.safe)
+                        .execTransactionFromModule(
+                        weth, state.value, state.payload, Operation.Call
+                    );
+
+                    if (!state.success) {
+                        revert WithdrawETH();
+                    }
+                }
+            }
+        }
+
+        // #endregion create module payload.
 
         // #region create modular vault.
 
         {
+            bytes memory moduleCreationPayload = abi.encodeWithSelector(
+                IUniV4StandardModule.initialize.selector,
+                params_.vaultCreation.init0,
+                params_.vaultCreation.init1,
+                state.isInversed,
+                params_.poolCreation.poolKey,
+                params_.vaultCreation.oracle,
+                params_.vaultCreation.maxSlippage
+            );
+
             bytes memory initManagementPayload = abi.encode(
                 params_.vaultCreation.oracle,
                 params_.vaultCreation.maxDeviation,
@@ -100,13 +196,14 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 params_.vaultCreation.maxSlippage
             );
 
-            vault = IArrakisMetaVaultFactory(factory).deployPrivateVault(
+            vault = IArrakisMetaVaultFactory(factory)
+                .deployPrivateVault(
                 params_.vaultCreation.salt,
-                token0,
-                token1,
+                state.token0,
+                state.token1,
                 params_.safe,
                 params_.vaultCreation.upgradeableBeacon,
-                params_.vaultCreation.moduleCreationPayload,
+                moduleCreationPayload,
                 initManagementPayload
             );
         }
@@ -119,16 +216,16 @@ contract MigrationHelper is IMigrationHelper, Ownable {
             address[] memory depositors = new address[](1);
             depositors[0] = params_.safe;
 
-            payload = abi.encodeWithSelector(
+            state.payload = abi.encodeWithSelector(
                 IArrakisMetaVaultPrivate.whitelistDepositors.selector,
                 depositors
             );
 
-            success = ISafe(params_.safe).execTransactionFromModule(
-                vault, 0, payload, Operation.Call
+            state.success = ISafe(params_.safe).execTransactionFromModule(
+                vault, 0, state.payload, Operation.Call
             );
 
-            if (!success) {
+            if (!state.success) {
                 revert WhitelistDepositorErr();
             }
         }
@@ -141,47 +238,47 @@ contract MigrationHelper is IMigrationHelper, Ownable {
             address module =
                 address(IArrakisMetaVault(vault).module());
 
-            if (amount0 > 0) {
-                payload = abi.encodeWithSelector(
-                    IERC20.approve.selector, module, amount0
+            if (state.amount0 > 0 && state.token0 != NATIVE_COIN) {
+                state.payload = abi.encodeWithSelector(
+                    IERC20.approve.selector, module, state.amount0
                 );
 
-                success = ISafe(params_.safe)
+                state.success = ISafe(params_.safe)
                     .execTransactionFromModule(
-                    token0, 0, payload, Operation.Call
+                    state.token0, 0, state.payload, Operation.Call
                 );
 
-                if (!success) {
+                if (!state.success) {
                     revert Approval0Err();
                 }
             }
 
-            if (amount1 > 0) {
-                payload = abi.encodeWithSelector(
-                    IERC20.approve.selector, module, amount1
+            if (state.amount1 > 0 && state.token1 != NATIVE_COIN) {
+                state.payload = abi.encodeWithSelector(
+                    IERC20.approve.selector, module, state.amount1
                 );
 
-                success = ISafe(params_.safe)
+                state.success = ISafe(params_.safe)
                     .execTransactionFromModule(
-                    token1, 0, payload, Operation.Call
+                    state.token1, 0, state.payload, Operation.Call
                 );
 
-                if (!success) {
+                if (!state.success) {
                     revert Approval1Err();
                 }
             }
 
-            payload = abi.encodeWithSelector(
+            state.payload = abi.encodeWithSelector(
                 IArrakisMetaVaultPrivate.deposit.selector,
-                amount0,
-                amount1
+                state.amount0,
+                state.amount1
             );
 
-            success = ISafe(params_.safe).execTransactionFromModule(
-                vault, 0, payload, Operation.Call
+            state.success = ISafe(params_.safe).execTransactionFromModule(
+                vault, state.value, state.payload, Operation.Call
             );
 
-            if (!success) {
+            if (!state.success) {
                 revert DepositErr();
             }
         }
@@ -191,17 +288,17 @@ contract MigrationHelper is IMigrationHelper, Ownable {
         // #region rebalance as executor.
 
         if (params_.rebalancePayloads.length > 0) {
-            payload = abi.encodeWithSelector(
+            state.payload = abi.encodeWithSelector(
                 IArrakisStandardManager.rebalance.selector,
                 vault,
                 params_.rebalancePayloads
             );
 
-            success = ISafe(params_.safe).execTransactionFromModule(
-                manager, 0, payload, Operation.Call
+            state.success = ISafe(params_.safe).execTransactionFromModule(
+                manager, 0, state.payload, Operation.Call
             );
 
-            if (!success) {
+            if (!state.success) {
                 revert RebalanceErr();
             }
         }
@@ -219,9 +316,7 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 ,
                 address stratAnnouncer,
                 uint24 maxSlippagePIPS,
-            ) = IArrakisStandardManager(manager).vaultInfo(
-                vault
-            );
+            ) = IArrakisStandardManager(manager).vaultInfo(vault);
 
             SetupParams memory setupParams = SetupParams({
                 vault: vault,
@@ -233,20 +328,22 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 maxSlippagePIPS: maxSlippagePIPS
             });
 
-            payload = abi.encodeWithSelector(
+            state.payload = abi.encodeWithSelector(
                 IArrakisStandardManager.updateVaultInfo.selector,
                 setupParams
             );
 
-            success = ISafe(params_.safe).execTransactionFromModule(
-                manager, 0, payload, Operation.Call
+            state.success = ISafe(params_.safe).execTransactionFromModule(
+                manager, 0, state.payload, Operation.Call
             );
 
-            if (!success) {
+            if (!state.success) {
                 revert ChangeExecutorErr();
             }
         }
 
         // #endregion change executor.
     }
+
+    receive() external payable {}
 }
