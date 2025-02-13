@@ -45,5 +45,9 @@ library WethFactory {
         else if (chainId == 57073) {
             return 0x4200000000000000000000000000000000000006;
         }
+        // Unichain
+        else if (chainId == 130) {
+            return 0x4200000000000000000000000000000000000006;
+        }
     }
 }

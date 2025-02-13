@@ -21,6 +21,7 @@ import {UpgradeableBeacon} from
 // Polygon UpgradeableBeacon : 0xD4ae05C8928d4850cDD0f800322108E6B1a8F3eB
 // Optimism UpgradeableBeacon : 0x79fc92afa1ce5476010644380156790d2fc52168
 // Ink UpgradeableBeacon : 0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73
+// Unichain UpgradeableBeacon : 0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73
 contract DBunkerModule is CreateXScript {
     uint88 public version = uint88(
         uint256(keccak256(abi.encode("Bunker Module version 1")))

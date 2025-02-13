@@ -45,6 +45,10 @@ library ArrakisRoles {
         else if (chainId == 57073) {
             return 0x307EB311C787F3CBF63fDDF8e8F74aFBFA051613;
         }
+        // Unichain
+        else if (chainId == 130) {
+            return 0xFf3cBD0fB3639f4ffFbae66B9D1cabc3690F498C;
+        }
     }
 
     function getOwner() internal returns (address) {
@@ -89,6 +93,10 @@ library ArrakisRoles {
         // Ink
         else if (chainId == 57073) {
             return 0xbdA8A0C66b3e7ed55b3dCb33CCE889B3985fF868;
+        }
+        // Unichain
+        else if (chainId == 130) {
+            return 0xDE7154C9568844C5cbADB638D528c3A0279FEebc;
         }
     }
 }

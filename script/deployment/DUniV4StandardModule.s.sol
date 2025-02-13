@@ -42,12 +42,26 @@ import {UpgradeableBeacon} from
 // Optimism UniswapV4StandardPrivate : 0x04eAd25447F9371c5c1e2C33645f32aAFEb337dc
 // Optimism UpgradeableBeacon : 0x413fc8E6F0B95D1f45de01b17e9441ec41eD01AB
 
+// #endregion Optimism.
+
+// #region Ink.
+
 // Ink Underlying V4 : 0xB2BA4B781EB2e575A928E54c404b67b904A4DBEb
 // Ink Uniswap V4 : 0x2Aa0f3154D1e7109AaF681A372589DA318B2BA56
 // Ink UniswapV4StandardPrivate : 0x04eAd25447F9371c5c1e2C33645f32aAFEb337dc
 // Ink UpgradeableBeacon : 0xCc8989978668ad377369C0cC720192377a6006e3
 
-// #endregion Optimism.
+// #endregion Ink.
+
+// #region Unichain.
+
+// Unichain Underlying V4 : 0xB2BA4B781EB2e575A928E54c404b67b904A4DBEb
+// Unichain Uniswap V4 : 0x2Aa0f3154D1e7109AaF681A372589DA318B2BA56
+// Unichain UniswapV4StandardPrivate : 0x04eAd25447F9371c5c1e2C33645f32aAFEb337dc
+// Unichain UpgradeableBeacon : 0xCc8989978668ad377369C0cC720192377a6006e3
+
+// #endregion Unichain.
+
 contract DUniV4StandardModule is CreateXScript {
     uint88 public version = uint88(
         uint256(
@@ -154,6 +168,10 @@ contract DUniV4StandardModule is CreateXScript {
         // binance
         else if (chainId == 56) {
             return 0x28e2Ea090877bF75740558f6BFB36A5ffeE9e9dF;
+        }
+        // Unichain
+        else if (chainId == 130) {
+            return 0x1F98400000000000000000000000000000000004;
         }
     }
 }
