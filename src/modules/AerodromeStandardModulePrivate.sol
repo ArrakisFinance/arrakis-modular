@@ -479,24 +479,21 @@ contract AerodromeStandardModulePrivate is
         uint256 length = _tokenIds.length();
         address _gauge = gauge;
 
-        uint256 aeroBalance;
+        uint256 aeroBalance =
+            IERC20Metadata(AERO).balanceOf(address(this));
 
         for (uint256 i; i < length;) {
             uint256 tokenId = _tokenIds.at(i);
 
-            uint256 balance =
-                IERC20Metadata(AERO).balanceOf(address(this));
-
             ICLGauge(_gauge).getReward(tokenId);
-
-            aeroBalance += IERC20Metadata(AERO).balanceOf(
-                address(this)
-            ) - balance;
 
             unchecked {
                 i += 1;
             }
         }
+
+        aeroBalance =
+            IERC20Metadata(AERO).balanceOf(address(this)) - aeroBalance;
 
         // #region take the manager share.
 
@@ -654,6 +651,8 @@ contract AerodromeStandardModulePrivate is
         uint256 mint1;
 
         // #region increase positions.
+
+        (sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
 
         length = params_.increasePositions.length;
 
@@ -928,18 +927,6 @@ contract AerodromeStandardModulePrivate is
             uint256 aeroAmountCollected
         )
     {
-        // #region principals.
-
-        uint256 amt0;
-        uint256 amt1;
-
-        {
-            (amt0, amt1) =
-                _principal(modifyPosition_.tokenId, sqrtPriceX96_);
-        }
-
-        // #endregion principals.
-
         // #region unstake position.
 
         address _gauge;
@@ -959,17 +946,6 @@ contract AerodromeStandardModulePrivate is
             liquidity = SafeCast.toUint128(
                 FullMath.mulDiv(
                     liquidity, modifyPosition_.proportion, BASE
-                )
-            );
-
-            amt0 = SafeCast.toUint128(
-                FullMath.mulDiv(
-                    amt0, modifyPosition_.proportion, BASE
-                )
-            );
-            amt1 = SafeCast.toUint128(
-                FullMath.mulDiv(
-                    amt1, modifyPosition_.proportion, BASE
                 )
             );
 
