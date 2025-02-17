@@ -56,7 +56,7 @@ contract MigrationHelper is IMigrationHelper, Ownable {
         if (
             palmTerms_ == address(0) || factory_ == address(0)
                 || poolManager_ == address(0) || manager_ == address(0)
-                || weth_ == address(0)
+                || weth_ == address(0) || owner_ == address(0)
         ) {
             revert AddressZero();
         }
@@ -91,7 +91,8 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 params_.closeTerm.newManager
             );
 
-            state.success = ISafe(params_.safe).execTransactionFromModule(
+            state.success = ISafe(params_.safe)
+                .execTransactionFromModule(
                 palmTerms, 0, state.payload, Operation.Call
             );
 
@@ -100,8 +101,10 @@ contract MigrationHelper is IMigrationHelper, Ownable {
             }
         }
 
-        state.amount0 = IERC20(state.token0).balanceOf(params_.safe) - state.amount0;
-        state.amount1 = IERC20(state.token1).balanceOf(params_.safe) - state.amount1;
+        state.amount0 = IERC20(state.token0).balanceOf(params_.safe)
+            - state.amount0;
+        state.amount1 = IERC20(state.token1).balanceOf(params_.safe)
+            - state.amount1;
 
         // #endregion close term.
 
@@ -125,7 +128,7 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                     == CurrencyLibrary.ADDRESS_ZERO
             ) {
                 state.payload = "";
-                if (state.token0 == weth && NATIVE_COIN < state.token1) {
+                if (state.token0 == weth) {
                     if (state.amount0 > 0) {
                         state.payload = abi.encodeWithSelector(
                             IWETH9.withdraw.selector, state.amount0
@@ -162,7 +165,10 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 if (state.payload.length > 0) {
                     state.success = ISafe(params_.safe)
                         .execTransactionFromModule(
-                        weth, state.value, state.payload, Operation.Call
+                        weth,
+                        0,
+                        state.payload,
+                        Operation.Call
                     );
 
                     if (!state.success) {
@@ -177,7 +183,8 @@ contract MigrationHelper is IMigrationHelper, Ownable {
         // #region create modular vault.
 
         {
-            bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            bytes memory moduleCreationPayload = abi
+                .encodeWithSelector(
                 IUniV4StandardModule.initialize.selector,
                 params_.vaultCreation.init0,
                 params_.vaultCreation.init1,
@@ -221,7 +228,8 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 depositors
             );
 
-            state.success = ISafe(params_.safe).execTransactionFromModule(
+            state.success = ISafe(params_.safe)
+                .execTransactionFromModule(
                 vault, 0, state.payload, Operation.Call
             );
 
@@ -274,7 +282,8 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 state.amount1
             );
 
-            state.success = ISafe(params_.safe).execTransactionFromModule(
+            state.success = ISafe(params_.safe)
+                .execTransactionFromModule(
                 vault, state.value, state.payload, Operation.Call
             );
 
@@ -294,7 +303,8 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 params_.rebalancePayloads
             );
 
-            state.success = ISafe(params_.safe).execTransactionFromModule(
+            state.success = ISafe(params_.safe)
+                .execTransactionFromModule(
                 manager, 0, state.payload, Operation.Call
             );
 
@@ -333,7 +343,8 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 setupParams
             );
 
-            state.success = ISafe(params_.safe).execTransactionFromModule(
+            state.success = ISafe(params_.safe)
+                .execTransactionFromModule(
                 manager, 0, state.payload, Operation.Call
             );
 
@@ -343,6 +354,30 @@ contract MigrationHelper is IMigrationHelper, Ownable {
         }
 
         // #endregion change executor.
+
+        // #region unable the module.
+
+        {
+            (, address prevModule) = ISafe(params_.safe)
+                .getModulesPaginated(address(this), 1);
+
+            state.payload = abi.encodeWithSelector(
+                ISafe.disableModule.selector,
+                prevModule,
+                address(this)
+            );
+
+            state.success = ISafe(params_.safe)
+                .execTransactionFromModule(
+                params_.safe, 0, state.payload, Operation.Call
+            );
+
+            if (!state.success) {
+                revert UnableModuleErr();
+            }
+        }
+
+        // #endregion unable the module.
     }
 
     receive() external payable {}

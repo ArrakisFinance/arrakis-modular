@@ -48,6 +48,7 @@ import {
     IMigrationHelper
 } from "../../src/utils/MigrationHelper.sol";
 import {IArrakisV2} from "../../src/interfaces/IArrakisV2.sol";
+import {SwapPayload} from "../../src/structs/SUniswapV4.sol";
 
 // #endregion interfaces.
 
@@ -88,6 +89,8 @@ import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 
 import {LiquidityAmounts} from
     "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
+import {FullMath} from
+    "@v3-lib-0.8/contracts/FullMath.sol";
 
 // #region mocks.
 
@@ -1276,6 +1279,528 @@ contract UniswapV4PrivateIntegration is TestWrapper {
 
     // #region migration module.
 
+    // #region test migration module constructor.
+
+    function test_constructor_palmTerms_address_zero() public {
+        vm.expectRevert(IMigrationHelper.AddressZero.selector);
+        migrationHelper = new MigrationHelper(
+            address(0),
+            factory,
+            arrakisStandardManager,
+            poolManager,
+            WETH,
+            arrakisTimeLock
+        );
+    }
+
+    function test_constructor_factory_address_zero() public {
+        vm.expectRevert(IMigrationHelper.AddressZero.selector);
+        migrationHelper = new MigrationHelper(
+            PALMTerms,
+            address(0),
+            arrakisStandardManager,
+            poolManager,
+            WETH,
+            arrakisTimeLock
+        );
+    }
+
+    function test_constructor_arrakisStandardManager_address_zero()
+        public
+    {
+        vm.expectRevert(IMigrationHelper.AddressZero.selector);
+        migrationHelper = new MigrationHelper(
+            PALMTerms,
+            factory,
+            address(0),
+            poolManager,
+            WETH,
+            arrakisTimeLock
+        );
+    }
+
+    function test_constructor_poolManager_address_zero() public {
+        vm.expectRevert(IMigrationHelper.AddressZero.selector);
+        migrationHelper = new MigrationHelper(
+            PALMTerms,
+            factory,
+            arrakisStandardManager,
+            address(0),
+            WETH,
+            arrakisTimeLock
+        );
+    }
+
+    function test_constructor_weth_address_zero() public {
+        vm.expectRevert(IMigrationHelper.AddressZero.selector);
+        migrationHelper = new MigrationHelper(
+            PALMTerms,
+            factory,
+            arrakisStandardManager,
+            poolManager,
+            address(0),
+            arrakisTimeLock
+        );
+    }
+
+    function test_constructor_owner_address_zero() public {
+        vm.expectRevert(IMigrationHelper.AddressZero.selector);
+        migrationHelper = new MigrationHelper(
+            PALMTerms,
+            factory,
+            arrakisStandardManager,
+            poolManager,
+            WETH,
+            address(0)
+        );
+    }
+
+    // #region test migration.
+
+    function test_migration_closeTermsErr() public {
+        // #region create migration helper.
+
+        migrationHelper = new MigrationHelper(
+            PALMTerms,
+            factory,
+            arrakisStandardManager,
+            poolManager,
+            WETH,
+            arrakisTimeLock
+        );
+
+        // #endregion create migration helper.
+
+        OracleWrapper oracleWrapper = new OracleWrapper();
+
+        // #region create a GEL pool on uniswap v4.
+
+        address token0 = address(IArrakisV2(GELV2Vault).token0());
+        address token1 = address(IArrakisV2(GELV2Vault).token1());
+
+        PoolKey memory poolKey = PoolKey({
+            currency0: Currency.wrap(token0),
+            currency1: Currency.wrap(token1),
+            fee: 10_000,
+            tickSpacing: 200,
+            hooks: IHooks(address(0))
+        });
+
+        (uint160 sqrtPrice,,,,,,) =
+            IUniswapV3PoolState(GELPool).slot0();
+
+        int24 tick =
+            IPoolManager(poolManager).initialize(poolKey, sqrtPrice);
+
+        console.logInt(tick);
+
+        // #endregion create a GEL pool on uniswap v4.
+
+        // #region migration payload.
+
+        IMigrationHelper.Migration memory migration;
+
+        migration.safe = GELOwner;
+        migration.closeTerm.vault = IArrakisV2(GELV2Vault);
+        migration.closeTerm.newOwner = address(0);
+        migration.closeTerm.newManager =
+            vm.addr(uint256(keccak256(abi.encode("NewManager"))));
+
+        migration.poolCreation.poolKey = PoolKey({
+            currency0: Currency.wrap(token0),
+            currency1: Currency.wrap(token1),
+            fee: 10_000,
+            tickSpacing: 200,
+            hooks: IHooks(address(0))
+        });
+
+        migration.poolCreation.sqrtPriceX96 = 0;
+        migration.poolCreation.createPool = false;
+
+        migration.vaultCreation.salt =
+            keccak256(abi.encode("Migration salt"));
+        migration.vaultCreation.upgradeableBeacon =
+            uniswapStandardModuleBeacon;
+        migration.vaultCreation.init0 = 1;
+        migration.vaultCreation.init1 = 1;
+        // migration.vaultCreation.moduleCreationPayload = abi
+        //     .encodeWithSelector(
+        //     IUniV4StandardModule.initialize.selector,
+        //     1,
+        //     1,
+        //     false,
+        //     poolKey,
+        //     IOracleWrapper(address(oracleWrapper)),
+        //     PIPS / 50
+        // );
+
+        migration.vaultCreation.oracle =
+            IOracleWrapper(address(oracleWrapper));
+        migration.vaultCreation.maxDeviation = PIPS / 50;
+        migration.vaultCreation.cooldownPeriod = 60;
+        migration.vaultCreation.stratAnnouncer =
+            vm.addr(uint256(keccak256(abi.encode("StratAnnouncer"))));
+        migration.vaultCreation.maxSlippage = PIPS / 50;
+
+        migration.executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
+
+        // #endregion migration payload.
+
+        // #region whitelist migration module.
+
+        vm.prank(GELOwner);
+        IGnosisSafe(GELOwner).enableModule(address(migrationHelper));
+
+        // #endregion whitelist migration module.
+
+        // #region do migration.
+
+        vm.prank(arrakisTimeLock);
+        vm.expectRevert(IMigrationHelper.CloseTermsErr.selector);
+        migrationHelper.migrateVault(migration);
+
+        // #endregion do migration.
+    }
+
+    function test_migration_with_pool_creation() public {
+        // #region create migration helper.
+
+        migrationHelper = new MigrationHelper(
+            PALMTerms,
+            factory,
+            arrakisStandardManager,
+            poolManager,
+            WETH,
+            arrakisTimeLock
+        );
+
+        // #endregion create migration helper.
+
+        OracleWrapper oracleWrapper = new OracleWrapper();
+
+        // #region create a GEL pool on uniswap v4.
+
+        address token0 = address(IArrakisV2(GELV2Vault).token0());
+        address token1 = address(IArrakisV2(GELV2Vault).token1());
+
+        PoolKey memory poolKey = PoolKey({
+            currency0: Currency.wrap(token0),
+            currency1: Currency.wrap(token1),
+            fee: 10_000,
+            tickSpacing: 200,
+            hooks: IHooks(address(0))
+        });
+
+        (uint160 sqrtPrice,,,,,,) =
+            IUniswapV3PoolState(GELPool).slot0();
+
+        int24 tick =
+            IPoolManager(poolManager).initialize(poolKey, sqrtPrice);
+
+        console.logInt(tick);
+
+        // #endregion create a GEL pool on uniswap v4.
+
+        // #region migration payload.
+
+        IMigrationHelper.Migration memory migration;
+
+        migration.safe = GELOwner;
+        migration.closeTerm.vault = IArrakisV2(GELV2Vault);
+        migration.closeTerm.newOwner =
+            vm.addr(uint256(keccak256(abi.encode("NewOwner"))));
+        migration.closeTerm.newManager =
+            vm.addr(uint256(keccak256(abi.encode("NewManager"))));
+
+        migration.poolCreation.poolKey = PoolKey({
+            currency0: Currency.wrap(token0),
+            currency1: Currency.wrap(token1),
+            fee: 10_001,
+            tickSpacing: 200,
+            hooks: IHooks(address(0))
+        });
+
+        migration.poolCreation.sqrtPriceX96 = sqrtPrice;
+        migration.poolCreation.createPool = true;
+
+        migration.vaultCreation.salt =
+            keccak256(abi.encode("Migration salt"));
+        migration.vaultCreation.upgradeableBeacon =
+            uniswapStandardModuleBeacon;
+        migration.vaultCreation.init0 = 1;
+        migration.vaultCreation.init1 = 1;
+        // migration.vaultCreation.moduleCreationPayload = abi
+        //     .encodeWithSelector(
+        //     IUniV4StandardModule.initialize.selector,
+        //     1,
+        //     1,
+        //     false,
+        //     poolKey,
+        //     IOracleWrapper(address(oracleWrapper)),
+        //     PIPS / 50
+        // );
+
+        migration.vaultCreation.oracle =
+            IOracleWrapper(address(oracleWrapper));
+        migration.vaultCreation.maxDeviation = PIPS / 50;
+        migration.vaultCreation.cooldownPeriod = 60;
+        migration.vaultCreation.stratAnnouncer =
+            vm.addr(uint256(keccak256(abi.encode("StratAnnouncer"))));
+        migration.vaultCreation.maxSlippage = PIPS / 50;
+
+        migration.executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
+
+        // #endregion migration payload.
+
+        // #region whitelist migration module.
+
+        vm.prank(GELOwner);
+        IGnosisSafe(GELOwner).enableModule(address(migrationHelper));
+
+        // #endregion whitelist migration module.
+
+        // #region do migration.
+
+        vm.prank(arrakisTimeLock);
+        migrationHelper.migrateVault(migration);
+
+        // #endregion do migration.
+    }
+
+    function test_migration_conversion_to_eth_vault() public {
+        // #region create migration helper.
+
+        migrationHelper = new MigrationHelper(
+            PALMTerms,
+            factory,
+            arrakisStandardManager,
+            poolManager,
+            WETH,
+            arrakisTimeLock
+        );
+
+        // #endregion create migration helper.
+
+        OracleWrapper oracleWrapper = new OracleWrapper();
+
+        // #region create a GEL pool on uniswap v4.
+
+        address token0 = address(IArrakisV2(GELV2Vault).token0());
+        address token1 = address(IArrakisV2(GELV2Vault).token1());
+
+        PoolKey memory poolKey = PoolKey({
+            currency0: CurrencyLibrary.ADDRESS_ZERO,
+            currency1: Currency.wrap(token0),
+            fee: 10_000,
+            tickSpacing: 200,
+            hooks: IHooks(address(0))
+        });
+
+        (uint160 sqrtPrice,,,,,,) =
+            IUniswapV3PoolState(GELPool).slot0();
+
+        // int24 tick =
+        //     IPoolManager(poolManager).initialize(poolKey, sqrtPrice);
+
+        // console.logInt(tick);
+
+        // #endregion create a GEL pool on uniswap v4.
+
+        // #region migration payload.
+
+        IMigrationHelper.Migration memory migration;
+
+        migration.safe = GELOwner;
+        migration.closeTerm.vault = IArrakisV2(GELV2Vault);
+        migration.closeTerm.newOwner =
+            vm.addr(uint256(keccak256(abi.encode("NewOwner"))));
+        migration.closeTerm.newManager =
+            vm.addr(uint256(keccak256(abi.encode("NewManager"))));
+
+        migration.poolCreation.poolKey = poolKey;
+
+        migration.poolCreation.sqrtPriceX96 = sqrtPrice;
+        migration.poolCreation.createPool = true;
+
+        migration.vaultCreation.salt =
+            keccak256(abi.encode("Migration salt"));
+        migration.vaultCreation.upgradeableBeacon =
+            uniswapStandardModuleBeacon;
+        migration.vaultCreation.init0 = 1;
+        migration.vaultCreation.init1 = 1;
+        // migration.vaultCreation.moduleCreationPayload = abi
+        //     .encodeWithSelector(
+        //     IUniV4StandardModule.initialize.selector,
+        //     1,
+        //     1,
+        //     false,
+        //     poolKey,
+        //     IOracleWrapper(address(oracleWrapper)),
+        //     PIPS / 50
+        // );
+
+        migration.vaultCreation.oracle =
+            IOracleWrapper(address(oracleWrapper));
+        migration.vaultCreation.maxDeviation = PIPS / 50;
+        migration.vaultCreation.cooldownPeriod = 60;
+        migration.vaultCreation.stratAnnouncer =
+            vm.addr(uint256(keccak256(abi.encode("StratAnnouncer"))));
+        migration.vaultCreation.maxSlippage = PIPS / 50;
+
+        migration.executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
+
+        // #endregion migration payload.
+
+        // #region whitelist migration module.
+
+        vm.prank(GELOwner);
+        IGnosisSafe(GELOwner).enableModule(address(migrationHelper));
+
+        // #endregion whitelist migration module.
+
+        // #region do migration.
+
+        vm.prank(arrakisTimeLock);
+        migrationHelper.migrateVault(migration);
+
+        // #endregion do migration.
+    }
+
+    function test_migration_conversion_to_eth_vault_rebalance() public {
+        // #region create migration helper.
+
+        migrationHelper = new MigrationHelper(
+            PALMTerms,
+            factory,
+            arrakisStandardManager,
+            poolManager,
+            WETH,
+            arrakisTimeLock
+        );
+
+        // #endregion create migration helper.
+
+        OracleWrapper oracleWrapper = new OracleWrapper();
+
+        // #region create a GEL pool on uniswap v4.
+
+        address token0 = address(IArrakisV2(GELV2Vault).token0());
+        address token1 = address(IArrakisV2(GELV2Vault).token1());
+
+        PoolKey memory poolKey = PoolKey({
+            currency0: CurrencyLibrary.ADDRESS_ZERO,
+            currency1: Currency.wrap(token0),
+            fee: 10_000,
+            tickSpacing: 200,
+            hooks: IHooks(address(0))
+        });
+
+        (uint160 sqrtPrice,,,,,,) =
+            IUniswapV3PoolState(GELPool).slot0();
+
+        oracleWrapper.setPrice1(
+            FullMath.mulDiv(
+                uint256(sqrtPrice) * uint256(sqrtPrice),
+                10 ** 18,
+                1 << 192
+            )
+        );
+
+        // int24 tick =
+        //     IPoolManager(poolManager).initialize(poolKey, sqrtPrice);
+
+        // console.logInt(tick);
+
+        // #endregion create a GEL pool on uniswap v4.
+
+        // #region migration payload.
+
+        IMigrationHelper.Migration memory migration;
+
+        migration.safe = GELOwner;
+        migration.closeTerm.vault = IArrakisV2(GELV2Vault);
+        migration.closeTerm.newOwner =
+            vm.addr(uint256(keccak256(abi.encode("NewOwner"))));
+        migration.closeTerm.newManager =
+            vm.addr(uint256(keccak256(abi.encode("NewManager"))));
+
+        migration.poolCreation.poolKey = poolKey;
+
+        migration.poolCreation.sqrtPriceX96 = sqrtPrice;
+        migration.poolCreation.createPool = true;
+
+        migration.vaultCreation.salt =
+            keccak256(abi.encode("Migration salt"));
+        migration.vaultCreation.upgradeableBeacon =
+            uniswapStandardModuleBeacon;
+        migration.vaultCreation.init0 = 1;
+        migration.vaultCreation.init1 = 1;
+        // migration.vaultCreation.moduleCreationPayload = abi
+        //     .encodeWithSelector(
+        //     IUniV4StandardModule.initialize.selector,
+        //     1,
+        //     1,
+        //     false,
+        //     poolKey,
+        //     IOracleWrapper(address(oracleWrapper)),
+        //     PIPS / 50
+        // );
+
+        migration.vaultCreation.oracle =
+            IOracleWrapper(address(oracleWrapper));
+        migration.vaultCreation.maxDeviation = PIPS / 50;
+        migration.vaultCreation.cooldownPeriod = 60;
+        migration.vaultCreation.stratAnnouncer =
+            vm.addr(uint256(keccak256(abi.encode("StratAnnouncer"))));
+        migration.vaultCreation.maxSlippage = PIPS / 50;
+
+        migration.executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
+
+        IUniV4StandardModule.LiquidityRange[] memory ranges = new IUniV4StandardModule.LiquidityRange[](0);
+        // ranges[0] = IUniV4StandardModule.LiquidityRange({
+        //     range : IUniV4StandardModule.Range({
+        //         tickLower : TickMath.MIN_TICK / 2,
+        //         tickUpper : TickMath.MAX_TICK / 2
+        //     }),
+        //     liquidity : 0
+        // });
+
+        SwapPayload memory swapPayload;
+
+        migration.rebalancePayloads = new bytes[](1);
+        migration.rebalancePayloads[0] = abi.encodeWithSelector(
+            IUniV4StandardModule.rebalance.selector,
+            ranges,
+            swapPayload,
+            0,
+            0,
+            0,
+            0
+        );
+
+        // #endregion migration payload.
+
+        // #region whitelist migration module.
+
+        vm.prank(GELOwner);
+        IGnosisSafe(GELOwner).enableModule(address(migrationHelper));
+
+        // #endregion whitelist migration module.
+
+        // #region do migration.
+
+        vm.prank(arrakisTimeLock);
+        migrationHelper.migrateVault(migration);
+
+        // #endregion do migration.
+    }
+
+    // #endregion test migration.
+
     function test_migration_module() public {
         // #region create migration helper.
 
@@ -1314,6 +1839,8 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         console.logInt(tick);
 
         // #endregion create a GEL pool on uniswap v4.
+
+        // #region migration payload.
 
         IMigrationHelper.Migration memory migration;
 
@@ -1363,6 +1890,8 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         migration.executor =
             vm.addr(uint256(keccak256(abi.encode("Executor"))));
 
+        // #endregion migration payload.
+
         // #region whitelist migration module.
 
         vm.prank(GELOwner);
@@ -1377,6 +1906,8 @@ contract UniswapV4PrivateIntegration is TestWrapper {
 
         // #endregion do migration.
     }
+
+    // #endregion test migration module constructor.
 
     // #endregion migration module.
 

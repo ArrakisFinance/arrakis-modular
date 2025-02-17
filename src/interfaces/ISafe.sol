@@ -18,4 +18,8 @@ interface ISafe {
         bytes calldata data,
         Operation operation
     ) external returns (bool success);
+
+    function disableModule(address prevModule, address module) external;
+
+    function getModulesPaginated(address start, uint256 pageSize) external view returns (address[] memory array, address next);
 }

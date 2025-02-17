@@ -69,6 +69,7 @@ interface IMigrationHelper {
     error RebalanceErr();
     error ChangeExecutorErr();
     error WithdrawETH();
+    error UnableModuleErr();
 
     // #endregion errors.
 
