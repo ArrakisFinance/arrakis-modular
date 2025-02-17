@@ -360,20 +360,7 @@ contract VelodromeStandardModulePrivate is
 
         // #region get sqrtPriceX96 from oracle price.
 
-        uint160 sqrtPriceX96;
-
-        {
-            uint8 decimals0 = token0.decimals();
-            uint256 price = oracle.getPrice0();
-
-            sqrtPriceX96 = SafeCast.toUint160(
-                Math.sqrt(
-                    FullMath.mulDiv(
-                        price, 1 << 192, 10 ** (decimals0)
-                    )
-                )
-            );
-        }
+        (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
 
         // #endregion get sqrtPriceX96 from oracle price.
 
@@ -492,24 +479,21 @@ contract VelodromeStandardModulePrivate is
         uint256 length = _tokenIds.length();
         address _gauge = gauge;
 
-        uint256 veloBalance;
+        uint256 veloBalance =
+            IERC20Metadata(VELO).balanceOf(address(this));
 
         for (uint256 i; i < length;) {
             uint256 tokenId = _tokenIds.at(i);
 
-            uint256 balance =
-                IERC20Metadata(VELO).balanceOf(address(this));
-
             ICLGauge(_gauge).getReward(tokenId);
-
-            veloBalance += IERC20Metadata(VELO).balanceOf(
-                address(this)
-            ) - balance;
 
             unchecked {
                 i += 1;
             }
         }
+
+        veloBalance = IERC20Metadata(VELO).balanceOf(address(this))
+            - veloBalance;
 
         // #region take the manager share.
 
@@ -539,20 +523,7 @@ contract VelodromeStandardModulePrivate is
 
         // #region get sqrtPriceX96 from oracle price.
 
-        uint160 sqrtPriceX96;
-
-        {
-            uint8 decimals0 = token0.decimals();
-            uint256 price = oracle.getPrice0();
-
-            sqrtPriceX96 = SafeCast.toUint160(
-                Math.sqrt(
-                    FullMath.mulDiv(
-                        price, 1 << 192, 10 ** (decimals0)
-                    )
-                )
-            );
-        }
+        (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
 
         // #endregion get sqrtPriceX96 from oracle price.
 
@@ -680,6 +651,8 @@ contract VelodromeStandardModulePrivate is
         uint256 mint1;
 
         // #region increase positions.
+
+        (sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
 
         length = params_.increasePositions.length;
 
@@ -954,18 +927,6 @@ contract VelodromeStandardModulePrivate is
             uint256 veloAmountCollected
         )
     {
-        // #region principals.
-
-        uint256 amt0;
-        uint256 amt1;
-
-        {
-            (amt0, amt1) =
-                _principal(modifyPosition_.tokenId, sqrtPriceX96_);
-        }
-
-        // #endregion principals.
-
         // #region unstake position.
 
         address _gauge;
@@ -988,30 +949,13 @@ contract VelodromeStandardModulePrivate is
                 )
             );
 
-            amt0 = SafeCast.toUint128(
-                FullMath.mulDiv(
-                    amt0, modifyPosition_.proportion, BASE
-                )
-            );
-            amt1 = SafeCast.toUint128(
-                FullMath.mulDiv(
-                    amt1, modifyPosition_.proportion, BASE
-                )
-            );
-
-            uint24 _maxSlippage = maxSlippage;
-
             INonfungiblePositionManager.DecreaseLiquidityParams memory
                 params = INonfungiblePositionManager
                     .DecreaseLiquidityParams({
                     tokenId: modifyPosition_.tokenId,
                     liquidity: liquidity,
-                    amount0Min: FullMath.mulDiv(
-                        amt0, PIPS - _maxSlippage, PIPS
-                    ),
-                    amount1Min: FullMath.mulDiv(
-                        amt1, PIPS - _maxSlippage, PIPS
-                    ),
+                    amount0Min: 0,
+                    amount1Min: 0,
                     deadline: type(uint256).max
                 });
 
@@ -1068,7 +1012,8 @@ contract VelodromeStandardModulePrivate is
         {
             uint256 veloAmountCo;
 
-            (veloAmountCo, _gauge,) = _unstake(modifyPosition_.tokenId);
+            (veloAmountCo, _gauge,) =
+                _unstake(modifyPosition_.tokenId);
 
             veloAmountCollected += veloAmountCo;
         }
@@ -1083,20 +1028,14 @@ contract VelodromeStandardModulePrivate is
         );
 
         {
-            uint24 _maxSlippage = maxSlippage;
-
             INonfungiblePositionManager.IncreaseLiquidityParams memory
                 params = INonfungiblePositionManager
                     .IncreaseLiquidityParams({
                     tokenId: modifyPosition_.tokenId,
                     amount0Desired: amt0,
                     amount1Desired: amt1,
-                    amount0Min: FullMath.mulDiv(
-                        amt0, PIPS - _maxSlippage, PIPS
-                    ),
-                    amount1Min: FullMath.mulDiv(
-                        amt1, PIPS - _maxSlippage, PIPS
-                    ),
+                    amount0Min: 0,
+                    amount1Min: 0,
                     deadline: type(uint256).max
                 });
 
