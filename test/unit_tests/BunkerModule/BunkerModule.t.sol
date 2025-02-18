@@ -2,18 +2,14 @@
 pragma solidity ^0.8.19;
 
 // #region foundry.
-
 import {console} from "forge-std/console.sol";
 import {TestWrapper} from "../../utils/TestWrapper.sol";
-
 // #endregion foundry.
 
 // #region openzeppelin.
-
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from
     "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-
 // #endregion openzeppelin.
 
 import {
@@ -32,10 +28,8 @@ import {
 // #endregion constants.
 
 // #region mocks.
-
 import {ArrakisMetaVaultMock} from "./mocks/ArrakisMetaVaultMock.sol";
 import {GuardianMock} from "./mocks/GuardianMock.sol";
-
 // #endregion mocks.
 
 contract BunkerModuleTest is TestWrapper {
