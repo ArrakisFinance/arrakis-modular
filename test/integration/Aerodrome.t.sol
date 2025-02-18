@@ -88,6 +88,8 @@ contract AerodromeStandardModulePrivateTest is
     // #region arrakis modular contracts.
     address public constant arrakisStandardManager =
         0x2e6E879648293e939aA68bA4c6c129A1Be733bDA;
+    address public constant arrakisStandardManagerOwner =
+        0x25CF23B54e25daaE3fe9989a74050b953A343823;
     address public constant arrakisTimeLock =
         0xAf6f9640092cB1236E5DB6E517576355b6C40b7f;
     address public constant factory =
@@ -298,40 +300,28 @@ contract AerodromeStandardModulePrivateTest is
     {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         new AerodromeStandardModulePrivate(
-            INonfungiblePositionManager(address(0)),
-            IUniswapV3Factory(clfactory),
-            IVoter(voter),
-            guardian
+            address(0), clfactory, voter, guardian
         );
     }
 
     function test_constructor_factory_is_address_zero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         new AerodromeStandardModulePrivate(
-            INonfungiblePositionManager(nonfungiblePositionManager),
-            IUniswapV3Factory(address(0)),
-            IVoter(voter),
-            guardian
+            nonfungiblePositionManager, address(0), voter, guardian
         );
     }
 
     function test_constructor_voter_is_address_zero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         new AerodromeStandardModulePrivate(
-            INonfungiblePositionManager(nonfungiblePositionManager),
-            IUniswapV3Factory(factory),
-            IVoter(address(0)),
-            guardian
+            nonfungiblePositionManager, factory, address(0), guardian
         );
     }
 
     function test_constructor_guardian_is_address_zero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         new AerodromeStandardModulePrivate(
-            INonfungiblePositionManager(nonfungiblePositionManager),
-            IUniswapV3Factory(factory),
-            IVoter(voter),
-            address(0)
+            nonfungiblePositionManager, factory, voter, address(0)
         );
     }
 
@@ -445,6 +435,61 @@ contract AerodromeStandardModulePrivateTest is
             IAerodromeStandardModulePrivate.PoolNotFound.selector
         );
         new BeaconProxy(beacon, moduleCreationPayload);
+    }
+
+    function test_initialize_aero_not_supported() public {
+        address a = address(new MetaVaultMock());
+
+        MetaVaultMock(a).setTokens(USDC, AERO);
+
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IAerodromeStandardModulePrivate.initialize.selector,
+            IOracleWrapper(oracle),
+            maxSlippage,
+            aeroReceiver,
+            10,
+            a
+        );
+
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate
+                .AEROTokenNotSupported
+                .selector
+        );
+        new BeaconProxy(beacon, moduleCreationPayload);
+    }
+
+    function test_initialize_gauge_killed() public {
+        address a = address(new MetaVaultMock());
+
+        MetaVaultMock(a).setTokens(WETH, USDC);
+
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IAerodromeStandardModulePrivate.initialize.selector,
+            IOracleWrapper(oracle),
+            maxSlippage,
+            aeroReceiver,
+            100,
+            a
+        );
+
+        // #region kill gauge.
+
+        address pool =
+            IUniswapV3Factory(clfactory).getPool(WETH, USDC, 100);
+
+        address gauge = IVoter(voter).gauges(pool);
+
+        vm.prank(IVoter(voter).emergencyCouncil());
+        IVoter(voter).killGauge(gauge);
+
+        // #endregion kill gauge.
+
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.GaugeKilled.selector
+        );
+        address beacon =
+            address(new BeaconProxy(beacon, moduleCreationPayload));
     }
 
     function test_initialize() public {
@@ -915,25 +960,22 @@ contract AerodromeStandardModulePrivateTest is
 
     // #region test set receiver.
 
-    function test_set_receiver_only_manager() public {
-        address notManager =
-            vm.addr(uint256(keccak256(abi.encode("Not Manager"))));
+    function test_set_receiver_only_manager_owner() public {
+        address notManagerOwner = vm.addr(
+            uint256(keccak256(abi.encode("Not Manager Owner")))
+        );
         address receiver =
             vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
-        vm.prank(notManager);
+        vm.prank(notManagerOwner);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IArrakisLPModule.OnlyManager.selector,
-                notManager,
-                arrakisStandardManager
-            )
+            IAerodromeStandardModulePrivate.OnlyManagerOwner.selector
         );
         IAerodromeStandardModulePrivate(module).setReceiver(receiver);
     }
 
     function test_set_receiver_same_receiver() public {
-        vm.prank(arrakisStandardManager);
+        vm.prank(arrakisStandardManagerOwner);
         vm.expectRevert(
             IAerodromeStandardModulePrivate.SameReceiver.selector
         );
@@ -943,7 +985,7 @@ contract AerodromeStandardModulePrivateTest is
     }
 
     function test_set_receiver_receiver_address_zero() public {
-        vm.prank(arrakisStandardManager);
+        vm.prank(arrakisStandardManagerOwner);
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         IAerodromeStandardModulePrivate(module).setReceiver(
             address(0)
@@ -959,7 +1001,7 @@ contract AerodromeStandardModulePrivateTest is
             aeroReceiver
         );
 
-        vm.prank(arrakisStandardManager);
+        vm.prank(arrakisStandardManagerOwner);
         IAerodromeStandardModulePrivate(module).setReceiver(receiver);
 
         assertEq(
@@ -3807,12 +3849,7 @@ contract AerodromeStandardModulePrivateTest is
 
         address implementation = address(
             new AerodromeStandardModulePrivate(
-                INonfungiblePositionManager(
-                    nonfungiblePositionManager
-                ),
-                IUniswapV3Factory(clfactory),
-                IVoter(voter),
-                guardian
+                nonfungiblePositionManager, clfactory, voter, guardian
             )
         );
 

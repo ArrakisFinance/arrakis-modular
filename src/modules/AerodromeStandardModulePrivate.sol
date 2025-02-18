@@ -42,13 +42,14 @@ import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20Metadata} from
-    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC721Receiver} from
     "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC20Metadata} from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract AerodromeStandardModulePrivate is
     IArrakisLPModule,
@@ -153,22 +154,22 @@ contract AerodromeStandardModulePrivate is
     // #endregion modifiers.
 
     constructor(
-        INonfungiblePositionManager nftPositionManager_,
-        IUniswapV3Factory factory_,
-        IVoter voter_,
+        address nftPositionManager_,
+        address factory_,
+        address voter_,
         address guardian_
     ) {
         if (
-            address(nftPositionManager_) == address(0)
-                || address(factory_) == address(0)
-                || address(voter_) == address(0)
+            nftPositionManager_ == address(0)
+                || factory_ == address(0) || voter_ == address(0)
                 || guardian_ == address(0)
         ) {
             revert AddressZero();
         }
-        nftPositionManager = nftPositionManager_;
-        factory = factory_;
-        voter = voter_;
+        nftPositionManager =
+            INonfungiblePositionManager(nftPositionManager_);
+        factory = IUniswapV3Factory(factory_);
+        voter = IVoter(voter_);
         _guardian = guardian_;
 
         _disableInitializers();
@@ -236,6 +237,10 @@ contract AerodromeStandardModulePrivate is
             revert NativeCoinNotSupported();
         }
 
+        if (_token0 == AERO || _token1 == AERO) {
+            revert AEROTokenNotSupported();
+        }
+
         address _pool =
             factory.getPool(_token0, _token1, tickSpacing_);
 
@@ -243,8 +248,14 @@ contract AerodromeStandardModulePrivate is
             revert PoolNotFound();
         }
 
+        address _gauge = voter.gauges(_pool);
+
+        if (!voter.isAlive(_gauge)) {
+            revert GaugeKilled();
+        }
+
         pool = _pool;
-        gauge = voter.gauges(_pool);
+        gauge = _gauge;
 
         token0 = IERC20Metadata(_token0);
         token1 = IERC20Metadata(_token1);
@@ -347,7 +358,11 @@ contract AerodromeStandardModulePrivate is
             _token1.balanceOf(address(this)), proportion_, BASE
         );
 
+        // #region get sqrtPriceX96 from oracle price.
+
         (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
+
+        // #endregion get sqrtPriceX96 from oracle price.
 
         ModifyPosition memory modifyPosition;
 
@@ -403,22 +418,21 @@ contract AerodromeStandardModulePrivate is
         uint256 aeroBalance;
         address _gauge = gauge;
 
+        uint256 balance =
+            IERC20Metadata(AERO).balanceOf(address(this));
+
         for (uint256 i; i < length;) {
             uint256 tokenId = _tokenIds.at(i);
 
-            uint256 balance =
-                IERC20Metadata(AERO).balanceOf(address(this));
-
             ICLGauge(_gauge).getReward(tokenId);
-
-            aeroBalance += IERC20Metadata(AERO).balanceOf(
-                address(this)
-            ) - balance;
 
             unchecked {
                 i += 1;
             }
         }
+
+        aeroBalance +=
+            IERC20Metadata(AERO).balanceOf(address(this)) - balance;
 
         // #region take the manager share.
 
@@ -439,7 +453,13 @@ contract AerodromeStandardModulePrivate is
     /// @inheritdoc IAerodromeStandardModulePrivate
     function setReceiver(
         address newReceiver_
-    ) external onlyManager whenNotPaused {
+    ) external whenNotPaused {
+        address manager = metaVault.manager();
+
+        if (IOwnable(manager).owner() != msg.sender) {
+            revert OnlyManagerOwner();
+        }
+
         address oldReceiver = aeroReceiver;
         if (newReceiver_ == address(0)) {
             revert AddressZero();
@@ -459,39 +479,35 @@ contract AerodromeStandardModulePrivate is
         uint256 length = _tokenIds.length();
         address _gauge = gauge;
 
-        uint256 aeroBalance;
+        uint256 aeroBalance =
+            IERC20Metadata(AERO).balanceOf(address(this));
 
         for (uint256 i; i < length;) {
             uint256 tokenId = _tokenIds.at(i);
 
-            uint256 balance =
-                IERC20Metadata(AERO).balanceOf(address(this));
-
             ICLGauge(_gauge).getReward(tokenId);
-
-            aeroBalance += IERC20Metadata(AERO).balanceOf(
-                address(this)
-            ) - balance;
 
             unchecked {
                 i += 1;
             }
         }
 
+        aeroBalance =
+            IERC20Metadata(AERO).balanceOf(address(this)) - aeroBalance;
+
         // #region take the manager share.
 
-        _aeroManagerBalance +=
-            FullMath.mulDiv(aeroBalance, managerFeePIPS, PIPS);
+        uint256 amountToSend = _aeroManagerBalance
+            + FullMath.mulDiv(aeroBalance, managerFeePIPS, PIPS);
+        _aeroManagerBalance = 0;
 
         // #endregion take the manager share.
 
         address _aeroReceiver = aeroReceiver;
 
-        IERC20Metadata(AERO).safeTransfer(
-            _aeroReceiver, _aeroManagerBalance
-        );
+        IERC20Metadata(AERO).safeTransfer(_aeroReceiver, amountToSend);
 
-        emit LogManagerClaim(_aeroReceiver, _aeroManagerBalance);
+        emit LogManagerClaim(_aeroReceiver, amountToSend);
     }
 
     /// @inheritdoc IAerodromeStandardModulePrivate
@@ -505,10 +521,14 @@ contract AerodromeStandardModulePrivate is
         uint256 burn0;
         uint256 burn1;
 
+        // #region get sqrtPriceX96 from oracle price.
+
+        (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
+
+        // #endregion get sqrtPriceX96 from oracle price.
+
         if (length > 0) {
             uint256 aeroAmountCollected;
-
-            (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
 
             uint256 _managerFeePIPS = managerFeePIPS;
 
@@ -590,7 +610,13 @@ contract AerodromeStandardModulePrivate is
                 balance = _token0.balanceOf(address(this));
             }
 
-            if (params_.swapPayload.router == address(metaVault)) {
+            if (
+                params_.swapPayload.router == address(metaVault)
+                    || params_.swapPayload.router
+                        == address(nftPositionManager)
+                    || params_.swapPayload.router == gauge
+                    || params_.swapPayload.router == AERO
+            ) {
                 revert WrongRouter();
             }
 
@@ -626,12 +652,12 @@ contract AerodromeStandardModulePrivate is
 
         // #region increase positions.
 
+        (sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
+
         length = params_.increasePositions.length;
 
         if (length > 0) {
             uint256 aeroAmountCollected;
-
-            (uint160 sqrtPriceX96,,,,,) = IUniswapV3Pool(pool).slot0();
 
             uint256 _managerFeePIPS = managerFeePIPS;
 
@@ -901,18 +927,6 @@ contract AerodromeStandardModulePrivate is
             uint256 aeroAmountCollected
         )
     {
-        // #region principals.
-
-        uint256 amt0;
-        uint256 amt1;
-
-        {
-            (amt0, amt1) =
-                _principal(modifyPosition_.tokenId, sqrtPriceX96_);
-        }
-
-        // #endregion principals.
-
         // #region unstake position.
 
         address _gauge;
@@ -935,48 +949,36 @@ contract AerodromeStandardModulePrivate is
                 )
             );
 
-            amt0 = SafeCast.toUint128(
-                FullMath.mulDiv(
-                    amt0, modifyPosition_.proportion, BASE
-                )
-            );
-            amt1 = SafeCast.toUint128(
-                FullMath.mulDiv(
-                    amt1, modifyPosition_.proportion, BASE
-                )
-            );
-
-            uint24 _maxSlippage = maxSlippage;
-
             INonfungiblePositionManager.DecreaseLiquidityParams memory
                 params = INonfungiblePositionManager
                     .DecreaseLiquidityParams({
                     tokenId: modifyPosition_.tokenId,
                     liquidity: liquidity,
-                    amount0Min: FullMath.mulDiv(amt0, _maxSlippage, PIPS),
-                    amount1Min: FullMath.mulDiv(amt1, _maxSlippage, PIPS),
+                    amount0Min: 0,
+                    amount1Min: 0,
                     deadline: type(uint256).max
                 });
 
-            (amount0ToSend, amount1ToSend) =
-                nftPositionManager.decreaseLiquidity(params);
+            nftPositionManager.decreaseLiquidity(params);
         }
 
-        if (modifyPosition_.proportion == BASE) {
-            nftPositionManager.collect(
-                INonfungiblePositionManager.CollectParams({
-                    tokenId: modifyPosition_.tokenId,
-                    recipient: address(this),
-                    amount0Max: SafeCast.toUint128(amount0ToSend),
-                    amount1Max: SafeCast.toUint128(amount1ToSend)
-                })
-            );
+        (amount0ToSend, amount1ToSend) = nftPositionManager.collect(
+            INonfungiblePositionManager.CollectParams({
+                tokenId: modifyPosition_.tokenId,
+                recipient: address(this),
+                amount0Max: type(uint128).max,
+                amount1Max: type(uint128).max
+            })
+        );
 
+        if (modifyPosition_.proportion == BASE) {
             nftPositionManager.burn(modifyPosition_.tokenId);
 
             _tokenIds.remove(modifyPosition_.tokenId);
         } else {
-            nftPositionManager.approve(_gauge, modifyPosition_.tokenId);
+            nftPositionManager.approve(
+                _gauge, modifyPosition_.tokenId
+            );
             ICLGauge(_gauge).deposit(modifyPosition_.tokenId);
         }
     }
@@ -1006,11 +1008,12 @@ contract AerodromeStandardModulePrivate is
 
         // #region unstake position.
 
-        address gauge;
+        address _gauge;
         {
             uint256 aeroAmountCo;
 
-            (aeroAmountCo, gauge,) = _unstake(modifyPosition_.tokenId);
+            (aeroAmountCo, _gauge,) =
+                _unstake(modifyPosition_.tokenId);
 
             aeroAmountCollected += aeroAmountCo;
         }
@@ -1025,16 +1028,14 @@ contract AerodromeStandardModulePrivate is
         );
 
         {
-            uint24 _maxSlippage = maxSlippage;
-
             INonfungiblePositionManager.IncreaseLiquidityParams memory
                 params = INonfungiblePositionManager
                     .IncreaseLiquidityParams({
                     tokenId: modifyPosition_.tokenId,
                     amount0Desired: amt0,
                     amount1Desired: amt1,
-                    amount0Min: FullMath.mulDiv(amt0, _maxSlippage, PIPS),
-                    amount1Min: FullMath.mulDiv(amt1, _maxSlippage, PIPS),
+                    amount0Min: 0,
+                    amount1Min: 0,
                     deadline: type(uint256).max
                 });
 
@@ -1067,8 +1068,8 @@ contract AerodromeStandardModulePrivate is
             }
         }
 
-        nftPositionManager.approve(gauge, modifyPosition_.tokenId);
-        ICLGauge(gauge).deposit(modifyPosition_.tokenId);
+        nftPositionManager.approve(_gauge, modifyPosition_.tokenId);
+        ICLGauge(_gauge).deposit(modifyPosition_.tokenId);
     }
 
     function _unstake(
@@ -1198,7 +1199,7 @@ contract AerodromeStandardModulePrivate is
         (int24 tickLower, int24 tickUpper, uint128 liquidity) =
             _getPosition(tokenId_);
 
-        return LiquidityAmounts.getAmountsForLiquidity(
+        (amount0, amount1) = LiquidityAmounts.getAmountsForLiquidity(
             sqrtRatioX96_,
             TickMath.getSqrtRatioAtTick(tickLower),
             TickMath.getSqrtRatioAtTick(tickUpper),

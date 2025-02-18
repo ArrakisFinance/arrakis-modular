@@ -2,7 +2,8 @@
 pragma solidity ^0.8.19;
 
 import {IUniswapV3Pool} from "../interfaces/IUniswapV3Pool.sol";
-import {INonfungiblePositionManager} from "../interfaces/INonfungiblePositionManager.sol";
+import {INonfungiblePositionManager} from
+    "../interfaces/INonfungiblePositionManager.sol";
 
 struct Range {
     int24 lowerTick;
