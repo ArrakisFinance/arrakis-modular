@@ -40,11 +40,16 @@ contract UniV4Oracle is IOracleWrapper, IUniV4Oracle {
     address public immutable poolManager;
     uint8 public immutable decimals0;
     uint8 public immutable decimals1;
+    bool public immutable isInversed;
 
     // #endregion immutables.
 
     // #region constructor.
-    constructor(PoolKey memory poolKey_, address poolManager_) {
+    constructor(
+        PoolKey memory poolKey_,
+        address poolManager_,
+        bool isInversed_
+    ) {
         if (poolManager_ == address(0)) {
             revert AddressZero();
         }
@@ -72,16 +77,28 @@ contract UniV4Oracle is IOracleWrapper, IUniV4Oracle {
         decimals1 = IERC20Metadata(
             Currency.unwrap(poolKey_.currency1)
         ).decimals();
+
+        isInversed = isInversed_;
     }
     // #endregion constructor.
 
-    // #region public.
-    function getPrice0()
-        public
-        view
-        override
-        returns (uint256 price0)
-    {
+    function getPrice0() external view returns (uint256 price0) {
+        if (isInversed) {
+            price0 = _getPrice1();
+        } else {
+            price0 = _getPrice0();
+        }
+    }
+
+    function getPrice1() external view returns (uint256 price1) {
+        if (isInversed) {
+            price1 = _getPrice0();
+        } else {
+            price1 = _getPrice1();
+        }
+    }
+
+    function _getPrice0() internal view returns (uint256 price0) {
         (uint160 sqrtPriceX96,,,) =
             IPoolManager(poolManager).getSlot0(pool);
 
@@ -104,12 +121,7 @@ contract UniV4Oracle is IOracleWrapper, IUniV4Oracle {
         }
     }
 
-    function getPrice1()
-        public
-        view
-        override
-        returns (uint256 price1)
-    {
+    function _getPrice1() internal view returns (uint256 price1) {
         (uint160 sqrtPriceX96,,,) =
             IPoolManager(poolManager).getSlot0(pool);
 

@@ -21,6 +21,8 @@ import {
 import {SwapPayload} from "../../src/structs/SUniswapV4.sol";
 import {IArrakisMetaVault} from
     "../../src/interfaces/IArrakisMetaVault.sol";
+import {UniV4Oracle} from "../../src/oracles/UniV4Oracle.sol";
+import {IArrakisLPModule} from "../../src/interfaces/IArrakisLPModule.sol";
 
 // #region interfaces.
 
@@ -741,7 +743,8 @@ contract UniswapV4IntegrationTest is TestWrapper {
             })
         );
 
-        (amount0, amount1) = IArrakisMetaVault(vault).totalUnderlying();
+        (amount0, amount1) =
+            IArrakisMetaVault(vault).totalUnderlying();
 
         vm.stopPrank();
 
@@ -788,6 +791,183 @@ contract UniswapV4IntegrationTest is TestWrapper {
             IUniV4StandardModule(
                 address(IArrakisMetaVault(vault).module())
             ).rebalance(liquidityRanges, swapPayload, 0, 0, 0, 0);
+            vm.stopPrank();
+
+            // #endregion rebalance.
+        }
+
+        // #region second user deposit.
+
+        (sharesToMint, amount0, amount1) = IArrakisPublicVaultRouterV2(
+            router
+        ).getMintAmounts(vault, init0, init1 / 3);
+
+        address secondUser =
+            vm.addr(uint256(keccak256(abi.encode("Second User"))));
+
+        deal(WETH, secondUser, amount1);
+        deal(USDC, secondUser, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(secondUser);
+
+        IERC20Metadata(USDC).approve(router, init0);
+        IERC20Metadata(WETH).approve(router, init1 / 3);
+
+        // #endregion approve router.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: init0,
+                amount1Max: init1 / 3,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint * 99 / 100,
+                vault: vault,
+                receiver: secondUser
+            })
+        );
+
+        vm.stopPrank();
+
+        // #endregion second user deposit.
+    }
+
+    function test_rebalance_then_addLiquidity_true_oracle() public {
+        // #region create vault with true oracle.
+
+        oracle = address(new UniV4Oracle(poolKey, poolManager, false));
+
+        bytes32 salt =
+            keccak256(abi.encode("Public vault Univ4 salt 2"));
+        init0 = 2000e6;
+        init1 = 1e18;
+        maxSlippage = 10_000;
+
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            false,
+            poolKey,
+            IOracleWrapper(oracle),
+            maxSlippage
+        );
+
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
+
+        // #endregion create a vault.
+
+        vm.prank(deployer);
+        vault = IArrakisMetaVaultFactory(factory).deployPublicVault(
+            salt,
+            USDC,
+            WETH,
+            owner,
+            uniswapStandardModuleBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
+
+        // #endregion create vault with true oracle.
+
+        (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
+        IArrakisPublicVaultRouterV2(router).getMintAmounts(
+            vault, init0, init1
+        );
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+
+        deal(WETH, user, amount1);
+
+        deal(USDC, user, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(user);
+
+        IERC20Metadata(USDC).approve(router, amount0);
+        IERC20Metadata(WETH).approve(router, amount1);
+
+        // #endregion approve router.
+
+        // #region add liquidity.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: init0,
+                amount1Max: init1,
+                amount0Min: amount0,
+                amount1Min: amount1,
+                amountSharesMin: sharesToMint,
+                vault: vault,
+                receiver: user
+            })
+        );
+
+        (amount0, amount1) =
+            IArrakisMetaVault(vault).totalUnderlying();
+
+        vm.stopPrank();
+
+        // #endregion add liquidity.
+        {
+            // #region rebalance.
+
+            int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+
+            int24 tickLower = (tick / 10) * 10 - (2 * 10);
+            int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+            IUniV4StandardModule.Range memory range =
+            IUniV4StandardModule.Range({
+                tickLower: tickLower,
+                tickUpper: tickUpper
+            });
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtPriceAtTick(tickLower),
+                TickMath.getSqrtPriceAtTick(tickUpper),
+                amount0,
+                amount1
+            );
+
+            IUniV4StandardModule.LiquidityRange memory liquidityRange =
+            IUniV4StandardModule.LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
+
+            IUniV4StandardModule.LiquidityRange[] memory
+                liquidityRanges =
+                    new IUniV4StandardModule.LiquidityRange[](1);
+
+            liquidityRanges[0] = liquidityRange;
+            SwapPayload memory swapPayload;
+
+            address module =
+                address(IArrakisMetaVault(vault).module());
+
+            IArrakisLPModule(module).validateRebalance(
+                IOracleWrapper(oracle), maxSlippage
+            );
+
+            vm.startPrank(arrakisStandardManager);
+            IUniV4StandardModule(module).rebalance(
+                liquidityRanges, swapPayload, 0, 0, 0, 0
+            );
             vm.stopPrank();
 
             // #endregion rebalance.
