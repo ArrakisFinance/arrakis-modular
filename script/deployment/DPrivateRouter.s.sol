@@ -8,14 +8,16 @@ import {ICreateX} from "./interfaces/ICreateX.sol";
 import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
 import {WethFactory} from "./constants/WethFactory.sol";
 
-import {ArrakisPublicVaultRouter} from
-    "../../src/ArrakisPublicVaultRouter.sol";
+import {ArrakisPrivateVaultRouter} from
+    "../../src/ArrakisPrivateVaultRouter.sol";
 import {NATIVE_COIN} from "../../src/constants/CArrakis.sol";
 
-// Router : 0x72aa2C8e6B14F30131081401Fa999fC964A66041
-contract DRouter is CreateXScript {
-    uint88 public version =
-        uint88(uint256(keccak256(abi.encode("Router version 1"))));
+// Private Router Test : 0x42dEa2a3911F287391f7B4c97dF12912A5831189
+// Private Router : 0xEa9702Cf19BB348F17155E92357beF1Ed6F080B3
+contract DPrivateRouter is CreateXScript {
+    uint88 public version = uint88(
+        uint256(keccak256(abi.encode("Private Router version 1")))
+    );
 
     address public constant factory =
         0x820FB8127a689327C863de8433278d6181123982;
@@ -25,8 +27,6 @@ contract DRouter is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        address owner = ArrakisRoles.getOwner();
-
         address weth = WethFactory.getWeth();
 
         console.logString("WETH :");
@@ -34,11 +34,13 @@ contract DRouter is CreateXScript {
 
         vm.startBroadcast();
 
+        address owner = msg.sender;
+
         console.logString("Deployer :");
         console.logAddress(msg.sender);
 
         bytes memory initCode = abi.encodePacked(
-            type(ArrakisPublicVaultRouter).creationCode,
+            type(ArrakisPrivateVaultRouter).creationCode,
             abi.encode(NATIVE_COIN, permit2, owner, factory, weth)
         );
 
@@ -46,13 +48,9 @@ contract DRouter is CreateXScript {
             abi.encodePacked(msg.sender, hex"00", bytes11(version))
         );
 
-        bytes memory payload = abi.encodeWithSelector(
-            ICreateX.deployCreate3.selector, salt, initCode
-        );
-
         address router = computeCreate3Address(salt, msg.sender);
 
-        console.logString("Router Address : ");
+        console.logString("Private Router Address : ");
         console.logAddress(router);
 
         address actualAddr = CreateX.deployCreate3(salt, initCode);

@@ -6,23 +6,23 @@ import {console} from "forge-std/console.sol";
 
 import {IArrakisMetaVault} from
     "../src/interfaces/IArrakisMetaVault.sol";
-import {IOracleWrapper} from "../src/interfaces/IOracleWrapper.sol";
+import {IValantisHOTModule} from
+    "../src/interfaces/IValantisHOTModule.sol";
 import {SetupParams} from "../src/structs/SManager.sol";
 import {ArrakisStandardManager} from
     "../src/ArrakisStandardManager.sol";
-import {TimeLock} from "../src/TimeLock.sol";
+import {IOracleWrapper} from "../src/interfaces/IOracleWrapper.sol";
 
 // For Gnosis chain.
 
-address constant vault = 0xf790870ccF6aE66DdC69f68e6d05d446f1a6ad83;
+address constant vault = 0x4bBFca3EaAC2cDa8c308CEB532a7792B54c8d781;
+// address constant alm = 0xE96fED9054F5DEa8Af4c9E924319a02d5a2a8935;
+// address constant oracle = 0x1DDDEc1cE817bc771b6339E9DE97ae81B3bE0da4;
 address payable constant manager =
     payable(0x2e6E879648293e939aA68bA4c6c129A1Be733bDA);
-address constant timeLock = 0xCFaD8B6981Da1c734352Bd31618040C23FE99117;
-address constant hotOracleWrapper =
-    0x1DDDEc1cE817bc771b6339E9DE97ae81B3bE0da4;
-address constant executor = 0x030DE9fd3ca63AB012f4E22dB595b66C812c8525;
+address constant executor = 0xe012b59a8fC2D18e2C8943106a05C2702640440B;
 
-contract ValantisVaultFive is Script {
+contract ValantisVaultSetupPrivate is Script {
     function setUp() public {}
 
     function run() public {
@@ -31,10 +31,16 @@ contract ValantisVaultFive is Script {
 
         vm.startBroadcast();
 
+        address module = address(IArrakisMetaVault(vault).module());
+
+        // IValantisHOTModule(module).setALMAndManagerFees(alm, oracle);
+
+        // #region manager vault info setup.
+
         (
             ,
             uint256 cooldownPeriod,
-            ,
+            IOracleWrapper oracle,
             uint24 maxDeviation,
             ,
             address stratAnnouncer,
@@ -43,7 +49,7 @@ contract ValantisVaultFive is Script {
 
         SetupParams memory params = SetupParams({
             vault: vault,
-            oracle: IOracleWrapper(hotOracleWrapper),
+            oracle: oracle,
             maxDeviation: maxDeviation,
             cooldownPeriod: cooldownPeriod,
             executor: executor,
@@ -51,15 +57,11 @@ contract ValantisVaultFive is Script {
             maxSlippagePIPS: maxSlippagePIPS
         });
 
-        bytes memory data = abi.encodeWithSelector(
-            ArrakisStandardManager.updateVaultInfo.selector, params
-        );
+        // #endregion manager vault info setup.
 
-        TimeLock(payable(timeLock)).execute(
-            manager, 0, data, bytes32(0), bytes32(0)
-        );
+        ArrakisStandardManager(manager).updateVaultInfo(params);
 
-        console.logString("Valantis Public Vault oracle updated");
+        console.logString("Valantis Private Vault is initialized");
         console.logAddress(vault);
 
         vm.stopBroadcast();

@@ -15,15 +15,15 @@ import {PIPS} from "../src/constants/CArrakis.sol";
 /// on the factory side.
 
 bytes32 constant salt =
-    keccak256(abi.encode("Salt WBTC/USDC vault"));
-address constant token0 = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
-address constant token1 = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    keccak256(abi.encode("Salt WETH/USDC vault Private Test"));
+address constant token0 = 0x4200000000000000000000000000000000000006;
+address constant token1 = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 address constant vaultOwner =
     0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
-address constant pool = 0x0Fc814C9978350d86E03ad3a5BcFc74b02599b13;
+address constant pool = 0xeb573DC5d8394B48C595066AA6e879b7208116B9;
 uint256 constant init0 = 1e8;
-uint256 constant init1 = 61000e6;
+uint256 constant init1 = 3350e6;
 uint24 constant maxSlippage = PIPS / 50;
 address constant oracle = 0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
@@ -34,26 +34,10 @@ address constant stratAnnouncer =
     0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
 address constant valantisUpgradeableBeacon =
-    0xE973Cf1e347EcF26232A95dBCc862AA488b0351b;
+    0x1D0c4451311A70379c59A00830E816F4cf5C6916;
 address constant factory = 0x820FB8127a689327C863de8433278d6181123982;
 
-// Salt for WETH/USDC : "Salt WETH/USDC USDC/WETH vault"
-// Arbitrum TimeLock Address WETH/USDC : 0xCFaD8B6981Da1c734352Bd31618040C23FE99117.
-// Arbitrum ArrakisMetaVaultPublic WETH/USDC : 0xf790870ccF6aE66DdC69f68e6d05d446f1a6ad83.
-// Arbitrum Valantis Module WETH/USDC : 0x06aAd5A57722336C3b04C6515BBC1f83212f5D4a.
-
-// Mainnet TimeLock Address WETH/USDC : 0xCFaD8B6981Da1c734352Bd31618040C23FE99117.
-// Mainnet ArrakisMetaVaultPublic WETH/USDC : 0xf790870ccF6aE66DdC69f68e6d05d446f1a6ad83.
-// Mainnet Valantis Module WETH/USDC : 0x505f0Cc4D88E1B32d3F0F7FBf21258d2B30aD1E5.
-
-// Base TimeLock Address WETH/USDC : 0xCFaD8B6981Da1c734352Bd31618040C23FE99117.
-// Base ArrakisMetaVaultPublic WETH/USDC : 0xf790870ccF6aE66DdC69f68e6d05d446f1a6ad83.
-// Base Valantis Module WETH/USDC : 0xE78311B9e0bBE4EB295AaF298A06e3dDcD3f226B.
-
-// Mainnet TimeLock Address WBTC/USDC : 0xf4f5BFF5837678B59427C5e992cdaFc6a4070A1B.
-// Mainnet ArrakisMetaVaultPublic WBTC/USDC : 0xAdB8a6A0279F50c54cd1a3b5C6BBfCC2094D6338.
-// Mainnet Valantis Module WBTC/USDC : 0xAf1E9f7A08A23c4c22E84881A5Dc0236c801C3FD.
-contract ValantisVaultOne is Script {
+contract ValantisVaultOnePrivate is Script {
     function setUp() public {}
 
     function run() public {
@@ -80,7 +64,7 @@ contract ValantisVaultOne is Script {
         );
 
         address vault = ArrakisMetaVaultFactory(factory)
-            .deployPublicVault(
+            .deployPrivateVault(
             salt,
             token0,
             token1,

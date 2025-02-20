@@ -28,13 +28,9 @@ contract Mint is Script {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
+        vm.startBroadcast();
 
-        address account = vm.addr(privateKey);
-
-        console.log(account);
-
-        vm.startBroadcast(privateKey);
+        console.log(msg.sender);
 
         (uint256 shares, uint256 amount0, uint256 amount1) =
         IArrakisPublicVaultRouter(router).getMintAmounts(

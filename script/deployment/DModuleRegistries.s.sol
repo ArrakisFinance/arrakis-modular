@@ -35,16 +35,12 @@ contract DModuleRegistries is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK");
-
-        address deployer = vm.addr(privateKey);
-
         address owner = ArrakisRoles.getOwner();
 
-        console.logString("Deployer :");
-        console.logAddress(deployer);
+        vm.startBroadcast();
 
-        vm.startBroadcast(privateKey);
+        console.logString("Deployer :");
+        console.logAddress(msg.sender);
 
         // #region public registry.
 
@@ -55,18 +51,21 @@ contract DModuleRegistries is CreateXScript {
 
         bytes32 salt = bytes32(
             abi.encodePacked(
-                deployer, hex"00", bytes11(publicVersion)
+                msg.sender, hex"00", bytes11(publicVersion)
             )
         );
 
-        address publicRegistry = computeCreate3Address(salt, deployer);
+        address publicRegistry =
+            computeCreate3Address(salt, msg.sender);
 
         console.logString("Module Public Registry Address : ");
         console.logAddress(publicRegistry);
 
         address actualAddr = CreateX.deployCreate3(salt, initCode);
 
-        console.logString("Simulation Module Public Registry Address :");
+        console.logString(
+            "Simulation Module Public Registry Address :"
+        );
         console.logAddress(actualAddr);
 
         if (publicRegistry != actualAddr) {
@@ -84,12 +83,12 @@ contract DModuleRegistries is CreateXScript {
 
         salt = bytes32(
             abi.encodePacked(
-                deployer, hex"00", bytes11(privateVersion)
+                msg.sender, hex"00", bytes11(privateVersion)
             )
         );
 
         address privateRegistry =
-            computeCreate3Address(salt, deployer);
+            computeCreate3Address(salt, msg.sender);
 
         console.logString("Module Private Registry Address : ");
         console.logAddress(privateRegistry);

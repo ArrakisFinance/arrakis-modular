@@ -56,16 +56,12 @@ contract DArrakisStandardManager is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK");
-
-        deployer = vm.addr(privateKey);
-
         address proxyAdmin = ArrakisRoles.getAdmin();
 
-        console.logString("Deployer :");
-        console.logAddress(deployer);
+        vm.startBroadcast();
 
-        vm.startBroadcast(privateKey);
+        console.logString("Deployer :");
+        console.logAddress(msg.sender);
 
         address implementation =
             _deployArrakisStandardManagerImpl(guardian);
@@ -92,10 +88,9 @@ contract DArrakisStandardManager is CreateXScript {
         // #endregion test a update.
     }
 
-    function _deployArrakisStandardManagerImpl(address guardian_)
-        internal
-        returns (address implementation)
-    {
+    function _deployArrakisStandardManagerImpl(
+        address guardian_
+    ) internal returns (address implementation) {
         bytes memory initCode = abi.encodePacked(
             type(ArrakisStandardManager).creationCode,
             abi.encode(
@@ -107,10 +102,12 @@ contract DArrakisStandardManager is CreateXScript {
         );
 
         bytes32 salt = bytes32(
-            abi.encodePacked(deployer, hex"00", bytes11(implVersion))
+            abi.encodePacked(
+                msg.sender, hex"00", bytes11(implVersion)
+            )
         );
 
-        implementation = computeCreate3Address(salt, deployer);
+        implementation = computeCreate3Address(salt, msg.sender);
 
         console.logString(
             "Arrakis Standard Manager Implementation Address : "
@@ -119,7 +116,9 @@ contract DArrakisStandardManager is CreateXScript {
 
         address actualAddr = CreateX.deployCreate3(salt, initCode);
 
-        console.logString("Simulation Arrakis Standard Manager Implementation Address :");
+        console.logString(
+            "Simulation Arrakis Standard Manager Implementation Address :"
+        );
         console.logAddress(actualAddr);
 
         if (actualAddr != implementation) {
@@ -137,10 +136,12 @@ contract DArrakisStandardManager is CreateXScript {
         );
 
         bytes32 salt = bytes32(
-            abi.encodePacked(deployer, hex"00", bytes11(proxyVersion))
+            abi.encodePacked(
+                msg.sender, hex"00", bytes11(proxyVersion)
+            )
         );
 
-        proxy = computeCreate3Address(salt, deployer);
+        proxy = computeCreate3Address(salt, msg.sender);
 
         console.logString("Transparent Proxy Address : ");
         console.logAddress(proxy);

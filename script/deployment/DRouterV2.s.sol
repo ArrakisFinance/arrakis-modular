@@ -8,14 +8,14 @@ import {ICreateX} from "./interfaces/ICreateX.sol";
 import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
 import {WethFactory} from "./constants/WethFactory.sol";
 
-import {ArrakisPublicVaultRouter} from
-    "../../src/ArrakisPublicVaultRouter.sol";
+import {ArrakisPublicVaultRouterV2} from
+    "../../src/ArrakisPublicVaultRouterV2.sol";
 import {NATIVE_COIN} from "../../src/constants/CArrakis.sol";
 
-// Router : 0x72aa2C8e6B14F30131081401Fa999fC964A66041
-contract DRouter is CreateXScript {
+// Router V2 : 0x64c3ac1a917953c99ea6a37c8aa8c534b32eb780
+contract DRouterV2 is CreateXScript {
     uint88 public version =
-        uint88(uint256(keccak256(abi.encode("Router version 1"))));
+        uint88(uint256(keccak256(abi.encode("RouterV2 version 1"))));
 
     address public constant factory =
         0x820FB8127a689327C863de8433278d6181123982;
@@ -38,7 +38,7 @@ contract DRouter is CreateXScript {
         console.logAddress(msg.sender);
 
         bytes memory initCode = abi.encodePacked(
-            type(ArrakisPublicVaultRouter).creationCode,
+            type(ArrakisPublicVaultRouterV2).creationCode,
             abi.encode(NATIVE_COIN, permit2, owner, factory, weth)
         );
 
@@ -52,7 +52,7 @@ contract DRouter is CreateXScript {
 
         address router = computeCreate3Address(salt, msg.sender);
 
-        console.logString("Router Address : ");
+        console.logString("Router V2 Address : ");
         console.logAddress(router);
 
         address actualAddr = CreateX.deployCreate3(salt, initCode);
