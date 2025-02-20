@@ -6,8 +6,6 @@ import {CreateXScript} from "./deployment/CreateXScript.sol";
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
-import {StateLibrary} from
-    "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {
     PoolKey, Currency
 } from "@uniswap/v4-core/src/types/PoolKey.sol";
@@ -18,8 +16,6 @@ import {
     PoolIdLibrary
 } from "@uniswap/v4-core/src/types/PoolId.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
-
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {NATIVE_COIN} from "../src/constants/CArrakis.sol";
 import {UniV4Oracle} from "../src/oracles/UniV4Oracle.sol";
@@ -56,7 +52,6 @@ address constant factory = 0x820FB8127a689327C863de8433278d6181123982;
 
 contract DeployV4PrivateVault is CreateXScript {
     using PoolIdLibrary for PoolKey;
-    using StateLibrary for IPoolManager;
 
     function setUp() public {}
 
