@@ -1029,7 +1029,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
             vm.prank(notOwner);
             vm.expectRevert(IWithdrawHelper.Unauthorized.selector);
             IWithdrawHelper(withdrawHelper).withdraw(
-                safe, vault, amount0, amount1, safe
+                safe, vault, amount0, amount1, payable(safe)
             );
         }
 

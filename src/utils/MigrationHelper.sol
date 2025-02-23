@@ -3,14 +3,13 @@ pragma solidity ^0.8.19;
 
 import {IMigrationHelper} from "../interfaces/IMigrationHelper.sol";
 import {ISafe, Operation} from "../interfaces/ISafe.sol";
-import {IPalmTerms} from "../interfaces/IPalmTerms.sol";
+import {IPALMTerms} from "../interfaces/IPALMTerms.sol";
 import {
     IArrakisStandardManager,
     SetupParams
 } from "../interfaces/IArrakisStandardManager.sol";
 import {IArrakisMetaVaultFactory} from
     "../interfaces/IArrakisMetaVaultFactory.sol";
-import {IArrakisV2} from "../interfaces/IArrakisV2.sol";
 import {IArrakisMetaVaultPrivate} from
     "../interfaces/IArrakisMetaVaultPrivate.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
@@ -21,7 +20,6 @@ import {NATIVE_COIN} from "../constants/CArrakis.sol";
 import {IWETH9} from "../interfaces/IWETH9.sol";
 
 import {
-    Currency,
     CurrencyLibrary
 } from "@uniswap/v4-core/src/types/Currency.sol";
 import {IPoolManager} from
@@ -37,10 +35,15 @@ import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 contract MigrationHelper is IMigrationHelper, Ownable {
     // #region immutable.
 
+    /// @inheritdoc IMigrationHelper
     address public immutable palmTerms;
+    /// @inheritdoc IMigrationHelper
     address public immutable factory;
+    /// @inheritdoc IMigrationHelper
     address public immutable manager;
+    /// @inheritdoc IMigrationHelper
     address public immutable poolManager;
+    /// @inheritdoc IMigrationHelper
     address public immutable weth;
 
     // #endregion immutable.
@@ -69,9 +72,18 @@ contract MigrationHelper is IMigrationHelper, Ownable {
         _initializeOwner(owner_);
     }
 
+    /// @inheritdoc IMigrationHelper
     function migrateVault(
         Migration calldata params_
-    ) external onlyOwner returns (address vault) {
+    ) external returns (address vault) {
+        {
+            address owner = owner();
+
+            if (msg.sender != owner && msg.sender != params_.safe) {
+                revert Unauthorized();
+            }
+        }
+
         // #region close term.
 
         InternalStruct memory state;
@@ -84,7 +96,7 @@ contract MigrationHelper is IMigrationHelper, Ownable {
 
         {
             state.payload = abi.encodeWithSelector(
-                IPalmTerms.closeTerm.selector,
+                IPALMTerms.closeTerm.selector,
                 params_.closeTerm.vault,
                 params_.safe,
                 params_.closeTerm.newOwner,
@@ -121,7 +133,6 @@ contract MigrationHelper is IMigrationHelper, Ownable {
 
         // #region create module payload.
 
-        // bytes memory moduleCreationPayload;
         {
             if (
                 params_.poolCreation.poolKey.currency0
@@ -139,7 +150,8 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                         state.token0 = NATIVE_COIN;
                     } else {
                         state.token0 = state.token1;
-                        state.amount0 = state.amount1;
+                        (state.amount0, state.amount1) =
+                            (state.amount1, state.amount0);
                         state.token1 = NATIVE_COIN;
                         state.isInversed = true;
                     }
@@ -154,7 +166,8 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                     state.value = state.amount1;
                     if (NATIVE_COIN < state.token0) {
                         state.token1 = state.token0;
-                        state.amount1 = state.amount0;
+                        (state.amount1, state.amount0) =
+                            (state.amount0, state.amount1);
                         state.token0 = NATIVE_COIN;
                     } else {
                         state.token1 = NATIVE_COIN;
@@ -165,10 +178,7 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 if (state.payload.length > 0) {
                     state.success = ISafe(params_.safe)
                         .execTransactionFromModule(
-                        weth,
-                        0,
-                        state.payload,
-                        Operation.Call
+                        weth, 0, state.payload, Operation.Call
                     );
 
                     if (!state.success) {
@@ -367,14 +377,10 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 address(this)
             );
 
-            state.success = ISafe(params_.safe)
+            ISafe(params_.safe)
                 .execTransactionFromModule(
                 params_.safe, 0, state.payload, Operation.Call
             );
-
-            if (!state.success) {
-                revert UnableModuleErr();
-            }
         }
 
         // #endregion unable the module.

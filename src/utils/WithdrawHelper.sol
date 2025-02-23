@@ -6,21 +6,26 @@ import {ISafe, Operation} from "../interfaces/ISafe.sol";
 import {IArrakisMetaVaultPrivate} from
     "../interfaces/IArrakisMetaVaultPrivate.sol";
 import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
-import {BASE} from "../constants/CArrakis.sol";
+import {BASE, NATIVE_COIN} from "../constants/CArrakis.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
+/// @title Helper contract to withdraw funds from a vault at any ratio.
 contract WithdrawHelper is IWithdrawHelper {
+
+    using Address for address payable;
+
+    /// @inheritdoc IWithdrawHelper
     function withdraw(
         address safe_,
         address vault_,
         uint256 amount0_,
         uint256 amount1_,
-        address receiver_
+        address payable receiver_
     ) external override {
-
         // #region checks.
 
         if(msg.sender != safe_) {
@@ -58,8 +63,20 @@ contract WithdrawHelper is IWithdrawHelper {
         address token0 = IArrakisMetaVault(vault_).token0();
         address token1 = IArrakisMetaVault(vault_).token1();
 
-        uint256 balance0 = IERC20(token0).balanceOf(safe_);
-        uint256 balance1 = IERC20(token1).balanceOf(safe_);
+        uint256 balance0;
+        uint256 balance1;
+
+        if (token0 == NATIVE_COIN) {
+            balance0 = safe_.balance;
+        } else {
+            balance0 = IERC20(token0).balanceOf(safe_);
+        }
+         
+        if (token1 == NATIVE_COIN) {
+            balance1 = safe_.balance;
+        } else {
+            balance1 = IERC20(token1).balanceOf(safe_);
+        }
 
         // #endregion balance of safe.
 
@@ -72,42 +89,71 @@ contract WithdrawHelper is IWithdrawHelper {
                 safe_
             );
 
-            ISafe(safe_).execTransactionFromModule(
+            bool success = ISafe(safe_).execTransactionFromModule(
                 vault_, 0, payload, Operation.Call
             );
+
+            if (!success) {
+                revert WithdrawErr();
+            }
         }
 
         // #endregion withdraw liquidity.
 
-        balance0 = IERC20(token0).balanceOf(safe_) - balance0;
-        balance1 = IERC20(token1).balanceOf(safe_) - balance1;
+        if (token0 == NATIVE_COIN) {
+            balance0 = safe_.balance - balance0;
+        } else {
+            balance0 = IERC20(token0).balanceOf(safe_) - balance0;
+        }
+
+        if (token1 == NATIVE_COIN) {
+            balance1 = safe_.balance - balance1;
+        } else {
+            balance1 = IERC20(token1).balanceOf(safe_) - balance1;
+        }
 
         // #region transfer amount0 and amount1 to receiver.
 
         if (amount0_ > 0) {
             uint256 amountToTransfer =
-                amount0_ > balance0 ? balance0 : amount0_;
-            balance0 -= amountToTransfer;
-            payload = abi.encodeWithSelector(
-                IERC20.transfer.selector, receiver_, amountToTransfer
-            );
+                    amount0_ > balance0 ? balance0 : amount0_;
+                balance0 -= amountToTransfer;
+            if(token0 == NATIVE_COIN) {
+                receiver_.sendValue(amountToTransfer);
+            } else {
+                payload = abi.encodeWithSelector(
+                    IERC20.transfer.selector, receiver_, amountToTransfer
+                );
 
-            ISafe(safe_).execTransactionFromModule(
-                token0, 0, payload, Operation.Call
-            );
+                bool success = ISafe(safe_).execTransactionFromModule(
+                    token0, 0, payload, Operation.Call
+                );
+
+                if (!success) {
+                    revert Transfer0Err();
+                }
+            }
         }
 
         if (amount1_ > 0) {
             uint256 amountToTransfer =
                 amount1_ > balance1 ? balance1 : amount1_;
             balance1 -= amountToTransfer;
-            payload = abi.encodeWithSelector(
-                IERC20.transfer.selector, receiver_, amountToTransfer
-            );
+            if(token1 == NATIVE_COIN) {
+                receiver_.sendValue(amountToTransfer);
+            } else {
+                payload = abi.encodeWithSelector(
+                    IERC20.transfer.selector, receiver_, amountToTransfer
+                );
 
-            ISafe(safe_).execTransactionFromModule(
-                token1, 0, payload, Operation.Call
-            );
+                bool success = ISafe(safe_).execTransactionFromModule(
+                    token1, 0, payload, Operation.Call
+                );
+
+                if (!success) {
+                    revert Transfer0Err();
+                }
+            }
         }
 
         // #endregion transfer amount0 and amount1 to receiver.
@@ -143,12 +189,64 @@ contract WithdrawHelper is IWithdrawHelper {
                 depositors
             );
 
-            ISafe(safe_).execTransactionFromModule(
+            bool success = ISafe(safe_).execTransactionFromModule(
                 vault_, 0, payload, Operation.Call
             );
+
+            if (!success) {
+                revert WhitelistDepositorErr();
+            }
         }
 
         // #endregion check if safe is a depositor and whitelist it if neccesary.
+
+        // #region approve module.
+
+        uint256 value;
+
+        {
+            address module =
+                address(IArrakisMetaVault(vault_).module());
+
+            if(balance0 > 0) {
+                if(token0 != NATIVE_COIN) {
+                    payload = abi.encodeWithSelector(
+                        IERC20.approve.selector, module, balance0
+                    );
+
+                    bool success = ISafe(safe_).execTransactionFromModule(
+                        token0, 0, payload, Operation.Call
+                    );
+
+                    if (!success) {
+                        revert Approval0Err();
+                    }
+                } else {
+                    value = balance0;
+                }
+                
+            }
+
+            if (balance1 > 0) {
+                if(token1 != NATIVE_COIN) {
+                    payload = abi.encodeWithSelector(
+                        IERC20.approve.selector, module, balance1
+                    );
+
+                    bool success = ISafe(safe_).execTransactionFromModule(
+                        token1, 0, payload, Operation.Call
+                    );
+
+                    if (!success) {
+                        revert Approval1Err();
+                    }
+                } else {
+                    value = balance1;
+                }
+            }
+        }
+
+        // #endregion approve module.
 
         // #region deposit left over.
 
@@ -159,11 +257,17 @@ contract WithdrawHelper is IWithdrawHelper {
                 balance1
             );
 
-            ISafe(safe_).execTransactionFromModule(
-                vault_, 0, payload, Operation.Call
+            bool success = ISafe(safe_).execTransactionFromModule(
+                vault_, value, payload, Operation.Call
             );
+
+            if (!success) {
+                revert DepositErr();
+            }
         }
 
         // #endregion deposit left over.
     }
+
+    receive() external payable {}
 }
