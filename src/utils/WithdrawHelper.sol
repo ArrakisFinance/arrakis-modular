@@ -119,7 +119,9 @@ contract WithdrawHelper is IWithdrawHelper {
                     amount0_ > balance0 ? balance0 : amount0_;
                 balance0 -= amountToTransfer;
             if(token0 == NATIVE_COIN) {
-                receiver_.sendValue(amountToTransfer);
+                ISafe(safe_).execTransactionFromModule(
+                    receiver_, amountToTransfer, "", Operation.Call
+                );
             } else {
                 payload = abi.encodeWithSelector(
                     IERC20.transfer.selector, receiver_, amountToTransfer
@@ -140,7 +142,9 @@ contract WithdrawHelper is IWithdrawHelper {
                 amount1_ > balance1 ? balance1 : amount1_;
             balance1 -= amountToTransfer;
             if(token1 == NATIVE_COIN) {
-                receiver_.sendValue(amountToTransfer);
+                ISafe(safe_).execTransactionFromModule(
+                    receiver_, amountToTransfer, "", Operation.Call
+                );
             } else {
                 payload = abi.encodeWithSelector(
                     IERC20.transfer.selector, receiver_, amountToTransfer
