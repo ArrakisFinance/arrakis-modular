@@ -15,7 +15,6 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 /// @title Helper contract to withdraw funds from a vault at any ratio.
 contract WithdrawHelper is IWithdrawHelper {
-
     using Address for address payable;
 
     /// @inheritdoc IWithdrawHelper
@@ -28,7 +27,7 @@ contract WithdrawHelper is IWithdrawHelper {
     ) external override {
         // #region checks.
 
-        if(msg.sender != safe_) {
+        if (msg.sender != safe_) {
             revert Unauthorized();
         }
 
@@ -71,7 +70,7 @@ contract WithdrawHelper is IWithdrawHelper {
         } else {
             balance0 = IERC20(token0).balanceOf(safe_);
         }
-         
+
         if (token1 == NATIVE_COIN) {
             balance1 = safe_.balance;
         } else {
@@ -116,15 +115,17 @@ contract WithdrawHelper is IWithdrawHelper {
 
         if (amount0_ > 0) {
             uint256 amountToTransfer =
-                    amount0_ > balance0 ? balance0 : amount0_;
-                balance0 -= amountToTransfer;
-            if(token0 == NATIVE_COIN) {
+                amount0_ > balance0 ? balance0 : amount0_;
+            balance0 -= amountToTransfer;
+            if (token0 == NATIVE_COIN) {
                 ISafe(safe_).execTransactionFromModule(
                     receiver_, amountToTransfer, "", Operation.Call
                 );
             } else {
                 payload = abi.encodeWithSelector(
-                    IERC20.transfer.selector, receiver_, amountToTransfer
+                    IERC20.transfer.selector,
+                    receiver_,
+                    amountToTransfer
                 );
 
                 bool success = ISafe(safe_).execTransactionFromModule(
@@ -141,13 +142,15 @@ contract WithdrawHelper is IWithdrawHelper {
             uint256 amountToTransfer =
                 amount1_ > balance1 ? balance1 : amount1_;
             balance1 -= amountToTransfer;
-            if(token1 == NATIVE_COIN) {
+            if (token1 == NATIVE_COIN) {
                 ISafe(safe_).execTransactionFromModule(
                     receiver_, amountToTransfer, "", Operation.Call
                 );
             } else {
                 payload = abi.encodeWithSelector(
-                    IERC20.transfer.selector, receiver_, amountToTransfer
+                    IERC20.transfer.selector,
+                    receiver_,
+                    amountToTransfer
                 );
 
                 bool success = ISafe(safe_).execTransactionFromModule(
@@ -212,13 +215,14 @@ contract WithdrawHelper is IWithdrawHelper {
             address module =
                 address(IArrakisMetaVault(vault_).module());
 
-            if(balance0 > 0) {
-                if(token0 != NATIVE_COIN) {
+            if (balance0 > 0) {
+                if (token0 != NATIVE_COIN) {
                     payload = abi.encodeWithSelector(
                         IERC20.approve.selector, module, balance0
                     );
 
-                    bool success = ISafe(safe_).execTransactionFromModule(
+                    bool success = ISafe(safe_)
+                        .execTransactionFromModule(
                         token0, 0, payload, Operation.Call
                     );
 
@@ -228,16 +232,16 @@ contract WithdrawHelper is IWithdrawHelper {
                 } else {
                     value = balance0;
                 }
-                
             }
 
             if (balance1 > 0) {
-                if(token1 != NATIVE_COIN) {
+                if (token1 != NATIVE_COIN) {
                     payload = abi.encodeWithSelector(
                         IERC20.approve.selector, module, balance1
                     );
 
-                    bool success = ISafe(safe_).execTransactionFromModule(
+                    bool success = ISafe(safe_)
+                        .execTransactionFromModule(
                         token1, 0, payload, Operation.Call
                     );
 
@@ -272,6 +276,4 @@ contract WithdrawHelper is IWithdrawHelper {
 
         // #endregion deposit left over.
     }
-
-    receive() external payable {}
 }

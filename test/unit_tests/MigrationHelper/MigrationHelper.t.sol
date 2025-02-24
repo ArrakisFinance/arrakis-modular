@@ -346,6 +346,100 @@ contract MigrationHelperTest is TestWrapper {
         migrationHelper.migrateVault(migration);
     }
 
+    function test_migrate_vault_approval_error_case_0() public {
+        migrationHelper = new MigrationHelper(
+            palmTerms, factory, manager, poolManager, WETH, owner
+        );
+
+        // #region poolKey.
+
+        PoolKey memory poolKey = PoolKey({
+            currency0: Currency.wrap(WETH),
+            currency1: Currency.wrap(USDX),
+            fee: 3000,
+            tickSpacing: 60,
+            hooks: IHooks(address(0))
+        });
+
+        // #endregion poolKey.
+
+        // #region safe mock.
+
+        safe = address(new SafeMock(WETH, USDX));
+        SafeMock(safe).setAmounts(1e18, 0);
+        SafeMock(safe).setRevertStep(4);
+
+        // #endregion safe mock.
+
+        // #region v2 vault.
+
+        ArrakisV2Mock vaultV2 = new ArrakisV2Mock();
+        vaultV2.setTokens(IERC20(WETH), IERC20(USDX));
+
+        // #endregion v2 vault.
+
+        // #region create migration struct.
+
+        MigrationHelper.Migration memory migration;
+
+        migration.poolCreation.poolKey = poolKey;
+        migration.safe = safe;
+        migration.closeTerm.vault = IArrakisV2(address(vaultV2));
+
+        // #endregion create migration struct.
+
+        vm.prank(safe);
+        vm.expectRevert(IMigrationHelper.Approval0Err.selector);
+        migrationHelper.migrateVault(migration);
+    }
+
+    function test_migrate_vault_approval_error_case_1() public {
+        migrationHelper = new MigrationHelper(
+            palmTerms, factory, manager, poolManager, WETH, owner
+        );
+
+        // #region poolKey.
+
+        PoolKey memory poolKey = PoolKey({
+            currency0: CurrencyLibrary.ADDRESS_ZERO,
+            currency1: Currency.wrap(USDX),
+            fee: 3000,
+            tickSpacing: 60,
+            hooks: IHooks(address(0))
+        });
+
+        // #endregion poolKey.
+
+        // #region safe mock.
+
+        safe = address(new SafeMock(USDX, WETH));
+        SafeMock(safe).setAmounts(2740e18, 0);
+        SafeMock(safe).setRevertStep(4);
+
+        // #endregion safe mock.
+
+        // #region v2 vault.
+
+        ArrakisV2Mock vaultV2 = new ArrakisV2Mock();
+        vaultV2.setTokens(IERC20(USDX), IERC20(WETH));
+
+        // #endregion v2 vault.
+
+        // #region create migration struct.
+
+        MigrationHelper.Migration memory migration;
+
+        migration.poolCreation.poolKey = poolKey;
+        migration.safe = safe;
+        migration.closeTerm.vault = IArrakisV2(address(vaultV2));
+
+        // #endregion create migration struct.
+
+        vm.prank(safe);
+        vm.expectRevert(IMigrationHelper.Approval1Err.selector);
+        migrationHelper.migrateVault(migration);
+    }
+
     function test_migrate_vault_depositor_error() public {
         migrationHelper = new MigrationHelper(
             palmTerms, factory, manager, poolManager, WETH, owner
