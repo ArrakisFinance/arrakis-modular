@@ -19,13 +19,10 @@ contract InitRegistries is Script {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
-
-        vm.startBroadcast(privateKey);
-        address deployer = vm.addr(privateKey);
+        vm.startBroadcast();
 
         console.logString("Deployer :");
-        console.logAddress(deployer);
+        console.logAddress(msg.sender);
 
         ModuleRegistry(publicRegistry).initialize(factory);
         ModuleRegistry(privateRegistry).initialize(factory);

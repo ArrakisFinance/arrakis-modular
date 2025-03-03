@@ -18,11 +18,8 @@ contract ValantisExecutor is Script {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
 
-        address account = vm.addr(privateKey);
-
-        vm.startBroadcast(privateKey);
+        vm.startBroadcast();
 
         address hotExecutor =
             address(new HOTExecutor(manager, w3f, owner));

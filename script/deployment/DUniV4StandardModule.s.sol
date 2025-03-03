@@ -62,6 +62,15 @@ import {UpgradeableBeacon} from
 
 // #endregion Unichain.
 
+// #region Base.
+
+// Base Underlying V4 : 0xB2BA4B781EB2e575A928E54c404b67b904A4DBEb
+// Base Uniswap V4 : 0x2Aa0f3154D1e7109AaF681A372589DA318B2BA56
+// Base UniswapV4StandardPrivate : 0x04eAd25447F9371c5c1e2C33645f32aAFEb337dc
+// Base UpgradeableBeacon : 0x97d42db1b71b1c9a811a73ce3505ac00f9f6e5fb
+
+// #endregion Base.
+
 contract DUniV4StandardModule is CreateXScript {
     uint88 public version = uint88(
         uint256(
@@ -82,16 +91,12 @@ contract DUniV4StandardModule is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
-
-        address deployer = vm.addr(privateKey);
-
-        console.logString("Deployer :");
-        console.logAddress(deployer);
-
         address poolManager = getPoolManager();
 
-        vm.startBroadcast(privateKey);
+        vm.startBroadcast();
+
+        console.logString("Deployer :");
+        console.logAddress(msg.sender);
 
         bytes memory initCode = abi.encodePacked(
             type(UniV4StandardModulePrivate).creationCode,
@@ -99,13 +104,15 @@ contract DUniV4StandardModule is CreateXScript {
         );
 
         bytes32 salt = bytes32(
-            abi.encodePacked(deployer, hex"00", bytes11(version))
+            abi.encodePacked(msg.sender, hex"00", bytes11(version))
         );
 
         address uniswapV4StandardPrivate =
-            computeCreate3Address(salt, deployer);
+            computeCreate3Address(salt, msg.sender);
 
-        console.logString("Uniswap V4 Standard Module Private Implementation Address : ");
+        console.logString(
+            "Uniswap V4 Standard Module Private Implementation Address : "
+        );
         console.logAddress(uniswapV4StandardPrivate);
 
         address actualAddr = CreateX.deployCreate3(salt, initCode);
@@ -124,7 +131,9 @@ contract DUniV4StandardModule is CreateXScript {
             arrakisTimeLock
         );
 
-        console.logString("Upgradeable Beacon Uniswap V4 Private Address : ");
+        console.logString(
+            "Upgradeable Beacon Uniswap V4 Private Address : "
+        );
         console.logAddress(upgradeableBeacon);
 
         vm.stopBroadcast();
@@ -162,7 +171,7 @@ contract DUniV4StandardModule is CreateXScript {
             return 0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408;
         }
         // Ink
-        else if (chainId == 57073) {
+        else if (chainId == 57_073) {
             return 0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32;
         }
         // binance

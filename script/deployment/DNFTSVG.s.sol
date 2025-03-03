@@ -6,8 +6,7 @@ import {console} from "forge-std/console.sol";
 import {CreateXScript} from "./CreateXScript.sol";
 import {ICreateX} from "./interfaces/ICreateX.sol";
 
-import {NFTSVG} from
-    "../../src/utils/NFTSVG.sol";
+import {NFTSVG} from "../../src/utils/NFTSVG.sol";
 
 // NFTSVGUtils Base : 0xB0eA63D67c815Dc602ba53ee1dCFEbBA9Ae5aD7b.
 // NFTSVG Base : 0x01C777eDd94411d9e7319cE226299EB8F96A3Ca9.
@@ -18,24 +17,19 @@ contract DNFTSVG is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK");
-
-        address deployer = vm.addr(privateKey);
+        vm.startBroadcast();
 
         console.logString("Deployer :");
-        console.logAddress(deployer);
+        console.logAddress(msg.sender);
 
-        vm.startBroadcast(privateKey);
-
-        bytes memory initCode = abi.encodePacked(
-            type(NFTSVG).creationCode
-        );
+        bytes memory initCode =
+            abi.encodePacked(type(NFTSVG).creationCode);
 
         bytes32 salt = bytes32(
-            abi.encodePacked(deployer, hex"00", bytes11(version))
+            abi.encodePacked(msg.sender, hex"00", bytes11(version))
         );
 
-        address nftSVG = computeCreate3Address(salt, deployer);
+        address nftSVG = computeCreate3Address(salt, msg.sender);
 
         console.logString("NFTSVG Address : ");
         console.logAddress(nftSVG);
