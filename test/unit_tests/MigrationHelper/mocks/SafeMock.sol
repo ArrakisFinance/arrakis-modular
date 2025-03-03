@@ -16,8 +16,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {StdCheats} from "forge-std/StdCheats.sol";
 
-import {console} from "forge-std/console.sol";
-
 contract SafeMock is ISafe, StdCheats {
     address public immutable token0;
     address public immutable token1;
@@ -114,16 +112,6 @@ contract SafeMock is ISafe, StdCheats {
             return true;
         }
 
-        if (selector == IERC20.approve.selector) {
-            // Nothing to do here.
-
-            if (revertStep == 4) {
-                return false;
-            }
-
-            return true;
-        }
-
         if (selector == IArrakisMetaVaultPrivate.deposit.selector) {
             // Nothing to do here.
 
@@ -165,6 +153,25 @@ contract SafeMock is ISafe, StdCheats {
             }
 
             return true;
+        }
+    }
+
+    function execTransactionFromModuleReturnData(
+        address to,
+        uint256 value,
+        bytes calldata data,
+        Operation operation
+    ) external returns (bool success, bytes memory returnData) {
+        bytes4 selector = bytes4(data[:4]);
+
+        if (selector == IERC20.approve.selector) {
+            // Nothing to do here.
+
+            if (revertStep == 4) {
+                return (false, "");
+            }
+
+            return (true, "");
         }
     }
 }

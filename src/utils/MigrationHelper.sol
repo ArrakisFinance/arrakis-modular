@@ -19,20 +19,35 @@ import {IUniV4StandardModule} from
 import {NATIVE_COIN} from "../constants/CArrakis.sol";
 import {IWETH9} from "../interfaces/IWETH9.sol";
 
-import {
-    CurrencyLibrary
-} from "@uniswap/v4-core/src/types/Currency.sol";
+// #region v4.
+
+import {CurrencyLibrary} from
+    "@uniswap/v4-core/src/types/Currency.sol";
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {StateLibrary} from
+    "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {
+    PoolId,
+    PoolIdLibrary
+} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+
+// #endregion v4.
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
+import {console} from "forge-std/console.sol";
+
 /// @title migration contract that will help migrate from V2 palm vault
 /// to modular private vault with uniswap v4 module.
 /// #@dev this contract intend to be used as a safe module.
 contract MigrationHelper is IMigrationHelper, Ownable {
+    using StateLibrary for IPoolManager;
+    using PoolIdLibrary for PoolKey;
+
     // #region immutable.
 
     /// @inheritdoc IMigrationHelper
@@ -122,11 +137,22 @@ contract MigrationHelper is IMigrationHelper, Ownable {
 
         // #region create pool on v4 if needed.
 
-        if (params_.poolCreation.createPool) {
-            IPoolManager(poolManager).initialize(
-                params_.poolCreation.poolKey,
-                params_.poolCreation.sqrtPriceX96
-            );
+        {
+            PoolId poolId = params_.poolCreation.poolKey.toId();
+
+            (uint160 price,,,) =
+                IPoolManager(poolManager).getSlot0(poolId);
+
+            if (price == 0) {
+                if (params_.poolCreation.sqrtPriceX96 == 0) {
+                    revert InvalidSqrtPrice();
+                }
+
+                IPoolManager(poolManager).initialize(
+                    params_.poolCreation.poolKey,
+                    params_.poolCreation.sqrtPriceX96
+                );
+            }
         }
 
         // #endregion create pool on v4 if needed.
@@ -213,8 +239,8 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 params_.vaultCreation.maxSlippage
             );
 
-            vault = IArrakisMetaVaultFactory(factory)
-                .deployPrivateVault(
+            state.payload = abi.encodeWithSelector(
+                IArrakisMetaVaultFactory.deployPrivateVault.selector,
                 params_.vaultCreation.salt,
                 state.token0,
                 state.token1,
@@ -223,6 +249,15 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 moduleCreationPayload,
                 initManagementPayload
             );
+
+            state.success = ISafe(params_.safe)
+                .execTransactionFromModule(
+                factory, 0, state.payload, Operation.Call
+            );
+
+            if (!state.success) {
+                revert VaultCreationErr();
+            }
         }
 
         // #endregion create modular vault.
@@ -261,10 +296,14 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                     IERC20.approve.selector, module, state.amount0
                 );
 
-                state.success = ISafe(params_.safe)
-                    .execTransactionFromModule(
+                bytes memory returnData;
+
+                (state.success, returnData) = ISafe(params_.safe)
+                    .execTransactionFromModuleReturnData(
                     state.token0, 0, state.payload, Operation.Call
                 );
+
+                console.logBytes(returnData);
 
                 if (!state.success) {
                     revert Approval0Err();
@@ -276,10 +315,14 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                     IERC20.approve.selector, module, state.amount1
                 );
 
-                state.success = ISafe(params_.safe)
-                    .execTransactionFromModule(
+                bytes memory returnData;
+
+                (state.success, returnData) = ISafe(params_.safe)
+                    .execTransactionFromModuleReturnData(
                     state.token1, 0, state.payload, Operation.Call
                 );
+
+                console.logBytes(returnData);
 
                 if (!state.success) {
                     revert Approval1Err();
@@ -368,19 +411,20 @@ contract MigrationHelper is IMigrationHelper, Ownable {
         // #region unable the module.
 
         {
-            (, address prevModule) = ISafe(params_.safe)
-                .getModulesPaginated(address(this), 1);
-
             state.payload = abi.encodeWithSelector(
                 ISafe.disableModule.selector,
-                prevModule,
+                address(0x1), // SENTINEL_MODULES.
                 address(this)
             );
 
-            ISafe(params_.safe)
+            state.success = ISafe(params_.safe)
                 .execTransactionFromModule(
                 params_.safe, 0, state.payload, Operation.Call
             );
+
+            if (!state.success) {
+                revert UnableModuleErr();
+            }
         }
 
         // #endregion unable the module.

@@ -1415,7 +1415,6 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         });
 
         migration.poolCreation.sqrtPriceX96 = 0;
-        migration.poolCreation.createPool = false;
 
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));
@@ -1522,7 +1521,6 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         });
 
         migration.poolCreation.sqrtPriceX96 = sqrtPrice;
-        migration.poolCreation.createPool = true;
 
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));
@@ -1622,7 +1620,6 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         migration.poolCreation.poolKey = poolKey;
 
         migration.poolCreation.sqrtPriceX96 = sqrtPrice;
-        migration.poolCreation.createPool = true;
 
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));
@@ -1730,7 +1727,6 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         migration.poolCreation.poolKey = poolKey;
 
         migration.poolCreation.sqrtPriceX96 = sqrtPrice;
-        migration.poolCreation.createPool = true;
 
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));
@@ -1860,7 +1856,6 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         });
 
         migration.poolCreation.sqrtPriceX96 = 0;
-        migration.poolCreation.createPool = false;
 
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));

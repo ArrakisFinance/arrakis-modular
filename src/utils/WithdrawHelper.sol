@@ -117,8 +117,9 @@ contract WithdrawHelper is IWithdrawHelper {
             uint256 amountToTransfer =
                 amount0_ > balance0 ? balance0 : amount0_;
             balance0 -= amountToTransfer;
+            bool success;
             if (token0 == NATIVE_COIN) {
-                ISafe(safe_).execTransactionFromModule(
+                success = ISafe(safe_).execTransactionFromModule(
                     receiver_, amountToTransfer, "", Operation.Call
                 );
             } else {
@@ -128,13 +129,13 @@ contract WithdrawHelper is IWithdrawHelper {
                     amountToTransfer
                 );
 
-                bool success = ISafe(safe_).execTransactionFromModule(
+                success = ISafe(safe_).execTransactionFromModule(
                     token0, 0, payload, Operation.Call
                 );
+            }
 
-                if (!success) {
-                    revert Transfer0Err();
-                }
+            if (!success) {
+                revert Transfer0Err();
             }
         }
 
@@ -142,8 +143,9 @@ contract WithdrawHelper is IWithdrawHelper {
             uint256 amountToTransfer =
                 amount1_ > balance1 ? balance1 : amount1_;
             balance1 -= amountToTransfer;
+            bool success;
             if (token1 == NATIVE_COIN) {
-                ISafe(safe_).execTransactionFromModule(
+                success = ISafe(safe_).execTransactionFromModule(
                     receiver_, amountToTransfer, "", Operation.Call
                 );
             } else {
@@ -153,13 +155,13 @@ contract WithdrawHelper is IWithdrawHelper {
                     amountToTransfer
                 );
 
-                bool success = ISafe(safe_).execTransactionFromModule(
+                success = ISafe(safe_).execTransactionFromModule(
                     token1, 0, payload, Operation.Call
                 );
+            }
 
-                if (!success) {
-                    revert Transfer0Err();
-                }
+            if (!success) {
+                revert Transfer0Err();
             }
         }
 

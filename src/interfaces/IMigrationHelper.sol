@@ -36,7 +36,6 @@ interface IMigrationHelper {
     struct PoolCreation {
         PoolKey poolKey;
         uint160 sqrtPriceX96;
-        bool createPool;
     }
 
     /// @notice Struct containing informations about the new
@@ -83,6 +82,12 @@ interface IMigrationHelper {
     error ChangeExecutorErr();
     /// @notice Error emitted when withdrawing ETH from WETH sm fails.
     error WithdrawETH();
+    /// @notice Error emitted when pool creation fails due to initial sqrtPrice not provided by payload.
+    error InvalidSqrtPrice();
+    /// @notice Error emitted when vault creation fails.
+    error VaultCreationErr();
+    /// @notice Error emitted when disable module fails.
+    error UnableModuleErr();
     // #endregion errors.
 
     // #region functions.

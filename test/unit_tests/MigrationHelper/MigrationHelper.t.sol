@@ -388,6 +388,8 @@ contract MigrationHelperTest is TestWrapper {
 
         // #endregion create migration struct.
 
+        console.log("TOTO");
+
         vm.prank(safe);
         vm.expectRevert(IMigrationHelper.Approval0Err.selector);
         migrationHelper.migrateVault(migration);
