@@ -11,6 +11,9 @@ import {IArrakisMetaVaultPrivate} from
     "../../../../src/interfaces/IArrakisMetaVaultPrivate.sol";
 import {IArrakisStandardManager} from
     "../../../../src/interfaces/IArrakisStandardManager.sol";
+import {IArrakisMetaVaultFactory} from
+    "../../../../src/interfaces/IArrakisMetaVaultFactory.sol";
+import {IArrakisLPModule} from "../../../../src/interfaces/IArrakisLPModule.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -168,10 +171,23 @@ contract SafeMock is ISafe, StdCheats {
             // Nothing to do here.
 
             if (revertStep == 4) {
-                return (false, "");
+                return (false, abi.encode(false));
             }
 
-            return (true, "");
+            return (true, abi.encode(true));
         }
+
+        if (selector == IArrakisMetaVaultFactory.deployPrivateVault.selector) {
+            if (revertStep == 9) {
+                return (false, "");
+            }
+            return (true, abi.encode(address(new MetaVaultMock())));
+        }
+    }
+}
+
+contract MetaVaultMock {
+    function module() external view returns (IArrakisLPModule) {
+        return IArrakisLPModule(0xa0Cb889707d426A7A386870A03bc70d1b0697598);
     }
 }

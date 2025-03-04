@@ -21,6 +21,7 @@ import {
     CurrencyLibrary
 } from "@uniswap/v4-core/src/types/Currency.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
+import {PoolManager} from "@uniswap/v4-core/src/PoolManager.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -74,7 +75,7 @@ contract MigrationHelperTest is TestWrapper {
         palmTerms =
             vm.addr(uint256(keccak256(abi.encode("PALMTerms"))));
         poolManager =
-            vm.addr(uint256(keccak256(abi.encode("PoolManager"))));
+            _deployPoolManager();
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
 
         safe = address(new SafeMock(WETH, USDC));
@@ -193,6 +194,7 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
+        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -240,6 +242,7 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
+        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -287,6 +290,7 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
+        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -334,6 +338,7 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
+        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -383,12 +388,12 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
+        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
         // #endregion create migration struct.
-
-        console.log("TOTO");
 
         vm.prank(safe);
         vm.expectRevert(IMigrationHelper.Approval0Err.selector);
@@ -432,6 +437,7 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
+        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -479,6 +485,7 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
+        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -526,6 +533,7 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
+        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
         migration.rebalancePayloads = new bytes[](1);
@@ -574,6 +582,7 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
+        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
         migration.rebalancePayloads = new bytes[](1);
@@ -586,4 +595,12 @@ contract MigrationHelperTest is TestWrapper {
     }
 
     // #endregion test migrate vault function.
+
+    function _deployPoolManager() internal returns (address pm) {
+        address poolManagerOwner = vm.addr(
+            uint256(keccak256(abi.encode("PoolManagerOwner")))
+        );
+
+        pm = address(new PoolManager(poolManagerOwner));
+    }
 }

@@ -39,8 +39,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 
-import {console} from "forge-std/console.sol";
-
 /// @title migration contract that will help migrate from V2 palm vault
 /// to modular private vault with uniswap v4 module.
 /// #@dev this contract intend to be used as a safe module.
@@ -250,10 +248,14 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 initManagementPayload
             );
 
-            state.success = ISafe(params_.safe)
-                .execTransactionFromModule(
+            bytes memory returnData;
+
+            (state.success, returnData) = ISafe(params_.safe)
+                .execTransactionFromModuleReturnData(
                 factory, 0, state.payload, Operation.Call
             );
+
+            vault = abi.decode(returnData, (address));
 
             if (!state.success) {
                 revert VaultCreationErr();
@@ -303,11 +305,17 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                     state.token0, 0, state.payload, Operation.Call
                 );
 
-                console.logBytes(returnData);
+                if(returnData.length > 0) {
+                    bool transferSuccessful = abi.decode(returnData, (bool));
 
-                if (!state.success) {
-                    revert Approval0Err();
-                }
+                    if (!state.success || !transferSuccessful) {   
+                        revert Approval0Err();
+                    }
+                } else {
+                    if (!state.success || address(state.token0).code.length == 0) {
+                        revert Approval0Err();
+                    }
+                }                
             }
 
             if (state.amount1 > 0 && state.token1 != NATIVE_COIN) {
@@ -322,10 +330,16 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                     state.token1, 0, state.payload, Operation.Call
                 );
 
-                console.logBytes(returnData);
+                if(returnData.length > 0) {
+                    bool transferSuccessful = abi.decode(returnData, (bool));
 
-                if (!state.success) {
-                    revert Approval1Err();
+                    if (!state.success || !transferSuccessful) {   
+                        revert Approval1Err();
+                    }
+                } else {
+                    if (!state.success || address(state.token1).code.length == 0) {
+                        revert Approval1Err();
+                    }
                 }
             }
 
