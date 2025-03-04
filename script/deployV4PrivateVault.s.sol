@@ -37,29 +37,26 @@ enum OracleDeployment {
 
 // #endregion enums.
 
-address constant token0 = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
-address constant token1 = NATIVE_COIN;
-uint24 constant fee = 2750;
-int24 constant tickSpacing = 55;
+address constant token0 = address(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913);
+address constant token1 = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+uint24 constant fee = 500;
+int24 constant tickSpacing = 10;
 address constant hooks = address(0);
 int24 constant tick = 0;
 uint160 constant sqrtPrice = 0;
 
 bool constant isInversed = true;
 
-bytes32 constant salt =
-    keccak256(abi.encode("Mainnet ETH/AAVE Uni V4 private vault v2"));
-address constant vaultOwner =
-    0x5108EF86cF493905BcD35A3736e4B46DeCD7de58;
+bytes32 constant salt = keccak256(abi.encode("Salt To Define"));
+address constant vaultOwner = address(0xE652c76246d3b0832E95200f03CD90E314192972);
 uint256 constant init0 = 1;
 uint256 constant init1 = 1;
-uint24 constant maxSlippage = TEN_PERCENT / 2;
+uint24 constant maxSlippage = 100;
 
-uint24 constant maxDeviation = TEN_PERCENT;
-uint256 constant cooldownPeriod = 60;
-address constant executor = 0xe012b59a8fC2D18e2C8943106a05C2702640440B;
-address constant stratAnnouncer =
-    0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
+uint24 constant maxDeviation = 100;
+uint256 constant cooldownPeriod = 300;
+address constant executor = address(0xe012b59a8fC2D18e2C8943106a05C2702640440B);
+address constant stratAnnouncer = address(0x9403de4457C3a28F3CA8190bfbb4e1B1Cc88D978);
 
 address constant factory = 0x820FB8127a689327C863de8433278d6181123982;
 
