@@ -71,6 +71,15 @@ import {UpgradeableBeacon} from
 
 // #endregion Base.
 
+// #region Arbitrum.
+
+// Arbitrum Underlying V4 : 0xB2BA4B781EB2e575A928E54c404b67b904A4DBEb
+// Arbitrum Uniswap V4 : 0x2Aa0f3154D1e7109AaF681A372589DA318B2BA56
+// Arbitrum UniswapV4StandardPrivate : 0x04eAd25447F9371c5c1e2C33645f32aAFEb337dc
+// Arbitrum UpgradeableBeacon : 0xe1a76410dfB11d6C60a43838FA853519f13dEef4
+
+// #endregion Arbitrum.
+
 contract DUniV4StandardModule is CreateXScript {
     uint88 public version = uint88(
         uint256(
