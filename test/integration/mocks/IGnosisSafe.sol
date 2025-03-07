@@ -47,4 +47,6 @@ interface IGnosisSafe {
     ) external view returns (bytes32 txHash);
 
     function nonce() external view returns (uint256);
+
+    function isModuleEnabled(address module) external view returns (bool);
 }

@@ -1892,6 +1892,8 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         vm.prank(GELOwner);
         IGnosisSafe(GELOwner).enableModule(address(migrationHelper));
 
+        assertEq(IGnosisSafe(GELOwner).isModuleEnabled(address(migrationHelper)), true);
+
         // #endregion whitelist migration module.
 
         // #region do migration.
@@ -1900,6 +1902,8 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         migrationHelper.migrateVault(migration);
 
         // #endregion do migration.
+
+        assertEq(IGnosisSafe(GELOwner).isModuleEnabled(address(migrationHelper)), false);
     }
 
     // #endregion test migration module constructor.

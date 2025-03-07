@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
 import {IArrakisV2} from "../../../../src/interfaces/IArrakisV2.sol";

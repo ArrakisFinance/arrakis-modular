@@ -118,6 +118,7 @@ contract WithdrawHelper is IWithdrawHelper {
                 amount0_ > balance0 ? balance0 : amount0_;
             balance0 -= amountToTransfer;
             bool success;
+            bytes memory returnData;
             if (token0 == NATIVE_COIN) {
                 success = ISafe(safe_).execTransactionFromModule(
                     receiver_, amountToTransfer, "", Operation.Call
@@ -129,13 +130,23 @@ contract WithdrawHelper is IWithdrawHelper {
                     amountToTransfer
                 );
 
-                success = ISafe(safe_).execTransactionFromModule(
+                (success, returnData) = ISafe(safe_)
+                    .execTransactionFromModuleReturnData(
                     token0, 0, payload, Operation.Call
                 );
             }
 
             if (!success) {
                 revert Transfer0Err();
+            }
+
+            if (returnData.length > 0) {
+                bool transferSuccessful =
+                    abi.decode(returnData, (bool));
+
+                if (!transferSuccessful) {
+                    revert Transfer0Err();
+                }
             }
         }
 
@@ -144,6 +155,7 @@ contract WithdrawHelper is IWithdrawHelper {
                 amount1_ > balance1 ? balance1 : amount1_;
             balance1 -= amountToTransfer;
             bool success;
+            bytes memory returnData;
             if (token1 == NATIVE_COIN) {
                 success = ISafe(safe_).execTransactionFromModule(
                     receiver_, amountToTransfer, "", Operation.Call
@@ -155,13 +167,23 @@ contract WithdrawHelper is IWithdrawHelper {
                     amountToTransfer
                 );
 
-                success = ISafe(safe_).execTransactionFromModule(
+                (success, returnData) = ISafe(safe_)
+                    .execTransactionFromModuleReturnData(
                     token1, 0, payload, Operation.Call
                 );
             }
 
             if (!success) {
-                revert Transfer0Err();
+                revert Transfer1Err();
+            }
+
+            if (returnData.length > 0) {
+                bool transferSuccessful =
+                    abi.decode(returnData, (bool));
+
+                if (!transferSuccessful) {
+                    revert Transfer1Err();
+                }
             }
         }
 
@@ -223,8 +245,9 @@ contract WithdrawHelper is IWithdrawHelper {
                         IERC20.approve.selector, module, balance0
                     );
 
-                    bool success = ISafe(safe_)
-                        .execTransactionFromModule(
+                    (bool success, bytes memory returnData) = ISafe(
+                        safe_
+                    ).execTransactionFromModuleReturnData(
                         token0, 0, payload, Operation.Call
                     );
 
@@ -242,8 +265,9 @@ contract WithdrawHelper is IWithdrawHelper {
                         IERC20.approve.selector, module, balance1
                     );
 
-                    bool success = ISafe(safe_)
-                        .execTransactionFromModule(
+                    (bool success, bytes memory returnData) = ISafe(
+                        safe_
+                    ).execTransactionFromModuleReturnData(
                         token1, 0, payload, Operation.Call
                     );
 

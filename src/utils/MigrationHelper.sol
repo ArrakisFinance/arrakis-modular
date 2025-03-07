@@ -255,11 +255,11 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                 factory, 0, state.payload, Operation.Call
             );
 
-            vault = abi.decode(returnData, (address));
-
             if (!state.success) {
                 revert VaultCreationErr();
             }
+
+            vault = abi.decode(returnData, (address));
         }
 
         // #endregion create modular vault.
@@ -305,17 +305,18 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                     state.token0, 0, state.payload, Operation.Call
                 );
 
-                if(returnData.length > 0) {
-                    bool transferSuccessful = abi.decode(returnData, (bool));
+                if (!state.success) {
+                    revert Approval0Err();
+                }
 
-                    if (!state.success || !transferSuccessful) {   
+                if (returnData.length > 0) {
+                    bool transferSuccessful =
+                        abi.decode(returnData, (bool));
+
+                    if (!transferSuccessful) {
                         revert Approval0Err();
                     }
-                } else {
-                    if (!state.success || address(state.token0).code.length == 0) {
-                        revert Approval0Err();
-                    }
-                }                
+                }
             }
 
             if (state.amount1 > 0 && state.token1 != NATIVE_COIN) {
@@ -330,14 +331,15 @@ contract MigrationHelper is IMigrationHelper, Ownable {
                     state.token1, 0, state.payload, Operation.Call
                 );
 
-                if(returnData.length > 0) {
-                    bool transferSuccessful = abi.decode(returnData, (bool));
+                if (!state.success) {
+                    revert Approval1Err();
+                }
 
-                    if (!state.success || !transferSuccessful) {   
-                        revert Approval1Err();
-                    }
-                } else {
-                    if (!state.success || address(state.token1).code.length == 0) {
+                if (returnData.length > 0) {
+                    bool transferSuccessful =
+                        abi.decode(returnData, (bool));
+
+                    if (!transferSuccessful) {
                         revert Approval1Err();
                     }
                 }

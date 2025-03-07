@@ -13,7 +13,9 @@ import {IArrakisStandardManager} from
     "../../../../src/interfaces/IArrakisStandardManager.sol";
 import {IArrakisMetaVaultFactory} from
     "../../../../src/interfaces/IArrakisMetaVaultFactory.sol";
-import {IArrakisLPModule} from "../../../../src/interfaces/IArrakisLPModule.sol";
+import {IArrakisLPModule} from
+    "../../../../src/interfaces/IArrakisLPModule.sol";
+import {NATIVE_COIN} from "../../../../src/constants/CArrakis.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -69,33 +71,38 @@ contract SafeMock is ISafe, StdCheats {
         bytes calldata data_,
         Operation operation_
     ) external override returns (bool success) {
-        bytes4 selector = bytes4(data_[:4]);
+        if (data_.length == 0) {
+            if (revertStep == 2) {
+                return false;
+            }
 
-        if (selector == IPALMTerms.closeTerm.selector) {
-            (
-                address vault,
-                address to,
-                address newOwner,
-                address newManager
-            ) = abi.decode(
-                data_[4:], (address, address, address, address)
-            );
-
-            deal(token0, to, amount0);
-            deal(token1, to, amount1);
-
-            if (revertStep == 1) {
+            if (revertStep == 8) {
                 return false;
             }
 
             return true;
         }
 
-        if (selector == IWETH9.withdraw.selector) {
-            (uint256 amount) = abi.decode(data_[4:], (uint256));
-            deal(address(this), amount);
+        bytes4 selector = bytes4(data_[:4]);
 
-            if (revertStep == 2) {
+        if (selector == IArrakisMetaVaultPrivate.withdraw.selector) {
+            if (amount0 > 0) {
+                if (NATIVE_COIN == token0) {
+                    deal(address(this), amount0);
+                } else {
+                    deal(token0, address(this), amount0);
+                }
+            }
+
+            if (amount1 > 0) {
+                if (NATIVE_COIN == token1) {
+                    deal(address(this), amount1);
+                } else {
+                    deal(token1, address(this), amount1);
+                }
+            }
+
+            if (revertStep == 1) {
                 return false;
             }
 
@@ -108,7 +115,7 @@ contract SafeMock is ISafe, StdCheats {
         ) {
             // Nothing to do here.
 
-            if (revertStep == 3) {
+            if (revertStep == 10) {
                 return false;
             }
 
@@ -118,40 +125,7 @@ contract SafeMock is ISafe, StdCheats {
         if (selector == IArrakisMetaVaultPrivate.deposit.selector) {
             // Nothing to do here.
 
-            if (revertStep == 5) {
-                return false;
-            }
-
-            return true;
-        }
-
-        if (selector == IArrakisStandardManager.rebalance.selector) {
-            // Nothing to do here.
-
-            if (revertStep == 6) {
-                return false;
-            }
-
-            return true;
-        }
-
-        if (
-            selector
-                == IArrakisStandardManager.updateVaultInfo.selector
-        ) {
-            // Nothing to do here.
-
-            if (revertStep == 7) {
-                return false;
-            }
-
-            return true;
-        }
-
-        if (selector == ISafe.disableModule.selector) {
-            // Nothing to do here.
-
-            if (revertStep == 8) {
+            if (revertStep == 19) {
                 return false;
             }
 
@@ -167,39 +141,80 @@ contract SafeMock is ISafe, StdCheats {
     ) external returns (bool success, bytes memory returnData) {
         bytes4 selector = bytes4(data[:4]);
 
-        if (selector == IERC20.approve.selector) {
+        if (selector == IERC20.transfer.selector) {
             // Nothing to do here.
 
-            if (revertStep == 4) {
+            if (revertStep == 2) {
                 return (false, abi.encode(true));
             }
 
-            if (revertStep == 10) {
+            if (revertStep == 3) {
                 return (true, abi.encode(false));
             }
 
-            if (revertStep == 11) {
+            if (revertStep == 4) {
                 return (false, abi.encode(false));
             }
 
-            if (revertStep == 12) {
+            if (revertStep == 5) {
+                return (false, "");
+            }
+
+            if (revertStep == 6) {
+                return (false, abi.encode(true));
+            }
+
+            if (revertStep == 7) {
+                return (true, abi.encode(false));
+            }
+
+            if (revertStep == 8) {
+                return (false, abi.encode(false));
+            }
+
+            if (revertStep == 9) {
                 return (false, "");
             }
 
             return (true, abi.encode(true));
         }
 
-        if (selector == IArrakisMetaVaultFactory.deployPrivateVault.selector) {
-            if (revertStep == 9) {
+        if (selector == IERC20.approve.selector) {
+            // Nothing to do here.
+
+            if (revertStep == 11) {
+                return (false, abi.encode(true));
+            }
+
+            if (revertStep == 12) {
+                return (true, abi.encode(false));
+            }
+
+            if (revertStep == 13) {
+                return (false, abi.encode(false));
+            }
+
+            if (revertStep == 14) {
                 return (false, "");
             }
-            return (true, abi.encode(address(new MetaVaultMock())));
-        }
-    }
-}
 
-contract MetaVaultMock {
-    function module() external view returns (IArrakisLPModule) {
-        return IArrakisLPModule(0xa0Cb889707d426A7A386870A03bc70d1b0697598);
+            if (revertStep == 15) {
+                return (false, abi.encode(true));
+            }
+
+            if (revertStep == 16) {
+                return (true, abi.encode(false));
+            }
+
+            if (revertStep == 17) {
+                return (false, abi.encode(false));
+            }
+
+            if (revertStep == 18) {
+                return (false, "");
+            }
+
+            return (true, abi.encode(true));
+        }
     }
 }
