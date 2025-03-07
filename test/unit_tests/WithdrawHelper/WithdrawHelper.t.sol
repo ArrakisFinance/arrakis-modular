@@ -281,6 +281,38 @@ contract WithdrawHelperTest is TestWrapper {
         );
     }
 
+    function testWithdraw_approval1_err_1() public {
+        address receiver = vm.addr(12);
+
+        uint256 amount0ToRemove = 1_000_000;
+        uint256 amount1ToRemove = 10_000_000;
+
+        uint256 total0 = 10_000_000;
+        uint256 total1 = 100_000_000;
+
+        // #region setup.
+
+        safe = address(new SafeMock(NATIVE_COIN, USDX));
+        vault = address(new VaultMock(NATIVE_COIN, USDX));
+
+        // #endregion setup.
+
+        VaultMock(vault).setAmounts(total0, total1);
+
+        SafeMock(safe).setAmounts(amount0ToRemove * 2, amount1ToRemove * 2);
+        SafeMock(safe).setRevertStep(12);
+
+        vm.prank(safe);
+        vm.expectRevert(IWithdrawHelper.Approval1Err.selector);
+        withdrawHelper.withdraw(
+            safe,
+            vault,
+            amount0ToRemove,
+            amount1ToRemove,
+            payable(receiver)
+        );
+    }
+
     function testWithdraw_approval0_err() public {
         address receiver = vm.addr(12);
 
@@ -301,6 +333,38 @@ contract WithdrawHelperTest is TestWrapper {
 
         SafeMock(safe).setAmounts(amount0ToRemove * 2, amount1ToRemove * 2);
         SafeMock(safe).setRevertStep(11);
+
+        vm.prank(safe);
+        vm.expectRevert(IWithdrawHelper.Approval0Err.selector);
+        withdrawHelper.withdraw(
+            safe,
+            vault,
+            amount0ToRemove,
+            amount1ToRemove,
+            payable(receiver)
+        );
+    }
+
+    function testWithdraw_approval0_err_1() public {
+        address receiver = vm.addr(12);
+
+        uint256 amount0ToRemove = 1_000_000;
+        uint256 amount1ToRemove = 10_000_000;
+
+        uint256 total0 = 10_000_000;
+        uint256 total1 = 100_000_000;
+
+        // #region setup.
+
+        safe = address(new SafeMock(USDC, NATIVE_COIN));
+        vault = address(new VaultMock(USDC, NATIVE_COIN));
+
+        // #endregion setup.
+
+        VaultMock(vault).setAmounts(total0, total1);
+
+        SafeMock(safe).setAmounts(amount0ToRemove * 2, amount1ToRemove * 2);
+        SafeMock(safe).setRevertStep(12);
 
         vm.prank(safe);
         vm.expectRevert(IWithdrawHelper.Approval0Err.selector);

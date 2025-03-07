@@ -254,6 +254,15 @@ contract WithdrawHelper is IWithdrawHelper {
                     if (!success) {
                         revert Approval0Err();
                     }
+
+                    if (returnData.length > 0) {
+                        bool transferSuccessful =
+                            abi.decode(returnData, (bool));
+
+                        if (!transferSuccessful) {
+                            revert Approval0Err();
+                        }
+                    }
                 } else {
                     value = balance0;
                 }
@@ -273,6 +282,15 @@ contract WithdrawHelper is IWithdrawHelper {
 
                     if (!success) {
                         revert Approval1Err();
+                    }
+
+                    if (returnData.length > 0) {
+                        bool transferSuccessful =
+                            abi.decode(returnData, (bool));
+
+                        if (!transferSuccessful) {
+                            revert Approval1Err();
+                        }
                     }
                 } else {
                     value = balance1;
