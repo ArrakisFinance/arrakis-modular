@@ -26,18 +26,18 @@ address constant token1 = 0x9a33406165f562E16C3abD82fd1185482E01b49a;
 int24 constant tickSpacing = 200;
 
 bytes32 constant salt =
-    keccak256(abi.encode("Mainnet WETH/TALENT Aerodrome private vault v1"));
+    keccak256(abi.encode("BASE WETH/TALENT Aerodrome private vault"));
 address constant vaultOwner =
-    0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
+    0xaf8C3f1Bd96e44fb68B94bCAc9bdF275db91E70c;
 uint256 constant init0 = 1;
 uint256 constant init1 = 1;
-uint24 constant maxSlippage = TEN_PERCENT / 2;
+uint24 constant maxSlippage = (TEN_PERCENT * 25) / 100;
 
-uint24 constant maxDeviation = TEN_PERCENT;
+uint24 constant maxDeviation = (TEN_PERCENT * 25) / 100;
 uint256 constant cooldownPeriod = 60;
-address constant executor = 0xe012b59a8fC2D18e2C8943106a05C2702640440B;
+address constant executor = 0x420966bCf2A0351F26048cD07076627Cde4f79ac;
 address constant stratAnnouncer =
-    0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
+    0xaf8C3f1Bd96e44fb68B94bCAc9bdF275db91E70c;
 
 address constant upgreadableBeacon = 0x8Dd906EcF9D434A3fBf2d60a14Fbf73d14d4Ea6e;
 
@@ -51,7 +51,7 @@ bytes constant creationCode_chainlinkOracleWrapper = bytes(
 );
 
 OracleDeployment constant oracleDeployment =
-    OracleDeployment.UniV3Oracle;
+    OracleDeployment.DeployedChainlinkOracleWrapper;
 
 uint8 constant token0Decimals = 18;
 uint8 constant token1Decimals = 18;
@@ -62,7 +62,7 @@ bool constant isPriceFeedInversed = false;
 
 uint24 constant twapDuration = 3600;
 
-address constant chainlinkOracleWrapper = 0xa552DfC7c9242A8F63a120901AAec76aC2473398;
+address constant chainlinkOracleWrapper = 0x4Cc1bbD85cF5980560Eda5B24D77C75C1F5b9468;
 
 contract DeployAeroPrivateVault is CreateXScript {
     function setUp() public {}
