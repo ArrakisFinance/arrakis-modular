@@ -10,6 +10,11 @@ import {IAerodromeStandardModulePrivate} from
     "../src/interfaces/IAerodromeStandardModulePrivate.sol";
 import {IArrakisMetaVaultFactory} from
     "../src/interfaces/IArrakisMetaVaultFactory.sol";
+import {IArrakisMetaVault} from
+    "../src/interfaces/IArrakisMetaVault.sol";
+import {IBunkerModule} from "../src/interfaces/IBunkerModule.sol";
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 // #region enums.
 enum OracleDeployment {
@@ -42,6 +47,8 @@ address constant stratAnnouncer =
 address constant upgreadableBeacon = 0x8Dd906EcF9D434A3fBf2d60a14Fbf73d14d4Ea6e;
 
 address constant factory = 0x820FB8127a689327C863de8433278d6181123982;
+address constant nft = 0x44A801e7E2E073bd8bcE4bCCf653239Fa156B762;
+
 address constant pool = 0x346eDb1aAa704dF6dDbfc604724AAFcdC12b2fed;
 address constant aeroReceiver = 0x25CF23B54e25daaE3fe9989a74050b953A343823;
 
@@ -63,6 +70,9 @@ bool constant isPriceFeedInversed = false;
 uint24 constant twapDuration = 3600;
 
 address constant chainlinkOracleWrapper = 0x4Cc1bbD85cF5980560Eda5B24D77C75C1F5b9468;
+
+bool constant sendOwnershipToSafe = false;
+address constant safe = address(0);
 
 contract DeployAeroPrivateVault is CreateXScript {
     function setUp() public {}
@@ -157,7 +167,76 @@ contract DeployAeroPrivateVault is CreateXScript {
         console.logAddress(vault);
 
         // #endregion create private vault.
+        // #region whitelist bunker module.
+
+        if (vaultOwner == msg.sender) {
+            address[] memory beacons = new address[](1);
+            beacons[0] = getBunkerModule();
+
+            bytes[] memory payloads = new bytes[](1);
+            payloads[0] = abi.encodeWithSelector(
+                IBunkerModule.initialize.selector, vault
+            );
+
+            IArrakisMetaVault(vault).whitelistModules(
+                beacons, payloads
+            );
+        }
+
+        // #endregion whitelist bunker module.
+
+        // #region send ownership to safe.
+
+        if (sendOwnershipToSafe) {
+            ERC721(nft).approve(safe, uint256(uint160(vault)));
+            ERC721(nft).safeTransferFrom(
+                msg.sender, safe, uint256(uint160(vault))
+            );
+        }
+
+        // #endregion send ownership to safe.
 
         vm.stopBroadcast();
+    }
+
+    function getBunkerModule() internal view returns (address) {
+        uint256 chainId = block.chainid;
+
+        // mainnet
+        if (chainId == 1) {
+            return 0xFf0474792DEe71935a0CeF1306D93fC1DCF47BD9;
+        }
+        // polygon
+        else if (chainId == 137) {
+            return 0xD4ae05C8928d4850cDD0f800322108E6B1a8F3eB;
+        }
+        // optimism
+        else if (chainId == 10) {
+            return 0x79FC92aFa1Ce5476010644380156790d2fC52168;
+        }
+        // sepolia
+        else if (chainId == 11_155_111) {
+            return 0xB4dA34605c26BA152d465DeB885889070105BB5F;
+        }
+        // base
+        else if (chainId == 8453) {
+            return 0x3025b46A9814a69EAf8699EDf905784Ee22C3ABB;
+        }
+        // Ink
+        else if (chainId == 57_073) {
+            return 0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73;
+        }
+        // Unichain
+        else if (chainId == 130) {
+            return 0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73;
+        }
+        // Arbitrum
+        else if (chainId == 42_161) {
+            return 0xe25F763fa58de798AF2e454e916F527cdD17E885;
+        }
+        // default
+        else {
+            revert("Not supported network!");
+        }
     }
 }
