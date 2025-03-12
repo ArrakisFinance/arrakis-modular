@@ -26,6 +26,11 @@ import {IUniV4StandardModule} from
     "../src/interfaces/IUniV4StandardModule.sol";
 import {IArrakisMetaVaultFactory} from
     "../src/interfaces/IArrakisMetaVaultFactory.sol";
+import {IArrakisMetaVault} from
+    "../src/interfaces/IArrakisMetaVault.sol";
+import {IBunkerModule} from "../src/interfaces/IBunkerModule.sol";
+
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 // IMPORTANT !!! Fill in / check these sensitive varaibles before running script !!!
 
@@ -61,6 +66,7 @@ address constant stratAnnouncer =
     0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
 address constant factory = 0x820FB8127a689327C863de8433278d6181123982;
+address constant nft = 0x44A801e7E2E073bd8bcE4bCCf653239Fa156B762;
 
 OracleDeployment constant oracleDeployment =
     OracleDeployment.UniV4Oracle;
@@ -83,6 +89,9 @@ bool constant isPriceFeedInversed = false;
 // #endregion chainlink oracle wrapper.
 
 address constant chainlinkOracleWrapper = address(0);
+
+bool constant sendOwnershipToSafe = false;
+address constant safe = address(0);
 
 contract DeployV4PrivateVault is CreateXScript {
     using PoolIdLibrary for PoolKey;
@@ -213,6 +222,35 @@ contract DeployV4PrivateVault is CreateXScript {
 
         // #endregion create private vault.
 
+        // #region whitelist bunker module.
+
+        if (vaultOwner == msg.sender) {
+            address[] memory beacons = new address[](1);
+            beacons[0] = getBunkerModule();
+
+            bytes[] memory payloads = new bytes[](1);
+            payloads[0] = abi.encodeWithSelector(
+                IBunkerModule.initialize.selector, vault
+            );
+
+            IArrakisMetaVault(vault).whitelistModules(
+                beacons, payloads
+            );
+        }
+
+        // #endregion whitelist bunker module.
+
+        // #region send ownership to safe.
+
+        if (sendOwnershipToSafe) {
+            ERC721(nft).approve(safe, uint256(uint160(vault)));
+            ERC721(nft).safeTransferFrom(
+                msg.sender, safe, uint256(uint160(vault))
+            );
+        }
+
+        // #endregion send ownership to safe.
+
         vm.stopBroadcast();
     }
 
@@ -250,6 +288,47 @@ contract DeployV4PrivateVault is CreateXScript {
         // Arbitrum
         else if (chainId == 42_161) {
             return 0xe1a76410dfB11d6C60a43838FA853519f13dEef4;
+        }
+        // default
+        else {
+            revert("Not supported network!");
+        }
+    }
+
+    function getBunkerModule() internal view returns (address) {
+        uint256 chainId = block.chainid;
+
+        // mainnet
+        if (chainId == 1) {
+            return 0xFf0474792DEe71935a0CeF1306D93fC1DCF47BD9;
+        }
+        // polygon
+        else if (chainId == 137) {
+            return 0xD4ae05C8928d4850cDD0f800322108E6B1a8F3eB;
+        }
+        // optimism
+        else if (chainId == 10) {
+            return 0x79FC92aFa1Ce5476010644380156790d2fC52168;
+        }
+        // sepolia
+        else if (chainId == 11_155_111) {
+            return 0xB4dA34605c26BA152d465DeB885889070105BB5F;
+        }
+        // base
+        else if (chainId == 8453) {
+            return 0x3025b46A9814a69EAf8699EDf905784Ee22C3ABB;
+        }
+        // Ink
+        else if (chainId == 57_073) {
+            return 0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73;
+        }
+        // Unichain
+        else if (chainId == 130) {
+            return 0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73;
+        }
+        // Arbitrum
+        else if (chainId == 42_161) {
+            return 0xe25F763fa58de798AF2e454e916F527cdD17E885;
         }
         // default
         else {
