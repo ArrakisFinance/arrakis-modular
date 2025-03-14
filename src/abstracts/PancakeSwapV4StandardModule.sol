@@ -18,6 +18,7 @@ import {
     NATIVE_COIN_DECIMALS
 } from "../constants/CArrakis.sol";
 import {PancakeSwapV4} from "../libraries/PancakeSwapV4.sol";
+import {SwapPayload} from "../structs/SPancakeSwapV4.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -305,4 +306,370 @@ abstract contract PancakeSwapV4StandardModule is
     }
 
     // #endregion vault owner functions.
+
+    // #region only manager functions.
+
+    /// @notice function used to set the pool for the module.
+    /// @param poolKey_ pool key of the uniswap v4 pool that will be used by the module.
+    /// @param liquidityRanges_ list of liquidity ranges to be used by the module on the new pool.
+    /// @param swapPayload_ swap payload to be used during rebalance.
+    /// @param minBurn0_ minimum amount of token0 to burn.
+    /// @param minBurn1_ minimum amount of token1 to burn.
+    /// @param minDeposit0_ minimum amount of token0 to deposit.
+    /// @param minDeposit1_ minimum amount of token1 to deposit.
+    function setPool(
+        PoolKey calldata poolKey_,
+        LiquidityRange[] calldata liquidityRanges_,
+        SwapPayload calldata swapPayload_,
+        uint256 minBurn0_,
+        uint256 minBurn1_,
+        uint256 minDeposit0_,
+        uint256 minDeposit1_
+    ) external onlyManager nonReentrant whenNotPaused {
+        PoolKey memory _poolKey = poolKey;
+
+        PancakeSwapV4._checkTokens(
+            poolKey_, address(token0), address(token1), isInversed
+        );
+        PancakeSwapV4._checkPermissions(poolKey_);
+
+        if (
+            poolKey_.fee == _poolKey.fee
+                && poolKey_.parameters == _poolKey.parameters
+                && address(poolKey_.hooks) == address(_poolKey.hooks)
+        ) revert SamePool();
+
+        PoolId poolId = poolKey_.toId();
+        (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(poolId);
+
+        if (sqrtPriceX96 == 0) revert SqrtPriceZero();
+
+        // #region remove any remaining liquidity on the previous pool.
+
+        // #region get liquidities and remove.
+
+        LiquidityRange[] memory liquidityRanges;
+
+        {
+            uint256 length = _ranges.length;
+
+            PoolId currentPoolId = _poolKey.toId();
+            liquidityRanges = new LiquidityRange[](length);
+
+            for (uint256 i; i < length; i++) {
+                Range memory range = _ranges[i];
+
+                uint128 liquidityToRemove = poolManager.getLiquidity(
+                    currentPoolId,
+                    address(this),
+                    range.tickLower,
+                    range.tickUpper,
+                    bytes32(0)
+                );
+
+                liquidityRanges[i] = LiquidityRange({
+                    liquidity: -SafeCast.toInt128(
+                        SafeCast.toInt256(uint256(liquidityToRemove))
+                    ),
+                    range: Range({
+                        tickLower: range.tickLower,
+                        tickUpper: range.tickUpper
+                    })
+                });
+            }
+        }
+
+        {
+            // no swap happens here.
+            uint256 amount0Burned;
+            uint256 amount1Burned;
+            {
+                SwapPayload memory swapPayload;
+                (,, amount0Burned, amount1Burned) =
+                    _internalRebalance(liquidityRanges, swapPayload);
+            }
+
+            if (minBurn0_ > amount0Burned) revert BurnToken0();
+            if (minBurn1_ > amount1Burned) revert BurnToken1();
+        }
+
+        // #endregion get liquidities and remove.
+
+        // #endregion remove any remaining liquidity on the previous pool.
+
+        // #region set PoolKey.
+
+        poolKey = poolKey_;
+
+        // #endregion set PoolKey.
+
+        // #region add liquidity on the new pool.
+
+        if (liquidityRanges_.length > 0) {
+            (uint256 amount0Minted, uint256 amount1Minted,,) =
+                _internalRebalance(liquidityRanges_, swapPayload_);
+
+            if (minDeposit0_ > amount0Minted) revert MintToken0();
+            if (minDeposit1_ > amount1Minted) revert MintToken1();
+        }
+
+        // #endregion add liquidity on the new pool.
+
+        emit LogSetPool(_poolKey, poolKey_);
+    }
+
+    // #endregion only manager functions.
+
+    /// @notice function used by metaVault to withdraw tokens from the strategy.
+    /// @param receiver_ address that will receive tokens.
+    /// @param proportion_ number of share needed to be withdrawn.
+    /// @return amount0 amount of token0 withdrawn.
+    /// @return amount1 amount of token1 withdrawn.
+    function withdraw(
+        address receiver_,
+        uint256 proportion_
+    )
+        public
+        virtual
+        onlyMetaVault
+        nonReentrant
+        returns (uint256 amount0, uint256 amount1)
+    {
+        // #region checks.
+
+        if (receiver_ == address(0)) revert AddressZero();
+
+        if (proportion_ == 0) revert ProportionZero();
+
+        if (proportion_ > BASE) revert ProportionGtBASE();
+
+        // #endregion checks.
+
+        bytes memory data = abi.encode(
+            Action.WITHDRAW, abi.encode(receiver_, proportion_)
+        );
+
+        bytes memory result = vault.lock(data);
+
+        (amount0, amount1) = abi.decode(result, (uint256, uint256));
+
+        emit LogWithdraw(receiver_, proportion_, amount0, amount1);
+    }
+
+    /// @notice function used to rebalance the inventory of the module.
+    /// @param liquidityRanges_ list of liquidity ranges to be used by the module.
+    /// @param swapPayload_ swap payload to be used during rebalance..
+    /// @param minBurn0_ minimum amount of token0 to burn.
+    /// @param minBurn1_ minimum amount of token1 to burn.
+    /// @param minDeposit0_ minimum amount of token0 to deposit.
+    /// @param minDeposit1_ minimum amount of token1 to deposit.
+    /// @return amount0Minted amount of token0 minted.
+    /// @return amount1Minted amount of token1 minted.
+    /// @return amount0Burned amount of token0 burned.
+    /// @return amount1Burned amount of token1 burned.
+    function rebalance(
+        LiquidityRange[] memory liquidityRanges_,
+        SwapPayload memory swapPayload_,
+        uint256 minBurn0_,
+        uint256 minBurn1_,
+        uint256 minDeposit0_,
+        uint256 minDeposit1_
+    )
+        public
+        onlyManager
+        nonReentrant
+        whenNotPaused
+        returns (
+            uint256 amount0Minted,
+            uint256 amount1Minted,
+            uint256 amount0Burned,
+            uint256 amount1Burned
+        )
+    {
+        (amount0Minted, amount1Minted, amount0Burned, amount1Burned) =
+            _internalRebalance(liquidityRanges_, swapPayload_);
+
+        if (minDeposit0_ > amount0Minted) revert MintToken0();
+        if (minDeposit1_ > amount1Minted) revert MintToken1();
+        if (minBurn0_ > amount0Burned) revert BurnToken0();
+        if (minBurn1_ > amount1Burned) revert BurnToken1();
+    }
+
+    /// @notice function used by metaVault or manager to get manager fees.
+    /// @return amount0 amount of token0 sent to manager.
+    /// @return amount1 amount of token1 sent to manager.
+    function withdrawManagerBalance()
+        public
+        nonReentrant
+        whenNotPaused
+        returns (uint256 amount0, uint256 amount1)
+    {
+        uint256 length = _ranges.length;
+
+        LiquidityRange[] memory liquidityRanges =
+            new LiquidityRange[](length);
+
+        for (uint256 i; i < length; i++) {
+            Range memory range = _ranges[i];
+
+            liquidityRanges[i] = LiquidityRange({
+                liquidity: 0,
+                range: Range({
+                    tickLower: range.tickLower,
+                    tickUpper: range.tickUpper
+                })
+            });
+        }
+
+        /// @dev default swapPayload, no swap happens here.
+        /// swapPayload will be empty. And will use it to do rebalance and collect fees.
+        SwapPayload memory swapPayload;
+
+        bytes memory data = abi.encode(
+            Action.REBALANCE, abi.encode(liquidityRanges, swapPayload)
+        );
+
+        bytes memory result = vault.lock(data);
+
+        (,,,, amount0, amount1) = abi.decode(
+            result,
+            (uint256, uint256, uint256, uint256, uint256, uint256)
+        );
+    }
+
+    /// @notice function used to set manager fees.
+    /// @param newFeePIPS_ new fee that will be applied.
+    function setManagerFeePIPS(
+        uint256 newFeePIPS_
+    ) external onlyManager whenNotPaused {
+        uint256 _managerFeePIPS = managerFeePIPS;
+        if (_managerFeePIPS == newFeePIPS_) revert SameManagerFee();
+        if (newFeePIPS_ > PIPS) revert NewFeesGtPIPS(newFeePIPS_);
+
+        withdrawManagerBalance();
+
+        managerFeePIPS = newFeePIPS_;
+        emit LogSetManagerFeePIPS(_managerFeePIPS, newFeePIPS_);
+    }
+
+    // in case of we swith module and get some ether from it.
+    receive() external payable {}
+
+    // #region view functions.
+
+    /// @notice function used to get the address that can pause the module.
+    /// @return guardian address of the pauser.
+    function guardian() external view returns (address) {
+        return IGuardian(_guardian).pauser();
+    }
+
+    /// @notice function used to get the list of active ranges.
+    /// @return ranges active ranges
+    function getRanges()
+        external
+        view
+        returns (Range[] memory ranges)
+    {
+        ranges = _ranges;
+    }
+
+    /// @notice function used to get the initial amounts needed to open a position.
+    /// @return init0 the amount of token0 needed to open a position.
+    /// @return init1 the amount of token1 needed to open a position.
+    function getInits()
+        external
+        view
+        returns (uint256 init0, uint256 init1)
+    {
+        if (isInversed) {
+            return (_init1, _init0);
+        }
+        return (_init0, _init1);
+    }
+
+    /// @notice function used to get the amount of token0 and token1 sitting
+    /// on the position.
+    /// @return amount0 the amount of token0 sitting on the position.
+    /// @return amount1 the amount of token1 sitting on the position.
+    function totalUnderlying()
+        external
+        view
+        returns (uint256 amount0, uint256 amount1)
+    {
+        PoolKey memory _poolKey = poolKey;
+        PoolRange[] memory poolRanges =
+            PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
+
+        uint256 fees0;
+        uint256 fees1;
+
+        {
+            (uint256 leftOver0, uint256 leftOver1) =
+                IUniV4StandardModule(this)._getLeftOvers(_poolKey);
+
+            (uint160 sqrtPriceX96_,,,) =
+                poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
+
+            (amount0, amount1, fees0, fees1) = UnderlyingV4
+                .totalUnderlyingAtPriceWithFees(
+                UnderlyingPayload({
+                    ranges: poolRanges,
+                    poolManager: poolManager,
+                    self: address(this),
+                    leftOver0: leftOver0,
+                    leftOver1: leftOver1
+                }),
+                sqrtPriceX96_
+            );
+        }
+
+        amount0 =
+            amount0 - FullMath.mulDiv(fees0, managerFeePIPS, PIPS);
+        amount1 =
+            amount1 - FullMath.mulDiv(fees1, managerFeePIPS, PIPS);
+
+        if (isInversed) {
+            (amount0, amount1) = (amount1, amount0);
+        }
+    }
+
+    // #endregion view functions.
+
+    // #region internal functions.
+
+    function _internalRebalance(
+        LiquidityRange[] memory liquidityRanges_,
+        SwapPayload memory swapPayload_
+    )
+        internal
+        returns (
+            uint256 amount0Minted,
+            uint256 amount1Minted,
+            uint256 amount0Burned,
+            uint256 amount1Burned
+        )
+    {
+        bytes memory data = abi.encode(
+            Action.REBALANCE,
+            abi.encode(liquidityRanges_, swapPayload_)
+        );
+
+        bytes memory result = vault.lock(data);
+
+        (amount0Minted, amount1Minted, amount0Burned, amount1Burned,,)
+        = abi.decode(
+            result,
+            (uint256, uint256, uint256, uint256, uint256, uint256)
+        );
+
+        emit LogRebalance(
+            liquidityRanges_,
+            amount0Minted,
+            amount1Minted,
+            amount0Burned,
+            amount1Burned
+        );
+    }
+
+    // #endregion internal functions.
 }
