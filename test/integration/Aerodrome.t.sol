@@ -212,6 +212,8 @@ contract AerodromeStandardModulePrivateTest is
         // #endregion create a vault with aerodrome module.
 
         module = address(IArrakisMetaVault(vault).module());
+
+        assertEq(IAerodromeStandardModulePrivate(module).AERO(), AERO);
     }
 
     // #region uniswap callback.

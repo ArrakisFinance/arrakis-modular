@@ -23,8 +23,8 @@ import {IArrakisMetaVault} from
     "../../src/interfaces/IArrakisMetaVault.sol";
 
 // #region interfaces.
-import {IVelodromeStandardModulePrivate} from
-    "../../src/interfaces/IVelodromeStandardModulePrivate.sol";
+import {IAerodromeStandardModulePrivate} from
+    "../../src/interfaces/IAerodromeStandardModulePrivate.sol";
 import {IArrakisLPModule} from
     "../../src/interfaces/IArrakisLPModule.sol";
 import {IArrakisMetaVaultFactory} from
@@ -177,7 +177,7 @@ contract VelodromeStandardModulePrivateTest is
         // #region create a vault with velodrome module.
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IVelodromeStandardModulePrivate.initialize.selector,
+            IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
             veloReceiver,
@@ -210,6 +210,8 @@ contract VelodromeStandardModulePrivateTest is
         // #endregion create a vault with velodrome module.
 
         module = address(IArrakisMetaVault(vault).module());
+
+        assertEq(IAerodromeStandardModulePrivate(module).AERO(), VELO);
     }
 
     // #region uniswap callback.
@@ -331,7 +333,7 @@ contract VelodromeStandardModulePrivateTest is
         address a = vm.addr(124_343); // Vault address
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IVelodromeStandardModulePrivate.initialize.selector,
+            IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(address(0)),
             maxSlippage,
             veloReceiver,
@@ -345,7 +347,7 @@ contract VelodromeStandardModulePrivateTest is
 
     function test_initialize_metaVault_address_zero() public {
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IVelodromeStandardModulePrivate.initialize.selector,
+            IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
             veloReceiver,
@@ -361,7 +363,7 @@ contract VelodromeStandardModulePrivateTest is
         address a = vm.addr(124_343); // Vault address
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IVelodromeStandardModulePrivate.initialize.selector,
+            IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
             address(0),
@@ -377,7 +379,7 @@ contract VelodromeStandardModulePrivateTest is
         address a = vm.addr(124_343); // Vault address
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IVelodromeStandardModulePrivate.initialize.selector,
+            IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             TEN_PERCENT + 1,
             veloReceiver,
@@ -386,7 +388,7 @@ contract VelodromeStandardModulePrivateTest is
         );
 
         vm.expectRevert(
-            IVelodromeStandardModulePrivate
+            IAerodromeStandardModulePrivate
                 .MaxSlippageGtTenPercent
                 .selector
         );
@@ -399,7 +401,7 @@ contract VelodromeStandardModulePrivateTest is
         MetaVaultMock(a).setTokens(USDC, NATIVE_COIN);
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IVelodromeStandardModulePrivate.initialize.selector,
+            IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
             veloReceiver,
@@ -408,7 +410,7 @@ contract VelodromeStandardModulePrivateTest is
         );
 
         vm.expectRevert(
-            IVelodromeStandardModulePrivate
+            IAerodromeStandardModulePrivate
                 .NativeCoinNotSupported
                 .selector
         );
@@ -421,7 +423,7 @@ contract VelodromeStandardModulePrivateTest is
         MetaVaultMock(a).setTokens(WETH, USDC);
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IVelodromeStandardModulePrivate.initialize.selector,
+            IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
             veloReceiver,
@@ -430,7 +432,7 @@ contract VelodromeStandardModulePrivateTest is
         );
 
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.PoolNotFound.selector
+            IAerodromeStandardModulePrivate.PoolNotFound.selector
         );
         new BeaconProxy(beacon, moduleCreationPayload);
     }
@@ -441,7 +443,7 @@ contract VelodromeStandardModulePrivateTest is
         MetaVaultMock(a).setTokens(USDC, VELO);
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IVelodromeStandardModulePrivate.initialize.selector,
+            IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
             veloReceiver,
@@ -450,8 +452,8 @@ contract VelodromeStandardModulePrivateTest is
         );
 
         vm.expectRevert(
-            IVelodromeStandardModulePrivate
-                .VELOTokenNotSupported
+            IAerodromeStandardModulePrivate
+                .AEROTokenNotSupported
                 .selector
         );
         new BeaconProxy(beacon, moduleCreationPayload);
@@ -463,7 +465,7 @@ contract VelodromeStandardModulePrivateTest is
         MetaVaultMock(a).setTokens(WETH, USDC);
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IVelodromeStandardModulePrivate.initialize.selector,
+            IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
             veloReceiver,
@@ -484,7 +486,7 @@ contract VelodromeStandardModulePrivateTest is
         // #endregion kill gauge.
 
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.GaugeKilled.selector
+            IAerodromeStandardModulePrivate.GaugeKilled.selector
         );
         address beacon =
             address(new BeaconProxy(beacon, moduleCreationPayload));
@@ -496,7 +498,7 @@ contract VelodromeStandardModulePrivateTest is
         MetaVaultMock(a).setTokens(WETH, USDC);
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IVelodromeStandardModulePrivate.initialize.selector,
+            IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
             veloReceiver,
@@ -514,17 +516,17 @@ contract VelodromeStandardModulePrivateTest is
         assertEq(address(IArrakisLPModule(beacon).token1()), USDC);
         assertEq(address(IArrakisLPModule(beacon).metaVault()), a);
         assertEq(
-            IVelodromeStandardModulePrivate(beacon).maxSlippage(),
+            IAerodromeStandardModulePrivate(beacon).maxSlippage(),
             maxSlippage
         );
         assertEq(
             address(
-                IVelodromeStandardModulePrivate(beacon).veloReceiver()
+                IAerodromeStandardModulePrivate(beacon).aeroReceiver()
             ),
             veloReceiver
         );
         assertEq(
-            address(IVelodromeStandardModulePrivate(beacon).pool()),
+            address(IAerodromeStandardModulePrivate(beacon).pool()),
             pool
         );
     }
@@ -548,11 +550,11 @@ contract VelodromeStandardModulePrivateTest is
         uint256 amount1 = 3850e6;
 
         vm.expectRevert(
-            IVelodromeStandardModulePrivate
+            IAerodromeStandardModulePrivate
                 .OnlyMetaVaultOwner
                 .selector
         );
-        IVelodromeStandardModulePrivate(module).approve(
+        IAerodromeStandardModulePrivate(module).approve(
             spender, amount0, amount1
         );
     }
@@ -564,7 +566,7 @@ contract VelodromeStandardModulePrivateTest is
         uint256 amount1 = 1 ether;
 
         vm.prank(owner);
-        IVelodromeStandardModulePrivate(module).approve(
+        IAerodromeStandardModulePrivate(module).approve(
             spender, amount0, amount1
         );
 
@@ -616,7 +618,7 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(vault);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate
+            IAerodromeStandardModulePrivate
                 .NativeCoinNotSupported
                 .selector
         );
@@ -632,7 +634,7 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(vault);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.AmountsZero.selector
+            IAerodromeStandardModulePrivate.AmountsZero.selector
         );
 
         IArrakisLPModulePrivate(module).fund(depositor, 0, 0);
@@ -774,7 +776,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -813,17 +815,17 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(notMetaVaultOwner);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate
+            IAerodromeStandardModulePrivate
                 .OnlyMetaVaultOwner
                 .selector
         );
-        IVelodromeStandardModulePrivate(module).claimRewards(receiver);
+        IAerodromeStandardModulePrivate(module).claimRewards(receiver);
     }
 
     function test_claim_rewards_receiver_address_zero() public {
         vm.prank(owner);
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        IVelodromeStandardModulePrivate(module).claimRewards(
+        IAerodromeStandardModulePrivate(module).claimRewards(
             address(0)
         );
     }
@@ -888,7 +890,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -947,7 +949,7 @@ contract VelodromeStandardModulePrivateTest is
         assertEq(IERC20Metadata(VELO).balanceOf(owner), 0);
 
         vm.prank(owner);
-        IVelodromeStandardModulePrivate(module).claimRewards(owner);
+        IAerodromeStandardModulePrivate(module).claimRewards(owner);
 
         assertGt(IERC20Metadata(VELO).balanceOf(owner), 0);
 
@@ -967,17 +969,17 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(notManagerOwner);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.OnlyManagerOwner.selector
+            IAerodromeStandardModulePrivate.OnlyManagerOwner.selector
         );
-        IVelodromeStandardModulePrivate(module).setReceiver(receiver);
+        IAerodromeStandardModulePrivate(module).setReceiver(receiver);
     }
 
     function test_set_receiver_same_receiver() public {
         vm.prank(arrakisStandardManagerOwner);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.SameReceiver.selector
+            IAerodromeStandardModulePrivate.SameReceiver.selector
         );
-        IVelodromeStandardModulePrivate(module).setReceiver(
+        IAerodromeStandardModulePrivate(module).setReceiver(
             veloReceiver
         );
     }
@@ -985,7 +987,7 @@ contract VelodromeStandardModulePrivateTest is
     function test_set_receiver_receiver_address_zero() public {
         vm.prank(arrakisStandardManagerOwner);
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        IVelodromeStandardModulePrivate(module).setReceiver(
+        IAerodromeStandardModulePrivate(module).setReceiver(
             address(0)
         );
     }
@@ -995,16 +997,16 @@ contract VelodromeStandardModulePrivateTest is
             vm.addr(uint256(keccak256(abi.encode("Receiver"))));
 
         assertEq(
-            IVelodromeStandardModulePrivate(module).veloReceiver(),
+            IAerodromeStandardModulePrivate(module).aeroReceiver(),
             veloReceiver
         );
 
         vm.prank(arrakisStandardManagerOwner);
-        IVelodromeStandardModulePrivate(module).setReceiver(receiver);
+        IAerodromeStandardModulePrivate(module).setReceiver(receiver);
 
         assertEq(
             address(
-                IVelodromeStandardModulePrivate(module).veloReceiver()
+                IAerodromeStandardModulePrivate(module).aeroReceiver()
             ),
             receiver
         );
@@ -1074,7 +1076,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -1133,7 +1135,7 @@ contract VelodromeStandardModulePrivateTest is
         assertEq(IERC20Metadata(VELO).balanceOf(owner), 0);
 
         vm.prank(owner);
-        IVelodromeStandardModulePrivate(module).claimRewards(owner);
+        IAerodromeStandardModulePrivate(module).claimRewards(owner);
 
         assertGt(IERC20Metadata(VELO).balanceOf(owner), 0);
 
@@ -1143,7 +1145,7 @@ contract VelodromeStandardModulePrivateTest is
 
         assertEq(IERC20Metadata(VELO).balanceOf(veloReceiver), 0);
 
-        IVelodromeStandardModulePrivate(module).claimManager();
+        IAerodromeStandardModulePrivate(module).claimManager();
 
         assertGt(IERC20Metadata(VELO).balanceOf(veloReceiver), 0);
 
@@ -1256,7 +1258,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -1339,7 +1341,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -1425,11 +1427,11 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate
+            IAerodromeStandardModulePrivate
                 .ExpectedMinReturnTooLow
                 .selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -1513,11 +1515,11 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate
+            IAerodromeStandardModulePrivate
                 .ExpectedMinReturnTooLow
                 .selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -1601,9 +1603,9 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.WrongRouter.selector
+            IAerodromeStandardModulePrivate.WrongRouter.selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -1690,9 +1692,9 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.SlippageTooHigh.selector
+            IAerodromeStandardModulePrivate.SlippageTooHigh.selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -1779,9 +1781,9 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.SlippageTooHigh.selector
+            IAerodromeStandardModulePrivate.SlippageTooHigh.selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -1864,7 +1866,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -1901,7 +1903,7 @@ contract VelodromeStandardModulePrivateTest is
         // #region second rebalance for increasing positions.
 
         uint256[] memory tokenIds =
-            IVelodromeStandardModulePrivate(module).tokenIds();
+            IAerodromeStandardModulePrivate(module).tokenIds();
 
         mintParams = new INonfungiblePositionManager.MintParams[](0);
         modifyPositions = new ModifyPosition[](1);
@@ -1910,7 +1912,7 @@ contract VelodromeStandardModulePrivateTest is
         modifyPositions[0].proportion = BASE;
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: new ModifyPosition[](0),
                 increasePositions: modifyPositions,
@@ -1995,7 +1997,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -2032,7 +2034,7 @@ contract VelodromeStandardModulePrivateTest is
         // #region second rebalance for increasing positions.
 
         uint256[] memory tokenIds =
-            IVelodromeStandardModulePrivate(module).tokenIds();
+            IAerodromeStandardModulePrivate(module).tokenIds();
 
         mintParams = new INonfungiblePositionManager.MintParams[](0);
         modifyPositions = new ModifyPosition[](1);
@@ -2042,9 +2044,9 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.TokenIdNotFound.selector
+            IAerodromeStandardModulePrivate.TokenIdNotFound.selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: new ModifyPosition[](0),
                 increasePositions: modifyPositions,
@@ -2128,9 +2130,9 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.MintToken1.selector
+            IAerodromeStandardModulePrivate.MintToken1.selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -2214,9 +2216,9 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.MintToken0.selector
+            IAerodromeStandardModulePrivate.MintToken0.selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -2300,9 +2302,9 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.Token0Mismatch.selector
+            IAerodromeStandardModulePrivate.Token0Mismatch.selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -2386,9 +2388,9 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.Token1Mismatch.selector
+            IAerodromeStandardModulePrivate.Token1Mismatch.selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -2472,11 +2474,11 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate
+            IAerodromeStandardModulePrivate
                 .TickSpacingMismatch
                 .selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -2559,7 +2561,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -2588,9 +2590,9 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.TokenIdNotFound.selector
+            IAerodromeStandardModulePrivate.TokenIdNotFound.selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: new ModifyPosition[](0),
@@ -2673,7 +2675,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -2702,9 +2704,9 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.BurnToken1.selector
+            IAerodromeStandardModulePrivate.BurnToken1.selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: new ModifyPosition[](0),
@@ -2787,7 +2789,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -2816,9 +2818,9 @@ contract VelodromeStandardModulePrivateTest is
 
         vm.prank(arrakisStandardManager);
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.BurnToken0.selector
+            IAerodromeStandardModulePrivate.BurnToken0.selector
         );
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: new ModifyPosition[](0),
@@ -2901,7 +2903,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -2929,7 +2931,7 @@ contract VelodromeStandardModulePrivateTest is
             ModifyPosition({tokenId: tokenId[0], proportion: BASE});
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: new ModifyPosition[](0),
@@ -3012,7 +3014,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -3042,7 +3044,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: new ModifyPosition[](0),
@@ -3150,7 +3152,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -3168,7 +3170,7 @@ contract VelodromeStandardModulePrivateTest is
         // #endregion setup.
 
         uint256[] memory tokenIds =
-            IVelodromeStandardModulePrivate(module).tokenIds();
+            IAerodromeStandardModulePrivate(module).tokenIds();
 
         assertEq(tokenIds.length, 2);
     }
@@ -3253,7 +3255,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -3358,7 +3360,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -3394,7 +3396,7 @@ contract VelodromeStandardModulePrivateTest is
         );
 
         vm.expectRevert(
-            IVelodromeStandardModulePrivate.OverMaxDeviation.selector
+            IAerodromeStandardModulePrivate.OverMaxDeviation.selector
         );
         IArrakisLPModule(module).validateRebalance(
             IOracleWrapper(oracle), 1000
@@ -3416,9 +3418,9 @@ contract VelodromeStandardModulePrivateTest is
     // #region test velo manager balance.
 
     function test_velo_manager_balance() public {
-        uint256 veloManagerBalance = IVelodromeStandardModulePrivate(
+        uint256 veloManagerBalance = IAerodromeStandardModulePrivate(
             module
-        ).veloManagerBalance();
+        ).aeroManagerBalance();
 
         assertEq(veloManagerBalance, 0);
 
@@ -3483,7 +3485,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -3539,8 +3541,8 @@ contract VelodromeStandardModulePrivateTest is
 
         // #endregion setup.
 
-        veloManagerBalance = IVelodromeStandardModulePrivate(module)
-            .veloManagerBalance();
+        veloManagerBalance = IAerodromeStandardModulePrivate(module)
+            .aeroManagerBalance();
 
         assertGt(veloManagerBalance, 0);
     }
@@ -3655,7 +3657,7 @@ contract VelodromeStandardModulePrivateTest is
         });
 
         vm.prank(arrakisStandardManager);
-        IVelodromeStandardModulePrivate(module).rebalance(
+        IAerodromeStandardModulePrivate(module).rebalance(
             RebalanceParams({
                 decreasePositions: modifyPositions,
                 increasePositions: modifyPositions,
@@ -3714,7 +3716,7 @@ contract VelodromeStandardModulePrivateTest is
         assertEq(IERC20Metadata(VELO).balanceOf(owner), 0);
 
         vm.prank(owner);
-        IVelodromeStandardModulePrivate(module).claimRewards(owner);
+        IAerodromeStandardModulePrivate(module).claimRewards(owner);
 
         // console.log(
         //     "VELO Balance : ", IERC20Metadata(VELO).balanceOf(owner)
@@ -3728,7 +3730,7 @@ contract VelodromeStandardModulePrivateTest is
 
         assertEq(IERC20Metadata(VELO).balanceOf(veloReceiver), 0);
 
-        IVelodromeStandardModulePrivate(module).claimManager();
+        IAerodromeStandardModulePrivate(module).claimManager();
 
         // console.log(
         //     "VELO Balance : ",
@@ -3817,9 +3819,9 @@ contract VelodromeStandardModulePrivateTest is
         assertEq(IERC20Metadata(VELO).balanceOf(veloReceiver), 0);
 
         vm.prank(owner);
-        IVelodromeStandardModulePrivate(module).claimRewards(owner);
+        IAerodromeStandardModulePrivate(module).claimRewards(owner);
 
-        IVelodromeStandardModulePrivate(module).claimManager();
+        IAerodromeStandardModulePrivate(module).claimManager();
 
         assertGt(IERC20Metadata(VELO).balanceOf(owner), 0);
         assertGt(IERC20Metadata(VELO).balanceOf(veloReceiver), 0);
