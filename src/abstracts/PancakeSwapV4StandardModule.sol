@@ -18,7 +18,10 @@ import {
     NATIVE_COIN_DECIMALS
 } from "../constants/CArrakis.sol";
 import {PancakeSwapV4} from "../libraries/PancakeSwapV4.sol";
-import {SwapPayload} from "../structs/SPancakeSwapV4.sol";
+import {
+    SwapPayload,
+    Range as PoolRange
+} from "../structs/SPancakeSwapV4.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -605,7 +608,7 @@ abstract contract PancakeSwapV4StandardModule is
 
         {
             (uint256 leftOver0, uint256 leftOver1) =
-                IUniV4StandardModule(this)._getLeftOvers(_poolKey);
+                IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
 
             (uint160 sqrtPriceX96_,,,) =
                 poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
