@@ -135,10 +135,10 @@ contract ArrakisPrivateHookFactoryTest is TestWrapper {
 
     // #endregion create hook.
 
-    function valideAddr(
-        IHooks hooks,
-        Hooks.Permissions memory perm
-    ) external returns (bool) {
-        Hooks.validateHookPermissions(hooks, perm);
-    }
+    // function valideAddr(
+    //     IHooks hooks,
+    //     Hooks.Permissions memory perm
+    // ) external returns (bool) {
+    //     Hooks.validateHookPermissions(hooks, perm);
+    // }
 }
