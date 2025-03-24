@@ -72,8 +72,7 @@ contract AerodromeStandardModulePrivate is
         0x491defc0794897991a8e5e9fa49dcbed24fe84ee079750b1db3f4df77fb17cb5;
 
     /// @inheritdoc IAerodromeStandardModulePrivate
-    address public constant AERO =
-        0x940181a94A35A4569E4529A3CDfB74e38FD98631;
+    address public immutable AERO;
 
     // #endregion constant internal variables.
 
@@ -171,6 +170,8 @@ contract AerodromeStandardModulePrivate is
         factory = IUniswapV3Factory(factory_);
         voter = IVoter(voter_);
         _guardian = guardian_;
+
+        AERO = 0x940181a94A35A4569E4529A3CDfB74e38FD98631;
 
         _disableInitializers();
     }

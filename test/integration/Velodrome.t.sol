@@ -6,8 +6,8 @@ import {TestWrapper} from "../utils/TestWrapper.sol";
 import {console} from "forge-std/console.sol";
 // #endregion foundry.
 
-import {AerodromeStandardModulePrivate} from
-    "../../src/modules/AerodromeStandardModulePrivate.sol";
+import {VelodromeStandardModulePrivate} from
+    "../../src/modules/VelodromeStandardModulePrivate.sol";
 import {
     BASE,
     PIPS,
@@ -70,7 +70,7 @@ import {MetaVaultMock} from "./mocks/MetaVaultMock.sol";
 import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-contract AerodromeStandardModulePrivateTest is
+contract VelodromeStandardModulePrivateTest is
     TestWrapper,
     IUniswapV3SwapCallback
 {
@@ -80,16 +80,16 @@ contract AerodromeStandardModulePrivateTest is
     address public constant WETH =
         0x4200000000000000000000000000000000000006;
     address public constant USDC =
-        0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
-    address public constant AERO =
-        0x940181a94A35A4569E4529A3CDfB74e38FD98631;
+        0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85;
+    address public constant VELO =
+        0x9560e827aF36c94D2Ac33a39bCE1Fe78631088Db;
     // #endregion constant properties.
 
     // #region arrakis modular contracts.
     address public constant arrakisStandardManager =
         0x2e6E879648293e939aA68bA4c6c129A1Be733bDA;
     address public constant arrakisStandardManagerOwner =
-        0x25CF23B54e25daaE3fe9989a74050b953A343823;
+        0x8636600A864797Aa7ac8807A065C5d8BD9bA3Ccb;
     address public constant arrakisTimeLock =
         0xAf6f9640092cB1236E5DB6E517576355b6C40b7f;
     address public constant factory =
@@ -103,13 +103,11 @@ contract AerodromeStandardModulePrivateTest is
     address public constant privateRegistry =
         0xe278C1944BA3321C1079aBF94961E9fF1127A265;
     address public constant pauser =
-        0x463a4a038038DE81525f55c456f071241e0a3E66;
-    address public constant valantisModuleBeacon =
-        0xE973Cf1e347EcF26232A95dBCc862AA488b0351b;
+        0x283824e5A6378EaB2695Be7d3cb0919186e37D7C;
     address public constant permit2 =
         0x000000000022D473030F116dDEE9F6B43aC78BA3;
     address public constant weth =
-        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+        0x4200000000000000000000000000000000000006;
     // #endregion arrakis modular contracts.
 
     address public owner;
@@ -120,14 +118,14 @@ contract AerodromeStandardModulePrivateTest is
     address public stratAnnouncer;
     address public beacon;
 
-    // #region aerodrome.
+    // #region velodrome.
     address public nonfungiblePositionManager =
-        0x827922686190790b37229fd06084350E74485b72;
+        0x416b433906b1B72FA758e166e239c43d68dC6F29;
     address public clfactory =
-        0x5e7BB104d84c7CB9B682AaC2F3d509f5F406809A;
-    address public voter = 0x16613524e02ad97eDfeF371bC883F2F5d6C480A5;
-    address public aero = 0x940181a94A35A4569E4529A3CDfB74e38FD98631;
-    // #endregion aerodrome.
+        0xCc0bDDB707055e04e497aB22a59c2aF4391cd12F;
+    address public voter = 0x41C914ee0c7E1A5edCD0295623e6dC557B5aBf3C;
+    address public velo = 0x9560e827aF36c94D2Ac33a39bCE1Fe78631088Db;
+    // #endregion velodrome.
 
     // #region mocks.
     address public oracle;
@@ -140,7 +138,7 @@ contract AerodromeStandardModulePrivateTest is
     uint24 public maxDeviation;
     uint256 public cooldownPeriod;
     uint160 public sqrtPriceX96;
-    address public aeroReceiver;
+    address public veloReceiver;
     // #endregion vault info.
 
     IERC20Metadata public token0;
@@ -148,9 +146,9 @@ contract AerodromeStandardModulePrivateTest is
 
     function setUp() public {
         // #region reset fork.
-        /// @dev base chain.
+        /// @dev op chain.
 
-        _reset(vm.envString("BASE_RPC_URL"), 23_903_800);
+        _reset(vm.envString("OP_RPC_URL"), 131_874_003);
 
         // #endregion reset fork.
 
@@ -159,16 +157,16 @@ contract AerodromeStandardModulePrivateTest is
         executor = vm.addr(uint256(keccak256(abi.encode("EXECUTOR"))));
         stratAnnouncer =
             vm.addr(uint256(keccak256(abi.encode("STRAT_ANNOUNCER"))));
-        aeroReceiver =
-            vm.addr(uint256(keccak256(abi.encode("AERO_RECEIVER"))));
+        veloReceiver =
+            vm.addr(uint256(keccak256(abi.encode("VELO_RECEIVER"))));
         // #endregion setup.
 
         // #region create an oracle.
         oracle = address(new OracleWrapper());
         // #endregion create an oracle.
 
-        OracleWrapper(oracle).setPrice0(3684e6);
-        OracleWrapper(oracle).setPrice1(294_303_750_901_305);
+        OracleWrapper(oracle).setPrice0(382_450_128_503_243);
+        OracleWrapper(oracle).setPrice1(2614e6);
 
         _setup();
 
@@ -176,13 +174,13 @@ contract AerodromeStandardModulePrivateTest is
         maxDeviation = TEN_PERCENT;
         cooldownPeriod = 60 seconds;
 
-        // #region create a vault with aerodrome module.
+        // #region create a vault with velodrome module.
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
             IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
-            aeroReceiver,
+            veloReceiver,
             100
         );
 
@@ -196,24 +194,24 @@ contract AerodromeStandardModulePrivateTest is
         );
 
         bytes32 salt = keccak256(
-            abi.encode("Salt WETH/USDC Aero vault Private Test")
+            abi.encode("Salt WETH/USDC Velo vault Private Test")
         );
 
         vault = IArrakisMetaVaultFactory(factory).deployPrivateVault(
             salt,
-            WETH,
             USDC,
+            WETH,
             owner,
             beacon,
             moduleCreationPayload,
             initManagementPayload
         );
 
-        // #endregion create a vault with aerodrome module.
+        // #endregion create a vault with velodrome module.
 
         module = address(IArrakisMetaVault(vault).module());
 
-        assertEq(IAerodromeStandardModulePrivate(module).AERO(), AERO);
+        assertEq(IAerodromeStandardModulePrivate(module).AERO(), VELO);
     }
 
     // #region uniswap callback.
@@ -225,13 +223,13 @@ contract AerodromeStandardModulePrivateTest is
     ) external {
         if (amount0_ > 0) {
             uint256 balance =
-                IERC20Metadata(WETH).balanceOf(msg.sender);
-            deal(WETH, msg.sender, balance + uint256(amount0_));
+                IERC20Metadata(USDC).balanceOf(msg.sender);
+            deal(USDC, msg.sender, balance + uint256(amount0_));
         }
         if (amount1_ > 0) {
             uint256 balance =
-                IERC20Metadata(USDC).balanceOf(msg.sender);
-            deal(USDC, msg.sender, balance + uint256(amount1_));
+                IERC20Metadata(WETH).balanceOf(msg.sender);
+            deal(WETH, msg.sender, balance + uint256(amount1_));
         }
     }
 
@@ -241,10 +239,10 @@ contract AerodromeStandardModulePrivateTest is
 
     function test_pause_when_already_paused() public {
         vm.prank(pauser);
-        AerodromeStandardModulePrivate(module).pause();
+        VelodromeStandardModulePrivate(module).pause();
 
         vm.expectRevert("Pausable: paused");
-        AerodromeStandardModulePrivate(module).pause();
+        VelodromeStandardModulePrivate(module).pause();
     }
 
     function test_pause_only_guardian() public {
@@ -253,44 +251,44 @@ contract AerodromeStandardModulePrivateTest is
 
         vm.prank(notGuardian);
         vm.expectRevert(IArrakisLPModule.OnlyGuardian.selector);
-        AerodromeStandardModulePrivate(module).pause();
+        VelodromeStandardModulePrivate(module).pause();
     }
 
     function test_pause() public {
         vm.prank(pauser);
-        AerodromeStandardModulePrivate(module).pause();
+        VelodromeStandardModulePrivate(module).pause();
 
-        assertTrue(AerodromeStandardModulePrivate(module).paused());
+        assertTrue(VelodromeStandardModulePrivate(module).paused());
     }
 
     function test_unpause_when_already_unpaused() public {
         vm.prank(pauser);
         vm.expectRevert("Pausable: not paused");
-        AerodromeStandardModulePrivate(module).unpause();
+        VelodromeStandardModulePrivate(module).unpause();
     }
 
     function test_unpause_only_guardian() public {
         vm.prank(pauser);
-        AerodromeStandardModulePrivate(module).pause();
+        VelodromeStandardModulePrivate(module).pause();
 
         address notGuardian =
             vm.addr(uint256(keccak256(abi.encode("Not Guardian"))));
 
         vm.prank(notGuardian);
         vm.expectRevert(IArrakisLPModule.OnlyGuardian.selector);
-        AerodromeStandardModulePrivate(module).unpause();
+        VelodromeStandardModulePrivate(module).unpause();
     }
 
     function test_unpause() public {
         vm.prank(pauser);
-        AerodromeStandardModulePrivate(module).pause();
+        VelodromeStandardModulePrivate(module).pause();
 
-        assertTrue(AerodromeStandardModulePrivate(module).paused());
+        assertTrue(VelodromeStandardModulePrivate(module).paused());
 
         vm.prank(pauser);
-        AerodromeStandardModulePrivate(module).unpause();
+        VelodromeStandardModulePrivate(module).unpause();
 
-        assertFalse(AerodromeStandardModulePrivate(module).paused());
+        assertFalse(VelodromeStandardModulePrivate(module).paused());
     }
 
     // #endregion test pause and unpause.
@@ -301,28 +299,28 @@ contract AerodromeStandardModulePrivateTest is
         public
     {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        new AerodromeStandardModulePrivate(
+        new VelodromeStandardModulePrivate(
             address(0), clfactory, voter, guardian
         );
     }
 
     function test_constructor_factory_is_address_zero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        new AerodromeStandardModulePrivate(
+        new VelodromeStandardModulePrivate(
             nonfungiblePositionManager, address(0), voter, guardian
         );
     }
 
     function test_constructor_voter_is_address_zero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        new AerodromeStandardModulePrivate(
+        new VelodromeStandardModulePrivate(
             nonfungiblePositionManager, factory, address(0), guardian
         );
     }
 
     function test_constructor_guardian_is_address_zero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        new AerodromeStandardModulePrivate(
+        new VelodromeStandardModulePrivate(
             nonfungiblePositionManager, factory, voter, address(0)
         );
     }
@@ -338,7 +336,7 @@ contract AerodromeStandardModulePrivateTest is
             IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(address(0)),
             maxSlippage,
-            aeroReceiver,
+            veloReceiver,
             100,
             a
         );
@@ -352,7 +350,7 @@ contract AerodromeStandardModulePrivateTest is
             IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
-            aeroReceiver,
+            veloReceiver,
             100,
             address(0)
         );
@@ -361,7 +359,7 @@ contract AerodromeStandardModulePrivateTest is
         new BeaconProxy(beacon, moduleCreationPayload);
     }
 
-    function test_initialize_aeroReceiver_address_zero() public {
+    function test_initialize_veloReceiver_address_zero() public {
         address a = vm.addr(124_343); // Vault address
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
@@ -384,7 +382,7 @@ contract AerodromeStandardModulePrivateTest is
             IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             TEN_PERCENT + 1,
-            aeroReceiver,
+            veloReceiver,
             100,
             a
         );
@@ -406,7 +404,7 @@ contract AerodromeStandardModulePrivateTest is
             IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
-            aeroReceiver,
+            veloReceiver,
             10,
             a
         );
@@ -428,7 +426,7 @@ contract AerodromeStandardModulePrivateTest is
             IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
-            aeroReceiver,
+            veloReceiver,
             10,
             a
         );
@@ -439,16 +437,16 @@ contract AerodromeStandardModulePrivateTest is
         new BeaconProxy(beacon, moduleCreationPayload);
     }
 
-    function test_initialize_aero_not_supported() public {
+    function test_initialize_velo_not_supported() public {
         address a = address(new MetaVaultMock());
 
-        MetaVaultMock(a).setTokens(USDC, AERO);
+        MetaVaultMock(a).setTokens(USDC, VELO);
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
             IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
-            aeroReceiver,
+            veloReceiver,
             10,
             a
         );
@@ -470,7 +468,7 @@ contract AerodromeStandardModulePrivateTest is
             IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
-            aeroReceiver,
+            veloReceiver,
             100,
             a
         );
@@ -503,7 +501,7 @@ contract AerodromeStandardModulePrivateTest is
             IAerodromeStandardModulePrivate.initialize.selector,
             IOracleWrapper(oracle),
             maxSlippage,
-            aeroReceiver,
+            veloReceiver,
             100,
             a
         );
@@ -525,7 +523,7 @@ contract AerodromeStandardModulePrivateTest is
             address(
                 IAerodromeStandardModulePrivate(beacon).aeroReceiver()
             ),
-            aeroReceiver
+            veloReceiver
         );
         assertEq(
             address(IAerodromeStandardModulePrivate(beacon).pool()),
@@ -564,29 +562,29 @@ contract AerodromeStandardModulePrivateTest is
     function test_approve() public {
         address spender =
             vm.addr(uint256(keccak256(abi.encode("Spender"))));
-        uint256 amount0 = 1 ether;
-        uint256 amount1 = 3850e6;
+        uint256 amount0 = 2614e6;
+        uint256 amount1 = 1 ether;
 
         vm.prank(owner);
         IAerodromeStandardModulePrivate(module).approve(
             spender, amount0, amount1
         );
 
-        deal(WETH, module, amount0);
-        deal(USDC, module, amount1);
+        deal(USDC, module, amount0);
+        deal(WETH, module, amount1);
 
-        assertEq(IERC20Metadata(WETH).balanceOf(spender), 0);
         assertEq(IERC20Metadata(USDC).balanceOf(spender), 0);
+        assertEq(IERC20Metadata(WETH).balanceOf(spender), 0);
 
         vm.startPrank(spender);
 
-        IERC20Metadata(USDC).transferFrom(module, spender, amount1);
-        IERC20Metadata(WETH).transferFrom(module, spender, amount0);
+        IERC20Metadata(USDC).transferFrom(module, spender, amount0);
+        IERC20Metadata(WETH).transferFrom(module, spender, amount1);
 
         vm.stopPrank();
 
-        assertEq(IERC20Metadata(WETH).balanceOf(spender), amount0);
-        assertEq(IERC20Metadata(USDC).balanceOf(spender), amount1);
+        assertEq(IERC20Metadata(USDC).balanceOf(spender), amount0);
+        assertEq(IERC20Metadata(WETH).balanceOf(spender), amount1);
     }
 
     // #endregion test approve.
@@ -647,23 +645,23 @@ contract AerodromeStandardModulePrivateTest is
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
         deal(WETH, depositor, 1 ether);
-        deal(USDC, depositor, 3850e6);
+        deal(USDC, depositor, 2614e6);
 
         assertEq(IERC20Metadata(WETH).balanceOf(module), 0);
         assertEq(IERC20Metadata(USDC).balanceOf(module), 0);
 
         vm.startPrank(depositor);
         IERC20Metadata(WETH).approve(module, 1 ether);
-        IERC20Metadata(USDC).approve(module, 3850e6);
+        IERC20Metadata(USDC).approve(module, 2614e6);
         vm.stopPrank();
 
         vm.prank(vault);
         IArrakisLPModulePrivate(module).fund(
-            depositor, 1 ether, 3850e6
+            depositor, 2614e6, 1 ether
         );
 
         assertEq(IERC20Metadata(WETH).balanceOf(module), 1 ether);
-        assertEq(IERC20Metadata(USDC).balanceOf(module), 3850e6);
+        assertEq(IERC20Metadata(USDC).balanceOf(module), 2614e6);
     }
 
     // #endregion test fund.
@@ -717,15 +715,15 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -746,30 +744,30 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2610e6;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -836,17 +834,17 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 1 ether;
-        uint256 amount1 = 3850e6;
+        uint256 amount0 = 2614e6;
+        uint256 amount1 = 1 ether;
 
-        deal(WETH, depositor, amount0);
-        deal(USDC, depositor, amount1);
+        deal(USDC, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
-        IERC20Metadata(USDC).approve(module, amount1);
+        IERC20Metadata(USDC).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -870,20 +868,20 @@ contract AerodromeStandardModulePrivateTest is
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3850e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -917,12 +915,12 @@ contract AerodromeStandardModulePrivateTest is
 
         address recipient =
             vm.addr(uint256(keccak256(abi.encode("Recipient"))));
-        bool zeroForOne = true;
+        bool zeroForOne = false;
         int256 amountSpecified = 0.5 ether;
 
         IUniswapV3Pool pool = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         );
 
@@ -932,7 +930,7 @@ contract AerodromeStandardModulePrivateTest is
             recipient,
             zeroForOne,
             amountSpecified,
-            TickMath.MIN_SQRT_RATIO + 1,
+            TickMath.MAX_SQRT_RATIO - 1,
             ""
         );
 
@@ -948,12 +946,12 @@ contract AerodromeStandardModulePrivateTest is
 
         // #region claim rewards.
 
-        assertEq(IERC20Metadata(AERO).balanceOf(owner), 0);
+        assertEq(IERC20Metadata(VELO).balanceOf(owner), 0);
 
         vm.prank(owner);
         IAerodromeStandardModulePrivate(module).claimRewards(owner);
 
-        assertGt(IERC20Metadata(AERO).balanceOf(owner), 0);
+        assertGt(IERC20Metadata(VELO).balanceOf(owner), 0);
 
         // #endregion claim rewards.
     }
@@ -982,7 +980,7 @@ contract AerodromeStandardModulePrivateTest is
             IAerodromeStandardModulePrivate.SameReceiver.selector
         );
         IAerodromeStandardModulePrivate(module).setReceiver(
-            aeroReceiver
+            veloReceiver
         );
     }
 
@@ -1000,7 +998,7 @@ contract AerodromeStandardModulePrivateTest is
 
         assertEq(
             IAerodromeStandardModulePrivate(module).aeroReceiver(),
-            aeroReceiver
+            veloReceiver
         );
 
         vm.prank(arrakisStandardManagerOwner);
@@ -1022,17 +1020,17 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 1 ether;
-        uint256 amount1 = 3850e6;
+        uint256 amount0 = 2614e6;
+        uint256 amount1 = 1 ether;
 
-        deal(WETH, depositor, amount0);
-        deal(USDC, depositor, amount1);
+        deal(USDC, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
-        IERC20Metadata(USDC).approve(module, amount1);
+        IERC20Metadata(USDC).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -1056,20 +1054,20 @@ contract AerodromeStandardModulePrivateTest is
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3850e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -1103,12 +1101,12 @@ contract AerodromeStandardModulePrivateTest is
 
         address recipient =
             vm.addr(uint256(keccak256(abi.encode("Recipient"))));
-        bool zeroForOne = true;
+        bool zeroForOne = false;
         int256 amountSpecified = 0.5 ether;
 
         IUniswapV3Pool pool = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         );
 
@@ -1118,7 +1116,7 @@ contract AerodromeStandardModulePrivateTest is
             recipient,
             zeroForOne,
             amountSpecified,
-            TickMath.MIN_SQRT_RATIO + 1,
+            TickMath.MAX_SQRT_RATIO - 1,
             ""
         );
 
@@ -1134,22 +1132,22 @@ contract AerodromeStandardModulePrivateTest is
 
         // #region claim rewards.
 
-        assertEq(IERC20Metadata(AERO).balanceOf(owner), 0);
+        assertEq(IERC20Metadata(VELO).balanceOf(owner), 0);
 
         vm.prank(owner);
         IAerodromeStandardModulePrivate(module).claimRewards(owner);
 
-        assertGt(IERC20Metadata(AERO).balanceOf(owner), 0);
+        assertGt(IERC20Metadata(VELO).balanceOf(owner), 0);
 
         // #endregion claim rewards.
 
         // #region claim manager rewards.
 
-        assertEq(IERC20Metadata(AERO).balanceOf(aeroReceiver), 0);
+        assertEq(IERC20Metadata(VELO).balanceOf(veloReceiver), 0);
 
         IAerodromeStandardModulePrivate(module).claimManager();
 
-        assertGt(IERC20Metadata(AERO).balanceOf(aeroReceiver), 0);
+        assertGt(IERC20Metadata(VELO).balanceOf(veloReceiver), 0);
 
         // #endregion claim manager rewards.
     }
@@ -1199,15 +1197,15 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -1228,30 +1226,30 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2610e6;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -1282,15 +1280,15 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 0;
-        uint256 amount1 = 3414e6 * 2;
+        uint256 amount0 = 2614e6 * 2;
+        uint256 amount1 = 0;
 
-        deal(USDC, depositor, amount1);
+        deal(USDC, depositor, amount0);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(USDC).approve(module, amount1);
+        IERC20Metadata(USDC).approve(module, amount0);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -1310,31 +1308,31 @@ contract AerodromeStandardModulePrivateTest is
             new ModifyPosition[](0);
         SwapPayload memory swapPayload;
 
-        swapPayload.amountIn = 3414e6;
+        swapPayload.amountIn = 2614e6;
         swapPayload.expectedMinReturn = 1 ether;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swapOneForZero.selector);
-        swapPayload.zeroForOne = false;
+        swapPayload.zeroForOne = true;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -1359,21 +1357,23 @@ contract AerodromeStandardModulePrivateTest is
         // #endregion rebalance.
     }
 
-    function test_rebalance_expected_min_return_too_low() public {
+    function test_rebalance_expected_min_return_too_low_one_for_zero()
+        public
+    {
         // #region deposit.
 
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -1394,30 +1394,30 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3014e6;
+        swapPayload.expectedMinReturn = 2010e6;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -1447,23 +1447,21 @@ contract AerodromeStandardModulePrivateTest is
         // #endregion rebalance.
     }
 
-    function test_rebalance_expected_min_return_too_low_one_for_zero()
-        public
-    {
+    function test_rebalance_expected_min_return_too_low() public {
         // #region deposit.
 
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 0;
-        uint256 amount1 = 3414e6 * 2;
+        uint256 amount0 = 2614e6 * 2;
+        uint256 amount1 = 0;
 
-        deal(USDC, depositor, amount1);
+        deal(USDC, depositor, amount0);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(USDC).approve(module, amount1);
+        IERC20Metadata(USDC).approve(module, amount0);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -1483,31 +1481,31 @@ contract AerodromeStandardModulePrivateTest is
             new ModifyPosition[](0);
         SwapPayload memory swapPayload;
 
-        swapPayload.amountIn = 3414e6;
+        swapPayload.amountIn = 2614e6;
         swapPayload.expectedMinReturn = 0.5 ether;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swapOneForZero.selector);
-        swapPayload.zeroForOne = false;
+        swapPayload.zeroForOne = true;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -1543,15 +1541,15 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -1572,30 +1570,30 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2614e6;
         swapPayload.router = vault;
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -1631,15 +1629,15 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -1660,31 +1658,31 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2614e6;
         swapPayload.router = address(this);
         swapPayload.payload = abi.encodeWithSelector(
             this.swapZeroForOneSlippage.selector
         );
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -1720,15 +1718,15 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 0;
-        uint256 amount1 = 3414e6 * 2;
+        uint256 amount0 = 2614e6 * 2;
+        uint256 amount1 = 0;
 
-        deal(USDC, depositor, amount1);
+        deal(USDC, depositor, amount0);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(USDC).approve(module, amount1);
+        IERC20Metadata(USDC).approve(module, amount0);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -1748,32 +1746,32 @@ contract AerodromeStandardModulePrivateTest is
             new ModifyPosition[](0);
         SwapPayload memory swapPayload;
 
-        swapPayload.amountIn = 3414e6;
+        swapPayload.amountIn = 2614e6;
         swapPayload.expectedMinReturn = 1 ether;
         swapPayload.router = address(this);
         swapPayload.payload = abi.encodeWithSelector(
             this.swapOneForZeroSlippage.selector
         );
-        swapPayload.zeroForOne = false;
+        swapPayload.zeroForOne = true;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -1807,15 +1805,15 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -1836,30 +1834,30 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2610e6;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -1885,12 +1883,12 @@ contract AerodromeStandardModulePrivateTest is
 
         // #region second deposit.
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -1938,15 +1936,15 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -1967,30 +1965,30 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2610e6;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -2016,12 +2014,12 @@ contract AerodromeStandardModulePrivateTest is
 
         // #region second deposit.
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -2064,107 +2062,21 @@ contract AerodromeStandardModulePrivateTest is
         // #endregion second rebalance for increasing positions.
     }
 
-    function test_rebalance_mint_token_0() public {
-        // #region deposit.
-
-        address depositor =
-            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
-
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
-
-        deal(WETH, depositor, amount0);
-
-        // #region approve the module.
-
-        vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
-        vm.stopPrank();
-
-        // #endregion approve the module.
-
-        vm.prank(address(vault));
-        IArrakisLPModulePrivate(module).fund(
-            depositor, amount0, amount1
-        );
-
-        // #endregion deposit.
-
-        // #region rebalance with swap.
-
-        // Zero for one swap.
-
-        ModifyPosition[] memory modifyPositions =
-            new ModifyPosition[](0);
-        SwapPayload memory swapPayload;
-
-        swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
-        swapPayload.router = address(this);
-        swapPayload.payload =
-            abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
-
-        int24 tickSpacing = 100;
-
-        (, int24 tick,,,,) = IUniswapV3Pool(
-            IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
-            )
-        ).slot0();
-
-        INonfungiblePositionManager.MintParams[] memory mintParams =
-            new INonfungiblePositionManager.MintParams[](1);
-        mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
-            tickSpacing: tickSpacing,
-            tickLower: int24(tick - (tick % 100) - 100),
-            tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
-            amount0Min: 0,
-            amount1Min: 0,
-            recipient: address(module),
-            deadline: type(uint256).max,
-            sqrtPriceX96: 0
-        });
-
-        vm.prank(arrakisStandardManager);
-        vm.expectRevert(
-            IAerodromeStandardModulePrivate.MintToken0.selector
-        );
-        IAerodromeStandardModulePrivate(module).rebalance(
-            RebalanceParams({
-                decreasePositions: modifyPositions,
-                increasePositions: modifyPositions,
-                swapPayload: swapPayload,
-                mintParams: mintParams,
-                minBurn0: 0,
-                minBurn1: 0,
-                minDeposit0: 2 ether,
-                minDeposit1: 0
-            })
-        );
-
-        // #endregion rebalance.
-    }
-
     function test_rebalance_mint_token_1() public {
         // #region deposit.
 
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -2185,30 +2097,30 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2610e6;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -2229,28 +2141,28 @@ contract AerodromeStandardModulePrivateTest is
                 minBurn0: 0,
                 minBurn1: 0,
                 minDeposit0: 0,
-                minDeposit1: 3415e6
+                minDeposit1: 2 ether
             })
         );
 
         // #endregion rebalance.
     }
 
-    function test_rebalance_token_0_mismatch() public {
+    function test_rebalance_mint_token_0() public {
         // #region deposit.
 
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -2271,17 +2183,17 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2610e6;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
@@ -2289,12 +2201,98 @@ contract AerodromeStandardModulePrivateTest is
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
             token0: USDC,
-            token1: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.MintToken0.selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 3415e6,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+    }
+
+    function test_rebalance_token_0_mismatch() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
+
+        deal(WETH, depositor, amount1);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount1);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 2610e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = false;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                USDC, WETH, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: WETH,
+            token1: WETH,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -2314,8 +2312,8 @@ contract AerodromeStandardModulePrivateTest is
                 mintParams: mintParams,
                 minBurn0: 0,
                 minBurn1: 0,
-                minDeposit0: 0,
-                minDeposit1: 3415e6
+                minDeposit0: 2614e6,
+                minDeposit1: 0
             })
         );
 
@@ -2328,15 +2326,15 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -2357,30 +2355,30 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2610e6;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: WETH,
+            token0: USDC,
+            token1: USDC,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -2400,8 +2398,8 @@ contract AerodromeStandardModulePrivateTest is
                 mintParams: mintParams,
                 minBurn0: 0,
                 minBurn1: 0,
-                minDeposit0: 0,
-                minDeposit1: 3415e6
+                minDeposit0: 2614e6,
+                minDeposit1: 0
             })
         );
 
@@ -2414,15 +2412,15 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -2443,30 +2441,30 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2610e6;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing + 1,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -2489,7 +2487,7 @@ contract AerodromeStandardModulePrivateTest is
                 minBurn0: 0,
                 minBurn1: 0,
                 minDeposit0: 0,
-                minDeposit1: 3415e6
+                minDeposit1: 2614e6
             })
         );
 
@@ -2502,15 +2500,15 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -2531,30 +2529,30 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2610e6;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -2581,7 +2579,7 @@ contract AerodromeStandardModulePrivateTest is
         // #region second rebalance to burn position.
 
         uint256[] memory tokenId =
-            AerodromeStandardModulePrivate(module).tokenIds();
+            VelodromeStandardModulePrivate(module).tokenIds();
 
         modifyPositions = new ModifyPosition[](1);
         SwapPayload memory swapPayload2;
@@ -2610,135 +2608,21 @@ contract AerodromeStandardModulePrivateTest is
         // #endregion second rebalance to burn position.
     }
 
-    function test_rebalance_burn_token_0() public {
-        // #region deposit.
-
-        address depositor =
-            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
-
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
-
-        deal(WETH, depositor, amount0);
-
-        // #region approve the module.
-
-        vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
-        vm.stopPrank();
-
-        // #endregion approve the module.
-
-        vm.prank(address(vault));
-        IArrakisLPModulePrivate(module).fund(
-            depositor, amount0, amount1
-        );
-
-        // #endregion deposit.
-
-        // #region rebalance with swap.
-
-        // Zero for one swap.
-
-        ModifyPosition[] memory modifyPositions =
-            new ModifyPosition[](0);
-        SwapPayload memory swapPayload;
-
-        swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
-        swapPayload.router = address(this);
-        swapPayload.payload =
-            abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
-
-        int24 tickSpacing = 100;
-
-        (, int24 tick,,,,) = IUniswapV3Pool(
-            IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
-            )
-        ).slot0();
-
-        INonfungiblePositionManager.MintParams[] memory mintParams =
-            new INonfungiblePositionManager.MintParams[](1);
-        mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
-            tickSpacing: tickSpacing,
-            tickLower: int24(tick - (tick % 100) - 100),
-            tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
-            amount0Min: 0,
-            amount1Min: 0,
-            recipient: address(module),
-            deadline: type(uint256).max,
-            sqrtPriceX96: 0
-        });
-
-        vm.prank(arrakisStandardManager);
-        IAerodromeStandardModulePrivate(module).rebalance(
-            RebalanceParams({
-                decreasePositions: modifyPositions,
-                increasePositions: modifyPositions,
-                swapPayload: swapPayload,
-                mintParams: mintParams,
-                minBurn0: 0,
-                minBurn1: 0,
-                minDeposit0: 0,
-                minDeposit1: 0
-            })
-        );
-
-        // #endregion rebalance.
-
-        // #region second rebalance to burn position.
-
-        uint256[] memory tokenId =
-            AerodromeStandardModulePrivate(module).tokenIds();
-
-        modifyPositions = new ModifyPosition[](1);
-        SwapPayload memory swapPayload2;
-        mintParams = new INonfungiblePositionManager.MintParams[](0);
-
-        modifyPositions[0] =
-            ModifyPosition({tokenId: tokenId[0], proportion: BASE});
-
-        vm.prank(arrakisStandardManager);
-        vm.expectRevert(
-            IAerodromeStandardModulePrivate.BurnToken0.selector
-        );
-        IAerodromeStandardModulePrivate(module).rebalance(
-            RebalanceParams({
-                decreasePositions: modifyPositions,
-                increasePositions: new ModifyPosition[](0),
-                swapPayload: swapPayload2,
-                mintParams: mintParams,
-                minBurn0: 2 ether,
-                minBurn1: 0,
-                minDeposit0: 0,
-                minDeposit1: 0
-            })
-        );
-
-        // #endregion second rebalance to burn position.
-    }
-
     function test_rebalance_burn_token_1() public {
         // #region deposit.
 
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -2759,30 +2643,30 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2610e6;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -2809,7 +2693,7 @@ contract AerodromeStandardModulePrivateTest is
         // #region second rebalance to burn position.
 
         uint256[] memory tokenId =
-            AerodromeStandardModulePrivate(module).tokenIds();
+            VelodromeStandardModulePrivate(module).tokenIds();
 
         modifyPositions = new ModifyPosition[](1);
         SwapPayload memory swapPayload2;
@@ -2829,7 +2713,7 @@ contract AerodromeStandardModulePrivateTest is
                 swapPayload: swapPayload2,
                 mintParams: mintParams,
                 minBurn0: 0,
-                minBurn1: 10_000_000_000,
+                minBurn1: 2 ether,
                 minDeposit0: 0,
                 minDeposit1: 0
             })
@@ -2838,21 +2722,21 @@ contract AerodromeStandardModulePrivateTest is
         // #endregion second rebalance to burn position.
     }
 
-    function test_rebalance_full_burn() public {
+    function test_rebalance_burn_token_0() public {
         // #region deposit.
 
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -2873,30 +2757,30 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2610e6;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -2923,7 +2807,121 @@ contract AerodromeStandardModulePrivateTest is
         // #region second rebalance to burn position.
 
         uint256[] memory tokenId =
-            AerodromeStandardModulePrivate(module).tokenIds();
+            VelodromeStandardModulePrivate(module).tokenIds();
+
+        modifyPositions = new ModifyPosition[](1);
+        SwapPayload memory swapPayload2;
+        mintParams = new INonfungiblePositionManager.MintParams[](0);
+
+        modifyPositions[0] =
+            ModifyPosition({tokenId: tokenId[0], proportion: BASE});
+
+        vm.prank(arrakisStandardManager);
+        vm.expectRevert(
+            IAerodromeStandardModulePrivate.BurnToken0.selector
+        );
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                decreasePositions: modifyPositions,
+                increasePositions: new ModifyPosition[](0),
+                swapPayload: swapPayload2,
+                mintParams: mintParams,
+                minBurn0: 10_000_000_000,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion second rebalance to burn position.
+    }
+
+    function test_rebalance_full_burn() public {
+        // #region deposit.
+
+        address depositor =
+            vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
+
+        deal(WETH, depositor, amount1);
+
+        // #region approve the module.
+
+        vm.startPrank(depositor);
+        IERC20Metadata(WETH).approve(module, amount1);
+        vm.stopPrank();
+
+        // #endregion approve the module.
+
+        vm.prank(address(vault));
+        IArrakisLPModulePrivate(module).fund(
+            depositor, amount0, amount1
+        );
+
+        // #endregion deposit.
+
+        // #region rebalance with swap.
+
+        // Zero for one swap.
+
+        ModifyPosition[] memory modifyPositions =
+            new ModifyPosition[](0);
+        SwapPayload memory swapPayload;
+
+        swapPayload.amountIn = 1 ether;
+        swapPayload.expectedMinReturn = 2610e6;
+        swapPayload.router = address(this);
+        swapPayload.payload =
+            abi.encodeWithSelector(this.swap.selector);
+        swapPayload.zeroForOne = false;
+
+        int24 tickSpacing = 100;
+
+        (, int24 tick,,,,) = IUniswapV3Pool(
+            IUniswapV3Factory(clfactory).getPool(
+                USDC, WETH, tickSpacing
+            )
+        ).slot0();
+
+        INonfungiblePositionManager.MintParams[] memory mintParams =
+            new INonfungiblePositionManager.MintParams[](1);
+        mintParams[0] = INonfungiblePositionManager.MintParams({
+            token0: USDC,
+            token1: WETH,
+            tickSpacing: tickSpacing,
+            tickLower: int24(tick - (tick % 100) - 100),
+            tickUpper: int24(tick - (tick % 100) + 100),
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(module),
+            deadline: type(uint256).max,
+            sqrtPriceX96: 0
+        });
+
+        vm.prank(arrakisStandardManager);
+        IAerodromeStandardModulePrivate(module).rebalance(
+            RebalanceParams({
+                decreasePositions: modifyPositions,
+                increasePositions: modifyPositions,
+                swapPayload: swapPayload,
+                mintParams: mintParams,
+                minBurn0: 0,
+                minBurn1: 0,
+                minDeposit0: 0,
+                minDeposit1: 0
+            })
+        );
+
+        // #endregion rebalance.
+
+        // #region second rebalance to burn position.
+
+        uint256[] memory tokenId =
+            VelodromeStandardModulePrivate(module).tokenIds();
 
         modifyPositions = new ModifyPosition[](1);
         SwapPayload memory swapPayload2;
@@ -2955,15 +2953,15 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 2 ether;
-        uint256 amount1 = 0;
+        uint256 amount0 = 0;
+        uint256 amount1 = 2 ether;
 
-        deal(WETH, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -2984,30 +2982,30 @@ contract AerodromeStandardModulePrivateTest is
         SwapPayload memory swapPayload;
 
         swapPayload.amountIn = 1 ether;
-        swapPayload.expectedMinReturn = 3414e6;
+        swapPayload.expectedMinReturn = 2610e6;
         swapPayload.router = address(this);
         swapPayload.payload =
             abi.encodeWithSelector(this.swap.selector);
-        swapPayload.zeroForOne = true;
+        swapPayload.zeroForOne = false;
 
         int24 tickSpacing = 100;
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3414e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -3034,7 +3032,7 @@ contract AerodromeStandardModulePrivateTest is
         // #region second rebalance to burn position.
 
         uint256[] memory tokenId =
-            AerodromeStandardModulePrivate(module).tokenIds();
+            VelodromeStandardModulePrivate(module).tokenIds();
 
         modifyPositions = new ModifyPosition[](1);
         SwapPayload memory swapPayload2;
@@ -3084,17 +3082,17 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 1 ether;
-        uint256 amount1 = 3850e6;
+        uint256 amount0 = 2614e6;
+        uint256 amount1 = 1 ether;
 
-        deal(WETH, depositor, amount0);
-        deal(USDC, depositor, amount1);
+        deal(USDC, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
-        IERC20Metadata(USDC).approve(module, amount1);
+        IERC20Metadata(USDC).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -3118,20 +3116,20 @@ contract AerodromeStandardModulePrivateTest is
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](2);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 0.5 ether,
-            amount1Desired: 3850e6 / 2,
+            amount0Desired: 2614e6 / 2,
+            amount1Desired: 0.5 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -3139,13 +3137,13 @@ contract AerodromeStandardModulePrivateTest is
             sqrtPriceX96: 0
         });
         mintParams[1] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 200),
             tickUpper: int24(tick - (tick % 100) + 200),
-            amount0Desired: 0.5 ether,
-            amount1Desired: 3850e6 / 2,
+            amount0Desired: 2614e6 / 2,
+            amount1Desired: 0.5 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -3187,17 +3185,17 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 1 ether;
-        uint256 amount1 = 3850e6;
+        uint256 amount0 = 2614e6;
+        uint256 amount1 = 1 ether;
 
-        deal(WETH, depositor, amount0);
-        deal(USDC, depositor, amount1);
+        deal(USDC, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
-        IERC20Metadata(USDC).approve(module, amount1);
+        IERC20Metadata(USDC).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -3221,20 +3219,20 @@ contract AerodromeStandardModulePrivateTest is
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](2);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 0.5 ether,
-            amount1Desired: 3850e6 / 2,
+            amount0Desired: 2614e6 / 2,
+            amount1Desired: 0.5 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -3242,13 +3240,13 @@ contract AerodromeStandardModulePrivateTest is
             sqrtPriceX96: 0
         });
         mintParams[1] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 200),
             tickUpper: int24(tick - (tick % 100) + 200),
-            amount0Desired: 0.5 ether,
-            amount1Desired: 3850e6 / 2,
+            amount0Desired: 2614e6 / 2,
+            amount1Desired: 0.5 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -3278,8 +3276,8 @@ contract AerodromeStandardModulePrivateTest is
             IArrakisLPModule(module).totalUnderlying();
 
         /// @dev minus 2 wei because, we are minting two positions.
-        assertEq(amount0, 1 ether - 2);
-        assertEq(amount1, 3850e6 - 2);
+        assertEq(amount0, 2614e6 - 2);
+        assertEq(amount1, 1 ether - 2);
     }
 
     // #endregion test total underlying.
@@ -3292,17 +3290,17 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 1 ether;
-        uint256 amount1 = 3850e6;
+        uint256 amount0 = 3850e6;
+        uint256 amount1 = 1 ether;
 
-        deal(WETH, depositor, amount0);
-        deal(USDC, depositor, amount1);
+        deal(USDC, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
-        IERC20Metadata(USDC).approve(module, amount1);
+        IERC20Metadata(USDC).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -3326,20 +3324,20 @@ contract AerodromeStandardModulePrivateTest is
 
         (uint160 sqrtPriceX96, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](2);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 0.5 ether,
-            amount1Desired: 3850e6 / 2,
+            amount0Desired: 2614e6 / 2,
+            amount1Desired: 0.5 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -3347,13 +3345,13 @@ contract AerodromeStandardModulePrivateTest is
             sqrtPriceX96: 0
         });
         mintParams[1] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 200),
             tickUpper: int24(tick - (tick % 100) + 200),
-            amount0Desired: 0.5 ether,
-            amount1Desired: 3850e6 / 2,
+            amount0Desired: 2614e6 / 2,
+            amount1Desired: 0.5 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -3384,8 +3382,8 @@ contract AerodromeStandardModulePrivateTest is
         (amount0, amount1) =
             IArrakisLPModule(module).totalUnderlyingAtPrice(priceX96);
 
-        assertEq(amount0, 207);
-        assertEq(amount1, 7_562_297_597);
+        assertEq(amount0, 2196755615);
+        assertEq(amount1, 1636310339193540072);
     }
 
     // #endregion test total underlying at price.
@@ -3393,7 +3391,9 @@ contract AerodromeStandardModulePrivateTest is
     // #region test validate rebalance.
 
     function test_validate_rebalance_over_max_deviation() public {
-        OracleWrapper(oracle).setPrice0(3000e6);
+        OracleWrapper(oracle).setPrice0(
+            382_450_128_503_243 + (382_450_128_503_243 * 2000) / PIPS
+        );
 
         vm.expectRevert(
             IAerodromeStandardModulePrivate.OverMaxDeviation.selector
@@ -3404,7 +3404,9 @@ contract AerodromeStandardModulePrivateTest is
     }
 
     function test_validate_rebalance() public {
-        OracleWrapper(oracle).setPrice0(3684e6);
+        OracleWrapper(oracle).setPrice0(
+            382_450_128_503_243 + (382_450_128_503_243 * 1000) / PIPS
+        );
 
         IArrakisLPModule(module).validateRebalance(
             IOracleWrapper(oracle), 3000
@@ -3413,31 +3415,31 @@ contract AerodromeStandardModulePrivateTest is
 
     // #endregion test validate rebalance.
 
-    // #region test aero manager balance.
+    // #region test velo manager balance.
 
-    function test_aero_manager_balance() public {
-        uint256 aeroManagerBalance = IAerodromeStandardModulePrivate(
+    function test_velo_manager_balance() public {
+        uint256 veloManagerBalance = IAerodromeStandardModulePrivate(
             module
         ).aeroManagerBalance();
 
-        assertEq(aeroManagerBalance, 0);
+        assertEq(veloManagerBalance, 0);
 
         // #region setup.
 
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 1 ether;
-        uint256 amount1 = 3850e6;
+        uint256 amount0 = 2614e6;
+        uint256 amount1 = 1 ether;
 
-        deal(WETH, depositor, amount0);
-        deal(USDC, depositor, amount1);
+        deal(USDC, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
-        IERC20Metadata(USDC).approve(module, amount1);
+        IERC20Metadata(USDC).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -3461,20 +3463,20 @@ contract AerodromeStandardModulePrivateTest is
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3850e6,
+            amount0Desired: 2614e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -3508,12 +3510,12 @@ contract AerodromeStandardModulePrivateTest is
 
         address recipient =
             vm.addr(uint256(keccak256(abi.encode("Recipient"))));
-        bool zeroForOne = true;
+        bool zeroForOne = false;
         int256 amountSpecified = 0.5 ether;
 
         IUniswapV3Pool pool = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         );
 
@@ -3523,7 +3525,7 @@ contract AerodromeStandardModulePrivateTest is
             recipient,
             zeroForOne,
             amountSpecified,
-            TickMath.MIN_SQRT_RATIO + 1,
+            TickMath.MAX_SQRT_RATIO - 1,
             ""
         );
 
@@ -3539,13 +3541,13 @@ contract AerodromeStandardModulePrivateTest is
 
         // #endregion setup.
 
-        aeroManagerBalance = IAerodromeStandardModulePrivate(module)
+        veloManagerBalance = IAerodromeStandardModulePrivate(module)
             .aeroManagerBalance();
 
-        assertGt(aeroManagerBalance, 0);
+        assertGt(veloManagerBalance, 0);
     }
 
-    // #endregion test aero manager balance.
+    // #endregion test velo manager balance.
 
     // #region test withdraw manager balance.
 
@@ -3599,17 +3601,17 @@ contract AerodromeStandardModulePrivateTest is
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        uint256 amount0 = 1 ether;
-        uint256 amount1 = 3850e6;
+        uint256 amount0 = 3850e6;
+        uint256 amount1 = 1 ether;
 
-        deal(WETH, depositor, amount0);
-        deal(USDC, depositor, amount1);
+        deal(USDC, depositor, amount0);
+        deal(WETH, depositor, amount1);
 
         // #region approve the module.
 
         vm.startPrank(depositor);
-        IERC20Metadata(WETH).approve(module, amount0);
-        IERC20Metadata(USDC).approve(module, amount1);
+        IERC20Metadata(USDC).approve(module, amount0);
+        IERC20Metadata(WETH).approve(module, amount1);
         vm.stopPrank();
 
         // #endregion approve the module.
@@ -3633,20 +3635,20 @@ contract AerodromeStandardModulePrivateTest is
 
         (, int24 tick,,,,) = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         ).slot0();
 
         INonfungiblePositionManager.MintParams[] memory mintParams =
             new INonfungiblePositionManager.MintParams[](1);
         mintParams[0] = INonfungiblePositionManager.MintParams({
-            token0: WETH,
-            token1: USDC,
+            token0: USDC,
+            token1: WETH,
             tickSpacing: tickSpacing,
             tickLower: int24(tick - (tick % 100) - 100),
             tickUpper: int24(tick - (tick % 100) + 100),
-            amount0Desired: 1 ether,
-            amount1Desired: 3850e6,
+            amount0Desired: 3850e6,
+            amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(module),
@@ -3680,12 +3682,12 @@ contract AerodromeStandardModulePrivateTest is
 
         address recipient =
             vm.addr(uint256(keccak256(abi.encode("Recipient"))));
-        bool zeroForOne = true;
+        bool zeroForOne = false;
         int256 amountSpecified = 0.5 ether;
 
         IUniswapV3Pool pool = IUniswapV3Pool(
             IUniswapV3Factory(clfactory).getPool(
-                WETH, USDC, tickSpacing
+                USDC, WETH, tickSpacing
             )
         );
 
@@ -3695,7 +3697,7 @@ contract AerodromeStandardModulePrivateTest is
             recipient,
             zeroForOne,
             amountSpecified,
-            TickMath.MIN_SQRT_RATIO + 1,
+            TickMath.MAX_SQRT_RATIO - 1,
             ""
         );
 
@@ -3711,42 +3713,42 @@ contract AerodromeStandardModulePrivateTest is
 
         // #region claim rewards.
 
-        assertEq(IERC20Metadata(AERO).balanceOf(owner), 0);
+        assertEq(IERC20Metadata(VELO).balanceOf(owner), 0);
 
         vm.prank(owner);
         IAerodromeStandardModulePrivate(module).claimRewards(owner);
 
         // console.log(
-        //     "AERO Balance : ", IERC20Metadata(AERO).balanceOf(owner)
+        //     "VELO Balance : ", IERC20Metadata(VELO).balanceOf(owner)
         // );
 
-        assertGt(IERC20Metadata(AERO).balanceOf(owner), 0);
+        assertGt(IERC20Metadata(VELO).balanceOf(owner), 0);
 
         // #endregion claim rewards.
 
         // #region claim manager rewards.
 
-        assertEq(IERC20Metadata(AERO).balanceOf(aeroReceiver), 0);
+        assertEq(IERC20Metadata(VELO).balanceOf(veloReceiver), 0);
 
         IAerodromeStandardModulePrivate(module).claimManager();
 
         // console.log(
-        //     "AERO Balance : ",
-        //     IERC20Metadata(AERO).balanceOf(aeroReceiver)
+        //     "VELO Balance : ",
+        //     IERC20Metadata(VELO).balanceOf(veloReceiver)
         // );
 
-        assertGt(IERC20Metadata(AERO).balanceOf(aeroReceiver), 0);
+        assertGt(IERC20Metadata(VELO).balanceOf(veloReceiver), 0);
 
         // console.log(
         //     "Manager Fee PIPS : %d ",
         //     FullMath.mulDiv(
-        //         IERC20Metadata(AERO).balanceOf(aeroReceiver),
+        //         IERC20Metadata(VELO).balanceOf(veloReceiver),
         //         PIPS,
-        //         IERC20Metadata(AERO).balanceOf(owner)
+        //         IERC20Metadata(VELO).balanceOf(owner)
         //     )
         // );
 
-        // console.log("Module balance : %d ", IERC20Metadata(AERO).balanceOf(address(module)));
+        // console.log("Module balance : %d ", IERC20Metadata(VELO).balanceOf(address(module)));
 
         // #endregion claim manager rewards.
 
@@ -3772,7 +3774,7 @@ contract AerodromeStandardModulePrivateTest is
             recipient,
             zeroForOne,
             amountSpecified,
-            TickMath.MIN_SQRT_RATIO + 1,
+            TickMath.MAX_SQRT_RATIO - 1,
             ""
         );
 
@@ -3803,26 +3805,26 @@ contract AerodromeStandardModulePrivateTest is
         // #region final claims.
 
         vm.startPrank(owner);
-        IERC20Metadata(AERO).transfer(
-            address(1), IERC20Metadata(AERO).balanceOf(owner)
+        IERC20Metadata(VELO).transfer(
+            address(1), IERC20Metadata(VELO).balanceOf(owner)
         );
         vm.stopPrank();
-        vm.startPrank(aeroReceiver);
-        IERC20Metadata(AERO).transfer(
-            address(1), IERC20Metadata(AERO).balanceOf(aeroReceiver)
+        vm.startPrank(veloReceiver);
+        IERC20Metadata(VELO).transfer(
+            address(1), IERC20Metadata(VELO).balanceOf(veloReceiver)
         );
         vm.stopPrank();
 
-        assertEq(IERC20Metadata(AERO).balanceOf(owner), 0);
-        assertEq(IERC20Metadata(AERO).balanceOf(aeroReceiver), 0);
+        assertEq(IERC20Metadata(VELO).balanceOf(owner), 0);
+        assertEq(IERC20Metadata(VELO).balanceOf(veloReceiver), 0);
 
         vm.prank(owner);
         IAerodromeStandardModulePrivate(module).claimRewards(owner);
 
         IAerodromeStandardModulePrivate(module).claimManager();
 
-        assertGt(IERC20Metadata(AERO).balanceOf(owner), 0);
-        assertGt(IERC20Metadata(AERO).balanceOf(aeroReceiver), 0);
+        assertGt(IERC20Metadata(VELO).balanceOf(owner), 0);
+        assertGt(IERC20Metadata(VELO).balanceOf(veloReceiver), 0);
 
         // #endregion final claims.
     }
@@ -3850,7 +3852,7 @@ contract AerodromeStandardModulePrivateTest is
         // #region deploy implementation.
 
         address implementation = address(
-            new AerodromeStandardModulePrivate(
+            new VelodromeStandardModulePrivate(
                 nonfungiblePositionManager, clfactory, voter, guardian
             )
         );
@@ -3874,28 +3876,38 @@ contract AerodromeStandardModulePrivateTest is
         IERC20Metadata(WETH).transferFrom(
             msg.sender, address(this), 1 ether
         );
-        deal(USDC, msg.sender, 3414e6);
+
+        uint256 balance = IERC20Metadata(USDC).balanceOf(msg.sender);
+
+        deal(USDC, msg.sender, balance + 2610e6);
     }
 
     function swapZeroForOneSlippage() public {
         IERC20Metadata(WETH).transferFrom(
             msg.sender, address(this), 1 ether
         );
-        deal(USDC, msg.sender, 3400e6);
+
+        uint256 balance = IERC20Metadata(USDC).balanceOf(msg.sender);
+
+        deal(USDC, msg.sender, balance + 2000e6);
     }
 
     function swapOneForZeroSlippage() public {
         IERC20Metadata(USDC).transferFrom(
-            msg.sender, address(this), 3414e6
+            msg.sender, address(this), 2614e6
         );
-        deal(WETH, msg.sender, 0.5 ether);
+        uint256 balance = IERC20Metadata(WETH).balanceOf(msg.sender);
+
+        deal(WETH, msg.sender, balance + 0.5 ether);
     }
 
     function swapOneForZero() public {
         IERC20Metadata(USDC).transferFrom(
-            msg.sender, address(this), 3414e6
+            msg.sender, address(this), 2614e6
         );
-        deal(WETH, msg.sender, 1 ether);
+
+        uint256 balance = IERC20Metadata(WETH).balanceOf(msg.sender);
+        deal(WETH, msg.sender, balance + 1 ether);
     }
 
     // #endregion swap mock functions.
