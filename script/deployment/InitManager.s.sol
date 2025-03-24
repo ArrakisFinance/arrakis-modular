@@ -18,17 +18,13 @@ contract InitManager is Script {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
-
-        vm.startBroadcast(privateKey);
-
-        address deployer = vm.addr(privateKey);
+        vm.startBroadcast();
 
         address owner = ArrakisRoles.getOwner();
         address defaultReceiver = owner;
 
         console.logString("Deployer :");
-        console.logAddress(deployer);
+        console.logAddress(msg.sender);
 
         bytes memory payload = abi.encodeWithSelector(
             ArrakisStandardManager.initialize.selector,

@@ -17,11 +17,7 @@ contract DGuardian is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK");
-
-        address deployer = vm.addr(privateKey);
-
-        vm.startBroadcast(privateKey);
+        vm.startBroadcast();
 
         address owner = ArrakisRoles.getOwner();
 
@@ -29,7 +25,7 @@ contract DGuardian is CreateXScript {
         address pauser = ArrakisRoles.getAdmin();
 
         console.logString("Deployer :");
-        console.logAddress(deployer);
+        console.logAddress(msg.sender);
 
         console.log("Owner of Guardian : ");
         console.logAddress(owner);
@@ -42,10 +38,11 @@ contract DGuardian is CreateXScript {
         );
 
         bytes32 salt = bytes32(
-            abi.encodePacked(deployer, hex"00", bytes11(version))
+            abi.encodePacked(msg.sender, hex"00", bytes11(version))
         );
 
-        address implementation = computeCreate3Address(salt, deployer);
+        address implementation =
+            computeCreate3Address(salt, msg.sender);
 
         console.logString("Guardian Address : ");
         console.logAddress(implementation);

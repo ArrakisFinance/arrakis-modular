@@ -20,7 +20,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 address constant vault = 0x1fbdAfE1131A29E8AFe04CC6BCBEA449235574b3; // arbitrum eth/usdc
 address constant router = 0xd3Db920D1403a5438A50d73f375b0DFf5a6Df9fC;
 uint256 constant maxAmount0 = 0.1 ether;
-uint256 constant maxAmount1 = 0.1*(10**6);
+uint256 constant maxAmount1 = 0.1 * (10 ** 6);
 // !! your address below !!
 address constant receiver = 0x9403de4457C3a28F3CA8190bfbb4e1B1Cc88D978;
 
@@ -28,13 +28,9 @@ contract Mint is Script {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
+        vm.startBroadcast();
 
-        address account = vm.addr(privateKey);
-
-        console.log(account);
-
-        vm.startBroadcast(privateKey);
+        console.log(msg.sender);
 
         (uint256 shares, uint256 amount0, uint256 amount1) =
         IArrakisPublicVaultRouter(router).getMintAmounts(
@@ -48,13 +44,14 @@ contract Mint is Script {
         ERC20(token0).approve(router, maxAmount0);
         ERC20(token1).approve(router, maxAmount1);
 
-        (amount0, amount1, shares) = IArrakisPublicVaultRouter(router).addLiquidity(
+        (amount0, amount1, shares) = IArrakisPublicVaultRouter(router)
+            .addLiquidity(
             AddLiquidityData({
                 amount0Max: maxAmount0,
                 amount1Max: maxAmount1,
-                amount0Min: amount0*99/100,
-                amount1Min: amount1*99/100,
-                amountSharesMin: shares*99/100,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: shares * 99 / 100,
                 vault: vault,
                 receiver: receiver
             })
