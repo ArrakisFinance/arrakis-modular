@@ -31,6 +31,12 @@ contract DGuardian is CreateXScript {
         console.logString("Deployer :");
         console.logAddress(deployer);
 
+        console.log("Owner of Guardian : ");
+        console.logAddress(owner);
+
+        console.log("Administrator of Guardian : ");
+        console.logAddress(pauser);
+
         bytes memory initCode = abi.encodePacked(
             type(Guardian).creationCode, abi.encode(owner, pauser)
         );
