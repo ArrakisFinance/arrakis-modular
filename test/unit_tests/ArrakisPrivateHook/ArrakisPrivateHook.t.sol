@@ -81,9 +81,11 @@ contract ArrakisPrivateHookTest is TestWrapper {
 
         vm.record();
         ArrakisPrivateHookImplementation impl =
-            new ArrakisPrivateHookImplementation(module, privateHook);
+            new ArrakisPrivateHookImplementation(manager, privateHook);
         (, bytes32[] memory writes) = vm.accesses(address(impl));
         vm.etch(address(privateHook), address(impl).code);
+
+        IArrakisPrivateHook(hook).initialize(module);
     }
 
     // #region test constructor.
@@ -236,6 +238,13 @@ contract ArrakisPrivateHookTest is TestWrapper {
         (,, uint24 lpFeeOverride) =
             IHooks(hook).beforeSwap(sender, key, params, hookData);
 
+        assertEq(lpFeeOverride, 0);
+
+        vm.roll(block.number + 1);
+
+        (,, lpFeeOverride) =
+            IHooks(hook).beforeSwap(sender, key, params, hookData);
+
         assertEq(
             lpFeeOverride,
             zeroForOneFee | LPFeeLibrary.OVERRIDE_FEE_FLAG
@@ -262,6 +271,13 @@ contract ArrakisPrivateHookTest is TestWrapper {
         // #endregion set fees.
 
         (,, uint24 lpFeeOverride) =
+            IHooks(hook).beforeSwap(sender, key, params, hookData);
+
+        assertEq(lpFeeOverride, 0);
+
+        vm.roll(block.number + 1);
+
+        (,, lpFeeOverride) =
             IHooks(hook).beforeSwap(sender, key, params, hookData);
 
         assertEq(
