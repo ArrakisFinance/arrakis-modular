@@ -20,7 +20,9 @@ import {UpgradeableBeacon} from
 // Sepolia UpgradeableBeacon : 0xD2307BeD9A55742feBe560B11e090427cEa89317
 contract DValantisPrivateModule is CreateXScript {
     uint88 public version = uint88(
-        uint256(keccak256(abi.encode("Valantis Private Module version 1")))
+        uint256(
+            keccak256(abi.encode("Valantis Private Module version 1"))
+        )
     );
 
     address public constant guardian =
@@ -32,24 +34,22 @@ contract DValantisPrivateModule is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
-
-        address deployer = vm.addr(privateKey);
+        vm.startBroadcast();
 
         console.logString("Deployer :");
-        console.logAddress(deployer);
-
-        vm.startBroadcast(privateKey);
+        console.logAddress(msg.sender);
 
         bytes memory initCode = abi.encodePacked(
-            type(ValantisModulePrivate).creationCode, abi.encode(guardian)
+            type(ValantisModulePrivate).creationCode,
+            abi.encode(guardian)
         );
 
         bytes32 salt = bytes32(
-            abi.encodePacked(deployer, hex"00", bytes11(version))
+            abi.encodePacked(msg.sender, hex"00", bytes11(version))
         );
 
-        address valantisModuleImpl = computeCreate3Address(salt, deployer);
+        address valantisModuleImpl =
+            computeCreate3Address(salt, msg.sender);
 
         console.logString("Valantis Module Implementation Address : ");
         console.logAddress(valantisModuleImpl);
@@ -63,9 +63,8 @@ contract DValantisPrivateModule is CreateXScript {
             revert("Create 3 addresses don't match.");
         }
 
-        address upgradeableBeacon = address(
-            new UpgradeableBeacon(valantisModuleImpl)
-        );
+        address upgradeableBeacon =
+            address(new UpgradeableBeacon(valantisModuleImpl));
 
         UpgradeableBeacon(upgradeableBeacon).transferOwnership(
             arrakisTimeLock

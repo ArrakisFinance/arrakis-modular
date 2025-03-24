@@ -30,14 +30,10 @@ contract DCreationCode is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
-
-        address deployer = vm.addr(privateKey);
+        vm.startBroadcast();
 
         console.logString("Deployer :");
-        console.logAddress(deployer);
-
-        vm.startBroadcast(privateKey);
+        console.logAddress(msg.sender);
 
         // #region public creation code.
 
@@ -47,12 +43,12 @@ contract DCreationCode is CreateXScript {
 
         bytes32 salt = bytes32(
             abi.encodePacked(
-                deployer, hex"00", bytes11(publicVersion)
+                msg.sender, hex"00", bytes11(publicVersion)
             )
         );
 
         address publicCreationCode =
-            computeCreate3Address(salt, deployer);
+            computeCreate3Address(salt, msg.sender);
 
         console.logString("Creation Code Public Address : ");
         console.logAddress(publicCreationCode);
@@ -76,12 +72,12 @@ contract DCreationCode is CreateXScript {
 
         salt = bytes32(
             abi.encodePacked(
-                deployer, hex"00", bytes11(privateVersion)
+                msg.sender, hex"00", bytes11(privateVersion)
             )
         );
 
         address privateCreationCode =
-            computeCreate3Address(salt, deployer);
+            computeCreate3Address(salt, msg.sender);
 
         console.logString("Creation Code Private Address : ");
         console.logAddress(privateCreationCode);

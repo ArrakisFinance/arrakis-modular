@@ -24,13 +24,10 @@ contract HOTOracle is Script {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
 
-        address account = vm.addr(privateKey);
+        vm.startBroadcast();
 
-        console.log(account);
-
-        vm.startBroadcast(privateKey);
+        console.log(msg.sender);
 
         address token0 = IArrakisMetaVault(vault).token0();
         address token1 = IArrakisMetaVault(vault).token1();

@@ -25,10 +25,6 @@ contract DRouterV2 is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
-
-        address deployer = vm.addr(privateKey);
-
         address owner = ArrakisRoles.getOwner();
 
         address weth = WethFactory.getWeth();
@@ -36,10 +32,10 @@ contract DRouterV2 is CreateXScript {
         console.logString("WETH :");
         console.logAddress(weth);
 
-        console.logString("Deployer :");
-        console.logAddress(deployer);
+        vm.startBroadcast();
 
-        vm.startBroadcast(privateKey);
+        console.logString("Deployer :");
+        console.logAddress(msg.sender);
 
         bytes memory initCode = abi.encodePacked(
             type(ArrakisPublicVaultRouterV2).creationCode,
@@ -47,14 +43,14 @@ contract DRouterV2 is CreateXScript {
         );
 
         bytes32 salt = bytes32(
-            abi.encodePacked(deployer, hex"00", bytes11(version))
+            abi.encodePacked(msg.sender, hex"00", bytes11(version))
         );
 
         bytes memory payload = abi.encodeWithSelector(
             ICreateX.deployCreate3.selector, salt, initCode
         );
 
-        address router = computeCreate3Address(salt, deployer);
+        address router = computeCreate3Address(salt, msg.sender);
 
         console.logString("Router V2 Address : ");
         console.logAddress(router);

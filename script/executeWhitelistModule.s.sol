@@ -21,19 +21,17 @@ contract ExecuteWhitelistModule is Script {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
+        vm.startBroadcast();
 
-        address account = vm.addr(privateKey);
-
-        console.log(account);
-
-        vm.startBroadcast(privateKey);
+        console.log(msg.sender);
 
         address[] memory beacons = new address[](1);
         beacons[0] = beacon;
 
         bytes[] memory payloads = new bytes[](1);
-        payloads[0] = abi.encodeWithSelector(IBunkerModule.initialize.selector, vault);
+        payloads[0] = abi.encodeWithSelector(
+            IBunkerModule.initialize.selector, vault
+        );
 
         bytes memory data = abi.encodeWithSelector(
             IArrakisMetaVault.whitelistModules.selector,

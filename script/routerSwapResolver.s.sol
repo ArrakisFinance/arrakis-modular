@@ -15,13 +15,10 @@ contract RouterSwapResolverDeployment is Script {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
 
-        address account = vm.addr(privateKey);
+        vm.startBroadcast();
 
-        console.log(account);
-
-        vm.startBroadcast(privateKey);
+        console.log(msg.sender);
 
         address routerSwapResover =
             address(new RouterSwapResolver(router));
