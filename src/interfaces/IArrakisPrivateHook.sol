@@ -16,9 +16,13 @@ interface IArrakisPrivateHook {
 
     // #region events.
 
-    event SetFees(uint24 zeroForOneFee, uint24 oneForZeroFee);
+    event SetFees(uint24 zeroForOneFee, uint24 oneForZeroFee, uint256 blockNumber);
 
     // #endregion events.
+
+    function initialize(
+        address module_
+    ) external;
 
     function setFees(
         uint24 zeroForOneFee_,

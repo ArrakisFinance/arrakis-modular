@@ -9,7 +9,7 @@ interface IArrakisPrivateHookFactory {
     // #endregion errors.
 
     function createPrivateHook(
-        address module_,
+        address manager_,
         bytes32 salt_
     ) external returns (address hook);
 

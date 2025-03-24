@@ -11,9 +11,9 @@ import {
 
 contract ArrakisPrivateHookImplementation is ArrakisPrivateHook {
     constructor(
-        address module_,
+        address manager_,
         ArrakisPrivateHook addressToEtch
-    ) ArrakisPrivateHook(module_) {
+    ) ArrakisPrivateHook(manager_) {
         Hooks.validateHookPermissions(
             addressToEtch, getHookPermissions()
         );
