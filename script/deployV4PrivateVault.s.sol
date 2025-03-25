@@ -145,9 +145,7 @@ contract DeployV4PrivateVault is CreateXScript {
         address oracle;
 
         if (oracleDeployment == OracleDeployment.UniV4Oracle) {
-            oracle = address(
-                new UniV4Oracle(poolKey, poolManager, isInversed)
-            );
+            oracle = address(new UniV4Oracle(poolManager, isInversed));
 
             console.log("Uni V4 Oracle : ");
             console.logAddress(oracle);
@@ -220,6 +218,16 @@ contract DeployV4PrivateVault is CreateXScript {
         console.logAddress(vault);
 
         // #endregion create private vault.
+
+        // #region initialize oracle.
+
+        if (oracleDeployment == OracleDeployment.UniV4Oracle) {
+            address module =
+                address(IArrakisMetaVault(vault).module());
+            UniV4Oracle(oracle).initialize(module);
+        }
+
+        // #endregion initialize oracle.
 
         // #region whitelist bunker module.
 
