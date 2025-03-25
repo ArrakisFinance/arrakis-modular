@@ -44,19 +44,19 @@ enum OracleDeployment {
 
 // #endregion enums.
 
-address constant token0 = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
+address constant token0 = 0x9a33406165f562E16C3abD82fd1185482E01b49a;
 address constant token1 = NATIVE_COIN;
-uint24 constant fee = 2750;
-int24 constant tickSpacing = 55;
+uint24 constant fee = 10_000;
+int24 constant tickSpacing = 200;
 address constant hooks = address(0);
-uint160 constant sqrtPrice = 0;
+uint160 constant sqrtPrice = 33965778792757789688229654398626;
 
 bool constant isInversed = true;
 
 bytes32 constant salt =
-    keccak256(abi.encode("Mainnet ETH/AAVE Uni V4 private vault v2"));
+    keccak256(abi.encode("BASE ETH/TALENT Uni V4 private vault beta 2"));
 address constant vaultOwner =
-    0x5108EF86cF493905BcD35A3736e4B46DeCD7de58;
+    0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 uint24 constant maxSlippage = TEN_PERCENT / 2;
 
 uint24 constant maxDeviation = TEN_PERCENT;
@@ -221,11 +221,8 @@ contract DeployV4PrivateVault is CreateXScript {
 
         // #region initialize oracle.
 
-        if (oracleDeployment == OracleDeployment.UniV4Oracle) {
-            address module =
-                address(IArrakisMetaVault(vault).module());
-            UniV4Oracle(oracle).initialize(module);
-        }
+        // do it manually after.
+
 
         // #endregion initialize oracle.
 
