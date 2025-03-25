@@ -4,6 +4,9 @@ pragma solidity ^0.8.19;
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IUniV4Oracle} from "../interfaces/IUniV4Oracle.sol";
 
+import {IUniV4StandardModule} from
+    "../interfaces/IUniV4StandardModule.sol";
+
 // #region uniswap v4.
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
@@ -27,60 +30,69 @@ import {
 
 import {IERC20Metadata} from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Initializable} from
+    "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 // #endregion openzeppelin.
 
-contract UniV4Oracle is IOracleWrapper, IUniV4Oracle {
+contract UniV4Oracle is
+    IOracleWrapper,
+    IUniV4Oracle,
+    Initializable
+{
     using StateLibrary for IPoolManager;
     using PoolIdLibrary for PoolKey;
 
     // #region immutables.
 
-    PoolId public immutable pool;
     address public immutable poolManager;
-    uint8 public immutable decimals0;
-    uint8 public immutable decimals1;
     bool public immutable isInversed;
 
     // #endregion immutables.
 
+    address public module;
+    uint8 public decimals0;
+    uint8 public decimals1;
+
     // #region constructor.
-    constructor(
-        PoolKey memory poolKey_,
-        address poolManager_,
-        bool isInversed_
-    ) {
+    constructor(address poolManager_, bool isInversed_) {
         if (poolManager_ == address(0)) {
             revert AddressZero();
         }
 
-        PoolId _pool = poolKey_.toId();
-
-        (uint160 sqrtPriceX96,,,) =
-            IPoolManager(poolManager_).getSlot0(_pool);
-
-        if (sqrtPriceX96 == 0) {
-            revert SqrtPriceZero();
-        }
-
-        pool = _pool;
         poolManager = poolManager_;
-
-        if (CurrencyLibrary.isAddressZero(poolKey_.currency0)) {
-            decimals0 = 18;
-        } else {
-            decimals0 = IERC20Metadata(
-                Currency.unwrap(poolKey_.currency0)
-            ).decimals();
-        }
-
-        decimals1 = IERC20Metadata(
-            Currency.unwrap(poolKey_.currency1)
-        ).decimals();
-
         isInversed = isInversed_;
     }
     // #endregion constructor.
+
+    // #region initialize function.
+
+    function initialize(
+        address module_
+    ) external override initializer {
+        if (module_ == address(0)) {
+            revert AddressZero();
+        }
+
+        PoolKey memory poolKey;
+        (poolKey.currency0, poolKey.currency1,,,) =
+            IUniV4StandardModule(module_).poolKey();
+
+        module = module_;
+
+        if (CurrencyLibrary.isAddressZero(poolKey.currency0)) {
+            decimals0 = 18;
+        } else {
+            decimals0 = IERC20Metadata(
+                Currency.unwrap(poolKey.currency0)
+            ).decimals();
+        }
+
+        decimals1 = IERC20Metadata(Currency.unwrap(poolKey.currency1))
+            .decimals();
+    }
+
+    // #endregion initialize function.
 
     function getPrice0() external view returns (uint256 price0) {
         if (isInversed) {
@@ -99,6 +111,17 @@ contract UniV4Oracle is IOracleWrapper, IUniV4Oracle {
     }
 
     function _getPrice0() internal view returns (uint256 price0) {
+        PoolKey memory poolKey;
+        (
+            poolKey.currency0,
+            poolKey.currency1,
+            poolKey.fee,
+            poolKey.tickSpacing,
+            poolKey.hooks
+        ) = IUniV4StandardModule(module).poolKey();
+
+        PoolId pool = poolKey.toId();
+
         (uint160 sqrtPriceX96,,,) =
             IPoolManager(poolManager).getSlot0(pool);
 
@@ -122,6 +145,17 @@ contract UniV4Oracle is IOracleWrapper, IUniV4Oracle {
     }
 
     function _getPrice1() internal view returns (uint256 price1) {
+        PoolKey memory poolKey;
+        (
+            poolKey.currency0,
+            poolKey.currency1,
+            poolKey.fee,
+            poolKey.tickSpacing,
+            poolKey.hooks
+        ) = IUniV4StandardModule(module).poolKey();
+
+        PoolId pool = poolKey.toId();
+
         (uint160 sqrtPriceX96,,,) =
             IPoolManager(poolManager).getSlot0(pool);
 
