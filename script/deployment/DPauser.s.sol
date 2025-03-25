@@ -18,11 +18,7 @@ contract DPauser is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK");
-
-        address deployer = vm.addr(privateKey);
-
-        vm.startBroadcast(privateKey);
+        vm.startBroadcast();
 
         address owner = ArrakisRoles.getOwner();
 
@@ -30,17 +26,18 @@ contract DPauser is CreateXScript {
         address pauser = ArrakisRoles.getAdmin();
 
         console.logString("Deployer :");
-        console.logAddress(deployer);
+        console.logAddress(msg.sender);
 
         bytes memory initCode = abi.encodePacked(
             type(Pauser).creationCode, abi.encode(pauser, owner)
         );
 
         bytes32 salt = bytes32(
-            abi.encodePacked(deployer, hex"00", bytes11(version))
+            abi.encodePacked(msg.sender, hex"00", bytes11(version))
         );
 
-        address implementation = computeCreate3Address(salt, deployer);
+        address implementation =
+            computeCreate3Address(salt, msg.sender);
 
         console.logString("Pauser Address : ");
         console.logAddress(implementation);

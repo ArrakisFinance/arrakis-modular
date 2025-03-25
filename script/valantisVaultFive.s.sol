@@ -26,12 +26,10 @@ contract ValantisVaultFive is Script {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
-        address account = vm.addr(privateKey);
 
-        console.log(account);
+        console.log(msg.sender);
 
-        vm.startBroadcast(privateKey);
+        vm.startBroadcast();
 
         (
             ,

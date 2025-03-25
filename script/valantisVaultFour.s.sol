@@ -26,13 +26,10 @@ contract ValantisVaultFour is Script {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
 
-        address account = vm.addr(privateKey);
+        console.log(msg.sender);
 
-        console.log(account);
-
-        vm.startBroadcast(privateKey);
+        vm.startBroadcast();
 
         (
             ,

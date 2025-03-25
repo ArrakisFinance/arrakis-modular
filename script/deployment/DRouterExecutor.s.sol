@@ -11,25 +11,22 @@ import {RouterSwapExecutor} from "../../src/RouterSwapExecutor.sol";
 import {NATIVE_COIN} from "../../src/constants/CArrakis.sol";
 
 // RouterExecutor : 0x19488620Cdf3Ff1B0784AC4529Fb5c5AbAceb1B6
+// RouterExecutor V2 : 0x31e1A0ac6931a9c5BFe149596CcDc9C37C558e54
 contract DRouterExecutor is CreateXScript {
     uint88 public version = uint88(
-        uint256(keccak256(abi.encode("Router Executor version 1")))
+        uint256(keccak256(abi.encode("Router V2 Executor version 1")))
     );
 
     address public constant router =
-        0x72aa2C8e6B14F30131081401Fa999fC964A66041;
+        0x64C3Ac1a917953c99eA6a37C8AA8c534B32Eb780;
 
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
-
-        address deployer = vm.addr(privateKey);
+        vm.startBroadcast();
 
         console.logString("Deployer :");
-        console.logAddress(deployer);
-
-        vm.startBroadcast(privateKey);
+        console.logAddress(msg.sender);
 
         bytes memory initCode = abi.encodePacked(
             type(RouterSwapExecutor).creationCode,
@@ -37,10 +34,11 @@ contract DRouterExecutor is CreateXScript {
         );
 
         bytes32 salt = bytes32(
-            abi.encodePacked(deployer, hex"00", bytes11(version))
+            abi.encodePacked(msg.sender, hex"00", bytes11(version))
         );
 
-        address routerExecutor = computeCreate3Address(salt, deployer);
+        address routerExecutor =
+            computeCreate3Address(salt, msg.sender);
 
         console.logString("Router Executor Address : ");
         console.logAddress(routerExecutor);

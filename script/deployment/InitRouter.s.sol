@@ -6,14 +6,16 @@ import {Script} from "forge-std/Script.sol";
 
 import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
 
-import {ArrakisPublicVaultRouter} from
-    "../../src/ArrakisPublicVaultRouter.sol";
+import {ArrakisPublicVaultRouterV2} from
+    "../../src/ArrakisPublicVaultRouterV2.sol";
+import {ArrakisPrivateVaultRouter} from
+    "../../src/ArrakisPrivateVaultRouter.sol";
 
 contract InitRouter is Script {
     address public constant router =
-        0x72aa2C8e6B14F30131081401Fa999fC964A66041;
+        0xEa9702Cf19BB348F17155E92357beF1Ed6F080B3;
     address public constant routerExecutor =
-        0x19488620Cdf3Ff1B0784AC4529Fb5c5AbAceb1B6;
+        0xC2d224E5781e9A173CaC4b387AeA9334a664beA7;
 
     function setUp() public {}
 
@@ -26,7 +28,7 @@ contract InitRouter is Script {
         console.logAddress(deployer);
 
         bytes memory payload = abi.encodeWithSelector(
-            ArrakisPublicVaultRouter.updateSwapExecutor.selector,
+            ArrakisPrivateVaultRouter.updateSwapExecutor.selector,
             routerExecutor
         );
 

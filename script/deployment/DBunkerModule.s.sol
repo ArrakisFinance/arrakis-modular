@@ -7,8 +7,7 @@ import {CreateXScript} from "./CreateXScript.sol";
 import {ICreateX} from "./interfaces/ICreateX.sol";
 import {ArrakisRoles} from "./constants/ArrakisRoles.sol";
 
-import {BunkerModule} from
-    "../../src/modules/BunkerModule.sol";
+import {BunkerModule} from "../../src/modules/BunkerModule.sol";
 
 import {UpgradeableBeacon} from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
@@ -18,6 +17,10 @@ import {UpgradeableBeacon} from
 // Base UpgradeableBeacon : 0x3025b46A9814a69EAf8699EDf905784Ee22C3ABB
 // Arbitrum UpgradeableBeacon : 0xe25F763fa58de798AF2e454e916F527cdD17E885
 // Sepolia UpgradeableBeacon : 0xB4dA34605c26BA152d465DeB885889070105BB5F
+// Polygon UpgradeableBeacon : 0xD4ae05C8928d4850cDD0f800322108E6B1a8F3eB
+// Optimism UpgradeableBeacon : 0x79fc92afa1ce5476010644380156790d2fc52168
+// Ink UpgradeableBeacon : 0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73
+// Unichain UpgradeableBeacon : 0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73
 contract DBunkerModule is CreateXScript {
     uint88 public version = uint88(
         uint256(keccak256(abi.encode("Bunker Module version 1")))
@@ -32,24 +35,21 @@ contract DBunkerModule is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
-
-        address deployer = vm.addr(privateKey);
+        vm.startBroadcast();
 
         console.logString("Deployer :");
-        console.logAddress(deployer);
-
-        vm.startBroadcast(privateKey);
+        console.logAddress(msg.sender);
 
         bytes memory initCode = abi.encodePacked(
             type(BunkerModule).creationCode, abi.encode(guardian)
         );
 
         bytes32 salt = bytes32(
-            abi.encodePacked(deployer, hex"00", bytes11(version))
+            abi.encodePacked(msg.sender, hex"00", bytes11(version))
         );
 
-        address bunkerModuleImpl = computeCreate3Address(salt, deployer);
+        address bunkerModuleImpl =
+            computeCreate3Address(salt, msg.sender);
 
         console.logString("Bunker Module Implementation Address : ");
         console.logAddress(bunkerModuleImpl);
@@ -63,13 +63,11 @@ contract DBunkerModule is CreateXScript {
             revert("Create 3 addresses don't match.");
         }
 
-        address upgradeableBeacon = address(
-            new UpgradeableBeacon(bunkerModuleImpl)
-        );
+        address upgradeableBeacon =
+            address(new UpgradeableBeacon(bunkerModuleImpl));
 
-        UpgradeableBeacon(upgradeableBeacon).transferOwnership(
-            arrakisTimeLock
-        );
+        UpgradeableBeacon(0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73)
+            .transferOwnership(arrakisTimeLock);
 
         console.logString("Upgradeable Beacon Valantis Address : ");
         console.logAddress(upgradeableBeacon);
