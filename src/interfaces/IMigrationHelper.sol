@@ -46,6 +46,7 @@ interface IMigrationHelper {
         uint256 init0;
         uint256 init1;
         IOracleWrapper oracle;
+        bool isUniV4OracleNeedInitilization;
         uint24 maxDeviation;
         uint256 cooldownPeriod;
         address stratAnnouncer;

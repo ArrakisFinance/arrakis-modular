@@ -49,6 +49,7 @@ import {
 } from "../../src/utils/MigrationHelper.sol";
 import {IArrakisV2} from "../../src/interfaces/IArrakisV2.sol";
 import {SwapPayload} from "../../src/structs/SUniswapV4.sol";
+import {UniV4Oracle} from "../../src/oracles/UniV4Oracle.sol";
 
 // #endregion interfaces.
 
@@ -89,8 +90,7 @@ import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 
 import {LiquidityAmounts} from
     "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
-import {FullMath} from
-    "@v3-lib-0.8/contracts/FullMath.sol";
+import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 // #region mocks.
 
@@ -1435,6 +1435,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
 
         migration.vaultCreation.oracle =
             IOracleWrapper(address(oracleWrapper));
+        migration.vaultCreation.isUniV4OracleNeedInitilization = false;
         migration.vaultCreation.maxDeviation = PIPS / 50;
         migration.vaultCreation.cooldownPeriod = 60;
         migration.vaultCreation.stratAnnouncer =
@@ -1541,6 +1542,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
 
         migration.vaultCreation.oracle =
             IOracleWrapper(address(oracleWrapper));
+        migration.vaultCreation.isUniV4OracleNeedInitilization = false;
         migration.vaultCreation.maxDeviation = PIPS / 50;
         migration.vaultCreation.cooldownPeriod = 60;
         migration.vaultCreation.stratAnnouncer =
@@ -1640,6 +1642,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
 
         migration.vaultCreation.oracle =
             IOracleWrapper(address(oracleWrapper));
+        migration.vaultCreation.isUniV4OracleNeedInitilization = false;
         migration.vaultCreation.maxDeviation = PIPS / 50;
         migration.vaultCreation.cooldownPeriod = 60;
         migration.vaultCreation.stratAnnouncer =
@@ -1666,7 +1669,9 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         // #endregion do migration.
     }
 
-    function test_migration_conversion_to_eth_vault_rebalance() public {
+    function test_migration_conversion_to_eth_vault_rebalance()
+        public
+    {
         // #region create migration helper.
 
         migrationHelper = new MigrationHelper(
@@ -1747,6 +1752,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
 
         migration.vaultCreation.oracle =
             IOracleWrapper(address(oracleWrapper));
+        migration.vaultCreation.isUniV4OracleNeedInitilization = false;
         migration.vaultCreation.maxDeviation = PIPS / 50;
         migration.vaultCreation.cooldownPeriod = 60;
         migration.vaultCreation.stratAnnouncer =
@@ -1756,7 +1762,133 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         migration.executor =
             vm.addr(uint256(keccak256(abi.encode("Executor"))));
 
-        IUniV4StandardModule.LiquidityRange[] memory ranges = new IUniV4StandardModule.LiquidityRange[](0);
+        IUniV4StandardModule.LiquidityRange[] memory ranges =
+            new IUniV4StandardModule.LiquidityRange[](0);
+        // ranges[0] = IUniV4StandardModule.LiquidityRange({
+        //     range : IUniV4StandardModule.Range({
+        //         tickLower : TickMath.MIN_TICK / 2,
+        //         tickUpper : TickMath.MAX_TICK / 2
+        //     }),
+        //     liquidity : 0
+        // });
+
+        SwapPayload memory swapPayload;
+
+        migration.rebalancePayloads = new bytes[](1);
+        migration.rebalancePayloads[0] = abi.encodeWithSelector(
+            IUniV4StandardModule.rebalance.selector,
+            ranges,
+            swapPayload,
+            0,
+            0,
+            0,
+            0
+        );
+
+        // #endregion migration payload.
+
+        // #region whitelist migration module.
+
+        vm.prank(GELOwner);
+        IGnosisSafe(GELOwner).enableModule(address(migrationHelper));
+
+        // #endregion whitelist migration module.
+
+        // #region do migration.
+
+        vm.prank(arrakisTimeLock);
+        migrationHelper.migrateVault(migration);
+
+        // #endregion do migration.
+    }
+
+    function test_migration_conversion_to_eth_vault_rebalance_uniV4Oracle(
+    ) public {
+        // #region create migration helper.
+
+        migrationHelper = new MigrationHelper(
+            PALMTerms,
+            factory,
+            arrakisStandardManager,
+            poolManager,
+            WETH,
+            arrakisTimeLock
+        );
+
+        // #endregion create migration helper.
+
+        UniV4Oracle oracle =
+            new UniV4Oracle(poolManager, true);
+
+        // #region create a GEL pool on uniswap v4.
+
+        address token0 = address(IArrakisV2(GELV2Vault).token0());
+        address token1 = address(IArrakisV2(GELV2Vault).token1());
+
+        PoolKey memory poolKey = PoolKey({
+            currency0: CurrencyLibrary.ADDRESS_ZERO,
+            currency1: Currency.wrap(token0),
+            fee: 10_000,
+            tickSpacing: 200,
+            hooks: IHooks(address(0))
+        });
+
+        (uint160 sqrtPrice,,,,,,) =
+            IUniswapV3PoolState(GELPool).slot0();
+
+        // int24 tick =
+        //     IPoolManager(poolManager).initialize(poolKey, sqrtPrice);
+
+        // console.logInt(tick);
+
+        // #endregion create a GEL pool on uniswap v4.
+
+        // #region migration payload.
+
+        IMigrationHelper.Migration memory migration;
+
+        migration.safe = GELOwner;
+        migration.closeTerm.vault = IArrakisV2(GELV2Vault);
+        migration.closeTerm.newOwner =
+            vm.addr(uint256(keccak256(abi.encode("NewOwner"))));
+        migration.closeTerm.newManager =
+            vm.addr(uint256(keccak256(abi.encode("NewManager"))));
+
+        migration.poolCreation.poolKey = poolKey;
+
+        migration.poolCreation.sqrtPriceX96 = sqrtPrice;
+
+        migration.vaultCreation.salt =
+            keccak256(abi.encode("Migration salt"));
+        migration.vaultCreation.upgradeableBeacon =
+            uniswapStandardModuleBeacon;
+        migration.vaultCreation.init0 = 1;
+        migration.vaultCreation.init1 = 1;
+        // migration.vaultCreation.moduleCreationPayload = abi
+        //     .encodeWithSelector(
+        //     IUniV4StandardModule.initialize.selector,
+        //     1,
+        //     1,
+        //     false,
+        //     poolKey,
+        //     IOracleWrapper(address(oracleWrapper)),
+        //     PIPS / 50
+        // );
+
+        migration.vaultCreation.oracle =
+            IOracleWrapper(address(oracle));
+        migration.vaultCreation.isUniV4OracleNeedInitilization = true;
+        migration.vaultCreation.maxDeviation = PIPS / 50;
+        migration.vaultCreation.cooldownPeriod = 60;
+        migration.vaultCreation.stratAnnouncer =
+            vm.addr(uint256(keccak256(abi.encode("StratAnnouncer"))));
+        migration.vaultCreation.maxSlippage = PIPS / 50;
+
+        migration.executor =
+            vm.addr(uint256(keccak256(abi.encode("Executor"))));
+
+        IUniV4StandardModule.LiquidityRange[] memory ranges =
+            new IUniV4StandardModule.LiquidityRange[](0);
         // ranges[0] = IUniV4StandardModule.LiquidityRange({
         //     range : IUniV4StandardModule.Range({
         //         tickLower : TickMath.MIN_TICK / 2,
@@ -1876,6 +2008,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
 
         migration.vaultCreation.oracle =
             IOracleWrapper(address(oracleWrapper));
+        migration.vaultCreation.isUniV4OracleNeedInitilization = false;
         migration.vaultCreation.maxDeviation = PIPS / 50;
         migration.vaultCreation.cooldownPeriod = 60;
         migration.vaultCreation.stratAnnouncer =
@@ -1892,7 +2025,12 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         vm.prank(GELOwner);
         IGnosisSafe(GELOwner).enableModule(address(migrationHelper));
 
-        assertEq(IGnosisSafe(GELOwner).isModuleEnabled(address(migrationHelper)), true);
+        assertEq(
+            IGnosisSafe(GELOwner).isModuleEnabled(
+                address(migrationHelper)
+            ),
+            true
+        );
 
         // #endregion whitelist migration module.
 
@@ -1903,7 +2041,12 @@ contract UniswapV4PrivateIntegration is TestWrapper {
 
         // #endregion do migration.
 
-        assertEq(IGnosisSafe(GELOwner).isModuleEnabled(address(migrationHelper)), false);
+        assertEq(
+            IGnosisSafe(GELOwner).isModuleEnabled(
+                address(migrationHelper)
+            ),
+            false
+        );
     }
 
     // #endregion test migration module constructor.
