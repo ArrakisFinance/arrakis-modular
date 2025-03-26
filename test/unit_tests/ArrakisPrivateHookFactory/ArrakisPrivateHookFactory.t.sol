@@ -27,49 +27,19 @@ import {ModuleMock} from "./mocks/ModuleMock.sol";
 // #endregion mock contract.
 
 contract ArrakisPrivateHookFactoryTest is TestWrapper {
-    address public owner;
     address public module;
 
     function setUp() public {
-        owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
         module = vm.addr(uint256(keccak256(abi.encode("Module"))));
     }
 
-    // #region test constructor.
-
-    function test_constructor_owner_address_zero() public {
-        vm.expectRevert(
-            IArrakisPrivateHookFactory.AddressZero.selector
-        );
-
-        new ArrakisPrivateHookFactory(address(0));
-    }
-
-    function test_constructor_owner_address_not_zero() public {
-        ArrakisPrivateHookFactory factory =
-            new ArrakisPrivateHookFactory(owner);
-
-        assertEq(factory.owner(), owner);
-    }
-
-    // #endregion test constructor.
-
     // #region create hook.
-
-    function test_create_private_hook_module_unauthorized() public {
-        ArrakisPrivateHookFactory factory =
-            new ArrakisPrivateHookFactory(owner);
-
-        vm.expectRevert(Ownable.Unauthorized.selector);
-        factory.createPrivateHook(address(0), bytes32(0));
-    }
 
     function test_create_private_hook_module_hook_address() public {
         ArrakisPrivateHookFactory factory =
-            new ArrakisPrivateHookFactory(owner);
+            new ArrakisPrivateHookFactory();
 
         vm.expectRevert(Create3.ErrorCreatingContract.selector);
-        vm.prank(owner);
         factory.createPrivateHook(module, bytes32(0));
     }
 
@@ -77,7 +47,7 @@ contract ArrakisPrivateHookFactoryTest is TestWrapper {
         module = address(new ModuleMock());
 
         ArrakisPrivateHookFactory factory =
-            new ArrakisPrivateHookFactory(owner);
+            new ArrakisPrivateHookFactory();
 
         Hooks.Permissions memory perm = Hooks.Permissions({
             beforeInitialize: false,
@@ -99,12 +69,14 @@ contract ArrakisPrivateHookFactoryTest is TestWrapper {
         // #region to generate the salt.
 
         // bytes32 salt;
+        // bytes32 s;
 
         // for (uint256 i = 0; i < 100000; i++) {
-        //     salt = bytes32(i);
+        //     salt = keccak256(abi.encode(address(this), bytes32(i)));
         //     address hookAddr = factory.addressOf(salt);
 
         //     try this.valideAddr(IHooks(hookAddr), perm) {
+        //         s = bytes32(i);
         //         break;
         //     } catch {
         //         salt = bytes32(0);
@@ -116,18 +88,18 @@ contract ArrakisPrivateHookFactoryTest is TestWrapper {
         //     vm.expectRevert(Create3.ErrorCreatingContract.selector);
         // } else {
         //     console.logBytes32(salt);
+        //     console.logBytes32(s);
         // }
 
         // #endregion to generate the salt.
 
         // address expectedHookAddress = factory.addressOf(salt);
-        address expectedHookAddress = factory.addressOf(0x00000000000000000000000000000000000000000000000000000000000096ba);
+        address expectedHookAddress = factory.addressOf(0xb3f7d430e00eab1bbbe932d150f9c94ba144afe683cd4b1bff72b7a63ac8d57d);
 
-        vm.prank(owner);
-        // factory.createPrivateHook(module, salt );
+        // address hook = factory.createPrivateHook(module, s);
         address hook = factory.createPrivateHook(
             module,
-            0x00000000000000000000000000000000000000000000000000000000000096ba
+            0x00000000000000000000000000000000000000000000000000000000000032af
         );
 
         assertEq(hook, expectedHookAddress);
