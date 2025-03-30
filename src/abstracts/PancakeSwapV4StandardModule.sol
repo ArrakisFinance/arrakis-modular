@@ -20,7 +20,8 @@ import {
 import {PancakeSwapV4} from "../libraries/PancakeSwapV4.sol";
 import {
     SwapPayload,
-    Range as PoolRange
+    Range as PoolRange,
+    UnderlyingPayload
 } from "../structs/SPancakeSwapV4.sol";
 
 import {SafeERC20} from
@@ -57,6 +58,7 @@ import {
     BalanceDeltaLibrary
 } from "@pancakeswap/v4-core/src/types/BalanceDelta.sol";
 import {IVault} from "@pancakeswap/v4-core/src/interfaces/IVault.sol";
+import {FullMath} from "@pancakeswap/v4-core/src/pool-cl/libraries/FullMath.sol";
 
 /// @notice this module can set pancakeswap v4 pool that have a generic hook,
 /// that don't require specific action to become liquidity provider.
@@ -613,7 +615,7 @@ abstract contract PancakeSwapV4StandardModule is
             (uint160 sqrtPriceX96_,,,) =
                 poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
 
-            (amount0, amount1, fees0, fees1) = UnderlyingV4
+            (amount0, amount1, fees0, fees1) = PancakeSwapV4
                 .totalUnderlyingAtPriceWithFees(
                 UnderlyingPayload({
                     ranges: poolRanges,

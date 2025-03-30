@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import {ICLPoolManager} from
     "@pancakeswap/v4-core/src/pool-cl/interfaces/ICLPoolManager.sol";
 import {PoolKey} from "@pancakeswap/v4-core/src/types/PoolKey.sol";
+import {PoolId} from "@pancakeswap/v4-core/src/types/PoolId.sol";
 
 struct SwapPayload {
     bytes payload;
@@ -16,7 +17,7 @@ struct SwapPayload {
 struct RangeData {
     address self;
     Range range;
-    IPoolManager poolManager;
+    ICLPoolManager poolManager;
 }
 
 struct Range {
@@ -35,9 +36,34 @@ struct UnderlyingPayload {
 
 struct PositionUnderlying {
     uint160 sqrtPriceX96;
-    IPoolManager poolManager;
+    ICLPoolManager poolManager;
     PoolKey poolKey;
     address self;
+    int24 tick;
+    int24 lowerTick;
+    int24 upperTick;
+}
+
+struct ComputeFeesPayload {
+    uint256 feeGrowthInsideLast;
+    uint256 feeGrowthOutsideLower;
+    uint256 feeGrowthOutsideUpper;
+    uint256 feeGrowthGlobal;
+    PoolId poolId;
+    ICLPoolManager poolManager;
+    uint128 liquidity;
+    int24 tick;
+    int24 lowerTick;
+    int24 upperTick;
+}
+
+struct GetFeesPayload {
+    uint256 feeGrowthInside0Last;
+    uint256 feeGrowthInside1Last;
+    PoolId poolId;
+    ICLPoolManager poolManager;
+    uint128 liquidity;
+    int24 tick;
     int24 lowerTick;
     int24 upperTick;
 }
