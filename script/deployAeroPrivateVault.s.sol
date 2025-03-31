@@ -15,6 +15,7 @@ import {IArrakisMetaVaultFactory} from
 import {IArrakisMetaVault} from
     "../src/interfaces/IArrakisMetaVault.sol";
 import {IBunkerModule} from "../src/interfaces/IBunkerModule.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
@@ -102,6 +103,16 @@ contract DeployAeroPrivateVault is CreateXScript {
 
             console.log("V3 Oracle Wrapper : ");
             console.logAddress(oracle);
+
+            // #region increase observation cardinality.
+
+            IUniswapV3Pool(pool).increaseObservationCardinalityNext(200);
+            console.logString(
+                "Increased observation cardinality to 200 for pool:"
+            );
+            console.logAddress(pool);
+
+            // #endregion increase observation cardinality.
         }
         if (
             oracleDeployment
