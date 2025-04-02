@@ -18,6 +18,7 @@ import {IUniV4StandardModule} from
     "../interfaces/IUniV4StandardModule.sol";
 import {NATIVE_COIN} from "../constants/CArrakis.sol";
 import {IWETH9} from "../interfaces/IWETH9.sol";
+import {IUniV4Oracle} from "../interfaces/IUniV4Oracle.sol";
 
 // #region v4.
 
@@ -263,6 +264,17 @@ contract MigrationHelper is IMigrationHelper, Ownable {
         }
 
         // #endregion create modular vault.
+
+        // #region initialize oracle.
+
+        if (params_.vaultCreation.isUniV4OracleNeedInitilization) {
+            address module = address(IArrakisMetaVault(vault).module());
+
+            IUniV4Oracle(address(params_.vaultCreation.oracle))
+                .initialize(module);
+        }
+
+        // #endregion initialize oracle.
 
         // #region whitelist safe as depositor.
 
