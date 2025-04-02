@@ -84,17 +84,9 @@ contract UniV4StandardModulePrivate is
 
         // #endregion checks.
 
-        bytes memory data = abi.encode(
-            Action.DEPOSIT_FUND,
-            abi.encode(depositor_, amount0_, amount1_)
-        );
+        _fund(depositor_, amount0_, amount1_);
 
-        bytes memory result = poolManager.unlock(data);
-
-        (uint256 amount0, uint256 amount1) =
-            abi.decode(result, (uint256, uint256));
-
-        emit LogFund(depositor_, amount0, amount1);
+        emit LogFund(depositor_, amount0_, amount1_);
     }
 
     /// @notice Called by the pool manager on `msg.sender` when a lock is acquired
@@ -112,12 +104,6 @@ contract UniV4StandardModulePrivate is
         (uint256 action, bytes memory data) =
             abi.decode(data_, (uint256, bytes));
 
-        if (Action(action) == Action.DEPOSIT_FUND) {
-            (address depositor, uint256 amount0, uint256 amount1) =
-                abi.decode(data, (address, uint256, uint256));
-            return _fund(depositor, amount0, amount1);
-        }
-
         return _unlockCallback(Action(action), data);
     }
 
@@ -127,7 +113,7 @@ contract UniV4StandardModulePrivate is
         address depositor_,
         uint256 amount0_,
         uint256 amount1_
-    ) internal returns (bytes memory) {
+    ) internal {
         // #region get liquidity for each positions and mint.
 
         // #endregion get liquidity for each positions and mint.
@@ -152,10 +138,6 @@ contract UniV4StandardModulePrivate is
 
             // #endregion get how much left over we have on poolManager and mint.
         }
-
-        return isInversed
-            ? abi.encode(amount1_, amount0_)
-            : abi.encode(amount0_, amount1_);
     }
 
     // #endregion internal functions.
