@@ -638,6 +638,48 @@ abstract contract PancakeSwapV4StandardModule is
         }
     }
 
+    /// @notice function used to get the amounts of token0 and token1 sitting
+    /// on the position for a specific price.
+    /// @param priceX96_ price at which we want to simulate our tokens composition
+    /// @return amount0 the amount of token0 sitting on the position for priceX96.
+    /// @return amount1 the amount of token1 sitting on the position for priceX96.
+    function totalUnderlyingAtPrice(
+        uint160 priceX96_
+    ) external view returns (uint256 amount0, uint256 amount1) {
+        PoolKey memory _poolKey = poolKey;
+        PoolRange[] memory poolRanges =
+            PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
+
+        uint256 fees0;
+        uint256 fees1;
+
+        {
+            (uint256 leftOver0, uint256 leftOver1) =
+                IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
+
+            (amount0, amount1, fees0, fees1) = PancakeSwapV4
+                .totalUnderlyingAtPriceWithFees(
+                UnderlyingPayload({
+                    ranges: poolRanges,
+                    poolManager: poolManager,
+                    self: address(this),
+                    leftOver0: leftOver0,
+                    leftOver1: leftOver1
+                }),
+                priceX96_
+            );
+        }
+
+        amount0 =
+            amount0 - FullMath.mulDiv(fees0, managerFeePIPS, PIPS);
+        amount1 =
+            amount1 - FullMath.mulDiv(fees1, managerFeePIPS, PIPS);
+
+        if (isInversed) {
+            (amount0, amount1) = (amount1, amount0);
+        }
+    }
+
     // #endregion view functions.
 
     // #region internal functions.
