@@ -21,7 +21,8 @@ import {PancakeSwapV4} from "../libraries/PancakeSwapV4.sol";
 import {
     SwapPayload,
     Range as PoolRange,
-    UnderlyingPayload
+    UnderlyingPayload,
+    Withdraw
 } from "../structs/SPancakeSwapV4.sol";
 
 import {SafeERC20} from
@@ -58,7 +59,8 @@ import {
     BalanceDeltaLibrary
 } from "@pancakeswap/v4-core/src/types/BalanceDelta.sol";
 import {IVault} from "@pancakeswap/v4-core/src/interfaces/IVault.sol";
-import {FullMath} from "@pancakeswap/v4-core/src/pool-cl/libraries/FullMath.sol";
+import {FullMath} from
+    "@pancakeswap/v4-core/src/pool-cl/libraries/FullMath.sol";
 
 /// @notice this module can set pancakeswap v4 pool that have a generic hook,
 /// that don't require specific action to become liquidity provider.
@@ -610,7 +612,7 @@ abstract contract PancakeSwapV4StandardModule is
 
         {
             (uint256 leftOver0, uint256 leftOver1) =
-                IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
+            IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
 
             (uint160 sqrtPriceX96_,,,) =
                 poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
@@ -655,7 +657,7 @@ abstract contract PancakeSwapV4StandardModule is
 
         {
             (uint256 leftOver0, uint256 leftOver1) =
-                IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
+            IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
 
             (amount0, amount1, fees0, fees1) = PancakeSwapV4
                 .totalUnderlyingAtPriceWithFees(
@@ -680,9 +682,186 @@ abstract contract PancakeSwapV4StandardModule is
         }
     }
 
+    /// @notice function used to validate if module state is not manipulated
+    /// before rebalance.
+    /// @param oracle_ oracle that will used to check internal state.
+    /// @param maxDeviation_ maximum deviation allowed.
+    /// rebalance can happen.
+    function validateRebalance(
+        IOracleWrapper oracle_,
+        uint24 maxDeviation_
+    ) external view {
+        // check if pool current price is not too far from oracle price.
+        PoolKey memory _poolKey = poolKey;
+        (address _token0, address _token1) =
+            IPancakeSwapV4StandardModule(this)._getTokens(_poolKey);
+
+        uint8 token0Decimals = _token0 == address(0)
+            ? NATIVE_COIN_DECIMALS
+            : IERC20Metadata(_token0).decimals();
+        uint8 token1Decimals = IERC20Metadata(_token1).decimals();
+
+        // #region compute pool price.
+
+        PoolId poolId = poolKey.toId();
+        (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(poolId);
+
+        uint256 poolPrice;
+
+        if (sqrtPriceX96 <= type(uint128).max) {
+            poolPrice = FullMath.mulDiv(
+                uint256(sqrtPriceX96) * uint256(sqrtPriceX96),
+                10 ** token0Decimals,
+                1 << 192
+            );
+        } else {
+            poolPrice = FullMath.mulDiv(
+                FullMath.mulDiv(
+                    uint256(sqrtPriceX96),
+                    uint256(sqrtPriceX96),
+                    1 << 64
+                ),
+                10 ** token0Decimals,
+                1 << 128
+            );
+        }
+
+        // #endregion compute pool price.
+
+        // #region get oracle price.
+
+        uint256 oraclePrice =
+            isInversed ? oracle_.getPrice1() : oracle_.getPrice0();
+
+        // #endregion get oracle price.
+
+        // #region check deviation.
+
+        uint256 deviation = FullMath.mulDiv(
+            FullMath.mulDiv(
+                poolPrice > oraclePrice
+                    ? poolPrice - oraclePrice
+                    : oraclePrice - poolPrice,
+                10 ** token1Decimals,
+                poolPrice
+            ),
+            PIPS,
+            10 ** token1Decimals
+        );
+
+        // #endregion check deviation.
+
+        if (deviation > maxDeviation_) revert OverMaxDeviation();
+    }
+
+    /// @notice function used to get manager token0 balance.
+    /// @dev amount of fees in token0 that manager have not taken yet.
+    /// @return managerFee0 amount of token0 that manager earned.
+    function managerBalance0()
+        external
+        view
+        returns (uint256 managerFee0)
+    {
+        PoolKey memory _poolKey = poolKey;
+        PoolRange[] memory poolRanges =
+            PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
+
+        (uint256 leftOver0, uint256 leftOver1) =
+            IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
+
+        (uint160 sqrtPriceX96_,,,) =
+            poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
+
+        (,, uint256 fee0, uint256 fee1) = PancakeSwapV4
+            .totalUnderlyingAtPriceWithFees(
+            UnderlyingPayload({
+                ranges: poolRanges,
+                poolManager: poolManager,
+                self: address(this),
+                leftOver0: leftOver0,
+                leftOver1: leftOver1
+            }),
+            sqrtPriceX96_
+        );
+
+        managerFee0 = isInversed
+            ? FullMath.mulDiv(fee1, managerFeePIPS, PIPS)
+            : FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
+    }
+
+    /// @notice function used to get manager token1 balance.
+    /// @dev amount of fees in token1 that manager have not taken yet.
+    /// @return managerFee1 amount of token1 that manager earned.
+    function managerBalance1()
+        external
+        view
+        returns (uint256 managerFee1)
+    {
+        PoolKey memory _poolKey = poolKey;
+        PoolRange[] memory poolRanges =
+            PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
+
+        (uint256 leftOver0, uint256 leftOver1) =
+            IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
+
+        (uint160 sqrtPriceX96_,,,) =
+            poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
+
+        (,, uint256 fee0, uint256 fee1) = PancakeSwapV4
+            .totalUnderlyingAtPriceWithFees(
+            UnderlyingPayload({
+                ranges: poolRanges,
+                poolManager: poolManager,
+                self: address(this),
+                leftOver0: leftOver0,
+                leftOver1: leftOver1
+            }),
+            sqrtPriceX96_
+        );
+
+        managerFee1 = isInversed
+            ? FullMath.mulDiv(fee0, managerFeePIPS, PIPS)
+            : FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
+    }
+
     // #endregion view functions.
 
     // #region internal functions.
+
+    function _lockAcquired(
+        Action action_,
+        bytes memory data_
+    ) internal returns (bytes memory) {
+        if (action_ == Action.WITHDRAW) {
+            (address receiver, uint256 proportion) =
+                abi.decode(data_, (address, uint256));
+            return IPancakeSwapV4StandardModule(this).withdraw(
+                Withdraw({
+                    receiver: receiver,
+                    proportion: proportion,
+                    amount0: 0,
+                    amount1: 0,
+                    fee0: 0,
+                    fee1: 0
+                }),
+                _ranges,
+                _activeRanges
+            );
+        }
+        if (action_ == Action.REBALANCE) {
+            (
+                LiquidityRange[] memory liquidityRanges,
+                SwapPayload memory swapPayload
+            ) = abi.decode(data_, (LiquidityRange[], SwapPayload));
+            return IPancakeSwapV4StandardModule(this).rebalance(
+                poolKey,
+                liquidityRanges,
+                swapPayload,
+                _ranges,
+                _activeRanges
+            );
+        }
+    }
 
     function _internalRebalance(
         LiquidityRange[] memory liquidityRanges_,
