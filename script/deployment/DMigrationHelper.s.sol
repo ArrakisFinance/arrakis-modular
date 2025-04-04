@@ -15,11 +15,12 @@ address constant palmTerms =
 address constant factory = 0x820FB8127a689327C863de8433278d6181123982;
 address constant manager = 0x2e6E879648293e939aA68bA4c6c129A1Be733bDA;
 
-// DMigrationHelper : 0x030DE9fd3ca63AB012f4E22dB595b66C812c8525
+// DMigrationHelper : 0x5B0e3AE71C72be8163063d1591886E55942fa61c
+// base, arbitrum, mainnet, optimism, polygon
 contract DMigrationHelper is CreateXScript {
     uint88 public version = uint88(
         uint256(
-            keccak256(abi.encode("Migration Helper version beta"))
+            keccak256(abi.encode("Migration Helper version 1"))
         )
     );
 
@@ -35,36 +36,28 @@ contract DMigrationHelper is CreateXScript {
         console.logString("Deployer :");
         console.logAddress(msg.sender);
 
-        address migrationHelper = address(
-            new MigrationHelper(
-                palmTerms, factory, manager, poolManager, weth, owner
-            )
+        bytes memory initCode = abi.encodePacked(
+            type(MigrationHelper).creationCode,
+            abi.encode(palmTerms, factory, manager, poolManager, weth, owner)
         );
 
-        console.logAddress(migrationHelper);
+        bytes32 salt = bytes32(
+            abi.encodePacked(msg.sender, hex"00", bytes11(version))
+        );
 
-        // bytes memory initCode = abi.encodePacked(
-        //     type(MigrationHelper).creationCode,
-        //     abi.encode(palmTerms, factory, manager, poolManager, weth, owner)
-        // );
+        address implementation = computeCreate3Address(salt, msg.sender);
 
-        // bytes32 salt = bytes32(
-        //     abi.encodePacked(msg.sender, hex"00", bytes11(version))
-        // );
+        console.logString("Migration Helper Address : ");
+        console.logAddress(implementation);
 
-        // address implementation = computeCreate3Address(salt, msg.sender);
+        address actualAddr = CreateX.deployCreate3(salt, initCode);
 
-        // console.logString("Migration Helper Address : ");
-        // console.logAddress(implementation);
+        console.logString("Actual Migration Helper Address :");
+        console.logAddress(actualAddr);
 
-        // address actualAddr = CreateX.deployCreate3(salt, initCode);
-
-        // console.logString("Actual Migration Helper Address :");
-        // console.logAddress(actualAddr);
-
-        // if (actualAddr != implementation) {
-        //     revert("Create 3 addresses don't match.");
-        // }
+        if (actualAddr != implementation) {
+            revert("Create 3 addresses don't match.");
+        }
 
         vm.stopBroadcast();
     }
@@ -111,6 +104,9 @@ contract DMigrationHelper is CreateXScript {
         // Unichain
         else if (chainId == 130) {
             return 0x1F98400000000000000000000000000000000004;
+        }
+        else {
+            revert("Not supported network!");
         }
     }
 }
