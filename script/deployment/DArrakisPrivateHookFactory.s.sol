@@ -8,11 +8,11 @@ import {ICreateX} from "./interfaces/ICreateX.sol";
 
 import {ArrakisPrivateHookFactory} from "../../src/hooks/ArrakisPrivateHookFactory.sol";
 
-// ArrakisPrivateHookFactory : 0xCd2430B875E600ae94ABBfA27c776e03F29C9232
+// ArrakisPrivateHookFactory : 0xeF129a430032C8183abA158C1a70799e3b840dF9
 contract DArrakisPrivateHookFactory is CreateXScript {
     uint88 public version = uint88(
         uint256(
-            keccak256(abi.encode("Arrakis Private Hook Factory version 1"))
+            keccak256(abi.encode("Arrakis Private Hook Factory version 2"))
         )
     );
 

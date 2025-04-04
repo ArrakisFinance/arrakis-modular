@@ -12,14 +12,18 @@ contract ArrakisPrivateHookFactory is IArrakisPrivateHookFactory {
         address module_,
         bytes32 salt_
     ) external override returns (address hook) {
-        bytes memory creatonCode = abi.encodePacked(
+        bytes memory creationCode = abi.encodePacked(
             type(ArrakisPrivateHook).creationCode,
             abi.encode(module_)
         );
 
         bytes32 salt = keccak256(abi.encode(msg.sender, salt_));
 
-        return Create3.create3(salt, creatonCode);
+        hook = Create3.create3(salt, creationCode);
+
+        emit LogCreatePrivateHook(hook, module_, salt_);
+
+        return hook;
     }
 
     function addressOf(bytes32 salt_) external view returns (address) {
