@@ -51,8 +51,8 @@ contract UniV4Oracle is
     // #endregion immutables.
 
     address public module;
-    uint8 public decimals0;
-    uint8 public decimals1;
+    uint8 internal _decimals0;
+    uint8 internal _decimals1;
 
     // #region constructor.
     constructor(address poolManager_, bool isInversed_) {
@@ -81,18 +81,33 @@ contract UniV4Oracle is
         module = module_;
 
         if (CurrencyLibrary.isAddressZero(poolKey.currency0)) {
-            decimals0 = 18;
+            _decimals0 = 18;
         } else {
-            decimals0 = IERC20Metadata(
+            _decimals0 = IERC20Metadata(
                 Currency.unwrap(poolKey.currency0)
             ).decimals();
         }
 
-        decimals1 = IERC20Metadata(Currency.unwrap(poolKey.currency1))
+        _decimals1 = IERC20Metadata(Currency.unwrap(poolKey.currency1))
             .decimals();
     }
 
     // #endregion initialize function.
+
+    function decimals0() external view returns (uint8) {
+        if (isInversed) {
+            return _decimals1;
+        }
+        return _decimals0;
+    }
+
+    function decimals1() external view returns (uint8) {
+        if (isInversed) {
+            return _decimals0;
+        }
+        return _decimals1;
+    }
+
 
     function getPrice0() external view returns (uint256 price0) {
         if (isInversed) {
@@ -128,7 +143,7 @@ contract UniV4Oracle is
         if (sqrtPriceX96 <= type(uint128).max) {
             price0 = FullMath.mulDiv(
                 uint256(sqrtPriceX96) * uint256(sqrtPriceX96),
-                10 ** decimals0,
+                10 ** _decimals0,
                 2 ** 192
             );
         } else {
@@ -138,7 +153,7 @@ contract UniV4Oracle is
                     uint256(sqrtPriceX96),
                     1 << 64
                 ),
-                10 ** decimals0,
+                10 ** _decimals0,
                 1 << 128
             );
         }
@@ -162,13 +177,13 @@ contract UniV4Oracle is
         if (sqrtPriceX96 <= type(uint128).max) {
             price1 = FullMath.mulDiv(
                 2 ** 192,
-                10 ** decimals1,
+                10 ** _decimals1,
                 uint256(sqrtPriceX96) * uint256(sqrtPriceX96)
             );
         } else {
             price1 = FullMath.mulDiv(
                 1 << 128,
-                10 ** decimals1,
+                10 ** _decimals1,
                 FullMath.mulDiv(
                     uint256(sqrtPriceX96),
                     uint256(sqrtPriceX96),
