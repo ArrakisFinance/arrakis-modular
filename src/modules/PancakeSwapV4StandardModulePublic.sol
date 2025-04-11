@@ -17,8 +17,7 @@ import {
     Currency,
     CurrencyLibrary
 } from "@pancakeswap/v4-core/src/types/Currency.sol";
-import {PoolKey} from
-    "@pancakeswap/v4-core/src/types/PoolKey.sol";
+import {PoolKey} from "@pancakeswap/v4-core/src/types/PoolKey.sol";
 import {
     BalanceDelta,
     BalanceDeltaLibrary
@@ -56,8 +55,9 @@ contract PancakeSwapV4StandardModulePublic is
 
     constructor(
         address poolManager_,
-        address guardian_
-    ) PancakeSwapV4StandardModule(poolManager_, guardian_) {}
+        address guardian_,
+        address vault_
+    ) PancakeSwapV4StandardModule(poolManager_, guardian_, vault_) {}
 
     /// @notice function used by metaVault to deposit tokens into the strategy.
     /// @param depositor_ address that will provide the tokens.
@@ -157,8 +157,8 @@ contract PancakeSwapV4StandardModulePublic is
     function lockAcquired(
         bytes calldata data_
     ) public virtual returns (bytes memory) {
-        if (msg.sender != address(poolManager)) {
-            revert OnlyPoolManager();
+        if (msg.sender != address(vault)) {
+            revert OnlyVault();
         }
 
         /// @dev use data to do specific action.
@@ -189,5 +189,4 @@ contract PancakeSwapV4StandardModulePublic is
         }
         return _lockAcquired(Action(action), data);
     }
-
 }

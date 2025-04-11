@@ -13,8 +13,7 @@ import {
     Currency,
     CurrencyLibrary
 } from "@pancakeswap/v4-core/src/types/Currency.sol";
-import {PoolKey} from
-    "@pancakeswap/v4-core/src/types/PoolKey.sol";
+import {PoolKey} from "@pancakeswap/v4-core/src/types/PoolKey.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {SafeERC20} from
@@ -42,8 +41,9 @@ contract PancakeSwapV4StandardModulePrivate is
 
     constructor(
         address poolManager_,
-        address guardian_
-    ) PancakeSwapV4StandardModule(poolManager_, guardian_) {}
+        address guardian_,
+        address vault_
+    ) PancakeSwapV4StandardModule(poolManager_, guardian_, vault_) {}
 
     /// @notice fund function for private vault.
     /// @param depositor_ address that will provide the tokens.
@@ -125,8 +125,8 @@ contract PancakeSwapV4StandardModulePrivate is
     function lockAcquired(
         bytes calldata data_
     ) public virtual returns (bytes memory) {
-        if (msg.sender != address(poolManager)) {
-            revert OnlyPoolManager();
+        if (msg.sender != address(vault)) {
+            revert OnlyVault();
         }
 
         /// @dev use data to do specific action.

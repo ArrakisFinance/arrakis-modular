@@ -166,14 +166,16 @@ abstract contract PancakeSwapV4StandardModule is
 
     // #endregion modifiers.
 
-    constructor(address poolManager_, address guardian_) {
+    constructor(address poolManager_, address guardian_, address vault_) {
         // #region checks.
         if (poolManager_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
+        if (vault_ == address(0)) revert AddressZero();
         // #endregion checks.
 
         poolManager = ICLPoolManager(poolManager_);
         _guardian = guardian_;
+        vault = IVault(vault_);
 
         _disableInitializers();
     }

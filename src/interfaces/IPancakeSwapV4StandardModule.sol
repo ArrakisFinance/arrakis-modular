@@ -40,7 +40,7 @@ interface IPancakeSwapV4StandardModule {
     error WrongRouter();
     error SlippageTooHigh();
     error InvalidMsgValue();
-    error OnlyPoolManager();
+    error OnlyVault();
 
     // #endregion errors.
 
@@ -190,6 +190,10 @@ interface IPancakeSwapV4StandardModule {
     /// @notice function used to get the max slippage that
     /// can occur during swap rebalance.
     function maxSlippage() external view returns (uint24);
+
+    /// @notice function used to get the list of active ranges.
+    /// @return ranges active ranges
+    function getRanges() external view returns (Range[] memory ranges);
 
     // #endregion view functions.
 }
