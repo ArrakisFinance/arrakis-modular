@@ -86,8 +86,6 @@ contract PancakeSwapV4StandardModuleResolver is
 
                 uint256 buffer = 2 * _ranges.length;
 
-                console.log("Buffer: %s", buffer);
-
                 if (buffer >= maxAmount0_ || buffer >= maxAmount1_) {
                     revert MaxAmountsTooLow();
                 }

@@ -1582,16 +1582,15 @@ library PancakeSwapV4 {
     function _checkPermissions(
         PoolKey memory poolKey_
     ) internal {
-        ICLHooks hooks = ICLHooks(address(poolKey_.hooks));
         if (
-            poolKey_.parameters.shouldCall(
-                HOOKS_BEFORE_REMOVE_LIQUIDITY_OFFSET, hooks
+            poolKey_.parameters.hasOffsetEnabled(
+                HOOKS_BEFORE_REMOVE_LIQUIDITY_OFFSET
             )
-                || poolKey_.parameters.shouldCall(
-                    HOOKS_AFTER_REMOVE_LIQUIDITY_OFFSET, hooks
+                || poolKey_.parameters.hasOffsetEnabled(
+                    HOOKS_AFTER_REMOVE_LIQUIDITY_OFFSET
                 )
-                || poolKey_.parameters.shouldCall(
-                    HOOKS_AFTER_ADD_LIQUIDITY_OFFSET, hooks
+                || poolKey_.parameters.hasOffsetEnabled(
+                    HOOKS_AFTER_ADD_LIQUIDITY_OFFSET
                 )
         ) {
             revert

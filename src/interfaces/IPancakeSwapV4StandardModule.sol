@@ -41,6 +41,9 @@ interface IPancakeSwapV4StandardModule {
     error SlippageTooHigh();
     error InvalidMsgValue();
     error OnlyVault();
+    error TicksMisordered(int24 tickLower, int24 tickUpper);
+    error TickLowerOutOfBounds(int24 tickLower);
+    error TickUpperOutOfBounds(int24 tickUpper);
 
     // #endregion errors.
 
