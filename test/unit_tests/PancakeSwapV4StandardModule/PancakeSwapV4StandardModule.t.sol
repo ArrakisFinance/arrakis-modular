@@ -1426,9 +1426,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
             currency1: Currency.wrap(WETH),
             poolManager: poolManager,
             fee: 3000,
-            hooks: IHooks(address(0)),
+            hooks: IHooks(address(hook)),
             parameters: CLPoolParametersHelper.setTickSpacing(
-                bytes32(0), 10
+                bytes32(uint256(hook.getHooksRegistrationBitmap())), 10
             )
         });
 
@@ -1465,9 +1465,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
             currency1: Currency.wrap(WETH),
             poolManager: poolManager,
             fee: 3000,
-            hooks: IHooks(address(0)),
+            hooks: IHooks(address(hook)),
             parameters: CLPoolParametersHelper.setTickSpacing(
-                bytes32(0), 10
+                bytes32(uint256(hook.getHooksRegistrationBitmap())), 10
             )
         });
 
@@ -5398,6 +5398,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         // #endregion do swap 1 and 2.
 
+        deal(
+            address(pancakeVault),
+            address(pancakeVault).balance + 0.25 ether
+        );
+
         // #region change ranges.
 
         tickLower = (tick / 10) * 10 - (5 * 10);
@@ -5574,6 +5579,13 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
         pancakeVault.lock(abi.encode(4));
 
         // #endregion do swap 1 and 2.
+
+        deal(
+            USDC,
+            address(pancakeVault),
+            IERC20Metadata(USDC).balanceOf(address(pancakeVault))
+                + 10_000_000_000
+        );
 
         // #region change ranges.
 
