@@ -61,7 +61,7 @@ uint24 constant maxSlippage = TEN_PERCENT / 2;
 
 uint24 constant maxDeviation = TEN_PERCENT;
 uint256 constant cooldownPeriod = 60;
-address constant executor = 0xe012b59a8fC2D18e2C8943106a05C2702640440B;
+address constant executor = 0x420966bCf2A0351F26048cD07076627Cde4f79ac;
 address constant stratAnnouncer =
     0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
