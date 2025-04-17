@@ -9,14 +9,18 @@ import "@uniswap/v4-core/src/interfaces/external/IERC20Minimal.sol";
 import "@uniswap/v4-core/src/types/Currency.sol";
 import "@uniswap/v4-core/src/types/PoolId.sol";
 import "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
+import "@uniswap/v4-core/src/interfaces/callback/IUnlockCallback.sol";
 
 // IMMUTABLE PARAMS
 address constant arrakisNativeToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 address constant uniswapNativeToken = 0x0000000000000000000000000000000000000000;
 
-contract SwapToSqrtPriceScriptETH is Script {
+contract SwapToSqrtPriceScriptETH is Script, IUnlockCallback {
+    using CurrencySettler for Currency;
     using StateLibrary for IPoolManager;
     using PoolIdLibrary for PoolKey;
+    using TransientStateLibrary for IPoolManager;
 
     // USER DEFINED PARAMS
     address constant poolManagerAddress =
@@ -36,6 +40,126 @@ contract SwapToSqrtPriceScriptETH is Script {
         0x4da27a545c0c5B758a6BA100e3a049001de870f5; // staked aave contract
     address constant biggestToken1Holder =
         0x28C6c06298d514Db089934071355E5743bf21d60; // binance 14
+
+    IPoolManager public immutable manager = IPoolManager(poolManagerAddress);
+
+    struct CallbackData {
+        address sender;
+        TestSettings testSettings;
+        PoolKey key;
+        IPoolManager.SwapParams params;
+        bytes hookData;
+    }
+
+    struct TestSettings {
+        bool takeClaims;
+        bool settleUsingBurn;
+    }
+
+    function swap(
+        PoolKey memory key,
+        IPoolManager.SwapParams memory params,
+        TestSettings memory testSettings,
+        bytes memory hookData
+    ) public payable returns (BalanceDelta delta) {
+        delta = abi.decode(
+            manager.unlock(
+                abi.encode(
+                    CallbackData(
+                        msg.sender,
+                        testSettings,
+                        key,
+                        params,
+                        hookData
+                    )
+                )
+            ),
+            (BalanceDelta)
+        );
+
+        uint256 ethBalance = address(this).balance;
+        if (ethBalance > 0)
+            CurrencyLibrary.ADDRESS_ZERO.transfer(msg.sender, ethBalance);
+    }
+
+    function unlockCallback(
+        bytes calldata rawData
+    ) external override returns (bytes memory) {
+        require(msg.sender == address(manager), "Unauthorized callback");
+
+        CallbackData memory data = abi.decode(rawData, (CallbackData));
+
+        // Call poolManager.swap
+        BalanceDelta delta = manager.swap(data.key, data.params, data.hookData);
+
+        // Get currencyDelta from transient storage
+        int256 delta0 = manager.currencyDelta(msg.sender, data.key.currency0);
+        int256 delta1 = manager.currencyDelta(msg.sender, data.key.currency1);
+
+        // Log the amountIn explicitly
+        if (data.params.zeroForOne) {
+            console.log("AmountIn (token0):", uint256(-delta0));
+            console.log("AmountOut (token1):", uint256(delta1));
+        } else {
+            console.log("AmountIn (token1):", uint256(-delta1));
+            console.log("AmountOut (token0):", uint256(delta0));
+        }
+
+        // Call poolManager.sync to synchronize the pool state
+        manager.sync(data.key.currency0);
+        manager.sync(data.key.currency1);
+
+        // Transfer the tokens
+        (, , int256 deltaAfter0) = _fetchBalances(
+            data.key.currency0,
+            data.sender,
+            address(this)
+        );
+        (, , int256 deltaAfter1) = _fetchBalances(
+            data.key.currency1,
+            data.sender,
+            address(this)
+        );
+
+        // Validate and handle token transfers
+        // [Your existing validation code here...]
+
+        // Handle settlements and token transfers
+        if (deltaAfter0 < 0) {
+            data.key.currency0.settle(
+                manager,
+                data.sender,
+                uint256(-deltaAfter0),
+                data.testSettings.settleUsingBurn
+            );
+        }
+        if (deltaAfter1 < 0) {
+            data.key.currency1.settle(
+                manager,
+                data.sender,
+                uint256(-deltaAfter1),
+                data.testSettings.settleUsingBurn
+            );
+        }
+        if (deltaAfter0 > 0) {
+            data.key.currency0.take(
+                manager,
+                data.sender,
+                uint256(deltaAfter0),
+                data.testSettings.takeClaims
+            );
+        }
+        if (deltaAfter1 > 0) {
+            data.key.currency1.take(
+                manager,
+                data.sender,
+                uint256(deltaAfter1),
+                data.testSettings.takeClaims
+            );
+        }
+
+        return abi.encode(delta);
+    }
 
     function run() external {
         // vm.startBroadcast();
@@ -105,6 +229,20 @@ contract SwapToSqrtPriceScriptETH is Script {
         }
     }
 
+    function _fetchBalances(
+        Currency currency,
+        address user,
+        address deltaHolder
+    )
+        internal
+        view
+        returns (uint256 userBalance, uint256 poolBalance, int256 delta)
+    {
+        userBalance = currency.balanceOf(user);
+        poolBalance = currency.balanceOf(address(manager));
+        delta = manager.currencyDelta(deltaHolder, currency);
+    }
+
     function _run() internal {
         Currency currency0;
         Currency currency1;
@@ -133,24 +271,15 @@ contract SwapToSqrtPriceScriptETH is Script {
             hooks: IHooks(hooks)
         });
 
-        // Initialize the PoolSwapTest contract
-        PoolSwapTest poolSwapTest = PoolSwapTest(poolSwapTestAddress);
-
         PoolId poolId = poolKey.toId();
-        IPoolManager poolManager = IPoolManager(poolManagerAddress);
 
         console.log("PoolId:");
         console.logBytes32(PoolId.unwrap(poolId));
 
-        (uint160 sqrtPriceX96, , , ) = poolManager.getSlot0(poolId);
+        (uint160 sqrtPriceX96, , , ) = manager.getSlot0(poolId);
 
         // Determine swap direction based on currency0 and token addresses
-        bool zeroForOne;
-        if (sqrtPriceX96 > desiredSqrtPriceX96) {
-            zeroForOne = true; // WETH -> USDC
-        } else {
-            zeroForOne = false; // USDC -> WETH
-        }
+        bool zeroForOne = (sqrtPriceX96 > desiredSqrtPriceX96);
         console.log("zeroForOne:", zeroForOne);
         console.log("Current sqrtPriceX96 (before):", sqrtPriceX96);
         console.log("Desired sqrtPriceX96:", desiredSqrtPriceX96);
@@ -174,12 +303,14 @@ contract SwapToSqrtPriceScriptETH is Script {
             sqrtPriceLimitX96: desiredSqrtPriceX96
         });
         // Prepare TestSettings
-        PoolSwapTest.TestSettings memory testSettings = PoolSwapTest
-            .TestSettings({takeClaims: true, settleUsingBurn: true});
+        TestSettings memory testSettings = TestSettings({
+            takeClaims: true,
+            settleUsingBurn: true
+        });
         bytes memory hookData = "";
         // Approve PoolSwapTest contract to spend the tokens
-        IERC20Minimal(token0).approve(address(poolSwapTest), type(uint256).max);
-        IERC20Minimal(token1).approve(address(poolSwapTest), type(uint256).max);
+        IERC20Minimal(token0).approve(address(manager), type(uint256).max);
+        IERC20Minimal(token1).approve(address(manager), type(uint256).max);
         console.log("PoolKey details:");
         console.log("Currency0:", address(Currency.unwrap(poolKey.currency0)));
         console.log("Currency1:", address(Currency.unwrap(poolKey.currency1)));
@@ -188,7 +319,7 @@ contract SwapToSqrtPriceScriptETH is Script {
         console.log("Hooks:", address(poolKey.hooks));
 
         // Perform the swap
-        poolSwapTest.swap(poolKey, params, testSettings, hookData);
+        swap(poolKey, params, testSettings, hookData);
 
         // Store and log token balances after the swap
         uint256 token0BalanceAfter = token0 == uniswapNativeToken
@@ -200,7 +331,7 @@ contract SwapToSqrtPriceScriptETH is Script {
         console.log("Token0 balance after swap:", token0BalanceAfter);
         console.log("Token1 balance after swap:", token1BalanceAfter);
 
-        (uint160 sqrtPriceX96After, , , ) = poolManager.getSlot0(poolId);
+        (uint160 sqrtPriceX96After, , , ) = manager.getSlot0(poolId);
         console.log("Current sqrtPriceX96 (after):", sqrtPriceX96After);
 
         console.log("Swap executed to reach desired sqrtPrice.");
