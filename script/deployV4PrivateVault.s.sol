@@ -44,24 +44,24 @@ enum OracleDeployment {
 
 // #endregion enums.
 
-address constant token0 = 0x9a33406165f562E16C3abD82fd1185482E01b49a;
+address constant token0 = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 address constant token1 = NATIVE_COIN;
-uint24 constant fee = 10_000;
-int24 constant tickSpacing = 200;
+uint24 constant fee = 500;
+int24 constant tickSpacing = 10;
 address constant hooks = address(0);
 uint160 constant sqrtPrice = 33965778792757789688229654398626;
 
 bool constant isInversed = true;
 
 bytes32 constant salt =
-    keccak256(abi.encode("BASE ETH/TALENT Uni V4 private vault beta 2"));
+    keccak256(abi.encode("BASE ETH/USDC Uni V4 private vault beta 2"));
 address constant vaultOwner =
     0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 uint24 constant maxSlippage = TEN_PERCENT / 2;
 
 uint24 constant maxDeviation = TEN_PERCENT;
 uint256 constant cooldownPeriod = 60;
-address constant executor = 0xe012b59a8fC2D18e2C8943106a05C2702640440B;
+address constant executor = 0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 address constant stratAnnouncer =
     0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 
