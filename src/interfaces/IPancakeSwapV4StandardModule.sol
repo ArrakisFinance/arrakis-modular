@@ -44,6 +44,9 @@ interface IPancakeSwapV4StandardModule {
     error TicksMisordered(int24 tickLower, int24 tickUpper);
     error TickLowerOutOfBounds(int24 tickLower);
     error TickUpperOutOfBounds(int24 tickUpper);
+    error OnlyManagerOrVaultOwner();
+    error LengthsNotEqual();
+    error SameRewardReceiver();
 
     // #endregion errors.
 
@@ -71,6 +74,7 @@ interface IPancakeSwapV4StandardModule {
         uint256 amount1Burned
     );
     event LogSetPool(PoolKey oldPoolKey, PoolKey poolKey);
+    event LogSetRewardReceiver(address rewardReceiver);
     // #endregion events.
 
     /// @notice initialize function to delegate call onced the beacon proxy is deployed,
@@ -104,6 +108,21 @@ interface IPancakeSwapV4StandardModule {
     ) external;
 
     // #endregion only meta vault owner functions.
+
+    // #region merkl rewards.
+
+    function claimMerklRewards(
+        address[] calldata tokens_,
+        uint256[] calldata amounts_,
+        bytes32[][] calldata proofs_,
+        address receiver_
+    ) external;
+
+    function setRewardReceiver(
+        address rewardReceiver_
+    ) external;
+
+    // #endregion merkl rewards.
 
     // #region only manager functions.
 
@@ -197,6 +216,8 @@ interface IPancakeSwapV4StandardModule {
     /// @notice function used to get the list of active ranges.
     /// @return ranges active ranges
     function getRanges() external view returns (Range[] memory ranges);
+
+    function rewardReceiver() external view returns (address);
 
     // #endregion view functions.
 }

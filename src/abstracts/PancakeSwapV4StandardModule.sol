@@ -24,6 +24,7 @@ import {
     UnderlyingPayload,
     Withdraw
 } from "../structs/SPancakeSwapV4.sol";
+import {IDistributor} from "../interfaces/IDistributor.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -98,6 +99,7 @@ abstract contract PancakeSwapV4StandardModule is
 
     ICLPoolManager public immutable poolManager;
     IVault public immutable vault;
+    IDistributor public immutable distributor;
 
     // #endregion immutable properties.
 
@@ -127,6 +129,8 @@ abstract contract PancakeSwapV4StandardModule is
     PoolKey public poolKey;
     /// @notice list of allowed addresses to withdraw eth.
     mapping(address => uint256) public ethWithdrawers;
+    /// @notice manager rewardReceiver.
+    address public rewardReceiver;
 
     // #endregion public properties.
 
@@ -166,16 +170,23 @@ abstract contract PancakeSwapV4StandardModule is
 
     // #endregion modifiers.
 
-    constructor(address poolManager_, address guardian_, address vault_) {
+    constructor(
+        address poolManager_,
+        address guardian_,
+        address vault_,
+        address distributor_
+    ) {
         // #region checks.
         if (poolManager_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
         if (vault_ == address(0)) revert AddressZero();
+        if (distributor_ == address(0)) revert AddressZero();
         // #endregion checks.
 
         poolManager = ICLPoolManager(poolManager_);
         _guardian = guardian_;
         vault = IVault(vault_);
+        distributor = IDistributor(distributor_);
 
         _disableInitializers();
     }
@@ -195,6 +206,84 @@ abstract contract PancakeSwapV4StandardModule is
     }
 
     // #endregion guardian functions.
+
+    // #region merkl reward functions.
+
+    function claimMerklRewards(
+        address[] calldata tokens_,
+        uint256[] calldata amounts_,
+        bytes32[][] calldata proofs_,
+        address receiver_
+    ) external whenNotPaused {
+        address manager = metaVault.manager();
+        address vaultOwner = IOwnable(address(metaVault)).owner();
+
+        if (msg.sender == manager) {
+            receiver_ = address(0);
+        } else if (msg.sender != vaultOwner) {
+            revert OnlyManagerOrVaultOwner();
+        } else if (receiver_ == address(0)) {
+            revert AddressZero();
+        }
+
+        /// @dev only vault owner.
+
+        if (tokens_.length != amounts_.length) {
+            revert LengthsNotEqual();
+        }
+        if (tokens_.length != proofs_.length) {
+            revert LengthsNotEqual();
+        }
+
+        address[] memory users = new address[](tokens_.length);
+        uint256[] memory balances = new uint256[](tokens_.length);
+
+        for (uint256 i = 0; i < tokens_.length; i++) {
+            users[i] = address(this);
+            balances[i] =
+                IERC20Metadata(tokens_[i]).balanceOf(address(this));
+        }
+
+        IDistributor(distributor).claim(
+            users, tokens_, amounts_, proofs_
+        );
+
+        uint256 _managerFeePIPS = managerFeePIPS;
+
+        for (uint256 i = 0; i < tokens_.length; i++) {
+            uint256 newBalance =
+                IERC20Metadata(tokens_[i]).balanceOf(address(this));
+            uint256 managerAmount = FullMath.mulDiv(
+                newBalance - balances[i], _managerFeePIPS, PIPS
+            );
+
+            if (managerAmount > 0) {
+                IERC20Metadata(tokens_[i]).safeTransfer(
+                    rewardReceiver, managerAmount
+                );
+
+                if (receiver_ != address(0)) {
+                    IERC20Metadata(tokens_[i]).safeTransfer(
+                        receiver_, newBalance - managerAmount
+                    );
+                }
+            }
+        }
+    }
+
+    function setRewardReceiver(
+        address rewardReceiver_
+    ) external onlyManager whenNotPaused {
+        if (rewardReceiver_ == address(0)) revert AddressZero();
+        if (rewardReceiver_ == rewardReceiver) {
+            revert SameRewardReceiver();
+        }
+
+        rewardReceiver = rewardReceiver_;
+        emit LogSetRewardReceiver(rewardReceiver_);
+    }
+
+    // #endregion merkl reward functions.
 
     /// @notice initialize function to delegate call onced the beacon proxy is deployed,
     /// for initializing the uniswap v4 standard module.

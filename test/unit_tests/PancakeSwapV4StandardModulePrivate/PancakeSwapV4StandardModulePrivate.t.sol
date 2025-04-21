@@ -92,6 +92,9 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
     address public constant WETH =
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
+    address public constant distributor =
+        0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
+
     // #endregion constants.
 
     CLPoolManager public poolManager;
@@ -180,7 +183,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager), guardian, address(pancakeVault), distributor
             )
         );
 
@@ -298,7 +301,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager), guardian, address(pancakeVault), distributor
             )
         );
 
@@ -364,7 +367,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager), guardian, address(pancakeVault), distributor
             )
         );
 
@@ -430,7 +433,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager), guardian, address(pancakeVault), distributor
             )
         );
 
@@ -497,7 +500,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager), guardian, address(pancakeVault), distributor
             )
         );
 
@@ -566,7 +569,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager), guardian, address(pancakeVault), distributor
             )
         );
 
@@ -635,7 +638,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager), guardian, address(pancakeVault), distributor
             )
         );
 
