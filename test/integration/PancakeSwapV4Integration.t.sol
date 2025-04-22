@@ -144,6 +144,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
     // #endregion arrakis modular contracts.
 
     address public owner;
+    address public collector;
 
     address public bunkerImplementation;
     address public bunkerBeacon;
@@ -202,6 +203,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         // #region setup.
 
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
+        collector = vm.addr(uint256(keccak256(abi.encode("Collector"))));
 
         /// @dev we will not use it so we mock it.
         privateModule =
@@ -975,7 +977,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         pancakeSwapStandardModuleImplementation = address(
             new PancakeSwapV4StandardModulePublic(
-                poolManager, guardian, pancakeVault, distributor
+                poolManager, guardian, pancakeVault, distributor, collector
             )
         );
         pancakeSwapStandardModuleBeacon = address(

@@ -111,16 +111,7 @@ interface IPancakeSwapV4StandardModule {
 
     // #region merkl rewards.
 
-    function claimMerklRewards(
-        address[] calldata tokens_,
-        uint256[] calldata amounts_,
-        bytes32[][] calldata proofs_,
-        address receiver_
-    ) external;
-
-    function setRewardReceiver(
-        address rewardReceiver_
-    ) external;
+    function setClaimRecipient(address token_) external;
 
     // #endregion merkl rewards.
 

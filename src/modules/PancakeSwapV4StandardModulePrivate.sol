@@ -43,13 +43,15 @@ contract PancakeSwapV4StandardModulePrivate is
         address poolManager_,
         address guardian_,
         address vault_,
-        address distributor_
+        address distributor_,
+        address collector_
     )
         PancakeSwapV4StandardModule(
             poolManager_,
             guardian_,
             vault_,
-            distributor_
+            distributor_,
+            collector_
         )
     {}
 

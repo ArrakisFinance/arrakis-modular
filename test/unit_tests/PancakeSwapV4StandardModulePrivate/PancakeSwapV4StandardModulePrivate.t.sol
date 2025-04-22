@@ -76,13 +76,16 @@ import {SimpleHook} from "./mocks/SimpleHook.sol";
 // #endregion mock contracts.
 
 interface IERC20USDT {
-    function transfer(address _to, uint _value) external;
-    function approve(address spender, uint value) external;
-    function transferFrom(address from, address to, uint value) external;
+    function transfer(address _to, uint256 _value) external;
+    function approve(address spender, uint256 value) external;
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) external;
 }
 
 contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
-
     // #region constants.
 
     address public constant USDC =
@@ -106,6 +109,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
     address public metaVault;
     address public guardian;
     address public owner;
+    address public collector;
 
     // #region mocks contracts.
 
@@ -119,9 +123,9 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
-
+        collector =
+            vm.addr(uint256(keccak256(abi.encode("Collector"))));
         // #region meta vault creation.
-
         metaVault = address(new ArrakisMetaVaultMock(manager, owner));
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, WETH);
 
@@ -183,7 +187,11 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault), distributor
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -301,7 +309,11 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault), distributor
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -367,7 +379,11 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault), distributor
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -433,7 +449,11 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault), distributor
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -468,7 +488,9 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
         vm.stopPrank();
 
         vm.prank(metaVault);
-        vm.expectRevert(IPancakeSwapV4StandardModule.InvalidMsgValue.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.InvalidMsgValue.selector
+        );
         module.fund{value: 0.5 ether}(depositor, init0, init1);
     }
 
@@ -500,7 +522,11 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault), distributor
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -527,7 +553,8 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        address binanceHotWallet = 0xF977814e90dA44bFA03b6295A0616a897441aceC;
+        address binanceHotWallet =
+            0xF977814e90dA44bFA03b6295A0616a897441aceC;
         vm.prank(binanceHotWallet);
         IERC20USDT(USDT).transfer(depositor, init1);
         deal(metaVault, init0);
@@ -569,7 +596,11 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault), distributor
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -596,7 +627,8 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        address binanceHotWallet = 0xF977814e90dA44bFA03b6295A0616a897441aceC;
+        address binanceHotWallet =
+            0xF977814e90dA44bFA03b6295A0616a897441aceC;
         vm.prank(binanceHotWallet);
         IERC20USDT(USDT).transfer(depositor, init1);
         deal(metaVault, 2 ether);
@@ -638,7 +670,11 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePrivate(
-                address(poolManager), guardian, address(pancakeVault), distributor
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -665,7 +701,8 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
 
-        address binanceHotWallet = 0xF977814e90dA44bFA03b6295A0616a897441aceC;
+        address binanceHotWallet =
+            0xF977814e90dA44bFA03b6295A0616a897441aceC;
         vm.prank(binanceHotWallet);
         IERC20USDT(USDT).transfer(depositor, init1);
         deal(metaVault, 2 ether);
@@ -676,7 +713,9 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
         vm.stopPrank();
 
         vm.prank(metaVault);
-        vm.expectRevert(IPancakeSwapV4StandardModule.InvalidMsgValue.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.InvalidMsgValue.selector
+        );
         module.fund{value: 0.5 ether}(depositor, init0, init1);
     }
 
@@ -715,7 +754,9 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
     // #region unlockCallback.
 
     function testLockAcquired() public {
-        vm.expectRevert(IPancakeSwapV4StandardModule.OnlyVault.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.OnlyVault.selector
+        );
         module.lockAcquired("");
     }
 
