@@ -130,8 +130,6 @@ abstract contract PancakeSwapV4StandardModule is
     PoolKey public poolKey;
     /// @notice list of allowed addresses to withdraw eth.
     mapping(address => uint256) public ethWithdrawers;
-    /// @notice manager rewardReceiver.
-    address public rewardReceiver;
 
     // #endregion public properties.
 

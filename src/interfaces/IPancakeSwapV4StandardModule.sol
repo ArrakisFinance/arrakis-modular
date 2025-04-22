@@ -208,7 +208,5 @@ interface IPancakeSwapV4StandardModule {
     /// @return ranges active ranges
     function getRanges() external view returns (Range[] memory ranges);
 
-    function rewardReceiver() external view returns (address);
-
     // #endregion view functions.
 }
