@@ -338,7 +338,7 @@ abstract contract PancakeSwapV4StandardModule is
 
     function setClaimRecipient(
         address token_
-    ) external onlyMetaVaultOwner whenNotPaused {
+    ) external nonReentrant onlyMetaVaultOwner whenNotPaused {
         IDistributor(distributor).setClaimRecipient(collector, token_);
     }
 
