@@ -1400,6 +1400,8 @@ contract UniswapV4PrivateIntegration is TestWrapper {
 
         IMigrationHelper.Migration memory migration;
 
+        migration.timestampLimit = block.timestamp + 60;
+
         migration.safe = GELOwner;
         migration.closeTerm.vault = IArrakisV2(GELV2Vault);
         migration.closeTerm.newOwner = address(0);
@@ -1522,6 +1524,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         });
 
         migration.poolCreation.sqrtPriceX96 = sqrtPrice;
+        migration.timestampLimit = block.timestamp + 60;
 
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));
@@ -1622,6 +1625,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         migration.poolCreation.poolKey = poolKey;
 
         migration.poolCreation.sqrtPriceX96 = sqrtPrice;
+        migration.timestampLimit = block.timestamp + 60;
 
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));
@@ -1732,6 +1736,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         migration.poolCreation.poolKey = poolKey;
 
         migration.poolCreation.sqrtPriceX96 = sqrtPrice;
+        migration.timestampLimit = block.timestamp + 60;
 
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));
@@ -1857,6 +1862,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         migration.poolCreation.poolKey = poolKey;
 
         migration.poolCreation.sqrtPriceX96 = sqrtPrice;
+        migration.timestampLimit = block.timestamp + 60;
 
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));
@@ -1971,6 +1977,8 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         // #region migration payload.
 
         IMigrationHelper.Migration memory migration;
+
+        migration.timestampLimit = block.timestamp + 60;
 
         migration.safe = GELOwner;
         migration.closeTerm.vault = IArrakisV2(GELV2Vault);
