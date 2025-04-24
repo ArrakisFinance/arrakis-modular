@@ -64,7 +64,7 @@ contract MintBetweenPrices is Script {
     {
         address t0 = token0;
         address t1 = token1;
-        if (uint160(t0) > uint160(t1)) (t0, t1) = (t1, t0);
+        if (t0 > t1) (t0, t1) = (t1, t0);
 
         Currency c0 = Currency.wrap(t0);
         Currency c1 = Currency.wrap(t1);
@@ -136,7 +136,7 @@ contract MintBetweenPrices is Script {
     /// @notice Core mint logic: calculates ticks, builds calldata, approves via Permit2, and calls PositionManager
     function _mintPosition(address recipient) internal {
         // Order token addresses lexicographically
-        if (uint160(token0) > uint160(token1)) {
+        if (token0 > token1) {
             (token0, token1) = (token1, token0);
         }
 
