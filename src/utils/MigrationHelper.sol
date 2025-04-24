@@ -90,6 +90,11 @@ contract MigrationHelper is IMigrationHelper, Ownable {
     function migrateVault(
         Migration calldata params_
     ) external returns (address vault) {
+
+        if (params_.timestampLimit < block.timestamp) {
+            revert PayloadOutdated();
+        }
+
         {
             address owner = owner();
 
@@ -268,7 +273,8 @@ contract MigrationHelper is IMigrationHelper, Ownable {
         // #region initialize oracle.
 
         if (params_.vaultCreation.isUniV4OracleNeedInitilization) {
-            address module = address(IArrakisMetaVault(vault).module());
+            address module =
+                address(IArrakisMetaVault(vault).module());
 
             IUniV4Oracle(address(params_.vaultCreation.oracle))
                 .initialize(module);

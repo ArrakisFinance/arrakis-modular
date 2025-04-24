@@ -61,6 +61,7 @@ interface IMigrationHelper {
         VaultCreation vaultCreation;
         bytes[] rebalancePayloads;
         address executor;
+        uint256 timestampLimit;
     }
     // #endregion structs.
 
@@ -89,6 +90,8 @@ interface IMigrationHelper {
     error VaultCreationErr();
     /// @notice Error emitted when disable module fails.
     error UnableModuleErr();
+    /// @notice Error emitted when the new uni V4 pool creation with an outdated price.
+    error PayloadOutdated();
     // #endregion errors.
 
     // #region functions.
