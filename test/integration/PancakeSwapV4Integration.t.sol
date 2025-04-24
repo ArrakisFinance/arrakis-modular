@@ -99,6 +99,7 @@ import {LiquidityAmounts} from
 // #region valantis mocks.
 
 import {OracleWrapper} from "./mocks/OracleWrapper.sol";
+import {CollectorMock} from "./mocks/CollectorMock.sol";
 
 // #endregion valantis mocks.
 
@@ -203,7 +204,9 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         // #region setup.
 
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
-        collector = vm.addr(uint256(keccak256(abi.encode("Collector"))));
+        collector = address(
+            new CollectorMock(distributor)
+        );
 
         /// @dev we will not use it so we mock it.
         privateModule =
