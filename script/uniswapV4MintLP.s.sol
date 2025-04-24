@@ -17,10 +17,6 @@ import "@uniswap/v4-periphery/src/libraries/Actions.sol";
 import "@uniswap/v4-core/src/interfaces/external/IERC20Minimal.sol";
 import "@uniswap/permit2/src/interfaces/IPermit2.sol";
 
-/**
- * @title MintBetweenPrices
- * @notice Script that mints a Uniswap V4 liquidity position between specified price ranges
- */
 contract MintBetweenPrices is Script {
     using PoolIdLibrary for PoolKey;
     using StateLibrary for IPoolManager;
@@ -29,9 +25,9 @@ contract MintBetweenPrices is Script {
     address constant PERMIT2_ADDRESS =
         0x000000000022D473030F116dDEE9F6B43aC78BA3;
     address constant POSITION_MANAGER =
-        0x7C5f5A4bBd8fD63184577525326123B519429bDc;
+        0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e;
     address constant POOL_MANAGER_ADDRESS =
-        0x498581fF718922c3f8e6A244956aF099B2652b2b;
+        0x000000000004444c5dc75cB358380D2e3dE08A90;
 
     IPoolManager public immutable poolManager =
         IPoolManager(POOL_MANAGER_ADDRESS);
@@ -40,50 +36,95 @@ contract MintBetweenPrices is Script {
     IPermit2 public immutable permit2 = IPermit2(PERMIT2_ADDRESS);
 
     // ───────────── User Parameters ─────────────
-    address token0 = 0x6C27BaE78f4763a7EF330baB2e63cFD94708DDa9; // MyToken
-    address token1 = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; // USDC
-    uint24 constant FEE_TIER = 500;
-    int24 constant TICK_SPACING = 10;
+    address public token0 = 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9; // AAVE
+    address public token1 = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
+    uint24 constant FEE_TIER = 3000;
+    int24 constant TICK_SPACING = 60;
     address constant HOOKS = address(0);
 
-    uint160 constant TARGET_SQRT_PRICE = 1123710556419588856013850;
+    uint160 constant DESIRED_SQRT_PRICE = 1023710556419588856013854;
     uint128 constant LIQUIDITY_UNITS = 1_000;
-    uint128 constant MAX_AMOUNT0 = 20 ether;
-    uint128 constant MAX_AMOUNT1 = 10 * 1e6; // USDC: 6 decimals
+    uint128 constant MAX_AMOUNT0 = 0.01 ether;
+    uint128 constant MAX_AMOUNT1 = 100 * 1e6; // USDC: 6 decimals
 
     // Holders for simulation
-    address constant LARGE_HOLDER0 = 0xb836043d800BE77944637a0e3e610C7a657dF75A;
-    address constant LARGE_HOLDER1 = 0xb836043d800BE77944637a0e3e610C7a657dF75A;
+    address constant LARGE_HOLDER0 = 0x4da27a545c0c5B758a6BA100e3a049001de870f5;
+    address constant LARGE_HOLDER1 = 0x28C6c06298d514Db089934071355E5743bf21d60;
 
-    // ───────────── Entry Points ─────────────
+    // ───────────── Entry Point ─────────────
     function run() external {
-        vm.startBroadcast();
-        _run();
-        vm.stopBroadcast();
+        simulate();
     }
 
-    function simulate() external {
-        // Fund caller
-        dealTokens(msg.sender, token0, MAX_AMOUNT0);
-        dealTokens(msg.sender, token1, MAX_AMOUNT1);
+    /// @notice Derive and sort token addresses, wrap as Currency, build PoolKey and PoolId
+    function _derivePoolKeyAndId()
+        internal
+        view
+        returns (PoolKey memory poolKey, PoolId poolId)
+    {
+        address t0 = token0;
+        address t1 = token1;
+        if (uint160(t0) > uint160(t1)) (t0, t1) = (t1, t0);
 
-        // Derive and log pool information
+        Currency c0 = Currency.wrap(t0);
+        Currency c1 = Currency.wrap(t1);
+
+        poolKey = PoolKey({
+            currency0: c0,
+            currency1: c1,
+            fee: FEE_TIER,
+            tickSpacing: TICK_SPACING,
+            hooks: IHooks(HOOKS)
+        });
+        poolId = poolKey.toId();
+    }
+
+    function _run() internal {
+        // 1) derive and log PoolId + current on‐chain state
         (, PoolId poolId) = _derivePoolKeyAndId();
         console.log("PoolId:");
         console.logBytes32(PoolId.unwrap(poolId));
 
-        // Record starting balances
+        // 2) record user's starting balances
         uint256 startBalance0 = getTokenBalance(msg.sender, token0);
         uint256 startBalance1 = getTokenBalance(msg.sender, token1);
         console.log("Start Token0:", startBalance0);
         console.log("Start Token1:", startBalance1);
 
-        // Impersonate and mint
+        // 3) mint the LP position
+        _mintPosition(msg.sender);
+
+        // 4) record ending balances and report consumption
+        uint256 endBalance0 = getTokenBalance(msg.sender, token0);
+        uint256 endBalance1 = getTokenBalance(msg.sender, token1);
+        console.log("End   Token0:", endBalance0);
+        console.log("End   Token1:", endBalance1);
+        console.log("Minted Token0:", startBalance0 - endBalance0);
+        console.log("Minted Token1:", startBalance1 - endBalance1);
+    }
+
+    function simulate() internal {
+        // 1) fund caller
+        dealTokens(msg.sender, token0, MAX_AMOUNT0);
+        dealTokens(msg.sender, token1, MAX_AMOUNT1);
+
+        // 2) derive and log PoolId + current on‐chain state
+        (, PoolId poolId) = _derivePoolKeyAndId();
+        console.log("PoolId:");
+        console.logBytes32(PoolId.unwrap(poolId));
+
+        // 3) record starting balances
+        uint256 startBalance0 = getTokenBalance(msg.sender, token0);
+        uint256 startBalance1 = getTokenBalance(msg.sender, token1);
+        console.log("Start Token0:", startBalance0);
+        console.log("Start Token1:", startBalance1);
+
+        // 4) impersonate and mint
         vm.startPrank(msg.sender);
         _mintPosition(msg.sender);
         vm.stopPrank();
 
-        // Record ending balances and report consumption
+        // 5) record ending balances and report consumption
         uint256 endBalance0 = getTokenBalance(msg.sender, token0);
         uint256 endBalance1 = getTokenBalance(msg.sender, token1);
         console.log("End   Token0:", endBalance0);
@@ -92,38 +133,10 @@ contract MintBetweenPrices is Script {
         console.log("Minted Token1:", startBalance1 - endBalance1);
     }
 
-    // ───────────── Core Logic ─────────────
-    function _run() internal {
-        // Derive and log pool information
-        (, PoolId poolId) = _derivePoolKeyAndId();
-        console.log("PoolId:");
-        console.logBytes32(PoolId.unwrap(poolId));
-
-        // Record starting balances
-        uint256 startBalance0 = getTokenBalance(msg.sender, token0);
-        uint256 startBalance1 = getTokenBalance(msg.sender, token1);
-        console.log("Start Token0:", startBalance0);
-        console.log("Start Token1:", startBalance1);
-
-        // Mint the LP position
-        _mintPosition(msg.sender);
-
-        // Record ending balances and report consumption
-        uint256 endBalance0 = getTokenBalance(msg.sender, token0);
-        uint256 endBalance1 = getTokenBalance(msg.sender, token1);
-        console.log("End   Token0:", endBalance0);
-        console.log("End   Token1:", endBalance1);
-        console.log("Minted Token0:", startBalance0 - endBalance0);
-        console.log("Minted Token1:", startBalance1 - endBalance1);
-    }
-
-    /**
-     * @notice Core mint logic: calculates ticks, builds calldata, approves via Permit2, and calls PositionManager
-     * @param recipient Address that will receive the minted liquidity position
-     */
+    /// @notice Core mint logic: calculates ticks, builds calldata, approves via Permit2, and calls PositionManager
     function _mintPosition(address recipient) internal {
         // Order token addresses lexicographically
-        if (token0 > token1) {
+        if (uint160(token0) > uint160(token1)) {
             (token0, token1) = (token1, token0);
         }
 
@@ -141,7 +154,7 @@ contract MintBetweenPrices is Script {
         uint160 currentSqrtPrice = _getSqrtPrice(poolKey.toId());
         (int24 tickLower, int24 tickUpper) = _computeTickRange(
             currentSqrtPrice,
-            TARGET_SQRT_PRICE
+            DESIRED_SQRT_PRICE
         );
 
         int24 currentTick = TickMath.getTickAtSqrtPrice(currentSqrtPrice);
@@ -175,50 +188,12 @@ contract MintBetweenPrices is Script {
     }
 
     // ───────────── Helper Functions ─────────────
-    /**
-     * @notice Derive and sort token addresses, wrap as Currency, build PoolKey and PoolId
-     * @return poolKey The constructed pool key
-     * @return poolId The derived pool ID
-     */
-    function _derivePoolKeyAndId()
-        internal
-        view
-        returns (PoolKey memory poolKey, PoolId poolId)
-    {
-        address t0 = token0;
-        address t1 = token1;
-        if (t0 > t1) (t0, t1) = (t1, t0);
 
-        Currency c0 = Currency.wrap(t0);
-        Currency c1 = Currency.wrap(t1);
-
-        poolKey = PoolKey({
-            currency0: c0,
-            currency1: c1,
-            fee: FEE_TIER,
-            tickSpacing: TICK_SPACING,
-            hooks: IHooks(HOOKS)
-        });
-        poolId = poolKey.toId();
-    }
-
-    /**
-     * @notice Get sqrt price for a pool
-     * @param poolId ID of the pool to query
-     * @return Current sqrt price X96 of the pool
-     */
     function _getSqrtPrice(PoolId poolId) internal view returns (uint160) {
         (uint160 price, , , ) = poolManager.getSlot0(poolId);
         return price;
     }
 
-    /**
-     * @notice Compute tick range for position based on current and target prices
-     * @param currentPrice Current sqrt price of the pool
-     * @param targetPrice Target sqrt price for positioning
-     * @return lower Lower tick boundary (aligned to tick spacing)
-     * @return upper Upper tick boundary (aligned to tick spacing)
-     */
     function _computeTickRange(
         uint160 currentPrice,
         uint160 targetPrice
@@ -238,11 +213,6 @@ contract MintBetweenPrices is Script {
         }
     }
 
-    /**
-     * @notice Rounds a tick to the nearest tick spacing
-     * @param tick Tick value to round
-     * @return Rounded tick aligned to tick spacing
-     */
     function _roundToSpacing(int24 tick) internal pure returns (int24) {
         int24 aligned = (tick / TICK_SPACING) * TICK_SPACING;
         if (tick < 0 && tick % TICK_SPACING != 0) {
@@ -251,17 +221,6 @@ contract MintBetweenPrices is Script {
         return aligned;
     }
 
-    /**
-     * @notice Build arguments for the modifyLiquidities call
-     * @param key Pool key
-     * @param lower Lower tick bound
-     * @param upper Upper tick bound
-     * @param recipient Address to receive the position
-     * @param currency0 Token0 as Currency
-     * @param currency1 Token1 as Currency
-     * @return actions Encoded actions to perform
-     * @return params Parameters for the actions
-     */
     function _buildModifyArguments(
         PoolKey memory key,
         int24 lower,
@@ -289,16 +248,12 @@ contract MintBetweenPrices is Script {
         params[1] = abi.encode(currency0, currency1);
     }
 
-    /**
-     * @notice Set up approvals for token transfer through Permit2
-     * @param token Address of token to approve
-     */
     function _permit2Approve(address token) internal {
         if (token == address(0)) {
             return;
         }
 
-        // Approve Permit2 to transfer tokens on behalf of the user
+        // approve Permit2 to transfer tokens on behalf of the user
         IERC20Minimal(token).approve(PERMIT2_ADDRESS, type(uint256).max);
 
         permit2.approve(
@@ -309,12 +264,6 @@ contract MintBetweenPrices is Script {
         );
     }
 
-    /**
-     * @notice Transfer tokens to an address for simulation
-     * @param to Recipient address
-     * @param token Token address (address(0) for native ETH)
-     * @param amount Amount to transfer
-     */
     function dealTokens(address to, address token, uint256 amount) internal {
         if (token == address(0)) {
             vm.deal(to, amount);
@@ -325,12 +274,6 @@ contract MintBetweenPrices is Script {
         }
     }
 
-    /**
-     * @notice Get token balance for an account
-     * @param who Address to check balance for
-     * @param token Token address (address(0) for native ETH)
-     * @return Token balance
-     */
     function getTokenBalance(
         address who,
         address token
