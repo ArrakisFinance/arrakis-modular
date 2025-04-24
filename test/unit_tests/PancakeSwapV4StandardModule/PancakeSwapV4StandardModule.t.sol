@@ -1284,6 +1284,43 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
     // #endregion test approve.
 
+    // #region test allowCollector.$
+
+    function testAllowCollectorOnlyMetaVaultOwner() public {
+        address notMetaVaultOwner = vm.addr(
+            uint256(keccak256(abi.encode("notMetaVaultOwner")))
+        );
+
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.OnlyMetaVaultOwner.selector
+        );
+        vm.prank(notMetaVaultOwner);
+        module.allowCollector(address(0));
+    }
+
+    function testAllowCollectorInvalidRewardToken() public {
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.InvalidRewardToken.selector
+        );
+        vm.prank(owner);
+        module.allowCollector(USDC);
+    }
+
+    function testAllowCollectorInvalidRewardTokenBis() public {
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.InvalidRewardToken.selector
+        );
+        vm.prank(owner);
+        module.allowCollector(WETH);
+    }
+
+    function testAllowCollector() public {
+        vm.prank(owner);
+        module.allowCollector(USDT);
+    }
+
+    // #endregion test allowCollector.
+
     // #region test withdrawEth.
 
     function testWithdrawEthAmountZero() public {

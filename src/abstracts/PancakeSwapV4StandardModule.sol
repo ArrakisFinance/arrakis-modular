@@ -334,10 +334,16 @@ abstract contract PancakeSwapV4StandardModule is
         emit LogApproval(spender_, amount0_, amount1_);
     }
 
-    function setClaimRecipient(
+    function allowCollector(
         address token_
     ) external nonReentrant onlyMetaVaultOwner whenNotPaused {
-        IDistributor(distributor).setClaimRecipient(collector, token_);
+        if (token_ == address(token0) || token_ == address(token1)) {
+            revert InvalidRewardToken();
+        }
+
+        IERC20Metadata(token_).forceApprove(
+            collector, type(uint256).max
+        );
     }
 
     // #endregion vault owner functions.

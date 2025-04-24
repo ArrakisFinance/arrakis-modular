@@ -47,6 +47,7 @@ interface IPancakeSwapV4StandardModule {
     error OnlyManagerOrVaultOwner();
     error LengthsNotEqual();
     error SameRewardReceiver();
+    error InvalidRewardToken();
 
     // #endregion errors.
 
@@ -111,7 +112,7 @@ interface IPancakeSwapV4StandardModule {
 
     // #region merkl rewards.
 
-    function setClaimRecipient(address token_) external;
+    function allowCollector(address token_) external;
 
     // #endregion merkl rewards.
 

@@ -103,6 +103,13 @@ import {CollectorMock} from "./mocks/CollectorMock.sol";
 
 // #endregion valantis mocks.
 
+// #region utils.
+
+import {IDistributorExtension} from
+    "./utils/IDistributorExtension.sol";
+
+// #endregion utils.
+
 contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
     using SafeERC20 for IERC20Metadata;
     using CurrencyLibrary for Currency;
@@ -113,9 +120,15 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant USDC =
         0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant USDT =
+        0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address public constant AAVE =
+        0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
 
     address public constant distributor =
         0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
+    address public constant distributorGovernor =
+        0x529619a10129396a2F642cae32099C1eA7FA2834;
     // #endregion constant properties.
 
     // #region arrakis modular contracts.
@@ -204,9 +217,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         // #region setup.
 
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
-        collector = address(
-            new CollectorMock(distributor)
-        );
+        collector = address(new CollectorMock(distributor));
 
         /// @dev we will not use it so we mock it.
         privateModule =
@@ -330,7 +341,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
     // #region test.
 
-    function test_addLiquidity() public {
+    function test_addLiquidity_1() public {
         (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
         IArrakisPublicVaultRouterV2(router).getMintAmounts(
             vault, init0 / 3, init1
@@ -368,6 +379,75 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         vm.stopPrank();
 
         // #endregion add liquidity.
+
+        // #region merkl rewards.
+
+        address module = address(IArrakisMetaVault(vault).module());
+
+        vm.startPrank(IOwnable(vault).owner());
+        IPancakeSwapV4StandardModule(module).allowCollector(AAVE);
+        IPancakeSwapV4StandardModule(module).allowCollector(USDT);
+        vm.stopPrank();
+
+        uint256 uSDTBalance =
+            IERC20Metadata(USDT).balanceOf(distributor);
+        uint256 aAVEBalance =
+            IERC20Metadata(AAVE).balanceOf(distributor);
+
+        bytes32[][] memory proofs = new bytes32[][](2);
+        address[] memory users = new address[](2);
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
+        proofs[0] = new bytes32[](1);
+        proofs[0][0] = keccak256(abi.encode(module, USDT, 2000e6));
+        users[0] = module;
+        tokens[0] = AAVE;
+        amounts[0] = 1e18;
+        proofs[1] = new bytes32[](1);
+        proofs[1][0] = keccak256(abi.encode(module, AAVE, 1e18));
+        users[1] = module;
+        tokens[1] = USDT;
+        amounts[1] = 2000e6;
+
+        vm.prank(distributorGovernor);
+        IDistributorExtension(distributor).updateTree(
+            IDistributorExtension.MerkleTree({
+                merkleRoot: proofs[0][0] < proofs[1][0]
+                    ? keccak256(abi.encode(proofs[0][0], proofs[1][0]))
+                    : keccak256(abi.encode(proofs[1][0], proofs[0][0])),
+                ipfsHash: keccak256("IPFS_HASH")
+            })
+        );
+
+        vm.warp(IDistributorExtension(distributor).endOfDisputePeriod() + 1);
+
+        deal(USDT, distributor, uSDTBalance + amounts[1]);
+        deal(AAVE, distributor, aAVEBalance + amounts[0]);
+
+        uSDTBalance = IERC20Metadata(USDT).balanceOf(distributor);
+        aAVEBalance = IERC20Metadata(AAVE).balanceOf(distributor);
+
+        uSDTBalance = IERC20Metadata(USDT).balanceOf(collector);
+        aAVEBalance = IERC20Metadata(AAVE).balanceOf(collector);
+
+        CollectorMock(collector).claim(users, tokens, amounts, proofs);
+        CollectorMock(collector).transferFrom(
+            AAVE, module, amounts[0]
+        );
+        CollectorMock(collector).transferFrom(
+            USDT, module, amounts[1]
+        );
+
+        assertEq(
+            IERC20Metadata(USDT).balanceOf(collector),
+            uSDTBalance + amounts[1]
+        );
+        assertEq(
+            IERC20Metadata(AAVE).balanceOf(collector),
+            aAVEBalance + amounts[0]
+        );
+
+        // #endregion merkl rewards.
     }
 
     function test_addLiquidityMaxAmountsTooLow() public {
@@ -980,7 +1060,11 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         pancakeSwapStandardModuleImplementation = address(
             new PancakeSwapV4StandardModulePublic(
-                poolManager, guardian, pancakeVault, distributor, collector
+                poolManager,
+                guardian,
+                pancakeVault,
+                distributor,
+                collector
             )
         );
         pancakeSwapStandardModuleBeacon = address(
