@@ -15,12 +15,13 @@ address constant palmTerms =
 address constant factory = 0x820FB8127a689327C863de8433278d6181123982;
 address constant manager = 0x2e6E879648293e939aA68bA4c6c129A1Be733bDA;
 
-// DMigrationHelper : 0x5B0e3AE71C72be8163063d1591886E55942fa61c
+// MigrationHelper : 0x5B0e3AE71C72be8163063d1591886E55942fa61c
+// MigrationHelperV2 : 0xd61407B9B63956CfB61341AAfeFbD7EDA1F9B962
 // base, arbitrum, mainnet, optimism, polygon
 contract DMigrationHelper is CreateXScript {
     uint88 public version = uint88(
         uint256(
-            keccak256(abi.encode("Migration Helper version 1"))
+            keccak256(abi.encode("Migration Helper version 2"))
         )
     );
 
