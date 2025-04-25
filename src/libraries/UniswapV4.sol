@@ -711,6 +711,7 @@ library UniswapV4 {
                     withdraw_.fee1, managerFeePIPS, PIPS
                 );
 
+                bool isInversed;
                 {
                     uint256 amount0ToTake;
                     uint256 amount1ToTake;
@@ -758,7 +759,7 @@ library UniswapV4 {
                         withdraw_.amount1 -= amount1ToTake;
                     }
 
-                    bool isInversed = self.isInversed();
+                    isInversed = self.isInversed();
                     result = isInversed
                         ? abi.encode(amount1ToTake, amount0ToTake)
                         : abi.encode(amount0ToTake, amount1ToTake);
@@ -768,11 +769,6 @@ library UniswapV4 {
 
                 address manager = module.metaVault().manager();
 
-                if (managerFee0 > 0 || managerFee1 > 0) {
-                    emit IArrakisLPModule.LogWithdrawManagerBalance(
-                        manager, managerFee0, managerFee1
-                    );
-                }
                 if (managerFee0 > 0) {
                     poolManager.take(
                         poolKey.currency0, manager, managerFee0
@@ -786,6 +782,13 @@ library UniswapV4 {
                     );
 
                     withdraw_.amount1 -= managerFee1;
+                }
+                if (managerFee0 > 0 || managerFee1 > 0) {
+                    (managerFee0, managerFee1) = isInversed ?
+                        (managerFee1, managerFee0) : (managerFee0, managerFee1);
+                    emit IArrakisLPModule.LogWithdrawManagerBalance(
+                        manager, managerFee0, managerFee1
+                    );
                 }
 
                 // #endregion manager fees.

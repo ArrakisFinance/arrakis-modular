@@ -15,9 +15,10 @@ import {NATIVE_COIN} from "../../src/constants/CArrakis.sol";
 // Private Router Test : 0x42dEa2a3911F287391f7B4c97dF12912A5831189
 // Private Router : 0xEa9702Cf19BB348F17155E92357beF1Ed6F080B3
 contract DPrivateRouter is CreateXScript {
-    uint88 public version =
-        uint88(uint256(keccak256(abi.encode("Private Router version 1"))));
-    
+    uint88 public version = uint88(
+        uint256(keccak256(abi.encode("Private Router version 1")))
+    );
+
     address public constant factory =
         0x820FB8127a689327C863de8433278d6181123982;
     address public constant permit2 =
@@ -25,22 +26,18 @@ contract DPrivateRouter is CreateXScript {
 
     function setUp() public {}
 
-        function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
-
-        address deployer = vm.addr(privateKey);
-
-        address owner = deployer;
-
+    function run() public {
         address weth = WethFactory.getWeth();
 
         console.logString("WETH :");
         console.logAddress(weth);
 
-        console.logString("Deployer :");
-        console.logAddress(deployer);
+        vm.startBroadcast();
 
-        vm.startBroadcast(privateKey);
+        address owner = msg.sender;
+
+        console.logString("Deployer :");
+        console.logAddress(msg.sender);
 
         bytes memory initCode = abi.encodePacked(
             type(ArrakisPrivateVaultRouter).creationCode,
@@ -48,10 +45,10 @@ contract DPrivateRouter is CreateXScript {
         );
 
         bytes32 salt = bytes32(
-            abi.encodePacked(deployer, hex"00", bytes11(version))
+            abi.encodePacked(msg.sender, hex"00", bytes11(version))
         );
 
-        address router = computeCreate3Address(salt, deployer);
+        address router = computeCreate3Address(salt, msg.sender);
 
         console.logString("Private Router Address : ");
         console.logAddress(router);

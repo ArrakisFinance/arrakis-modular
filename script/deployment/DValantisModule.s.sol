@@ -32,24 +32,22 @@ contract DValantisModule is CreateXScript {
     function setUp() public {}
 
     function run() public {
-        uint256 privateKey = vm.envUint("PK_TEST");
-
-        address deployer = vm.addr(privateKey);
+        vm.startBroadcast();
 
         console.logString("Deployer :");
-        console.logAddress(deployer);
-
-        vm.startBroadcast(privateKey);
+        console.logAddress(msg.sender);
 
         bytes memory initCode = abi.encodePacked(
-            type(ValantisModulePublic).creationCode, abi.encode(guardian)
+            type(ValantisModulePublic).creationCode,
+            abi.encode(guardian)
         );
 
         bytes32 salt = bytes32(
-            abi.encodePacked(deployer, hex"00", bytes11(version))
+            abi.encodePacked(msg.sender, hex"00", bytes11(version))
         );
 
-        address valantisModuleImpl = computeCreate3Address(salt, deployer);
+        address valantisModuleImpl =
+            computeCreate3Address(salt, msg.sender);
 
         console.logString("Valantis Module Implementation Address : ");
         console.logAddress(valantisModuleImpl);
@@ -63,9 +61,8 @@ contract DValantisModule is CreateXScript {
             revert("Create 3 addresses don't match.");
         }
 
-        address upgradeableBeacon = address(
-            new UpgradeableBeacon(valantisModuleImpl)
-        );
+        address upgradeableBeacon =
+            address(new UpgradeableBeacon(valantisModuleImpl));
 
         UpgradeableBeacon(upgradeableBeacon).transferOwnership(
             arrakisTimeLock
