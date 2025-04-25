@@ -314,36 +314,30 @@ abstract contract PancakeSwapV4StandardModule is
 
     function approve(
         address spender_,
-        uint256 amount0_,
-        uint256 amount1_
+        address[] calldata tokens_,
+        uint256[] calldata amounts_
     ) external nonReentrant whenNotPaused onlyMetaVaultOwner {
-        IERC20Metadata _token0 = token0;
-        IERC20Metadata _token1 = token1;
-
-        if (address(_token0) != NATIVE_COIN) {
-            _token0.forceApprove(spender_, amount0_);
-        } else {
-            ethWithdrawers[spender_] = amount0_;
-        }
-        if (address(_token1) != NATIVE_COIN) {
-            _token1.forceApprove(spender_, amount1_);
-        } else {
-            ethWithdrawers[spender_] = amount1_;
+        uint256 length = tokens_.length;
+        if (length != amounts_.length) {
+            revert LengthsNotEqual();
         }
 
-        emit LogApproval(spender_, amount0_, amount1_);
-    }
+        for (uint256 i; i < length; i++) {
+            address token = tokens_[i];
+            uint256 amount = amounts_[i];
 
-    function allowCollector(
-        address token_
-    ) external nonReentrant onlyMetaVaultOwner whenNotPaused {
-        if (token_ == address(token0) || token_ == address(token1)) {
-            revert InvalidRewardToken();
+            if (token == address(0)) {
+                revert AddressZero();
+            }
+
+            if (address(token) != NATIVE_COIN) {
+                IERC20Metadata(token).forceApprove(spender_, amount);
+            } else {
+                ethWithdrawers[spender_] = amount;
+            }
         }
 
-        IERC20Metadata(token_).forceApprove(
-            collector, type(uint256).max
-        );
+        emit LogApproval(spender_, tokens_, amounts_);
     }
 
     // #endregion vault owner functions.

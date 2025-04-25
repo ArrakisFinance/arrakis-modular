@@ -385,8 +385,18 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         address module = address(IArrakisMetaVault(vault).module());
 
         vm.startPrank(IOwnable(vault).owner());
-        IPancakeSwapV4StandardModule(module).allowCollector(AAVE);
-        IPancakeSwapV4StandardModule(module).allowCollector(USDT);
+
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
+
+        tokens[0] = AAVE;
+        tokens[1] = USDT;
+        amounts[0] = type(uint256).max;
+        amounts[1] = type(uint256).max;
+
+        IPancakeSwapV4StandardModule(module).approve(
+            collector, tokens, amounts
+        );
         vm.stopPrank();
 
         uint256 uSDTBalance =
@@ -396,8 +406,8 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         bytes32[][] memory proofs = new bytes32[][](2);
         address[] memory users = new address[](2);
-        address[] memory tokens = new address[](2);
-        uint256[] memory amounts = new uint256[](2);
+        tokens = new address[](2);
+        amounts = new uint256[](2);
         proofs[0] = new bytes32[](1);
         proofs[0][0] = keccak256(abi.encode(module, USDT, 2000e6));
         users[0] = module;
@@ -419,7 +429,10 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
             })
         );
 
-        vm.warp(IDistributorExtension(distributor).endOfDisputePeriod() + 1);
+        vm.warp(
+            IDistributorExtension(distributor).endOfDisputePeriod()
+                + 1
+        );
 
         deal(USDT, distributor, uSDTBalance + amounts[1]);
         deal(AAVE, distributor, aAVEBalance + amounts[0]);

@@ -47,7 +47,6 @@ interface IPancakeSwapV4StandardModule {
     error OnlyManagerOrVaultOwner();
     error LengthsNotEqual();
     error SameRewardReceiver();
-    error InvalidRewardToken();
 
     // #endregion errors.
 
@@ -65,7 +64,7 @@ interface IPancakeSwapV4StandardModule {
 
     // #region events.
     event LogApproval(
-        address indexed spender, uint256 amount0, uint256 amount1
+        address indexed spender, address[] tokens, uint256[] amounts
     );
     event LogRebalance(
         LiquidityRange[] liquidityRanges,
@@ -104,17 +103,11 @@ interface IPancakeSwapV4StandardModule {
 
     function approve(
         address spender_,
-        uint256 amount0_,
-        uint256 amount1_
+        address[] calldata tokens_,
+        uint256[] calldata amounts
     ) external;
 
     // #endregion only meta vault owner functions.
-
-    // #region merkl rewards.
-
-    function allowCollector(address token_) external;
-
-    // #endregion merkl rewards.
 
     // #region only manager functions.
 
