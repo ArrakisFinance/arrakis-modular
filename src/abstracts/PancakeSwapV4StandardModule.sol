@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
-import {IUniV4StandardModule} from
-    "../interfaces/IUniV4StandardModule.sol";
+import {IPancakeSwapV4StandardModule} from
+    "../interfaces/IPancakeSwapV4StandardModule.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 import {IArrakisLPModuleID} from
     "../interfaces/IArrakisLPModuleID.sol";
@@ -17,14 +17,13 @@ import {
     TEN_PERCENT,
     NATIVE_COIN_DECIMALS
 } from "../constants/CArrakis.sol";
+import {PancakeSwapV4} from "../libraries/PancakeSwapV4.sol";
 import {
-    UnderlyingPayload,
+    SwapPayload,
     Range as PoolRange,
-    Withdraw,
-    SwapPayload
-} from "../structs/SUniswapV4.sol";
-import {UnderlyingV4} from "../libraries/UnderlyingV4.sol";
-import {UniswapV4} from "../libraries/UniswapV4.sol";
+    UnderlyingPayload,
+    Withdraw
+} from "../structs/SPancakeSwapV4.sol";
 import {IDistributor} from "../interfaces/IDistributor.sol";
 
 import {SafeERC20} from
@@ -39,56 +38,52 @@ import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
-import {IPoolManager} from
-    "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
-import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
-import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
-import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
-import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
-import {
-    Currency,
-    CurrencyLibrary
-} from "@uniswap/v4-core/src/types/Currency.sol";
-import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {ICLPoolManager} from
+    "@pancakeswap/v4-core/src/pool-cl/interfaces/ICLPoolManager.sol";
+import {ILockCallback} from
+    "@pancakeswap/v4-core/src/interfaces/ILockCallback.sol";
+import {PoolKey} from "@pancakeswap/v4-core/src/types/PoolKey.sol";
 import {
     PoolId,
     PoolIdLibrary
-} from "@uniswap/v4-core/src/types/PoolId.sol";
-import {IUnlockCallback} from
-    "@uniswap/v4-core/src/interfaces/callback/IUnlockCallback.sol";
-import {StateLibrary} from
-    "@uniswap/v4-core/src/libraries/StateLibrary.sol";
-import {TransientStateLibrary} from
-    "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
+} from "@pancakeswap/v4-core/src/types/PoolId.sol";
+import {
+    Currency,
+    CurrencyLibrary
+} from "@pancakeswap/v4-core/src/types/Currency.sol";
+import {Hooks} from "@pancakeswap/v4-core/src/libraries/Hooks.sol";
+import {IHooks} from "@pancakeswap/v4-core/src/interfaces/IHooks.sol";
 import {
     BalanceDelta,
     BalanceDeltaLibrary
-} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+} from "@pancakeswap/v4-core/src/types/BalanceDelta.sol";
+import {IVault} from "@pancakeswap/v4-core/src/interfaces/IVault.sol";
+import {FullMath} from
+    "@pancakeswap/v4-core/src/pool-cl/libraries/FullMath.sol";
 
-/// @notice this module can only set uni v4 pool that have generic hook,
+/// @notice this module can set pancakeswap v4 pool that have a generic hook,
 /// that don't require specific action to become liquidity provider.
-/// @dev due to native coin standard difference between uni V4 and arrakis,
+/// @dev due to native coin standard difference between pancakeswap and arrakis,
 /// we are assuming that all inputed amounts are using arrakis vault token0/token1
-/// as reference. Internal logic of UniV4StandardModule will handle the conversion or
+/// as reference. Internal logic of PancakeSwapV4StandardModule will handle the conversion or
 /// use the poolKey to interact with the poolManager.
-abstract contract UniV4StandardModule is
+abstract contract PancakeSwapV4StandardModule is
     ReentrancyGuardUpgradeable,
     PausableUpgradeable,
     IArrakisLPModule,
     IArrakisLPModuleID,
-    IUniV4StandardModule,
-    IUnlockCallback
+    IPancakeSwapV4StandardModule,
+    ILockCallback
 {
     using SafeERC20 for IERC20Metadata;
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
     using Hooks for IHooks;
     using Address for address payable;
-    using StateLibrary for IPoolManager;
-    using TransientStateLibrary for IPoolManager;
     using BalanceDeltaLibrary for BalanceDelta;
-    using UniswapV4 for IUniV4StandardModule;
+    using PancakeSwapV4 for IPancakeSwapV4StandardModule;
 
     // #region enum.
 
@@ -102,8 +97,8 @@ abstract contract UniV4StandardModule is
 
     // #region immutable properties.
 
-    /// @notice function used to get the uniswap v4 pool manager.
-    IPoolManager public immutable poolManager;
+    ICLPoolManager public immutable poolManager;
+    IVault public immutable vault;
     IDistributor public immutable distributor;
     address public immutable collector;
 
@@ -172,24 +167,33 @@ abstract contract UniV4StandardModule is
         _;
     }
 
+    modifier onlyMetaVaultOwner() {
+        if (msg.sender != IOwnable(address(metaVault)).owner()) {
+            revert OnlyMetaVaultOwner();
+        }
+        _;
+    }
+
     // #endregion modifiers.
 
     constructor(
         address poolManager_,
         address guardian_,
+        address vault_,
         address distributor_,
         address collector_
     ) {
         // #region checks.
         if (poolManager_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
+        if (vault_ == address(0)) revert AddressZero();
         if (distributor_ == address(0)) revert AddressZero();
         if (collector_ == address(0)) revert AddressZero();
         // #endregion checks.
 
-        poolManager = IPoolManager(poolManager_);
-
+        poolManager = ICLPoolManager(poolManager_);
         _guardian = guardian_;
+        vault = IVault(vault_);
         distributor = IDistributor(distributor_);
         collector = collector_;
 
@@ -263,10 +267,10 @@ abstract contract UniV4StandardModule is
 
         // #region poolKey initialization.
 
-        UniswapV4._checkTokens(
+        PancakeSwapV4._checkTokens(
             poolKey_, _token0, _token1, isInversed_
         );
-        UniswapV4._checkPermissions(poolKey_);
+        PancakeSwapV4._checkPermissions(poolKey_);
 
         /// @dev check if the pool is initialized.
         PoolId poolId = poolKey_.toId();
@@ -312,10 +316,7 @@ abstract contract UniV4StandardModule is
         address spender_,
         address[] calldata tokens_,
         uint256[] calldata amounts_
-    ) external nonReentrant whenNotPaused {
-        if (msg.sender != IOwnable(address(metaVault)).owner()) {
-            revert OnlyMetaVaultOwner();
-        }
+    ) external nonReentrant whenNotPaused onlyMetaVaultOwner {
         uint256 length = tokens_.length;
         if (length != amounts_.length) {
             revert LengthsNotEqual();
@@ -362,18 +363,17 @@ abstract contract UniV4StandardModule is
     ) external onlyManager nonReentrant whenNotPaused {
         PoolKey memory _poolKey = poolKey;
 
-        UniswapV4._checkTokens(
+        PancakeSwapV4._checkTokens(
             poolKey_, address(token0), address(token1), isInversed
         );
-        UniswapV4._checkPermissions(poolKey_);
+        PancakeSwapV4._checkPermissions(poolKey_);
 
         if (
             poolKey_.fee == _poolKey.fee
-                && poolKey_.tickSpacing == _poolKey.tickSpacing
+                && poolKey_.parameters == _poolKey.parameters
                 && address(poolKey_.hooks) == address(_poolKey.hooks)
         ) revert SamePool();
 
-        /// @dev check if the pool is initialized.
         PoolId poolId = poolKey_.toId();
         (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(poolId);
 
@@ -394,15 +394,12 @@ abstract contract UniV4StandardModule is
             for (uint256 i; i < length; i++) {
                 Range memory range = _ranges[i];
 
-                uint128 liquidityToRemove = poolManager
-                    .getPositionLiquidity(
+                uint128 liquidityToRemove = poolManager.getLiquidity(
                     currentPoolId,
-                    Position.calculatePositionKey(
-                        address(this),
-                        range.tickLower,
-                        range.tickUpper,
-                        bytes32(0)
-                    )
+                    address(this),
+                    range.tickLower,
+                    range.tickUpper,
+                    bytes32(0)
                 );
 
                 liquidityRanges[i] = LiquidityRange({
@@ -487,7 +484,7 @@ abstract contract UniV4StandardModule is
             Action.WITHDRAW, abi.encode(receiver_, proportion_)
         );
 
-        bytes memory result = poolManager.unlock(data);
+        bytes memory result = vault.lock(data);
 
         (amount0, amount1) = abi.decode(result, (uint256, uint256));
 
@@ -567,7 +564,7 @@ abstract contract UniV4StandardModule is
             Action.REBALANCE, abi.encode(liquidityRanges, swapPayload)
         );
 
-        bytes memory result = poolManager.unlock(data);
+        bytes memory result = vault.lock(data);
 
         (,,,, amount0, amount1) = abi.decode(
             result,
@@ -636,19 +633,19 @@ abstract contract UniV4StandardModule is
     {
         PoolKey memory _poolKey = poolKey;
         PoolRange[] memory poolRanges =
-            UniswapV4._getPoolRanges(_ranges, _poolKey);
+            PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
 
         uint256 fees0;
         uint256 fees1;
 
         {
             (uint256 leftOver0, uint256 leftOver1) =
-                IUniV4StandardModule(this)._getLeftOvers(_poolKey);
+            IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
 
             (uint160 sqrtPriceX96_,,,) =
                 poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
 
-            (amount0, amount1, fees0, fees1) = UnderlyingV4
+            (amount0, amount1, fees0, fees1) = PancakeSwapV4
                 .totalUnderlyingAtPriceWithFees(
                 UnderlyingPayload({
                     ranges: poolRanges,
@@ -680,17 +677,17 @@ abstract contract UniV4StandardModule is
         uint160 priceX96_
     ) external view returns (uint256 amount0, uint256 amount1) {
         PoolKey memory _poolKey = poolKey;
-
         PoolRange[] memory poolRanges =
-            UniswapV4._getPoolRanges(_ranges, _poolKey);
+            PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
 
         uint256 fees0;
         uint256 fees1;
+
         {
             (uint256 leftOver0, uint256 leftOver1) =
-                IUniV4StandardModule(this)._getLeftOvers(_poolKey);
+            IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
 
-            (amount0, amount1, fees0, fees1) = UnderlyingV4
+            (amount0, amount1, fees0, fees1) = PancakeSwapV4
                 .totalUnderlyingAtPriceWithFees(
                 UnderlyingPayload({
                     ranges: poolRanges,
@@ -725,7 +722,7 @@ abstract contract UniV4StandardModule is
         // check if pool current price is not too far from oracle price.
         PoolKey memory _poolKey = poolKey;
         (address _token0, address _token1) =
-            IUniV4StandardModule(this)._getTokens(_poolKey);
+            IPancakeSwapV4StandardModule(this)._getTokens(_poolKey);
 
         uint8 token0Decimals = _token0 == address(0)
             ? NATIVE_COIN_DECIMALS
@@ -795,15 +792,15 @@ abstract contract UniV4StandardModule is
     {
         PoolKey memory _poolKey = poolKey;
         PoolRange[] memory poolRanges =
-            UniswapV4._getPoolRanges(_ranges, _poolKey);
+            PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
 
         (uint256 leftOver0, uint256 leftOver1) =
-            IUniV4StandardModule(this)._getLeftOvers(_poolKey);
+            IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
 
         (uint160 sqrtPriceX96_,,,) =
             poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
 
-        (,, uint256 fee0, uint256 fee1) = UnderlyingV4
+        (,, uint256 fee0, uint256 fee1) = PancakeSwapV4
             .totalUnderlyingAtPriceWithFees(
             UnderlyingPayload({
                 ranges: poolRanges,
@@ -830,15 +827,15 @@ abstract contract UniV4StandardModule is
     {
         PoolKey memory _poolKey = poolKey;
         PoolRange[] memory poolRanges =
-            UniswapV4._getPoolRanges(_ranges, _poolKey);
+            PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
 
         (uint256 leftOver0, uint256 leftOver1) =
-            IUniV4StandardModule(this)._getLeftOvers(_poolKey);
+            IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
 
         (uint160 sqrtPriceX96_,,,) =
             poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
 
-        (,, uint256 fee0, uint256 fee1) = UnderlyingV4
+        (,, uint256 fee0, uint256 fee1) = PancakeSwapV4
             .totalUnderlyingAtPriceWithFees(
             UnderlyingPayload({
                 ranges: poolRanges,
@@ -859,14 +856,14 @@ abstract contract UniV4StandardModule is
 
     // #region internal functions.
 
-    function _unlockCallback(
+    function _lockAcquired(
         Action action_,
         bytes memory data_
     ) internal returns (bytes memory) {
         if (action_ == Action.WITHDRAW) {
             (address receiver, uint256 proportion) =
                 abi.decode(data_, (address, uint256));
-            return IUniV4StandardModule(this).withdraw(
+            return IPancakeSwapV4StandardModule(this).withdraw(
                 Withdraw({
                     receiver: receiver,
                     proportion: proportion,
@@ -884,7 +881,7 @@ abstract contract UniV4StandardModule is
                 LiquidityRange[] memory liquidityRanges,
                 SwapPayload memory swapPayload
             ) = abi.decode(data_, (LiquidityRange[], SwapPayload));
-            return IUniV4StandardModule(this).rebalance(
+            return IPancakeSwapV4StandardModule(this).rebalance(
                 poolKey,
                 liquidityRanges,
                 swapPayload,
@@ -911,7 +908,7 @@ abstract contract UniV4StandardModule is
             abi.encode(liquidityRanges_, swapPayload_)
         );
 
-        bytes memory result = poolManager.unlock(data);
+        bytes memory result = vault.lock(data);
 
         (amount0Minted, amount1Minted, amount0Burned, amount1Burned,,)
         = abi.decode(

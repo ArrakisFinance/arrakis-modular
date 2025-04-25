@@ -8,6 +8,7 @@ evm_version = "cancun"
 auto_detect_solc = true
 optimizer = true
 optimizer-runs = 10_000
+via_ir = true
 [fmt]
 line_length = 70
 multiline_func_header = "params_first"

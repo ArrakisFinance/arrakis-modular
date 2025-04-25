@@ -6,19 +6,18 @@ import {TestWrapper} from "../utils/TestWrapper.sol";
 import {console} from "forge-std/console.sol";
 // #endregion foundry.
 
-import {UniV4StandardModulePublic} from
-    "../../src/modules/UniV4StandardModulePublic.sol";
+import {PancakeSwapV4StandardModulePublic} from
+    "../../src/modules/PancakeSwapV4StandardModulePublic.sol";
 import {BunkerModule} from "../../src/modules/BunkerModule.sol";
 import {ArrakisPublicVaultRouterV2} from
     "../../src/ArrakisPublicVaultRouterV2.sol";
 import {RouterSwapExecutor} from "../../src/RouterSwapExecutor.sol";
-import {UniV4StandardModuleResolver} from
-    "../../src/modules/resolvers/UniV4StandardModuleResolver.sol";
+import {PancakeSwapV4StandardModuleResolver} from
+    "../../src/modules/resolvers/PancakeSwapV4StandardModuleResolver.sol";
 import {
     NATIVE_COIN,
     TEN_PERCENT
 } from "../../src/constants/CArrakis.sol";
-import {SwapPayload} from "../../src/structs/SUniswapV4.sol";
 import {IArrakisMetaVault} from
     "../../src/interfaces/IArrakisMetaVault.sol";
 
@@ -45,11 +44,13 @@ import {IRouterSwapExecutor} from
 import {IRouterSwapResolver} from
     "../../src/interfaces/IRouterSwapResolver.sol";
 import {IOwnable} from "../../src/interfaces/IOwnable.sol";
-import {IUniV4StandardModule} from
-    "../../src/interfaces/IUniV4StandardModule.sol";
+import {
+    IPancakeSwapV4StandardModule,
+    SwapPayload
+} from "../../src/interfaces/IPancakeSwapV4StandardModule.sol";
 import {IOracleWrapper} from "../../src/interfaces/IOracleWrapper.sol";
-import {IUniV4StandardModuleResolver} from
-    "../../src/interfaces/IUniV4StandardModuleResolver.sol";
+import {IPancakeSwapV4StandardModuleResolver} from
+    "../../src/interfaces/IPancakeSwapV4StandardModuleResolver.sol";
 
 // #endregion interfaces.
 
@@ -67,21 +68,28 @@ import {SafeCast} from
 // #endregion openzeppelin.
 
 // #region uniswap v4.
-
-import {
-    PoolManager,
-    IPoolManager
-} from "@uniswap/v4-core/src/PoolManager.sol";
+import {IPoolManager} from
+    "@pancakeswap/v4-core/src/interfaces/IPoolManager.sol";
+import {Vault, IVault} from "@pancakeswap/v4-core/src/Vault.sol";
+import {CLPoolManager} from
+    "@pancakeswap/v4-core/src/pool-cl/CLPoolManager.sol";
+import {ICLPoolManager} from
+    "@pancakeswap/v4-core/src/pool-cl/interfaces/ICLPoolManager.sol";
 import {
     Currency,
     CurrencyLibrary
-} from "@uniswap/v4-core/src/types/Currency.sol";
+} from "@pancakeswap/v4-core/src/types/Currency.sol";
 import {
     PoolKey,
     PoolIdLibrary
-} from "@uniswap/v4-core/src/types/PoolKey.sol";
-import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
-import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+} from "@pancakeswap/v4-core/src/types/PoolKey.sol";
+import {IHooks} from "@pancakeswap/v4-core/src/interfaces/IHooks.sol";
+import {TickMath} from
+    "@pancakeswap/v4-core/src/pool-cl/libraries/TickMath.sol";
+import {ILockCallback} from
+    "@pancakeswap/v4-core/src/interfaces/ILockCallback.sol";
+import {CLPoolParametersHelper} from
+    "@pancakeswap/v4-core/src/pool-cl/libraries/CLPoolParametersHelper.sol";
 
 // #endregion uniswap v4.
 
@@ -102,7 +110,7 @@ import {IDistributorExtension} from
 
 // #endregion utils.
 
-contract UniswapV4IntegrationTest is TestWrapper {
+contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
     using SafeERC20 for IERC20Metadata;
     using CurrencyLibrary for Currency;
     using PoolIdLibrary for PoolKey;
@@ -124,6 +132,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
     // #endregion constant properties.
 
     // #region arrakis modular contracts.
+
     address public constant arrakisStandardManager =
         0x2e6E879648293e939aA68bA4c6c129A1Be733bDA;
     address public constant arrakisTimeLock =
@@ -155,8 +164,8 @@ contract UniswapV4IntegrationTest is TestWrapper {
     address public bunkerBeacon;
 
     /// @dev should be used as a private module.
-    address public uniswapStandardModuleImplementation;
-    address public uniswapStandardModuleBeacon;
+    address public pancakeSwapStandardModuleImplementation;
+    address public pancakeSwapStandardModuleBeacon;
 
     address public privateModule;
     address public vault;
@@ -167,13 +176,14 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
     address public router;
     address public swapExecutor;
-    address public uniV4resolver;
+    address public pancakeSwapV4resolver;
 
     // #endregion arrakis.
 
     // #region uniswap.
 
     address public poolManager;
+    address public pancakeVault;
 
     // #endregion uniswap.
 
@@ -239,14 +249,17 @@ contract UniswapV4IntegrationTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: IPoolManager(poolManager),
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
         sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
 
-        IPoolManager(poolManager).unlock(abi.encode(0));
+        IVault(pancakeVault).lock(abi.encode(0));
 
         // #endregion create a uniswap v4 pool.
 
@@ -259,7 +272,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
         maxSlippage = 10_000;
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -285,7 +298,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
             USDC,
             WETH,
             owner,
-            uniswapStandardModuleBeacon,
+            pancakeSwapStandardModuleBeacon,
             moduleCreationPayload,
             initManagementPayload
         );
@@ -293,13 +306,13 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
     // #region uniswap v4 callback function.
 
-    function unlockCallback(
+    function lockAcquired(
         bytes calldata data
     ) public returns (bytes memory) {
         uint256 typeOfLockAcquired = abi.decode(data, (uint256));
 
         if (typeOfLockAcquired == 0) {
-            IPoolManager(poolManager).initialize(
+            ICLPoolManager(poolManager).initialize(
                 poolKey, sqrtPriceX96
             );
         }
@@ -311,18 +324,17 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
     function testResolverConstructorAddressZero() public {
         vm.expectRevert(
-            IUniV4StandardModuleResolver.AddressZero.selector
+            IPancakeSwapV4StandardModuleResolver.AddressZero.selector
         );
-        new UniV4StandardModuleResolver(address(0));
+        new PancakeSwapV4StandardModuleResolver(address(0));
     }
 
     function test_compute_mint_amounts_mint_zero() public {
         vm.expectRevert(
-            IUniV4StandardModuleResolver.MintZero.selector
+            IPancakeSwapV4StandardModuleResolver.MintZero.selector
         );
-        IUniV4StandardModuleResolver(uniV4resolver).computeMintAmounts(
-            2000e6, 1e18, 1e18, 0, 0
-        );
+        IPancakeSwapV4StandardModuleResolver(pancakeSwapV4resolver)
+            .computeMintAmounts(2000e6, 1e18, 1e18, 0, 0);
     }
 
     // #endregion test resolver constructor.
@@ -382,7 +394,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
         amounts[0] = type(uint256).max;
         amounts[1] = type(uint256).max;
 
-        IUniV4StandardModule(module).approve(
+        IPancakeSwapV4StandardModule(module).approve(
             collector, tokens, amounts
         );
         vm.stopPrank();
@@ -475,7 +487,9 @@ contract UniswapV4IntegrationTest is TestWrapper {
         // #region add liquidity.
 
         vm.expectRevert(
-            IUniV4StandardModuleResolver.MaxAmountsTooLow.selector
+            IPancakeSwapV4StandardModuleResolver
+                .MaxAmountsTooLow
+                .selector
         );
         IArrakisPublicVaultRouterV2(router).addLiquidity(
             AddLiquidityData({
@@ -582,7 +596,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
         maxSlippage = 10_000;
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -608,7 +622,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
             USDC,
             WETH,
             owner,
-            uniswapStandardModuleBeacon,
+            pancakeSwapStandardModuleBeacon,
             moduleCreationPayload,
             initManagementPayload
         );
@@ -700,7 +714,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
         maxSlippage = 10_000;
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -726,7 +740,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
             USDC,
             WETH,
             owner,
-            uniswapStandardModuleBeacon,
+            pancakeSwapStandardModuleBeacon,
             moduleCreationPayload,
             initManagementPayload
         );
@@ -850,13 +864,13 @@ contract UniswapV4IntegrationTest is TestWrapper {
         {
             // #region rebalance.
 
-            int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+            int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
             int24 tickLower = (tick / 10) * 10 - (2 * 10);
             int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-            IUniV4StandardModule.Range memory range =
-            IUniV4StandardModule.Range({
+            IPancakeSwapV4StandardModule.Range memory range =
+            IPancakeSwapV4StandardModule.Range({
                 tickLower: tickLower,
                 tickUpper: tickUpper
             });
@@ -864,29 +878,30 @@ contract UniswapV4IntegrationTest is TestWrapper {
             uint128 liquidity = LiquidityAmounts
                 .getLiquidityForAmounts(
                 sqrtPriceX96,
-                TickMath.getSqrtPriceAtTick(tickLower),
-                TickMath.getSqrtPriceAtTick(tickUpper),
+                TickMath.getSqrtRatioAtTick(tickLower),
+                TickMath.getSqrtRatioAtTick(tickUpper),
                 amount0,
                 amount1
             );
 
-            IUniV4StandardModule.LiquidityRange memory liquidityRange =
-            IUniV4StandardModule.LiquidityRange({
-                range: range,
-                liquidity: SafeCast.toInt128(
-                    SafeCast.toInt256(uint256(liquidity))
-                )
-            });
+            IPancakeSwapV4StandardModule.LiquidityRange memory
+                liquidityRange = IPancakeSwapV4StandardModule
+                    .LiquidityRange({
+                    range: range,
+                    liquidity: SafeCast.toInt128(
+                        SafeCast.toInt256(uint256(liquidity))
+                    )
+                });
 
-            IUniV4StandardModule.LiquidityRange[] memory
-                liquidityRanges =
-                    new IUniV4StandardModule.LiquidityRange[](1);
+            IPancakeSwapV4StandardModule.LiquidityRange[] memory
+                liquidityRanges = new IPancakeSwapV4StandardModule
+                    .LiquidityRange[](1);
 
             liquidityRanges[0] = liquidityRange;
             SwapPayload memory swapPayload;
 
             vm.startPrank(arrakisStandardManager);
-            IUniV4StandardModule(
+            IPancakeSwapV4StandardModule(
                 address(IArrakisMetaVault(vault).module())
             ).rebalance(liquidityRanges, swapPayload, 0, 0, 0, 0);
             vm.stopPrank();
@@ -951,7 +966,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         // #region uniswap setup.
 
-        poolManager = _deployPoolManager();
+        (poolManager, pancakeVault) = _deployPoolManager();
 
         // #endregion uniswap setup.
 
@@ -975,8 +990,8 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         // #region create resolver.
 
-        uniV4resolver =
-            _deployUniV4StandardModuleResolver(poolManager);
+        pancakeSwapV4resolver =
+            _deployPancakeV4StandardModuleResolver(poolManager);
 
         // #endregion create resolver.
 
@@ -993,10 +1008,11 @@ contract UniswapV4IntegrationTest is TestWrapper {
         // #region whitelist resolver.
 
         address[] memory resolvers = new address[](1);
-        resolvers[0] = uniV4resolver;
+        resolvers[0] = pancakeSwapV4resolver;
 
         bytes32[] memory ids = new bytes32[](1);
-        ids[0] = keccak256(abi.encode("UniV4StandardModulePublic"));
+        ids[0] =
+            keccak256(abi.encode("PancakeSwapV4StandardModulePublic"));
 
         vm.prank(owner);
         IArrakisPublicVaultRouterV2(router).setResolvers(
@@ -1007,13 +1023,13 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         // #region create an uniswap standard module.
 
-        _deployUniswapStandardModule(poolManager);
+        _deployPancakeSwapStandardModule(poolManager);
 
         // #endregion create an uniswap standard module.
 
         address[] memory beacons = new address[](2);
         beacons[0] = bunkerBeacon;
-        beacons[1] = uniswapStandardModuleBeacon;
+        beacons[1] = pancakeSwapStandardModuleBeacon;
 
         vm.startPrank(IOwnable(publicRegistry).owner());
 
@@ -1023,12 +1039,20 @@ contract UniswapV4IntegrationTest is TestWrapper {
         vm.stopPrank();
     }
 
-    function _deployPoolManager() internal returns (address pm) {
+    function _deployPoolManager()
+        internal
+        returns (address pm, address pV)
+    {
         address poolManagerOwner = vm.addr(
             uint256(keccak256(abi.encode("Pool Manager Owner")))
         );
 
-        pm = address(new PoolManager(poolManagerOwner));
+        vm.prank(poolManagerOwner);
+        pV = address(new Vault());
+        pm = address(new CLPoolManager(IVault(pV)));
+
+        vm.prank(poolManagerOwner);
+        IVault(pV).registerApp(pm);
     }
 
     function _deployBunkerModule() internal {
@@ -1042,21 +1066,27 @@ contract UniswapV4IntegrationTest is TestWrapper {
         );
     }
 
-    function _deployUniswapStandardModule(
+    function _deployPancakeSwapStandardModule(
         address poolManager_
     ) internal {
         // #region create uniswap standard module.
 
-        uniswapStandardModuleImplementation = address(
-            new UniV4StandardModulePublic(
-                poolManager, guardian, distributor, collector
+        pancakeSwapStandardModuleImplementation = address(
+            new PancakeSwapV4StandardModulePublic(
+                poolManager,
+                guardian,
+                pancakeVault,
+                distributor,
+                collector
             )
         );
-        uniswapStandardModuleBeacon = address(
-            new UpgradeableBeacon(uniswapStandardModuleImplementation)
+        pancakeSwapStandardModuleBeacon = address(
+            new UpgradeableBeacon(
+                pancakeSwapStandardModuleImplementation
+            )
         );
 
-        UpgradeableBeacon(uniswapStandardModuleBeacon)
+        UpgradeableBeacon(pancakeSwapStandardModuleBeacon)
             .transferOwnership(arrakisTimeLock);
 
         // #endregion create uniswap standard module.
@@ -1079,10 +1109,12 @@ contract UniswapV4IntegrationTest is TestWrapper {
         return address(new RouterSwapExecutor(router, NATIVE_COIN));
     }
 
-    function _deployUniV4StandardModuleResolver(
+    function _deployPancakeV4StandardModuleResolver(
         address poolManager
     ) internal returns (address resolver) {
-        return address(new UniV4StandardModuleResolver(poolManager));
+        return address(
+            new PancakeSwapV4StandardModuleResolver(poolManager)
+        );
     }
 
     function _setupETHUSDCVault() internal returns (address vault) {}

@@ -1,32 +1,29 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.26;
 
-import {UniV4StandardModule} from
-    "../abstracts/UniV4StandardModule.sol";
 import {IArrakisLPModulePrivate} from
     "../interfaces/IArrakisLPModulePrivate.sol";
-
-import {IPoolManager} from
-    "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {PancakeSwapV4StandardModule} from
+    "../abstracts/PancakeSwapV4StandardModule.sol";
 import {NATIVE_COIN} from "../constants/CArrakis.sol";
 
-import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
-import {PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {PoolIdLibrary} from
+    "@pancakeswap/v4-core/src/types/PoolId.sol";
 import {
     Currency,
     CurrencyLibrary
-} from "@uniswap/v4-core/src/types/Currency.sol";
+} from "@pancakeswap/v4-core/src/types/Currency.sol";
+import {PoolKey} from "@pancakeswap/v4-core/src/types/PoolKey.sol";
 
-import {IERC20Metadata} from
-    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata} from
+    "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {NATIVE_COIN} from "../constants/CArrakis.sol";
 
-/// @notice this module can only set uni v4 pool that have generic hook,
-/// that don't require specific action to become liquidity provider.
-contract UniV4StandardModulePrivate is
-    UniV4StandardModule,
+contract PancakeSwapV4StandardModulePrivate is
+    PancakeSwapV4StandardModule,
     IArrakisLPModulePrivate
 {
     using PoolIdLibrary for PoolKey;
@@ -36,21 +33,23 @@ contract UniV4StandardModulePrivate is
 
     // #region public constants.
 
-    /// @dev id = keccak256(abi.encode("UniV4StandardModulePrivate"))
+    /// @dev id = keccak256(abi.encode("PancakeSwapV4StandardModulePrivate"))
     bytes32 public constant id =
-        0xae9c8e22b1f7ab201e144775cd6f848c3c1b0a82315571de8c67ce32ca9a7d44;
+        0x7cec99d521e59378e389a879513f6373dd58e86a0c1422fa01195032b7071950;
 
     // #endregion public constants.
 
     constructor(
         address poolManager_,
         address guardian_,
+        address vault_,
         address distributor_,
         address collector_
     )
-        UniV4StandardModule(
+        PancakeSwapV4StandardModule(
             poolManager_,
             guardian_,
+            vault_,
             distributor_,
             collector_
         )
@@ -71,7 +70,7 @@ contract UniV4StandardModulePrivate is
 
         if (amount0_ == 0 && amount1_ == 0) revert DepositZero();
 
-        if (poolKey.currency0.isAddressZero()) {
+        if (poolKey.currency0.isNative()) {
             if (isInversed) {
                 if (amount1_ > msg.value) {
                     revert InvalidMsgValue();
@@ -96,24 +95,6 @@ contract UniV4StandardModulePrivate is
         _fund(depositor_, amount0_, amount1_);
 
         emit LogFund(depositor_, amount0_, amount1_);
-    }
-
-    /// @notice Called by the pool manager on `msg.sender` when a lock is acquired
-    /// @param data_ The data that was passed to the call to lock
-    /// @return result data that you want to be returned from the lock call
-    function unlockCallback(
-        bytes calldata data_
-    ) public virtual returns (bytes memory) {
-        if (msg.sender != address(poolManager)) {
-            revert OnlyPoolManager();
-        }
-
-        /// @dev use data to do specific action.
-
-        (uint256 action, bytes memory data) =
-            abi.decode(data_, (uint256, bytes));
-
-        return _unlockCallback(Action(action), data);
     }
 
     // #region internal functions.
@@ -150,4 +131,19 @@ contract UniV4StandardModulePrivate is
     }
 
     // #endregion internal functions.
+
+    function lockAcquired(
+        bytes calldata data_
+    ) public virtual returns (bytes memory) {
+        if (msg.sender != address(vault)) {
+            revert OnlyVault();
+        }
+
+        /// @dev use data to do specific action.
+
+        (uint256 action, bytes memory data) =
+            abi.decode(data_, (uint256, bytes));
+
+        return _lockAcquired(Action(action), data);
+    }
 }

@@ -6,11 +6,11 @@ import {console} from "forge-std/console.sol";
 import {TestWrapper} from "../../utils/TestWrapper.sol";
 // #endregion foundry.
 
-// #region Uniswap Module.
-import {UniV4StandardModulePublic} from
-    "../../../src/modules/UniV4StandardModulePublic.sol";
-import {IUniV4StandardModule} from
-    "../../../src/interfaces/IUniV4StandardModule.sol";
+// #region pancakeSwap Module.
+import {PancakeSwapV4StandardModulePublic} from
+    "../../../src/modules/PancakeSwapV4StandardModulePublic.sol";
+import {IPancakeSwapV4StandardModule} from
+    "../../../src/interfaces/IPancakeSwapV4StandardModule.sol";
 import {IArrakisLPModule} from
     "../../../src/interfaces/IArrakisLPModule.sol";
 import {IOracleWrapper} from
@@ -22,10 +22,10 @@ import {
     TEN_PERCENT,
     NATIVE_COIN
 } from "../../../src/constants/CArrakis.sol";
-import {SwapPayload} from "../../../src/structs/SUniswapV4.sol";
-import {UniV4StandardModuleResolver} from
-    "../../../src/modules/resolvers/UniV4StandardModuleResolver.sol";
-// #endregion Uniswap Module.
+import {SwapPayload} from "../../../src/structs/SPancakeSwapV4.sol";
+import {PancakeSwapV4StandardModuleResolver} from
+    "../../../src/modules/resolvers/PancakeSwapV4StandardModuleResolver.sol";
+// #endregion pancakeSwap Module.
 
 // #region openzeppelin.
 import {SafeERC20} from
@@ -38,24 +38,32 @@ import {ERC1967Proxy} from
     "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 // #endregion openzeppelin.
 
-// #region uniswap.
-import {IPoolManager} from
-    "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
-import {PoolManager} from "@uniswap/v4-core/src/PoolManager.sol";
+// #region pancakeSwap.
+
+import {ICLPoolManager} from
+    "@pancakeswap/v4-core/src/pool-cl/interfaces/ICLPoolManager.sol";
+import {CLPoolManager} from
+    "@pancakeswap/v4-core/src/pool-cl/CLPoolManager.sol";
+import {Vault, IVault} from "@pancakeswap/v4-core/src/Vault.sol";
 import {
     Currency,
     CurrencyLibrary
-} from "@uniswap/v4-core/src/types/Currency.sol";
-import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
-import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
-import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
-import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
-import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
-import {StateLibrary} from
-    "@uniswap/v4-core/src/libraries/StateLibrary.sol";
-import {TransientStateLibrary} from
-    "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
-// #endregion uniswap.
+} from "@pancakeswap/v4-core/src/types/Currency.sol";
+import {PoolKey} from "@pancakeswap/v4-core/src/types/PoolKey.sol";
+import {IHooks} from "@pancakeswap/v4-core/src/interfaces/IHooks.sol";
+import {TickMath} from
+    "@pancakeswap/v4-core/src/pool-cl/libraries/TickMath.sol";
+import {FullMath} from
+    "@pancakeswap/v4-core/src/pool-cl/libraries/FullMath.sol";
+import {Hooks} from "@pancakeswap/v4-core/src/libraries/Hooks.sol";
+import {CLPoolParametersHelper} from
+    "@pancakeswap/v4-core/src/pool-cl/libraries/CLPoolParametersHelper.sol";
+import {
+    HOOKS_BEFORE_REMOVE_LIQUIDITY_OFFSET,
+    HOOKS_AFTER_REMOVE_LIQUIDITY_OFFSET
+} from "@pancakeswap/v4-core/src/pool-cl/interfaces/ICLHooks.sol";
+
+// #endregion pancakeSwap.
 
 import {LiquidityAmounts} from
     "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
@@ -77,10 +85,7 @@ interface IERC20USDT {
     ) external;
 }
 
-contract UniV4StandardModuleTest is TestWrapper {
-    using StateLibrary for IPoolManager;
-    using TransientStateLibrary for IPoolManager;
-
+contract PancakeSwapV4StandardModuleTest is TestWrapper {
     // #region constants.
 
     address public constant USDC =
@@ -95,9 +100,10 @@ contract UniV4StandardModuleTest is TestWrapper {
 
     // #endregion constants.
 
-    PoolManager public poolManager;
+    CLPoolManager public poolManager;
+    Vault public pancakeVault;
     PoolKey public poolKey;
-    UniV4StandardModuleResolver public resolver;
+    PancakeSwapV4StandardModuleResolver public resolver;
     uint160 public sqrtPriceX96;
     address public manager;
     address public pauser;
@@ -112,7 +118,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
     // #endregion mocks contracts.
 
-    UniV4StandardModulePublic public module;
+    PancakeSwapV4StandardModulePublic public module;
 
     function setUp() public {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
@@ -140,14 +146,20 @@ contract UniV4StandardModuleTest is TestWrapper {
             uint256(keccak256(abi.encode("PoolManagerOwner")))
         );
 
-        poolManager = new PoolManager(poolManagerOwner);
+        vm.prank(poolManagerOwner);
+        pancakeVault = new Vault();
+        poolManager = new CLPoolManager(pancakeVault);
+
+        vm.prank(poolManagerOwner);
+        pancakeVault.registerApp(address(poolManager));
 
         // #region create a pool.
 
         // #region create resolver.
 
-        resolver =
-            new UniV4StandardModuleResolver(address(poolManager));
+        resolver = new PancakeSwapV4StandardModuleResolver(
+            address(poolManager)
+        );
 
         // #endregion create resolver.
 
@@ -157,14 +169,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
         sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         // #endregion create a pool.
 
@@ -182,13 +197,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -198,7 +217,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
@@ -208,9 +227,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         // #endregion create uni v4 module.
     }
 
-    // #region uniswap v4 callback function.
+    // #region pancakeSwap v4 callback function.
 
-    function unlockCallback(
+    function lockAcquired(
         bytes calldata data
     ) public returns (bytes memory) {
         uint256 typeOfLockAcquired = abi.decode(data, (uint256));
@@ -241,7 +260,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         }
     }
 
-    // #endregion uniswap v4 callback function.
+    // #endregion pancakeSwap v4 callback function.
 
     // #region test pause.
 
@@ -309,7 +328,13 @@ contract UniV4StandardModuleTest is TestWrapper {
 
     function testConstructorPoolManagerAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        new UniV4StandardModulePublic(address(0), guardian, distributor, collector);
+        new PancakeSwapV4StandardModulePublic(
+            address(0),
+            guardian,
+            address(pancakeVault),
+            distributor,
+            collector
+        );
     }
 
     function testConstructorMetaVaultAddressZero() public {
@@ -317,13 +342,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implmentation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -334,15 +363,19 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
 
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
 
     function testConstructorGuardianAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        new UniV4StandardModulePublic(
-            address(poolManager), address(0), distributor, collector
+        new PancakeSwapV4StandardModulePublic(
+            address(poolManager),
+            address(0),
+            address(pancakeVault),
+            distributor,
+            collector
         );
     }
 
@@ -356,21 +389,28 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -382,12 +422,14 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.Currency0DtToken0.selector,
+                IPancakeSwapV4StandardModule
+                    .Currency0DtToken0
+                    .selector,
                 WETH,
                 USDC
             )
         );
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -404,21 +446,28 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -430,12 +479,14 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.Currency0DtToken0.selector,
+                IPancakeSwapV4StandardModule
+                    .Currency0DtToken0
+                    .selector,
                 WETH,
                 NATIVE_COIN
             )
         );
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -450,21 +501,28 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -476,12 +534,14 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.Currency1DtToken1.selector,
+                IPancakeSwapV4StandardModule
+                    .Currency1DtToken1
+                    .selector,
                 USDT,
                 WETH
             )
         );
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -496,21 +556,28 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             true,
@@ -522,12 +589,14 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.Currency1DtToken0.selector,
+                IPancakeSwapV4StandardModule
+                    .Currency1DtToken0
+                    .selector,
                 USDT,
                 USDC
             )
         );
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -544,21 +613,28 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             true,
@@ -570,12 +646,14 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.Currency0DtToken1.selector,
+                IPancakeSwapV4StandardModule
+                    .Currency0DtToken1
+                    .selector,
                 address(1),
                 NATIVE_COIN
             )
         );
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -592,21 +670,28 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             true,
@@ -618,12 +703,14 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.Currency0DtToken1.selector,
+                IPancakeSwapV4StandardModule
+                    .Currency0DtToken1
+                    .selector,
                 address(1),
                 WETH
             )
         );
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -640,21 +727,28 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             true,
@@ -665,9 +759,11 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
 
         vm.expectRevert(
-            IUniV4StandardModule.NativeCoinCannotBeToken1.selector
+            IPancakeSwapV4StandardModule
+                .NativeCoinCannotBeToken1
+                .selector
         );
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -684,21 +780,28 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -709,16 +812,20 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
 
         vm.expectRevert(
-            IUniV4StandardModule.NativeCoinCannotBeToken1.selector
+            IPancakeSwapV4StandardModule
+                .NativeCoinCannotBeToken1
+                .selector
         );
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
 
     function testConstructorNoRemoveLiquidityHooksBefore() public {
         SimpleHook hook = SimpleHook(
-            address(uint160(Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG))
+            address(
+                uint160(1 << HOOKS_BEFORE_REMOVE_LIQUIDITY_OFFSET)
+            )
         );
 
         SimpleHook implementation = new SimpleHook();
@@ -735,21 +842,28 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(hook))
+            hooks: IHooks(address(hook)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(uint256(hook.getHooksRegistrationBitmap())), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -760,16 +874,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
 
         vm.expectRevert(
-            IUniV4StandardModule.NoRemoveOrAddLiquidityHooks.selector
+            IPancakeSwapV4StandardModule
+                .NoRemoveOrAddLiquidityHooks
+                .selector
         );
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
 
     function testConstructorNoRemoveLiquidityHooksAfter() public {
         SimpleHook hook = SimpleHook(
-            address(uint160(Hooks.AFTER_REMOVE_LIQUIDITY_FLAG))
+            address(uint160(1 << HOOKS_AFTER_REMOVE_LIQUIDITY_OFFSET))
         );
 
         SimpleHook implementation = new SimpleHook();
@@ -785,20 +901,28 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(hook))
+            hooks: IHooks(address(hook)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(uint256(hook.getHooksRegistrationBitmap())), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
+
         address implmentation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -809,9 +933,11 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
 
         vm.expectRevert(
-            IUniV4StandardModule.NoRemoveOrAddLiquidityHooks.selector
+            IPancakeSwapV4StandardModule
+                .NoRemoveOrAddLiquidityHooks
+                .selector
         );
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -827,19 +953,26 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         address implmentation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -849,8 +982,10 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        vm.expectRevert(IUniV4StandardModule.SqrtPriceZero.selector);
-        module = UniV4StandardModulePublic(
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.SqrtPriceZero.selector
+        );
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -859,18 +994,23 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init0 = 3000e6;
         uint256 init1 = 1e18;
 
-        poolKey.tickSpacing = 20;
+        poolKey.parameters =
+            CLPoolParametersHelper.setTickSpacing(bytes32(0), 20);
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         address implmentation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             true,
@@ -881,9 +1021,11 @@ contract UniV4StandardModuleTest is TestWrapper {
         );
 
         vm.expectRevert(
-            IUniV4StandardModule.MaxSlippageGtTenPercent.selector
+            IPancakeSwapV4StandardModule
+                .MaxSlippageGtTenPercent
+                .selector
         );
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implmentation, data)))
         );
     }
@@ -923,26 +1065,33 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         uint256 init0 = 3000e6;
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             true,
@@ -954,7 +1103,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
 
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
@@ -986,7 +1135,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         amounts[1] = 3000e6;
 
         vm.expectRevert(
-            IUniV4StandardModule.OnlyMetaVaultOwner.selector
+            IPancakeSwapV4StandardModule.OnlyMetaVaultOwner.selector
         );
         vm.prank(notMetaVaultOwner);
         module.approve(spender, tokens, amounts);
@@ -1004,7 +1153,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         amounts[1] = 3000e6;
 
         vm.expectRevert(
-            IUniV4StandardModule.LengthsNotEqual.selector
+            IPancakeSwapV4StandardModule.LengthsNotEqual.selector
         );
         vm.prank(owner);
         module.approve(spender, tokens, amounts);
@@ -1061,26 +1210,33 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 true,
@@ -1090,7 +1246,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -1127,7 +1283,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.AmountZero.selector
+                IPancakeSwapV4StandardModule.AmountZero.selector
             )
         );
 
@@ -1140,7 +1296,9 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.InsufficientFunds.selector
+                IPancakeSwapV4StandardModule
+                    .InsufficientFunds
+                    .selector
             )
         );
 
@@ -1163,26 +1321,33 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 false,
@@ -1192,7 +1357,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -1244,8 +1409,9 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         SwapPayload memory swapPayload;
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
-            new IUniV4StandardModule.LiquidityRange[](0);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRange =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](0);
 
         module.setPool(
             poolKey, liquidityRange, swapPayload, 0, 0, 0, 0
@@ -1262,14 +1428,17 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.Currency0DtToken0.selector,
+                IPancakeSwapV4StandardModule
+                    .Currency0DtToken0
+                    .selector,
                 poolKey.currency0,
                 USDC
             )
         );
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
-            new IUniV4StandardModule.LiquidityRange[](0);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRange =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](0);
 
         vm.prank(manager);
         module.setPool(
@@ -1285,14 +1454,17 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.Currency1DtToken1.selector,
+                IPancakeSwapV4StandardModule
+                    .Currency1DtToken1
+                    .selector,
                 poolKey.currency1,
                 WETH
             )
         );
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
-            new IUniV4StandardModule.LiquidityRange[](0);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRange =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](0);
 
         SwapPayload memory swapPayload;
 
@@ -1303,11 +1475,14 @@ contract UniV4StandardModuleTest is TestWrapper {
     }
 
     function testSetPoolSamePool() public {
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
-            new IUniV4StandardModule.LiquidityRange[](0);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRange =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](0);
 
         SwapPayload memory swapPayload;
-        vm.expectRevert(IUniV4StandardModule.SamePool.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.SamePool.selector
+        );
 
         vm.prank(manager);
         module.setPool(
@@ -1317,7 +1492,9 @@ contract UniV4StandardModuleTest is TestWrapper {
 
     function testSetPoolNoRemoveLiquidityHooks() public {
         SimpleHook hook = SimpleHook(
-            address(uint160(Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG))
+            address(
+                uint160(1 << HOOKS_BEFORE_REMOVE_LIQUIDITY_OFFSET)
+            )
         );
 
         SimpleHook implementation = new SimpleHook();
@@ -1327,20 +1504,26 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: Currency.wrap(USDC),
             currency1: Currency.wrap(WETH),
+            poolManager: poolManager,
             fee: 3000,
-            tickSpacing: 10,
-            hooks: IHooks(address(hook))
+            hooks: IHooks(address(hook)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(uint256(hook.getHooksRegistrationBitmap())), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
-            new IUniV4StandardModule.LiquidityRange[](0);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRange =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](0);
 
         SwapPayload memory swapPayload;
 
         vm.expectRevert(
-            IUniV4StandardModule.NoRemoveOrAddLiquidityHooks.selector
+            IPancakeSwapV4StandardModule
+                .NoRemoveOrAddLiquidityHooks
+                .selector
         );
         vm.prank(manager);
         module.setPool(
@@ -1350,7 +1533,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
     function testSetPoolNoRemoveOrAddLiquidityHooks() public {
         SimpleHook hook = SimpleHook(
-            address(uint160(Hooks.AFTER_ADD_LIQUIDITY_FLAG))
+            address(uint160(1 << HOOKS_AFTER_REMOVE_LIQUIDITY_OFFSET))
         );
 
         SimpleHook implementation = new SimpleHook();
@@ -1360,20 +1543,26 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: Currency.wrap(USDC),
             currency1: Currency.wrap(WETH),
+            poolManager: poolManager,
             fee: 3000,
-            tickSpacing: 10,
-            hooks: IHooks(address(hook))
+            hooks: IHooks(address(hook)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(uint256(hook.getHooksRegistrationBitmap())), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
-            new IUniV4StandardModule.LiquidityRange[](0);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRange =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](0);
 
         SwapPayload memory swapPayload;
 
         vm.expectRevert(
-            IUniV4StandardModule.NoRemoveOrAddLiquidityHooks.selector
+            IPancakeSwapV4StandardModule
+                .NoRemoveOrAddLiquidityHooks
+                .selector
         );
         vm.prank(manager);
         module.setPool(
@@ -1385,17 +1574,23 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: Currency.wrap(USDC),
             currency1: Currency.wrap(WETH),
+            poolManager: poolManager,
             fee: 3000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
-            new IUniV4StandardModule.LiquidityRange[](0);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRange =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](0);
 
         SwapPayload memory swapPayload;
 
-        vm.expectRevert(IUniV4StandardModule.SqrtPriceZero.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.SqrtPriceZero.selector
+        );
         vm.prank(manager);
         module.setPool(
             poolKey, liquidityRange, swapPayload, 0, 0, 0, 0
@@ -1406,15 +1601,19 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: Currency.wrap(USDC),
             currency1: Currency.wrap(WETH),
+            poolManager: poolManager,
             fee: 3000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRange =
-            new IUniV4StandardModule.LiquidityRange[](0);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRange =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](0);
 
         SwapPayload memory swapPayload;
 
@@ -1451,41 +1650,49 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: Currency.wrap(USDC),
             currency1: Currency.wrap(WETH),
+            poolManager: poolManager,
             fee: 3000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         // #region do rebalance payload.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -1526,41 +1733,49 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: Currency.wrap(USDC),
             currency1: Currency.wrap(WETH),
+            poolManager: poolManager,
             fee: 3000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         // #region do rebalance payload.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -1569,7 +1784,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         // #endregion do rebalance payload.
 
         vm.prank(manager);
-        vm.expectRevert(IUniV4StandardModule.BurnToken0.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.BurnToken0.selector
+        );
         module.setPool(
             poolKey, liquidityRanges, swapPayload, 1, 0, 0, 0
         );
@@ -1602,41 +1819,49 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: Currency.wrap(USDC),
             currency1: Currency.wrap(WETH),
+            poolManager: poolManager,
             fee: 3000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         // #region do rebalance payload.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -1645,7 +1870,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         // #endregion do rebalance payload.
 
         vm.prank(manager);
-        vm.expectRevert(IUniV4StandardModule.BurnToken1.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.BurnToken1.selector
+        );
         module.setPool(
             poolKey, liquidityRanges, swapPayload, 0, 1, 0, 0
         );
@@ -1678,41 +1905,49 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: Currency.wrap(USDC),
             currency1: Currency.wrap(WETH),
+            poolManager: poolManager,
             fee: 3000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         // #region do rebalance payload.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -1721,7 +1956,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         // #endregion do rebalance payload.
 
         vm.prank(manager);
-        vm.expectRevert(IUniV4StandardModule.MintToken0.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.MintToken0.selector
+        );
         module.setPool(
             poolKey,
             liquidityRanges,
@@ -1760,41 +1997,49 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: Currency.wrap(USDC),
             currency1: Currency.wrap(WETH),
+            poolManager: poolManager,
             fee: 3000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         // #region do rebalance payload.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -1803,7 +2048,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         // #endregion do rebalance payload.
 
         vm.prank(manager);
-        vm.expectRevert(IUniV4StandardModule.MintToken1.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.MintToken1.selector
+        );
         module.setPool(
             poolKey,
             liquidityRanges,
@@ -1844,32 +2091,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -1883,15 +2135,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: Currency.wrap(USDC),
             currency1: Currency.wrap(WETH),
+            poolManager: poolManager,
             fee: 3000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
-        IUniV4StandardModule.LiquidityRange[] memory l =
-            new IUniV4StandardModule.LiquidityRange[](0);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory l =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](0);
 
         vm.prank(manager);
         module.setPool(poolKey, l, swapPayload, 0, 0, 0, 0);
@@ -2006,32 +2261,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -2095,32 +2355,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             100,
             100
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -2184,13 +2449,13 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             // #region do rebalance.
 
-            int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+            int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
             int24 tickLower = (tick / 10) * 10 - (2 * 10);
             int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-            IUniV4StandardModule.Range memory range =
-            IUniV4StandardModule.Range({
+            IPancakeSwapV4StandardModule.Range memory range =
+            IPancakeSwapV4StandardModule.Range({
                 tickLower: tickLower,
                 tickUpper: tickUpper
             });
@@ -2198,23 +2463,24 @@ contract UniV4StandardModuleTest is TestWrapper {
             uint128 liquidity = LiquidityAmounts
                 .getLiquidityForAmounts(
                 sqrtPriceX96,
-                TickMath.getSqrtPriceAtTick(tickLower),
-                TickMath.getSqrtPriceAtTick(tickUpper),
+                TickMath.getSqrtRatioAtTick(tickLower),
+                TickMath.getSqrtRatioAtTick(tickUpper),
                 100,
                 100
             );
 
-            IUniV4StandardModule.LiquidityRange memory liquidityRange =
-            IUniV4StandardModule.LiquidityRange({
-                range: range,
-                liquidity: SafeCast.toInt128(
-                    SafeCast.toInt256(uint256(liquidity))
-                )
-            });
+            IPancakeSwapV4StandardModule.LiquidityRange memory
+                liquidityRange = IPancakeSwapV4StandardModule
+                    .LiquidityRange({
+                    range: range,
+                    liquidity: SafeCast.toInt128(
+                        SafeCast.toInt256(uint256(liquidity))
+                    )
+                });
 
-            IUniV4StandardModule.LiquidityRange[] memory
-                liquidityRanges =
-                    new IUniV4StandardModule.LiquidityRange[](1);
+            IPancakeSwapV4StandardModule.LiquidityRange[] memory
+                liquidityRanges = new IPancakeSwapV4StandardModule
+                    .LiquidityRange[](1);
 
             liquidityRanges[0] = liquidityRange;
 
@@ -2280,32 +2546,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -2318,7 +2589,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap.
 
-        poolManager.unlock(abi.encode(1));
+        pancakeVault.lock(abi.encode(1));
 
         // #endregion do swap.
 
@@ -2373,32 +2644,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -2411,7 +2687,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap.
 
-        poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap.
 
@@ -2466,32 +2742,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -2504,8 +2785,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap.
 
-        poolManager.unlock(abi.encode(1));
-        poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap.
 
@@ -2534,7 +2815,7 @@ contract UniV4StandardModuleTest is TestWrapper {
     }
 
     function testDepositNative() public {
-        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO; // NATIVE COIN
+        Currency currency0 = CurrencyLibrary.NATIVE; // NATIVE COIN
         Currency currency1 = Currency.wrap(USDC);
 
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
@@ -2542,14 +2823,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
         sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         // #region create uni v4 module.
 
@@ -2557,13 +2841,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             true,
@@ -2573,7 +2861,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
@@ -2597,7 +2885,7 @@ contract UniV4StandardModuleTest is TestWrapper {
     }
 
     function testDepositNativeInvalidMsgValue() public {
-        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO; // NATIVE COIN
+        Currency currency0 = CurrencyLibrary.NATIVE; // NATIVE COIN
         Currency currency1 = Currency.wrap(USDC);
 
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
@@ -2605,14 +2893,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
         sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         // #region create uni v4 module.
 
@@ -2620,13 +2911,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             true,
@@ -2636,7 +2931,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
@@ -2656,12 +2951,14 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.stopPrank();
 
         vm.prank(metaVault);
-        vm.expectRevert(IUniV4StandardModule.InvalidMsgValue.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.InvalidMsgValue.selector
+        );
         module.deposit{value: 0.5 ether}(depositor, BASE);
     }
 
     function testDepositNativeAfterDonation() public {
-        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO; // NATIVE COIN
+        Currency currency0 = CurrencyLibrary.NATIVE; // NATIVE COIN
         Currency currency1 = Currency.wrap(USDC);
 
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
@@ -2669,14 +2966,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
         sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         // #region create uni v4 module.
 
@@ -2684,13 +2984,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             true,
@@ -2700,7 +3004,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
@@ -2726,7 +3030,7 @@ contract UniV4StandardModuleTest is TestWrapper {
     }
 
     function testDepositNativeActiveRange() public {
-        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO;
+        Currency currency0 = CurrencyLibrary.NATIVE;
         Currency currency1 = Currency.wrap(USDC);
 
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
@@ -2734,14 +3038,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
         sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         // #region create uni v4 module.
 
@@ -2749,13 +3056,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             true,
@@ -2765,7 +3076,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
@@ -2789,32 +3100,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init1,
             init0
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -2849,7 +3165,7 @@ contract UniV4StandardModuleTest is TestWrapper {
     }
 
     function testDepositNativeOverSentEther() public {
-        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO;
+        Currency currency0 = CurrencyLibrary.NATIVE;
         Currency currency1 = Currency.wrap(USDC);
 
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
@@ -2857,14 +3173,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
         sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         // #region create uni v4 module.
 
@@ -2872,13 +3191,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             true,
@@ -2888,7 +3211,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
@@ -2912,7 +3235,7 @@ contract UniV4StandardModuleTest is TestWrapper {
     }
 
     function testDepositNativeOverSentEtherAsToken0() public {
-        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO;
+        Currency currency0 = CurrencyLibrary.NATIVE;
         Currency currency1 = Currency.wrap(USDC);
 
         ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
@@ -2920,14 +3243,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
         sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         // #region create uni v4 module.
 
@@ -2935,13 +3261,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 3000e6;
 
         address implementation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -2951,7 +3281,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
@@ -2975,7 +3305,7 @@ contract UniV4StandardModuleTest is TestWrapper {
     }
 
     function testDepositNativeUnderSentEtherAsToken0() public {
-        Currency currency0 = CurrencyLibrary.ADDRESS_ZERO;
+        Currency currency0 = CurrencyLibrary.NATIVE;
         Currency currency1 = Currency.wrap(USDC);
 
         ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
@@ -2983,14 +3313,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 10,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 10
+            )
         });
 
         sqrtPriceX96 = 4_363_802_021_784_129_436_505_493;
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         // #region create uni v4 module.
 
@@ -2998,13 +3331,17 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint256 init1 = 3000e6;
 
         address implementation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -3014,7 +3351,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
@@ -3034,7 +3371,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.stopPrank();
 
         vm.prank(metaVault);
-        vm.expectRevert(IUniV4StandardModule.InvalidMsgValue.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.InvalidMsgValue.selector
+        );
         module.deposit{value: 0.5 ether}(depositor, BASE);
     }
 
@@ -3229,32 +3568,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -3267,8 +3611,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(1));
-        poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap 1 and 2.
 
@@ -3313,32 +3657,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -3382,32 +3731,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -3420,8 +3774,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(1));
-        poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap 1 and 2.
 
@@ -3483,19 +3837,21 @@ contract UniV4StandardModuleTest is TestWrapper {
 
     // #endregion test setManagerFeePIPS.
 
-    // #region test unlockCallback.
+    // #region test lockAcquired.
 
-    function testUnlockCallbackOnlyPoolManager() public {
-        vm.expectRevert(IUniV4StandardModule.OnlyPoolManager.selector);
+    function testLockAcquiredOnlyPoolManager() public {
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.OnlyVault.selector
+        );
 
-        module.unlockCallback("");
+        module.lockAcquired("");
     }
 
-    function testUnlockCallbackCallBackNotSupported() public {
+    function testLockAcquiredCallBackNotSupported() public {
         vm.expectRevert();
 
         vm.prank(address(poolManager));
-        module.unlockCallback(abi.encode(4, bytes("")));
+        module.lockAcquired(abi.encode(4, bytes("")));
     }
 
     // #endregion test unlockCallbask.
@@ -3531,32 +3887,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
         SwapPayload memory swapPayload;
@@ -3606,32 +3967,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -3644,7 +4010,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do another rebalance to overburn.
 
-        liquidityRange = IUniV4StandardModule.LiquidityRange({
+        liquidityRange = IPancakeSwapV4StandardModule.LiquidityRange({
             range: range,
             liquidity: -1
                 * SafeCast.toInt128(
@@ -3655,7 +4021,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         liquidityRanges[0] = liquidityRange;
 
         vm.prank(manager);
-        vm.expectRevert(IUniV4StandardModule.OverBurning.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.OverBurning.selector
+        );
         module.rebalance(liquidityRanges, swapPayload, 0, 0, 0, 0);
 
         // #endregion do another rebalance to overburn.
@@ -3690,32 +4058,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -3728,8 +4101,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do a second rebalance to remove unknown liquidity.
 
-        liquidityRange = IUniV4StandardModule.LiquidityRange({
-            range: IUniV4StandardModule.Range({
+        liquidityRange = IPancakeSwapV4StandardModule.LiquidityRange({
+            range: IPancakeSwapV4StandardModule.Range({
                 tickLower: tickLower + 50,
                 tickUpper: tickUpper + 50
             }),
@@ -3743,7 +4116,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.prank(manager);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.RangeShouldBeActive.selector,
+                IPancakeSwapV4StandardModule
+                    .RangeShouldBeActive
+                    .selector,
                 tickLower + 50,
                 tickUpper + 50
             )
@@ -3782,35 +4157,40 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: IUniV4StandardModule.Range({
-                tickLower: tickUpper,
-                tickUpper: tickLower
-            }),
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: IPancakeSwapV4StandardModule.Range({
+                    tickLower: tickUpper,
+                    tickUpper: tickLower
+                }),
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -3819,7 +4199,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.prank(manager);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.TicksMisordered.selector,
+                IPancakeSwapV4StandardModule.TicksMisordered.selector,
                 tickUpper,
                 tickLower
             )
@@ -3858,35 +4238,40 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: IUniV4StandardModule.Range({
-                tickLower: TickMath.MIN_TICK - 1,
-                tickUpper: tickUpper
-            }),
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: IPancakeSwapV4StandardModule.Range({
+                    tickLower: TickMath.MIN_TICK - 1,
+                    tickUpper: tickUpper
+                }),
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -3895,7 +4280,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.prank(manager);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.TickLowerOutOfBounds.selector,
+                IPancakeSwapV4StandardModule
+                    .TickLowerOutOfBounds
+                    .selector,
                 TickMath.MIN_TICK - 1
             )
         );
@@ -3933,35 +4320,40 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: IUniV4StandardModule.Range({
-                tickLower: tickLower,
-                tickUpper: TickMath.MAX_TICK + 1
-            }),
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: IPancakeSwapV4StandardModule.Range({
+                    tickLower: tickLower,
+                    tickUpper: TickMath.MAX_TICK + 1
+                }),
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -3970,7 +4362,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         vm.prank(manager);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.TickUpperOutOfBounds.selector,
+                IPancakeSwapV4StandardModule
+                    .TickUpperOutOfBounds
+                    .selector,
                 TickMath.MAX_TICK + 1
             )
         );
@@ -4008,32 +4402,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -4046,8 +4445,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(1));
-        poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap 1 and 2.
 
@@ -4056,16 +4455,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](2);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](2);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -4074,13 +4475,14 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             amount0 / 2,
             amount1 / 2
         );
 
-        liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[1] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 (SafeCast.toInt256(uint256(liquidity)))
@@ -4134,32 +4536,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -4172,8 +4579,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(1));
-        poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap 1 and 2.
 
@@ -4182,16 +4589,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](2);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](2);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -4200,13 +4609,14 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             amount0 / 2,
             amount1 / 2
         );
 
-        liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[1] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 (SafeCast.toInt256(uint256(liquidity)))
@@ -4214,7 +4624,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         });
 
         vm.prank(manager);
-        vm.expectRevert(IUniV4StandardModule.BurnToken0.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.BurnToken0.selector
+        );
         module.rebalance(
             liquidityRanges,
             swapPayload,
@@ -4256,32 +4668,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -4294,8 +4711,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(1));
-        poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap 1 and 2.
 
@@ -4304,16 +4721,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](2);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](2);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -4322,13 +4741,14 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             amount0 / 2,
             amount1 / 2
         );
 
-        liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[1] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 (SafeCast.toInt256(uint256(liquidity)))
@@ -4336,7 +4756,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         });
 
         vm.prank(manager);
-        vm.expectRevert(IUniV4StandardModule.BurnToken1.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.BurnToken1.selector
+        );
         module.rebalance(
             liquidityRanges,
             swapPayload,
@@ -4378,32 +4800,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -4416,8 +4843,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(1));
-        poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap 1 and 2.
 
@@ -4426,16 +4853,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](2);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](2);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -4444,13 +4873,14 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             amount0 / 2,
             amount1 / 2
         );
 
-        liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[1] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 (SafeCast.toInt256(uint256(liquidity)))
@@ -4458,7 +4888,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         });
 
         vm.prank(manager);
-        vm.expectRevert(IUniV4StandardModule.MintToken0.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.MintToken0.selector
+        );
         module.rebalance(
             liquidityRanges,
             swapPayload,
@@ -4500,32 +4932,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -4538,8 +4975,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(1));
-        poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap 1 and 2.
 
@@ -4548,16 +4985,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](2);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](2);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -4566,13 +5005,14 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             amount0 / 2,
             amount1 / 2
         );
 
-        liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[1] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 (SafeCast.toInt256(uint256(liquidity)))
@@ -4580,7 +5020,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         });
 
         vm.prank(manager);
-        vm.expectRevert(IUniV4StandardModule.MintToken1.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.MintToken1.selector
+        );
         module.rebalance(
             liquidityRanges,
             swapPayload,
@@ -4605,24 +5047,31 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 1_546_089_921_970_950_693_041_566_601_029_373; // 2626,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 false,
@@ -4632,7 +5081,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -4669,32 +5118,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -4707,8 +5161,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(1));
-        // poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        // pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap 1 and 2.
 
@@ -4717,16 +5171,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](1);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -4768,24 +5224,31 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 1_546_089_921_970_950_693_041_566_601_029_373; // 2626,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 false,
@@ -4795,7 +5258,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -4832,32 +5295,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -4870,8 +5338,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(1));
-        // poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        // pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap 1 and 2.
 
@@ -4880,16 +5348,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](1);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -4903,7 +5373,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         });
 
         vm.prank(manager);
-        vm.expectRevert(IUniV4StandardModule.SlippageTooHigh.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.SlippageTooHigh.selector
+        );
         module.rebalance(liquidityRanges, swapPayload, 0, 0, 0, 0);
 
         // #endregion change ranges.
@@ -4921,26 +5393,33 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 true,
@@ -4950,7 +5429,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -4986,32 +5465,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -5024,25 +5508,32 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(4));
+        pancakeVault.lock(abi.encode(4));
 
         // #endregion do swap 1 and 2.
+
+        deal(
+            address(pancakeVault),
+            address(pancakeVault).balance + 0.25 ether
+        );
 
         // #region change ranges.
 
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](1);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -5086,26 +5577,33 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 true,
@@ -5115,7 +5613,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -5151,32 +5649,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -5189,25 +5692,34 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(4));
+        pancakeVault.lock(abi.encode(4));
 
         // #endregion do swap 1 and 2.
+
+        deal(
+            USDC,
+            address(pancakeVault),
+            IERC20Metadata(USDC).balanceOf(address(pancakeVault))
+                + 10_000_000_000
+        );
 
         // #region change ranges.
 
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](1);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -5251,26 +5763,33 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 true,
@@ -5280,7 +5799,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -5316,32 +5835,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -5354,7 +5878,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(4));
+        pancakeVault.lock(abi.encode(4));
 
         // #endregion do swap 1 and 2.
 
@@ -5395,16 +5919,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](1);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -5419,7 +5945,9 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.prank(manager);
         vm.expectRevert(
-            IUniV4StandardModule.ExpectedMinReturnTooLow.selector
+            IPancakeSwapV4StandardModule
+                .ExpectedMinReturnTooLow
+                .selector
         );
         module.rebalance(liquidityRanges, swapPayload, 0, 0, 0, 0);
 
@@ -5455,32 +5983,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -5493,8 +6026,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(1));
-        poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap 1 and 2.
 
@@ -5548,32 +6081,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -5586,8 +6124,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(1));
-        poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap 1 and 2.
 
@@ -5596,14 +6134,13 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](2);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](2);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: 0
-        });
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({range: range, liquidity: 0});
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -5612,21 +6149,21 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             amount0 / 2,
             amount1 / 2
         );
 
-        liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: 0
-        });
+        liquidityRanges[1] = IPancakeSwapV4StandardModule
+            .LiquidityRange({range: range, liquidity: 0});
 
         vm.prank(manager);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniV4StandardModule.RangeShouldBeActive.selector,
+                IPancakeSwapV4StandardModule
+                    .RangeShouldBeActive
+                    .selector,
                 tickLower,
                 tickUpper
             )
@@ -5650,24 +6187,31 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 false,
@@ -5677,7 +6221,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -5719,32 +6263,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -5757,7 +6306,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(5));
+        pancakeVault.lock(abi.encode(5));
 
         // #endregion do swap 1 and 2.
 
@@ -5766,16 +6315,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](1);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -5819,24 +6370,31 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 false,
@@ -5846,7 +6404,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -5888,32 +6446,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -5926,7 +6489,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(5));
+        pancakeVault.lock(abi.encode(5));
 
         // #endregion do swap 1 and 2.
 
@@ -5935,16 +6498,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](1);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -5958,7 +6523,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         });
 
         vm.prank(manager);
-        vm.expectRevert(IUniV4StandardModule.SlippageTooHigh.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.SlippageTooHigh.selector
+        );
         module.rebalance(liquidityRanges, swapPayload, 0, 0, 0, 0);
 
         // #endregion change ranges.
@@ -5978,24 +6545,31 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 false,
@@ -6005,7 +6579,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -6046,32 +6620,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -6084,7 +6663,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(6));
+        pancakeVault.lock(abi.encode(6));
 
         // #endregion do swap 1 and 2.
 
@@ -6093,16 +6672,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](1);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -6146,24 +6727,31 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 false,
@@ -6173,7 +6761,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -6214,32 +6802,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -6252,7 +6845,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(6));
+        pancakeVault.lock(abi.encode(6));
 
         // #endregion do swap 1 and 2.
 
@@ -6261,16 +6854,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](1);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -6314,24 +6909,31 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 false,
@@ -6341,7 +6943,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -6382,32 +6984,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -6420,7 +7027,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(6));
+        pancakeVault.lock(abi.encode(6));
 
         // #endregion do swap 1 and 2.
 
@@ -6429,16 +7036,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](1);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -6483,7 +7092,9 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         vm.prank(manager);
         vm.expectRevert(
-            IUniV4StandardModule.ExpectedMinReturnTooLow.selector
+            IPancakeSwapV4StandardModule
+                .ExpectedMinReturnTooLow
+                .selector
         );
         module.rebalance(liquidityRanges, swapPayload, 0, 0, 0, 0);
 
@@ -6504,24 +7115,31 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 false,
@@ -6531,7 +7149,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -6572,32 +7190,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -6610,7 +7233,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(6));
+        pancakeVault.lock(abi.encode(6));
 
         // #endregion do swap 1 and 2.
 
@@ -6619,16 +7242,18 @@ contract UniV4StandardModuleTest is TestWrapper {
         tickLower = (tick / 10) * 10 - (5 * 10);
         tickUpper = (tick / 10) * 10 + (5 * 10);
 
-        liquidityRanges = new IUniV4StandardModule.LiquidityRange[](1);
+        liquidityRanges =
+            new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
-        liquidityRanges[0] = IUniV4StandardModule.LiquidityRange({
+        liquidityRanges[0] = IPancakeSwapV4StandardModule
+            .LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
                 -(SafeCast.toInt256(uint256(liquidity)))
             )
         });
 
-        range = IUniV4StandardModule.Range({
+        range = IPancakeSwapV4StandardModule.Range({
             tickLower: tickLower,
             tickUpper: tickUpper
         });
@@ -6642,7 +7267,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         });
 
         vm.prank(manager);
-        vm.expectRevert(IUniV4StandardModule.WrongRouter.selector);
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.WrongRouter.selector
+        );
         module.rebalance(liquidityRanges, swapPayload, 0, 0, 0, 0);
 
         // #endregion change ranges.
@@ -6691,32 +7318,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -6727,7 +7359,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #endregion do rebalance.
 
-        IUniV4StandardModule.Range[] memory ranges =
+        IPancakeSwapV4StandardModule.Range[] memory ranges =
             module.getRanges();
 
         assertEq(ranges[0].tickLower, tickLower);
@@ -6755,26 +7387,33 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 true,
@@ -6784,7 +7423,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -6830,32 +7469,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -6913,32 +7557,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -6953,7 +7602,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         int24 newTick = tick + 10;
 
-        uint160 newSqrtPrice = TickMath.getSqrtPriceAtTick(newTick);
+        uint160 newSqrtPrice = TickMath.getSqrtRatioAtTick(newTick);
 
         // #endregion compute new price.
 
@@ -6975,27 +7624,34 @@ contract UniV4StandardModuleTest is TestWrapper {
             poolKey = PoolKey({
                 currency0: currency0,
                 currency1: currency1,
+                poolManager: poolManager,
                 fee: 10_000,
-                tickSpacing: 20,
-                hooks: IHooks(address(0))
+                hooks: IHooks(address(0)),
+                parameters: CLPoolParametersHelper.setTickSpacing(
+                    bytes32(0), 20
+                )
             });
         }
 
         sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, NATIVE_COIN);
 
         {
             address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian, distributor, collector
+                new PancakeSwapV4StandardModulePublic(
+                    address(poolManager),
+                    guardian,
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
             bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
+                IPancakeSwapV4StandardModule.initialize.selector,
                 init0,
                 init1,
                 true,
@@ -7005,7 +7661,7 @@ contract UniV4StandardModuleTest is TestWrapper {
                 metaVault
             );
 
-            module = UniV4StandardModulePublic(
+            module = PancakeSwapV4StandardModulePublic(
                 payable(
                     address(new ERC1967Proxy(implementation, data))
                 )
@@ -7036,32 +7692,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -7076,7 +7737,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         int24 newTick = tick + 10;
 
-        uint160 newSqrtPrice = TickMath.getSqrtPriceAtTick(newTick);
+        uint160 newSqrtPrice = TickMath.getSqrtRatioAtTick(newTick);
 
         // #endregion compute new price.
 
@@ -7124,7 +7785,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         uint24 maxDeviation = 5000;
 
         vm.expectRevert(
-            IUniV4StandardModule.OverMaxDeviation.selector
+            IPancakeSwapV4StandardModule.OverMaxDeviation.selector
         );
         module.validateRebalance(
             IOracleWrapper(address(oracle)), maxDeviation
@@ -7139,26 +7800,33 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolKey = PoolKey({
             currency0: Currency.wrap(USDC),
             currency1: Currency.wrap(WETH),
+            poolManager: poolManager,
             fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
+            hooks: IHooks(address(0)),
+            parameters: CLPoolParametersHelper.setTickSpacing(
+                bytes32(0), 20
+            )
         });
 
         sqrtPriceX96 = uint160(type(uint128).max) + 1;
 
-        poolManager.unlock(abi.encode(2));
+        pancakeVault.lock(abi.encode(2));
 
         uint256 init0 = 3000e6;
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new UniV4StandardModulePublic(
-                address(poolManager), guardian, distributor, collector
+            new PancakeSwapV4StandardModulePublic(
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
         bytes memory data = abi.encodeWithSelector(
-            IUniV4StandardModule.initialize.selector,
+            IPancakeSwapV4StandardModule.initialize.selector,
             init0,
             init1,
             false,
@@ -7168,7 +7836,7 @@ contract UniV4StandardModuleTest is TestWrapper {
             metaVault
         );
 
-        module = UniV4StandardModulePublic(
+        module = PancakeSwapV4StandardModulePublic(
             payable(address(new ERC1967Proxy(implementation, data)))
         );
 
@@ -7250,32 +7918,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -7288,8 +7961,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(1));
-        poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap 1 and 2.
 
@@ -7339,32 +8012,37 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do rebalance.
 
-        int24 tick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
         int24 tickLower = (tick / 10) * 10 - (2 * 10);
         int24 tickUpper = (tick / 10) * 10 + (2 * 10);
 
-        IUniV4StandardModule.Range memory range = IUniV4StandardModule
-            .Range({tickLower: tickLower, tickUpper: tickUpper});
+        IPancakeSwapV4StandardModule.Range memory range =
+        IPancakeSwapV4StandardModule.Range({
+            tickLower: tickLower,
+            tickUpper: tickUpper
+        });
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
             init0,
             init1
         );
 
-        IUniV4StandardModule.LiquidityRange memory liquidityRange =
-        IUniV4StandardModule.LiquidityRange({
-            range: range,
-            liquidity: SafeCast.toInt128(
-                SafeCast.toInt256(uint256(liquidity))
-            )
-        });
+        IPancakeSwapV4StandardModule.LiquidityRange memory
+            liquidityRange = IPancakeSwapV4StandardModule
+                .LiquidityRange({
+                range: range,
+                liquidity: SafeCast.toInt128(
+                    SafeCast.toInt256(uint256(liquidity))
+                )
+            });
 
-        IUniV4StandardModule.LiquidityRange[] memory liquidityRanges =
-            new IUniV4StandardModule.LiquidityRange[](1);
+        IPancakeSwapV4StandardModule.LiquidityRange[] memory
+            liquidityRanges =
+                new IPancakeSwapV4StandardModule.LiquidityRange[](1);
 
         liquidityRanges[0] = liquidityRange;
 
@@ -7377,8 +8055,8 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         // #region do swap 1 and 2.
 
-        poolManager.unlock(abi.encode(1));
-        poolManager.unlock(abi.encode(3));
+        pancakeVault.lock(abi.encode(1));
+        pancakeVault.lock(abi.encode(3));
 
         // #endregion do swap 1 and 2.
 
@@ -7451,208 +8129,208 @@ contract UniV4StandardModuleTest is TestWrapper {
     // #region internal functions.
 
     function _lockAcquiredSwap() internal {
-        IPoolManager.SwapParams memory params = IPoolManager
+        ICLPoolManager.SwapParams memory params = ICLPoolManager
             .SwapParams({
             zeroForOne: false,
             amountSpecified: 1_000_774_893,
-            sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE / 2
+            sqrtPriceLimitX96: TickMath.MAX_SQRT_RATIO / 2
         });
         poolManager.swap(poolKey, params, "");
 
         // #region settle currency.
 
-        int256 currency0BalanceRaw = IPoolManager(
-            address(poolManager)
-        ).currencyDelta(address(this), poolKey.currency0);
+        int256 currency0BalanceRaw = pancakeVault.currencyDelta(
+            address(this), poolKey.currency0
+        );
 
         uint256 currency0Balance =
             SafeCast.toUint256(currency0BalanceRaw);
 
-        int256 currency1BalanceRaw = IPoolManager(
-            address(poolManager)
-        ).currencyDelta(address(this), poolKey.currency1);
+        int256 currency1BalanceRaw = pancakeVault.currencyDelta(
+            address(this), poolKey.currency1
+        );
 
         uint256 currency1Balance =
             SafeCast.toUint256(-currency1BalanceRaw);
 
         if (currency0Balance > 0) {
-            poolManager.take(
+            pancakeVault.take(
                 poolKey.currency0, address(this), currency0Balance
             );
         }
 
         if (currency1Balance > 0) {
-            poolManager.sync(poolKey.currency1);
+            pancakeVault.sync(poolKey.currency1);
             deal(WETH, address(this), currency1Balance);
             IERC20Metadata(WETH).transfer(
-                address(poolManager), currency1Balance
+                address(pancakeVault), currency1Balance
             );
-            poolManager.settle();
+            pancakeVault.settle();
         }
 
         // #endregion settle currency.
     }
 
     function _lockAcquiredSwapWETHUSDT() internal {
-        IPoolManager.SwapParams memory params = IPoolManager
+        ICLPoolManager.SwapParams memory params = ICLPoolManager
             .SwapParams({
             zeroForOne: true,
             amountSpecified: 1_000_774_893,
-            sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE * 2
+            sqrtPriceLimitX96: TickMath.MIN_SQRT_RATIO * 2
         });
         poolManager.swap(poolKey, params, "");
 
         // #region settle currency.
 
-        int256 currency1BalanceRaw = IPoolManager(
-            address(poolManager)
-        ).currencyDelta(address(this), poolKey.currency1);
+        int256 currency1BalanceRaw = pancakeVault.currencyDelta(
+            address(this), poolKey.currency1
+        );
 
         uint256 currency1Balance =
             SafeCast.toUint256(currency1BalanceRaw);
 
-        int256 currency0BalanceRaw = IPoolManager(
-            address(poolManager)
-        ).currencyDelta(address(this), poolKey.currency0);
+        int256 currency0BalanceRaw = pancakeVault.currencyDelta(
+            address(this), poolKey.currency0
+        );
 
         uint256 currency0Balance =
             SafeCast.toUint256(-currency0BalanceRaw);
 
         if (currency1Balance > 0) {
-            poolManager.take(
+            pancakeVault.take(
                 poolKey.currency1, address(this), currency1Balance
             );
         }
 
         if (currency0Balance > 0) {
-            poolManager.sync(poolKey.currency0);
+            pancakeVault.sync(poolKey.currency0);
             deal(WETH, address(this), currency0Balance);
             IERC20Metadata(WETH).transfer(
-                address(poolManager), currency0Balance
+                address(pancakeVault), currency0Balance
             );
-            poolManager.settle();
+            pancakeVault.settle();
         }
 
         // #endregion settle currency.
     }
 
     function _lockAcquiredSwapETHUSDT() internal {
-        IPoolManager.SwapParams memory params = IPoolManager
+        ICLPoolManager.SwapParams memory params = ICLPoolManager
             .SwapParams({
             zeroForOne: true,
             amountSpecified: 1_000_774_893,
-            sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE * 2
+            sqrtPriceLimitX96: TickMath.MIN_SQRT_RATIO * 2
         });
         poolManager.swap(poolKey, params, "");
 
         // #region settle currency.
 
-        int256 currency1BalanceRaw = IPoolManager(
-            address(poolManager)
-        ).currencyDelta(address(this), poolKey.currency1);
+        int256 currency1BalanceRaw = pancakeVault.currencyDelta(
+            address(this), poolKey.currency1
+        );
 
         uint256 currency1Balance =
             SafeCast.toUint256(currency1BalanceRaw);
 
-        int256 currency0BalanceRaw = IPoolManager(
-            address(poolManager)
-        ).currencyDelta(address(this), poolKey.currency0);
+        int256 currency0BalanceRaw = pancakeVault.currencyDelta(
+            address(this), poolKey.currency0
+        );
 
         uint256 currency0Balance =
             SafeCast.toUint256(-currency0BalanceRaw);
 
         if (currency1Balance > 0) {
-            poolManager.take(
+            pancakeVault.take(
                 poolKey.currency1, address(this), currency1Balance
             );
         }
 
         if (currency0Balance > 0) {
-            poolManager.sync(poolKey.currency0);
+            pancakeVault.sync(poolKey.currency0);
             deal(address(this), currency0Balance);
-            poolManager.settle{value: currency0Balance}();
+            pancakeVault.settle{value: currency0Balance}();
         }
 
         // #endregion settle currency.
     }
 
     function _lockAcquiredSwapNative() internal {
-        IPoolManager.SwapParams memory params = IPoolManager
+        ICLPoolManager.SwapParams memory params = ICLPoolManager
             .SwapParams({
             zeroForOne: true,
             amountSpecified: 1_000_774_893,
-            sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE * 2
+            sqrtPriceLimitX96: TickMath.MIN_SQRT_RATIO * 2
         });
         poolManager.swap(poolKey, params, "");
 
         // #region settle currency.
 
-        int256 currency0BalanceRaw = IPoolManager(
-            address(poolManager)
-        ).currencyDelta(address(this), poolKey.currency0);
+        int256 currency0BalanceRaw = pancakeVault.currencyDelta(
+            address(this), poolKey.currency0
+        );
 
         uint256 currency0Balance =
             SafeCast.toUint256(-currency0BalanceRaw);
 
-        int256 currency1BalanceRaw = IPoolManager(
-            address(poolManager)
-        ).currencyDelta(address(this), poolKey.currency1);
+        int256 currency1BalanceRaw = pancakeVault.currencyDelta(
+            address(this), poolKey.currency1
+        );
 
         uint256 currency1Balance =
             SafeCast.toUint256(currency1BalanceRaw);
 
         if (currency1Balance > 0) {
-            poolManager.take(
+            pancakeVault.take(
                 poolKey.currency1, address(this), currency1Balance
             );
         }
 
         if (currency0Balance > 0) {
-            poolManager.sync(poolKey.currency0);
-            poolManager.settle{value: currency0Balance}();
+            pancakeVault.sync(poolKey.currency0);
+            pancakeVault.settle{value: currency0Balance}();
         }
 
         // #endregion settle currency.
     }
 
     function _lockAcquiredSwapBis() internal {
-        IPoolManager.SwapParams memory params = IPoolManager
+        ICLPoolManager.SwapParams memory params = ICLPoolManager
             .SwapParams({
             zeroForOne: true,
             amountSpecified: (1 ether) / 1000,
-            sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE * 2
+            sqrtPriceLimitX96: TickMath.MIN_SQRT_RATIO * 2
         });
         poolManager.swap(poolKey, params, "");
 
         // #region settle currency.
 
-        int256 currency0BalanceRaw = IPoolManager(
-            address(poolManager)
-        ).currencyDelta(address(this), poolKey.currency0);
+        int256 currency0BalanceRaw = pancakeVault.currencyDelta(
+            address(this), poolKey.currency0
+        );
 
         uint256 currency0Balance =
             SafeCast.toUint256(-currency0BalanceRaw);
 
-        int256 currency1BalanceRaw = IPoolManager(
-            address(poolManager)
-        ).currencyDelta(address(this), poolKey.currency1);
+        int256 currency1BalanceRaw = pancakeVault.currencyDelta(
+            address(this), poolKey.currency1
+        );
 
         uint256 currency1Balance =
             SafeCast.toUint256(currency1BalanceRaw);
 
         if (currency1Balance > 0) {
-            poolManager.take(
+            pancakeVault.take(
                 poolKey.currency1, address(this), currency1Balance
             );
         }
 
         if (currency0Balance > 0) {
-            poolManager.sync(poolKey.currency0);
+            pancakeVault.sync(poolKey.currency0);
             deal(USDC, address(this), currency0Balance);
             IERC20Metadata(USDC).transfer(
-                address(poolManager), currency0Balance
+                address(pancakeVault), currency0Balance
             );
-            poolManager.settle();
+            pancakeVault.settle();
         }
 
         // #endregion settle currency.
