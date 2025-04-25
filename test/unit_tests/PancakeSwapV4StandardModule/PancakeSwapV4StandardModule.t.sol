@@ -95,6 +95,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
     address public constant WETH =
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
+    address public constant distributor =
+        0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
+
     // #endregion constants.
 
     CLPoolManager public poolManager;
@@ -107,6 +110,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
     address public metaVault;
     address public guardian;
     address public owner;
+    address public collector;
 
     // #region mocks contracts.
 
@@ -120,6 +124,8 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
+        collector =
+            vm.addr(uint256(keccak256(abi.encode("Collector"))));
 
         // #region meta vault creation.
 
@@ -192,7 +198,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -319,7 +329,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
     function testConstructorPoolManagerAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         new PancakeSwapV4StandardModulePublic(
-            address(0), guardian, address(pancakeVault)
+            address(0),
+            guardian,
+            address(pancakeVault),
+            distributor,
+            collector
         );
     }
 
@@ -329,7 +343,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -353,7 +371,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
     function testConstructorGuardianAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         new PancakeSwapV4StandardModulePublic(
-            address(poolManager), address(0), address(pancakeVault)
+            address(poolManager),
+            address(0),
+            address(pancakeVault),
+            distributor,
+            collector
         );
     }
 
@@ -379,7 +401,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -432,7 +458,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -483,7 +513,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -534,7 +568,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -587,7 +625,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -640,7 +682,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -693,7 +739,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -742,7 +792,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -800,7 +854,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -855,7 +913,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -901,7 +963,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -935,7 +1001,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -1012,7 +1082,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -1052,19 +1126,69 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
         address spender =
             vm.addr(uint256(keccak256(abi.encode("Spender"))));
 
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
+
+        tokens[0] = NATIVE_COIN;
+        tokens[1] = USDC;
+        amounts[0] = 1e18;
+        amounts[1] = 3000e6;
+
         vm.expectRevert(
             IPancakeSwapV4StandardModule.OnlyMetaVaultOwner.selector
         );
         vm.prank(notMetaVaultOwner);
-        module.approve(spender, 3000e6, 1e18);
+        module.approve(spender, tokens, amounts);
+    }
+
+    function testApproveLengthsNotEqual() public {
+        address spender =
+            vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        address[] memory tokens = new address[](1);
+        uint256[] memory amounts = new uint256[](2);
+
+        tokens[0] = NATIVE_COIN;
+        amounts[0] = 1e18;
+        amounts[1] = 3000e6;
+
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.LengthsNotEqual.selector
+        );
+        vm.prank(owner);
+        module.approve(spender, tokens, amounts);
+    }
+
+    function testApproveAddressZero() public {
+        address spender =
+            vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
+
+        tokens[1] = USDC;
+        amounts[0] = 1e18;
+        amounts[1] = 3000e6;
+
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+        vm.prank(owner);
+        module.approve(spender, tokens, amounts);
     }
 
     function testApprove() public {
         address spender =
             vm.addr(uint256(keccak256(abi.encode("Spender"))));
 
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
+
+        tokens[0] = WETH;
+        tokens[1] = USDC;
+        amounts[0] = 1e18;
+        amounts[1] = 3000e6;
+
         vm.prank(owner);
-        module.approve(spender, 3000e6, 1e18);
+        module.approve(spender, tokens, amounts);
 
         assertEq(
             IERC20Metadata(USDC).allowance(address(module), spender),
@@ -1105,7 +1229,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -1130,8 +1256,16 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
         address spender =
             vm.addr(uint256(keccak256(abi.encode("Spender"))));
 
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
+
+        tokens[0] = NATIVE_COIN;
+        tokens[1] = USDC;
+        amounts[0] = 1e18;
+        amounts[1] = 3000e6;
+
         vm.prank(owner);
-        module.approve(spender, 3000e6, 1e18);
+        module.approve(spender, tokens, amounts);
 
         assertEq(
             IERC20Metadata(USDC).allowance(address(module), spender),
@@ -1140,69 +1274,71 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
         assertEq(module.ethWithdrawers(spender), 1e18);
     }
 
-    function testApproveToken1Native() public {
-        uint256 init0 = 1e18;
-        uint256 init1 = 3000e6;
+    // function testApproveToken1Native() public {
+    //     uint256 init0 = 1e18;
+    //     uint256 init1 = 3000e6;
 
-        Currency currency0 = Currency.wrap(address(0));
-        Currency currency1 = Currency.wrap(USDC);
+    //     Currency currency0 = Currency.wrap(address(0));
+    //     Currency currency1 = Currency.wrap(USDC);
 
-        poolKey = PoolKey({
-            currency0: currency0,
-            currency1: currency1,
-            poolManager: poolManager,
-            fee: 10_000,
-            hooks: IHooks(address(0)),
-            parameters: CLPoolParametersHelper.setTickSpacing(
-                bytes32(0), 20
-            )
-        });
+    //     poolKey = PoolKey({
+    //         currency0: currency0,
+    //         currency1: currency1,
+    //         poolManager: poolManager,
+    //         fee: 10_000,
+    //         hooks: IHooks(address(0)),
+    //         parameters: CLPoolParametersHelper.setTickSpacing(
+    //             bytes32(0), 20
+    //         )
+    //     });
 
-        sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
+    //     sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
 
-        pancakeVault.lock(abi.encode(2));
+    //     pancakeVault.lock(abi.encode(2));
 
-        ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
+    //     ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
 
-        {
-            address implementation = address(
-                new PancakeSwapV4StandardModulePublic(
-                    address(poolManager),
-                    guardian,
-                    address(pancakeVault)
-                )
-            );
+    //     {
+    //         address implementation = address(
+    //             new PancakeSwapV4StandardModulePublic(
+    //                 address(poolManager),
+    //                 guardian,
+    //                 address(pancakeVault),
+    //                 distributor,
+    //                 collector
+    //             )
+    //         );
 
-            bytes memory data = abi.encodeWithSelector(
-                IPancakeSwapV4StandardModule.initialize.selector,
-                init0,
-                init1,
-                false,
-                poolKey,
-                IOracleWrapper(address(oracle)),
-                TEN_PERCENT,
-                metaVault
-            );
+    //         bytes memory data = abi.encodeWithSelector(
+    //             IPancakeSwapV4StandardModule.initialize.selector,
+    //             init0,
+    //             init1,
+    //             false,
+    //             poolKey,
+    //             IOracleWrapper(address(oracle)),
+    //             TEN_PERCENT,
+    //             metaVault
+    //         );
 
-            module = PancakeSwapV4StandardModulePublic(
-                payable(
-                    address(new ERC1967Proxy(implementation, data))
-                )
-            );
-        }
+    //         module = PancakeSwapV4StandardModulePublic(
+    //             payable(
+    //                 address(new ERC1967Proxy(implementation, data))
+    //             )
+    //         );
+    //     }
 
-        address spender =
-            vm.addr(uint256(keccak256(abi.encode("Spender"))));
+    //     address spender =
+    //         vm.addr(uint256(keccak256(abi.encode("Spender"))));
 
-        vm.prank(owner);
-        module.approve(spender, 1e18, 3000e6);
+    //     vm.prank(owner);
+    //     module.approve(spender, 1e18, 3000e6);
 
-        assertEq(
-            IERC20Metadata(USDC).allowance(address(module), spender),
-            3000e6
-        );
-        assertEq(module.ethWithdrawers(spender), 1e18);
-    }
+    //     assertEq(
+    //         IERC20Metadata(USDC).allowance(address(module), spender),
+    //         3000e6
+    //     );
+    //     assertEq(module.ethWithdrawers(spender), 1e18);
+    // }
 
     // #endregion test approve.
 
@@ -1270,7 +1406,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -1292,8 +1430,16 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
             );
         }
 
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
+
+        tokens[0] = NATIVE_COIN;
+        tokens[1] = USDC;
+        amounts[0] = 1e18;
+        amounts[1] = 3000e6;
+
         vm.prank(owner);
-        module.approve(spender, 1e18, 3000e6);
+        module.approve(spender, tokens, amounts);
 
         assertEq(
             IERC20Metadata(USDC).allowance(address(module), spender),
@@ -2762,7 +2908,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -2828,7 +2978,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -2897,7 +3051,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -2965,7 +3123,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -3096,7 +3258,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -3162,7 +3328,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -3228,7 +3398,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 
@@ -4956,7 +5130,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -5131,7 +5307,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -5300,7 +5478,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -5482,7 +5662,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -5666,7 +5848,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -6086,7 +6270,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -6267,7 +6453,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -6440,7 +6628,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -6620,7 +6810,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -6800,7 +6992,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -7004,7 +7198,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -7276,7 +7472,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -7512,7 +7710,9 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 new PancakeSwapV4StandardModulePublic(
                     address(poolManager),
                     guardian,
-                    address(pancakeVault)
+                    address(pancakeVault),
+                    distributor,
+                    collector
                 )
             );
 
@@ -7683,7 +7883,11 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new PancakeSwapV4StandardModulePublic(
-                address(poolManager), guardian, address(pancakeVault)
+                address(poolManager),
+                guardian,
+                address(pancakeVault),
+                distributor,
+                collector
             )
         );
 

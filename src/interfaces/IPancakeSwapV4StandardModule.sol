@@ -44,6 +44,9 @@ interface IPancakeSwapV4StandardModule {
     error TicksMisordered(int24 tickLower, int24 tickUpper);
     error TickLowerOutOfBounds(int24 tickLower);
     error TickUpperOutOfBounds(int24 tickUpper);
+    error OnlyManagerOrVaultOwner();
+    error LengthsNotEqual();
+    error SameRewardReceiver();
 
     // #endregion errors.
 
@@ -61,7 +64,7 @@ interface IPancakeSwapV4StandardModule {
 
     // #region events.
     event LogApproval(
-        address indexed spender, uint256 amount0, uint256 amount1
+        address indexed spender, address[] tokens, uint256[] amounts
     );
     event LogRebalance(
         LiquidityRange[] liquidityRanges,
@@ -71,6 +74,7 @@ interface IPancakeSwapV4StandardModule {
         uint256 amount1Burned
     );
     event LogSetPool(PoolKey oldPoolKey, PoolKey poolKey);
+    event LogSetRewardReceiver(address rewardReceiver);
     // #endregion events.
 
     /// @notice initialize function to delegate call onced the beacon proxy is deployed,
@@ -99,8 +103,8 @@ interface IPancakeSwapV4StandardModule {
 
     function approve(
         address spender_,
-        uint256 amount0_,
-        uint256 amount1_
+        address[] calldata tokens_,
+        uint256[] calldata amounts
     ) external;
 
     // #endregion only meta vault owner functions.

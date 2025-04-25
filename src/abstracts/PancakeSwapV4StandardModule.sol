@@ -24,6 +24,7 @@ import {
     UnderlyingPayload,
     Withdraw
 } from "../structs/SPancakeSwapV4.sol";
+import {IDistributor} from "../interfaces/IDistributor.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -98,6 +99,8 @@ abstract contract PancakeSwapV4StandardModule is
 
     ICLPoolManager public immutable poolManager;
     IVault public immutable vault;
+    IDistributor public immutable distributor;
+    address public immutable collector;
 
     // #endregion immutable properties.
 
@@ -164,18 +167,35 @@ abstract contract PancakeSwapV4StandardModule is
         _;
     }
 
+    modifier onlyMetaVaultOwner() {
+        if (msg.sender != IOwnable(address(metaVault)).owner()) {
+            revert OnlyMetaVaultOwner();
+        }
+        _;
+    }
+
     // #endregion modifiers.
 
-    constructor(address poolManager_, address guardian_, address vault_) {
+    constructor(
+        address poolManager_,
+        address guardian_,
+        address vault_,
+        address distributor_,
+        address collector_
+    ) {
         // #region checks.
         if (poolManager_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
         if (vault_ == address(0)) revert AddressZero();
+        if (distributor_ == address(0)) revert AddressZero();
+        if (collector_ == address(0)) revert AddressZero();
         // #endregion checks.
 
         poolManager = ICLPoolManager(poolManager_);
         _guardian = guardian_;
         vault = IVault(vault_);
+        distributor = IDistributor(distributor_);
+        collector = collector_;
 
         _disableInitializers();
     }
@@ -262,6 +282,10 @@ abstract contract PancakeSwapV4StandardModule is
 
         // #endregion poolKey initialization.
 
+        IDistributor(distributor).toggleOperator(
+            address(this), collector
+        );
+
         __ReentrancyGuard_init();
         __Pausable_init();
     }
@@ -290,28 +314,30 @@ abstract contract PancakeSwapV4StandardModule is
 
     function approve(
         address spender_,
-        uint256 amount0_,
-        uint256 amount1_
-    ) external nonReentrant whenNotPaused {
-        if (msg.sender != IOwnable(address(metaVault)).owner()) {
-            revert OnlyMetaVaultOwner();
+        address[] calldata tokens_,
+        uint256[] calldata amounts_
+    ) external nonReentrant whenNotPaused onlyMetaVaultOwner {
+        uint256 length = tokens_.length;
+        if (length != amounts_.length) {
+            revert LengthsNotEqual();
         }
 
-        IERC20Metadata _token0 = token0;
-        IERC20Metadata _token1 = token1;
+        for (uint256 i; i < length; i++) {
+            address token = tokens_[i];
+            uint256 amount = amounts_[i];
 
-        if (address(_token0) != NATIVE_COIN) {
-            _token0.forceApprove(spender_, amount0_);
-        } else {
-            ethWithdrawers[spender_] = amount0_;
-        }
-        if (address(_token1) != NATIVE_COIN) {
-            _token1.forceApprove(spender_, amount1_);
-        } else {
-            ethWithdrawers[spender_] = amount1_;
+            if (token == address(0)) {
+                revert AddressZero();
+            }
+
+            if (address(token) != NATIVE_COIN) {
+                IERC20Metadata(token).forceApprove(spender_, amount);
+            } else {
+                ethWithdrawers[spender_] = amount;
+            }
         }
 
-        emit LogApproval(spender_, amount0_, amount1_);
+        emit LogApproval(spender_, tokens_, amounts_);
     }
 
     // #endregion vault owner functions.

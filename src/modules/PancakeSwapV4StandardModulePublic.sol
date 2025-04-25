@@ -56,8 +56,18 @@ contract PancakeSwapV4StandardModulePublic is
     constructor(
         address poolManager_,
         address guardian_,
-        address vault_
-    ) PancakeSwapV4StandardModule(poolManager_, guardian_, vault_) {}
+        address vault_,
+        address distributor_,
+        address collector_
+    )
+        PancakeSwapV4StandardModule(
+            poolManager_,
+            guardian_,
+            vault_,
+            distributor_,
+            collector_
+        )
+    {}
 
     /// @notice function used by metaVault to deposit tokens into the strategy.
     /// @param depositor_ address that will provide the tokens.
