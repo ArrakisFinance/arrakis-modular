@@ -458,6 +458,17 @@ abstract contract UniV4StandardModule is
 
     // #endregion only manager functions.
 
+    /// @dev function to assign operator role to collector.
+    function toggleOperator() external {
+        if (IDistributor(distributor).operators(address(this), collector) == 0) {
+            IDistributor(distributor).toggleOperator(
+                address(this), collector
+            );
+        } else {
+            revert CollectorIsOperator();
+        }
+    }
+
     /// @notice function used by metaVault to withdraw tokens from the strategy.
     /// @param receiver_ address that will receive tokens.
     /// @param proportion_ number of share needed to be withdrawn.

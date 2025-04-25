@@ -18,4 +18,10 @@ interface IDistributor {
     /// @notice Toggles whitelisting for a given user and a given operator
     /// @dev When an operator is whitelisted for a user, the operator can claim rewards on behalf of the user
     function toggleOperator(address user, address operator) external;
+
+    /// @notice user -> operator -> authorisation to claim
+    function operators(
+        address user,
+        address operator
+    ) external view returns (uint256);
 }

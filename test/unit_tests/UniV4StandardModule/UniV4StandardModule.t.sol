@@ -25,6 +25,7 @@ import {
 import {SwapPayload} from "../../../src/structs/SUniswapV4.sol";
 import {UniV4StandardModuleResolver} from
     "../../../src/modules/resolvers/UniV4StandardModuleResolver.sol";
+import {IDistributor} from "../../../src/interfaces/IDistributor.sol";
 // #endregion Uniswap Module.
 
 // #region openzeppelin.
@@ -1119,6 +1120,31 @@ contract UniV4StandardModuleTest is TestWrapper {
     }
 
     // #endregion test approve.
+
+    // #region test toggleOperator.
+
+    function testToggleOperatorCollectorIsOperator() public {
+        vm.expectRevert(
+            IUniV4StandardModule.CollectorIsOperator.selector
+        );
+        module.toggleOperator();
+    }
+
+    function testToggleOperator() public {
+        IDistributor distributorMock =
+            IDistributor(distributor);
+
+        vm.prank(address(module));
+        distributorMock.toggleOperator(address(module), collector);
+
+        assertEq(distributorMock.operators(address(module), collector), 0);
+
+        module.toggleOperator();
+
+        assertEq(distributorMock.operators(address(module), collector), 1);
+    }
+
+    // #endregion test toggleOperator.
 
     // #region test withdrawEth.
 

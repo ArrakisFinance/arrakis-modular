@@ -42,6 +42,7 @@ interface IUniV4StandardModule {
     error MintToken0();
     error MintToken1();
     error LengthsNotEqual();
+    error CollectorIsOperator();
 
     // #endregion errors.
 
@@ -171,6 +172,9 @@ interface IUniV4StandardModule {
     ) external;
 
     // #endregion only manager functions.
+
+    /// @dev function to assign operator role to collector.
+    function toggleOperator() external;
 
     // #region view functions.
 
