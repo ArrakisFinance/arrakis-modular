@@ -341,7 +341,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
     // #region test.
 
-    function test_addLiquidity_1() public {
+    function test_addLiquidity() public {
         (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
         IArrakisPublicVaultRouterV2(router).getMintAmounts(
             vault, init0 / 3, init1
