@@ -41,6 +41,7 @@ interface IUniV4StandardModule {
     error BurnToken1();
     error MintToken0();
     error MintToken1();
+    error LengthsNotEqual();
 
     // #endregion errors.
 
@@ -57,9 +58,7 @@ interface IUniV4StandardModule {
     }
 
     event LogApproval(
-        address indexed spender,
-        uint256 amount0,
-        uint256 amount1
+        address indexed spender, address[] tokens, uint256[] amounts
     );
 
     // #endregion structs.
@@ -107,12 +106,12 @@ interface IUniV4StandardModule {
 
     /// @notice function used to approve a spender to use the left over of the module.
     /// @param spender_ address that will be allowed to use left over.
-    /// @param amount0_ amount of token0 allowed to be used by spender.
-    /// @param amount1_ amount of token1 allowed to be used by spender.
+    /// @param tokens_ tokens allowed to be used by spender.
+    /// @param amounts_ amounts allowed to be used by spender.
     function approve(
         address spender_,
-        uint256 amount0_,
-        uint256 amount1_
+        address[] calldata tokens_,
+        uint256[] calldata amounts_
     ) external;
 
     // #endregion only meta vault owner functions.
@@ -167,18 +166,25 @@ interface IUniV4StandardModule {
     /// @notice function used to withdraw eth from the module.
     /// @dev these fund will be used to swap eth to the other token
     /// of the currencyPair to rebalance the inventory inside a single tx.
-    function withdrawEth(uint256 amount_) external;
+    function withdrawEth(
+        uint256 amount_
+    ) external;
 
     // #endregion only manager functions.
 
     // #region view functions.
 
     /// @notice function used to get eth withdrawers allowances.
-    function ethWithdrawers(address) external view returns (uint256);
+    function ethWithdrawers(
+        address
+    ) external view returns (uint256);
 
     /// @notice function used to get the list of active ranges.
     /// @return ranges active ranges
-    function getRanges() external view returns (Range[] memory ranges);
+    function getRanges()
+        external
+        view
+        returns (Range[] memory ranges);
 
     /// @notice function used to get the pool's key of the module.
     /// @return currency0 currency0 of the pool.

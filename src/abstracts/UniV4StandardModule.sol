@@ -25,6 +25,7 @@ import {
 } from "../structs/SUniswapV4.sol";
 import {UnderlyingV4} from "../libraries/UnderlyingV4.sol";
 import {UniswapV4} from "../libraries/UniswapV4.sol";
+import {IDistributor} from "../interfaces/IDistributor.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -103,6 +104,8 @@ abstract contract UniV4StandardModule is
 
     /// @notice function used to get the uniswap v4 pool manager.
     IPoolManager public immutable poolManager;
+    IDistributor public immutable distributor;
+    address public immutable collector;
 
     // #endregion immutable properties.
 
@@ -171,15 +174,24 @@ abstract contract UniV4StandardModule is
 
     // #endregion modifiers.
 
-    constructor(address poolManager_, address guardian_) {
+    constructor(
+        address poolManager_,
+        address guardian_,
+        address distributor_,
+        address collector_
+    ) {
         // #region checks.
         if (poolManager_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
+        if (distributor_ == address(0)) revert AddressZero();
+        if (collector_ == address(0)) revert AddressZero();
         // #endregion checks.
 
         poolManager = IPoolManager(poolManager_);
 
         _guardian = guardian_;
+        distributor = IDistributor(distributor_);
+        collector = collector_;
 
         _disableInitializers();
     }
@@ -266,6 +278,10 @@ abstract contract UniV4StandardModule is
 
         // #endregion poolKey initialization.
 
+        IDistributor(distributor).toggleOperator(
+            address(this), collector
+        );
+
         __ReentrancyGuard_init();
         __Pausable_init();
     }
@@ -294,28 +310,33 @@ abstract contract UniV4StandardModule is
 
     function approve(
         address spender_,
-        uint256 amount0_,
-        uint256 amount1_
+        address[] calldata tokens_,
+        uint256[] calldata amounts_
     ) external nonReentrant whenNotPaused {
         if (msg.sender != IOwnable(address(metaVault)).owner()) {
             revert OnlyMetaVaultOwner();
         }
-
-        IERC20Metadata _token0 = token0;
-        IERC20Metadata _token1 = token1;
-
-        if (address(_token0) != NATIVE_COIN) {
-            _token0.forceApprove(spender_, amount0_);
-        } else {
-            ethWithdrawers[spender_] = amount0_;
-        }
-        if (address(_token1) != NATIVE_COIN) {
-            _token1.forceApprove(spender_, amount1_);
-        } else {
-            ethWithdrawers[spender_] = amount1_;
+        uint256 length = tokens_.length;
+        if (length != amounts_.length) {
+            revert LengthsNotEqual();
         }
 
-        emit LogApproval(spender_, amount0_, amount1_);
+        for (uint256 i; i < length; i++) {
+            address token = tokens_[i];
+            uint256 amount = amounts_[i];
+
+            if (token == address(0)) {
+                revert AddressZero();
+            }
+
+            if (address(token) != NATIVE_COIN) {
+                IERC20Metadata(token).forceApprove(spender_, amount);
+            } else {
+                ethWithdrawers[spender_] = amount;
+            }
+        }
+
+        emit LogApproval(spender_, tokens_, amounts_);
     }
 
     // #endregion vault owner functions.

@@ -44,8 +44,17 @@ contract UniV4StandardModulePrivate is
 
     constructor(
         address poolManager_,
-        address guardian_
-    ) UniV4StandardModule(poolManager_, guardian_) {}
+        address guardian_,
+        address distributor_,
+        address collector_
+    )
+        UniV4StandardModule(
+            poolManager_,
+            guardian_,
+            distributor_,
+            collector_
+        )
+    {}
 
     /// @notice fund function for private vault.
     /// @param depositor_ address that will provide the tokens.
