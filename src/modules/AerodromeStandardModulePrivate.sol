@@ -753,10 +753,10 @@ contract AerodromeStandardModulePrivate is
 
     function setAeroManagerBalannce(uint256 newBalance_) external {
         if (msg.sender != aeroReceiver) {
-            revert OnlyManager();
+            revert("");
         }
         if (newBalance_ > IERC20Metadata(AERO).balanceOf(address(this))) {
-            revert NewBalanceTooHigh();
+            revert("");
         }
         _aeroManagerBalance = newBalance_;
     }
