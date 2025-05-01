@@ -751,6 +751,16 @@ contract AerodromeStandardModulePrivate is
         emit LogSetManagerFeePIPS(_managerFeePIPS, newFeePIPS_);
     }
 
+    function setAeroManagerBalannce(uint256 newBalance_) external {
+        if (msg.sender != aeroReceiver) {
+            revert("");
+        }
+        if (newBalance_ > IERC20Metadata(AERO).balanceOf(address(this))) {
+            revert("");
+        }
+        _aeroManagerBalance = newBalance_;
+    }
+
     // #region view functions.
 
     /// @inheritdoc IArrakisLPModule
