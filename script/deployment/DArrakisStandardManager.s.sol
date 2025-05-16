@@ -21,15 +21,17 @@ import {
 } from
     "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-// Implementation : 0xC618797D1Fd0283d535753aDa6a6AA24Fce2e745
-// Proxy : 0x2e6E879648293e939aA68bA4c6c129A1Be733bDA
+// Implementation with 1% fee : 0xC618797D1Fd0283d535753aDa6a6AA24Fce2e745.
+// Implementation with 50% fee : 0xd360d4D006A73F3A7d71B3254E2298F991779144.
+// Proxy : 0x2e6E879648293e939aA68bA4c6c129A1Be733bDA.
+// 0x3659cfe6000000000000000000000000d360d4d006a73f3a7d71b3254e2298f991779144
 contract DArrakisStandardManager is CreateXScript {
     // #region constants.
 
     uint88 public constant implVersion = uint88(
         uint256(
             keccak256(
-                abi.encode("Arrakis Standard Manager Impl version 1")
+                abi.encode("Arrakis Standard Manager Impl version 2")
             )
         )
     );
@@ -46,7 +48,7 @@ contract DArrakisStandardManager is CreateXScript {
     address constant arrakisTimeLock =
         0xAf6f9640092cB1236E5DB6E517576355b6C40b7f;
 
-    uint256 constant defaultFeePIPS = 10_000; // 1%
+    uint256 constant defaultFeePIPS = 500_000; // 50%
     uint8 constant nativeCoinDecimals = 18;
 
     // #endregion constants.

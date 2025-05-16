@@ -21,6 +21,7 @@ import {UpgradeableBeacon} from
 // Optimism UpgradeableBeacon : 0x79fc92afa1ce5476010644380156790d2fc52168
 // Ink UpgradeableBeacon : 0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73
 // Unichain UpgradeableBeacon : 0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73
+// Binance UpgradeableBeacon : 0xCc8989978668ad377369C0cC720192377a6006e3
 contract DBunkerModule is CreateXScript {
     uint88 public version = uint88(
         uint256(keccak256(abi.encode("Bunker Module version 1")))
@@ -66,7 +67,7 @@ contract DBunkerModule is CreateXScript {
         address upgradeableBeacon =
             address(new UpgradeableBeacon(bunkerModuleImpl));
 
-        UpgradeableBeacon(0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73)
+        UpgradeableBeacon(upgradeableBeacon)
             .transferOwnership(arrakisTimeLock);
 
         console.logString("Upgradeable Beacon Valantis Address : ");
