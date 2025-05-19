@@ -80,6 +80,15 @@ import {UpgradeableBeacon} from
 
 // #endregion Arbitrum.
 
+// #region Binance.
+
+// Binance Underlying V4 : 0xB2BA4B781EB2e575A928E54c404b67b904A4DBEb
+// Binance Uniswap V4 : 0x2Aa0f3154D1e7109AaF681A372589DA318B2BA56
+// Binance UniswapV4StandardPrivate : 0x04eAd25447F9371c5c1e2C33645f32aAFEb337dc
+// Binance UpgradeableBeacon : 0xe1a76410dfB11d6C60a43838FA853519f13dEef4
+
+// #endregion Binance.
+
 contract DUniV4StandardModule is CreateXScript {
     uint88 public version = uint88(
         uint256(
@@ -133,17 +142,17 @@ contract DUniV4StandardModule is CreateXScript {
             revert("Create 3 addresses don't match.");
         }
 
-        address upgradeableBeacon =
-            address(new UpgradeableBeacon(uniswapV4StandardPrivate));
+        // address upgradeableBeacon =
+        //     address(new UpgradeableBeacon(uniswapV4StandardPrivate));
 
-        UpgradeableBeacon(upgradeableBeacon).transferOwnership(
-            arrakisTimeLock
-        );
+        // UpgradeableBeacon(upgradeableBeacon).transferOwnership(
+        //     arrakisTimeLock
+        // );
 
-        console.logString(
-            "Upgradeable Beacon Uniswap V4 Private Address : "
-        );
-        console.logAddress(upgradeableBeacon);
+        // console.logString(
+        //     "Upgradeable Beacon Uniswap V4 Private Address : "
+        // );
+        // console.logAddress(upgradeableBeacon);
 
         vm.stopBroadcast();
     }

@@ -17,7 +17,7 @@ address constant manager = 0x2e6E879648293e939aA68bA4c6c129A1Be733bDA;
 
 // MigrationHelper : 0x5B0e3AE71C72be8163063d1591886E55942fa61c
 // MigrationHelperV2 : 0xd61407B9B63956CfB61341AAfeFbD7EDA1F9B962
-// base, arbitrum, mainnet, optimism, polygon
+// base, arbitrum, mainnet, optimism, polygon, binance
 contract DMigrationHelper is CreateXScript {
     uint88 public version = uint88(
         uint256(
