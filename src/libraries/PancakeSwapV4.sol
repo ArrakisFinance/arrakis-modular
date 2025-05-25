@@ -10,12 +10,6 @@ import {
     BASE
 } from "../constants/CArrakis.sol";
 import {
-    UnderlyingPayload,
-    RangeData,
-    PositionUnderlying,
-    Range as PoolRange,
-    ComputeFeesPayload,
-    GetFeesPayload,
     SwapPayload,
     RebalanceResult,
     Withdraw,
@@ -31,26 +25,12 @@ import {
     BalanceDeltaLibrary,
     BalanceDelta
 } from "@pancakeswap/v4-core/src/types/BalanceDelta.sol";
-import {Hooks} from "@pancakeswap/v4-core/src/libraries/Hooks.sol";
-import {IHooks} from "@pancakeswap/v4-core/src/interfaces/IHooks.sol";
 import {Currency} from "@pancakeswap/v4-core/src/types/Currency.sol";
 import {PoolId} from "@pancakeswap/v4-core/src/types/PoolId.sol";
-import {
-    ICLHooks,
-    HOOKS_BEFORE_REMOVE_LIQUIDITY_OFFSET,
-    HOOKS_AFTER_REMOVE_LIQUIDITY_OFFSET,
-    HOOKS_AFTER_ADD_LIQUIDITY_OFFSET
-} from "@pancakeswap/v4-core/src/pool-cl/interfaces/ICLHooks.sol";
 import {FullMath} from
     "@pancakeswap/v4-core/src/pool-cl/libraries/FullMath.sol";
 import {TickMath} from
     "@pancakeswap/v4-core/src/pool-cl/libraries/TickMath.sol";
-import {FixedPoint128} from
-    "@pancakeswap/v4-core/src/pool-cl/libraries/FixedPoint128.sol";
-import {CLPosition} from
-    "@pancakeswap/v4-core/src/pool-cl/libraries/CLPosition.sol";
-import {Tick} from
-    "@pancakeswap/v4-core/src/pool-cl/libraries/Tick.sol";
 import {ICLPoolManager} from
     "@pancakeswap/v4-core/src/pool-cl/interfaces/ICLPoolManager.sol";
 import {IVault} from "@pancakeswap/v4-core/src/interfaces/IVault.sol";
@@ -58,10 +38,6 @@ import {
     Currency,
     CurrencyLibrary
 } from "@pancakeswap/v4-core/src/types/Currency.sol";
-import {SqrtPriceMath} from
-    "@pancakeswap/v4-core/src/pool-cl/libraries/SqrtPriceMath.sol";
-
-import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -71,15 +47,11 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import {LiquidityAmounts} from
-    "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
-
 library PancakeSwapV4 {
     using PoolIdLibrary for PoolKey;
     using BalanceDeltaLibrary for BalanceDelta;
     using SafeERC20 for IERC20Metadata;
     using Address for address payable;
-    using Hooks for bytes32;
     using CurrencyLibrary for Currency;
 
     // #region rebalance.
@@ -1161,553 +1133,6 @@ library PancakeSwapV4 {
 
     // #endregion deposit.
 
-    // #region public functions underlying.
-
-    function totalUnderlyingForMint(
-        UnderlyingPayload memory underlyingPayload_,
-        uint256 proportion_
-    ) public view returns (uint256 amount0, uint256 amount1) {
-        uint256 fee0;
-        uint256 fee1;
-        for (uint256 i; i < underlyingPayload_.ranges.length; i++) {
-            {
-                (uint256 a0, uint256 a1, uint256 f0, uint256 f1) =
-                underlyingMint(
-                    RangeData({
-                        self: underlyingPayload_.self,
-                        range: underlyingPayload_.ranges[i],
-                        poolManager: underlyingPayload_.poolManager
-                    }),
-                    proportion_
-                );
-                amount0 += a0;
-                amount1 += a1;
-                fee0 += f0;
-                fee1 += f1;
-            }
-        }
-
-        uint256 managerFeePIPS =
-            IArrakisLPModule(underlyingPayload_.self).managerFeePIPS();
-
-        fee0 = fee0 - FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
-
-        fee1 = fee1 - FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
-
-        amount0 += FullMath.mulDivRoundingUp(
-            proportion_, fee0 + underlyingPayload_.leftOver0, BASE
-        );
-        amount1 += FullMath.mulDivRoundingUp(
-            proportion_, fee1 + underlyingPayload_.leftOver1, BASE
-        );
-    }
-
-    function totalUnderlyingAtPriceWithFees(
-        UnderlyingPayload memory underlyingPayload_,
-        uint160 sqrtPriceX96_
-    )
-        public
-        view
-        returns (
-            uint256 amount0,
-            uint256 amount1,
-            uint256 fee0,
-            uint256 fee1
-        )
-    {
-        return _totalUnderlyingWithFees(
-            underlyingPayload_, sqrtPriceX96_
-        );
-    }
-
-    function underlyingMint(
-        RangeData memory underlying_,
-        uint256 proportion_
-    )
-        public
-        view
-        returns (
-            uint256 amount0,
-            uint256 amount1,
-            uint256 fee0,
-            uint256 fee1
-        )
-    {
-        int24 tick;
-        uint160 sqrtPriceX96;
-        (sqrtPriceX96, tick,,) = underlying_.poolManager.getSlot0(
-            PoolIdLibrary.toId(underlying_.range.poolKey)
-        );
-
-        PositionUnderlying memory positionUnderlying =
-        PositionUnderlying({
-            sqrtPriceX96: sqrtPriceX96,
-            poolManager: underlying_.poolManager,
-            poolKey: underlying_.range.poolKey,
-            self: underlying_.self,
-            tick: tick,
-            lowerTick: underlying_.range.lowerTick,
-            upperTick: underlying_.range.upperTick
-        });
-
-        (amount0, amount1, fee0, fee1) =
-            getUnderlyingBalancesMint(positionUnderlying, proportion_);
-    }
-
-    function underlying(
-        RangeData memory underlying_,
-        uint160 sqrtPriceX96_
-    )
-        public
-        view
-        returns (
-            uint256 amount0,
-            uint256 amount1,
-            uint256 fee0,
-            uint256 fee1
-        )
-    {
-        int24 tick;
-        if (sqrtPriceX96_ == 0) {
-            (sqrtPriceX96_, tick,,) = underlying_.poolManager.getSlot0(
-                PoolIdLibrary.toId(underlying_.range.poolKey)
-            );
-        } else {
-            (, tick,,) = underlying_.poolManager.getSlot0(
-                PoolIdLibrary.toId(underlying_.range.poolKey)
-            );
-        }
-
-        PositionUnderlying memory positionUnderlying =
-        PositionUnderlying({
-            sqrtPriceX96: sqrtPriceX96_,
-            poolManager: underlying_.poolManager,
-            poolKey: underlying_.range.poolKey,
-            self: underlying_.self,
-            tick: tick,
-            lowerTick: underlying_.range.lowerTick,
-            upperTick: underlying_.range.upperTick
-        });
-
-        (amount0, amount1, fee0, fee1) =
-            getUnderlyingBalances(positionUnderlying);
-    }
-
-    function getUnderlyingBalancesMint(
-        PositionUnderlying memory positionUnderlying_,
-        uint256 proportion_
-    )
-        public
-        view
-        returns (
-            uint256 amount0Current,
-            uint256 amount1Current,
-            uint256 fee0,
-            uint256 fee1
-        )
-    {
-        PoolId poolId =
-            PoolIdLibrary.toId(positionUnderlying_.poolKey);
-
-        // compute current fees earned
-        CLPosition.Info memory positionInfo;
-        positionInfo = positionUnderlying_.poolManager.getPosition(
-            poolId,
-            positionUnderlying_.self,
-            positionUnderlying_.lowerTick,
-            positionUnderlying_.upperTick,
-            ""
-        );
-        (fee0, fee1) = _getFeesEarned(
-            GetFeesPayload({
-                feeGrowthInside0Last: positionInfo
-                    .feeGrowthInside0LastX128,
-                feeGrowthInside1Last: positionInfo
-                    .feeGrowthInside1LastX128,
-                poolId: poolId,
-                poolManager: positionUnderlying_.poolManager,
-                liquidity: positionInfo.liquidity,
-                tick: positionUnderlying_.tick,
-                lowerTick: positionUnderlying_.lowerTick,
-                upperTick: positionUnderlying_.upperTick
-            })
-        );
-
-        int128 liquidity = SafeCast.toInt128(
-            SafeCast.toInt256(
-                FullMath.mulDivRoundingUp(
-                    uint256(positionInfo.liquidity), proportion_, BASE
-                )
-            )
-        );
-
-        // compute current holdings from liquidity
-        (amount0Current, amount1Current) = getAmountsForDelta(
-            positionUnderlying_.sqrtPriceX96,
-            TickMath.getSqrtRatioAtTick(positionUnderlying_.lowerTick),
-            TickMath.getSqrtRatioAtTick(positionUnderlying_.upperTick),
-            liquidity
-        );
-    }
-
-    // solhint-disable-next-line function-max-lines
-    function getUnderlyingBalances(
-        PositionUnderlying memory positionUnderlying_
-    )
-        public
-        view
-        returns (
-            uint256 amount0Current,
-            uint256 amount1Current,
-            uint256 fee0,
-            uint256 fee1
-        )
-    {
-        PoolId poolId =
-            PoolIdLibrary.toId(positionUnderlying_.poolKey);
-
-        // compute current fees earned
-        CLPosition.Info memory positionInfo;
-        positionInfo = positionUnderlying_.poolManager.getPosition(
-            poolId,
-            positionUnderlying_.self,
-            positionUnderlying_.lowerTick,
-            positionUnderlying_.upperTick,
-            ""
-        );
-        (fee0, fee1) = _getFeesEarned(
-            GetFeesPayload({
-                feeGrowthInside0Last: positionInfo
-                    .feeGrowthInside0LastX128,
-                feeGrowthInside1Last: positionInfo
-                    .feeGrowthInside1LastX128,
-                poolId: poolId,
-                poolManager: positionUnderlying_.poolManager,
-                liquidity: positionInfo.liquidity,
-                tick: positionUnderlying_.tick,
-                lowerTick: positionUnderlying_.lowerTick,
-                upperTick: positionUnderlying_.upperTick
-            })
-        );
-
-        // compute current holdings from liquidity
-        (amount0Current, amount1Current) = LiquidityAmounts
-            .getAmountsForLiquidity(
-            positionUnderlying_.sqrtPriceX96,
-            TickMath.getSqrtRatioAtTick(positionUnderlying_.lowerTick),
-            TickMath.getSqrtRatioAtTick(positionUnderlying_.upperTick),
-            positionInfo.liquidity
-        );
-    }
-
-    function getAmountsForDelta(
-        uint160 sqrtRatioX96,
-        uint160 sqrtRatioAX96,
-        uint160 sqrtRatioBX96,
-        int128 liquidity
-    ) public pure returns (uint256 amount0, uint256 amount1) {
-        if (sqrtRatioAX96 > sqrtRatioBX96) {
-            (sqrtRatioAX96, sqrtRatioBX96) =
-                (sqrtRatioBX96, sqrtRatioAX96);
-        }
-
-        if (sqrtRatioX96 < sqrtRatioAX96) {
-            amount0 = SafeCast.toUint256(
-                -SqrtPriceMath.getAmount0Delta(
-                    sqrtRatioAX96, sqrtRatioBX96, liquidity
-                )
-            );
-        } else if (sqrtRatioX96 < sqrtRatioBX96) {
-            amount0 = SafeCast.toUint256(
-                -SqrtPriceMath.getAmount0Delta(
-                    sqrtRatioX96, sqrtRatioBX96, liquidity
-                )
-            );
-            amount1 = SafeCast.toUint256(
-                -SqrtPriceMath.getAmount1Delta(
-                    sqrtRatioAX96, sqrtRatioX96, liquidity
-                )
-            );
-        } else {
-            amount1 = SafeCast.toUint256(
-                -SqrtPriceMath.getAmount1Delta(
-                    sqrtRatioAX96, sqrtRatioBX96, liquidity
-                )
-            );
-        }
-    }
-
-    // #endregion public functions underlying.
-
-    function _getTokens(
-        IPancakeSwapV4StandardModule self,
-        PoolKey memory poolKey_
-    ) internal view returns (address _token0, address _token1) {
-        _token0 = Currency.unwrap(poolKey_.currency0);
-        _token1 = Currency.unwrap(poolKey_.currency1);
-    }
-
-    // solhint-disable-next-line function-max-lines
-    function _totalUnderlyingWithFees(
-        UnderlyingPayload memory underlyingPayload_,
-        uint160 sqrtPriceX96_
-    )
-        private
-        view
-        returns (
-            uint256 amount0,
-            uint256 amount1,
-            uint256 fee0,
-            uint256 fee1
-        )
-    {
-        for (uint256 i; i < underlyingPayload_.ranges.length; i++) {
-            {
-                (uint256 a0, uint256 a1, uint256 f0, uint256 f1) =
-                underlying(
-                    RangeData({
-                        self: underlyingPayload_.self,
-                        range: underlyingPayload_.ranges[i],
-                        poolManager: underlyingPayload_.poolManager
-                    }),
-                    sqrtPriceX96_
-                );
-                amount0 += a0;
-                amount1 += a1;
-                fee0 += f0;
-                fee1 += f1;
-            }
-        }
-
-        amount0 += fee0 + underlyingPayload_.leftOver0;
-        amount1 += fee1 + underlyingPayload_.leftOver1;
-    }
-
-    function _getLeftOvers(
-        IPancakeSwapV4StandardModule self_,
-        PoolKey memory poolKey_
-    ) internal view returns (uint256 leftOver0, uint256 leftOver1) {
-        leftOver0 = Currency.unwrap(poolKey_.currency0) == address(0)
-            ? address(this).balance
-            : IERC20Metadata(Currency.unwrap(poolKey_.currency0))
-                .balanceOf(address(this));
-        leftOver1 = IERC20Metadata(
-            Currency.unwrap(poolKey_.currency1)
-        ).balanceOf(address(this));
-    }
-
-    function _getPoolRanges(
-        IPancakeSwapV4StandardModule.Range[] storage ranges_,
-        PoolKey memory poolKey_
-    ) internal view returns (PoolRange[] memory poolRanges) {
-        uint256 length = ranges_.length;
-        poolRanges = new PoolRange[](length);
-        for (uint256 i; i < length; i++) {
-            IPancakeSwapV4StandardModule.Range memory range =
-                ranges_[i];
-            poolRanges[i] = PoolRange({
-                lowerTick: range.tickLower,
-                upperTick: range.tickUpper,
-                poolKey: poolKey_
-            });
-        }
-    }
-
-    function _checkTokens(
-        PoolKey memory poolKey_,
-        address token0_,
-        address token1_,
-        bool isInversed_
-    ) internal pure {
-        if (isInversed_) {
-            /// @dev Currency.unwrap(poolKey_.currency1) == address(0) is not possible
-            /// @dev because currency0 should be lower currency1.
-
-            if (token0_ == NATIVE_COIN) {
-                revert
-                    IPancakeSwapV4StandardModule
-                    .NativeCoinCannotBeToken1();
-            } else if (Currency.unwrap(poolKey_.currency1) != token0_)
-            {
-                revert IPancakeSwapV4StandardModule.Currency1DtToken0(
-                    Currency.unwrap(poolKey_.currency1), token0_
-                );
-            }
-
-            if (token1_ == NATIVE_COIN) {
-                if (Currency.unwrap(poolKey_.currency0) != address(0))
-                {
-                    revert
-                        IPancakeSwapV4StandardModule
-                        .Currency0DtToken1(
-                        Currency.unwrap(poolKey_.currency0), token1_
-                    );
-                }
-            } else if (Currency.unwrap(poolKey_.currency0) != token1_)
-            {
-                revert IPancakeSwapV4StandardModule.Currency0DtToken1(
-                    Currency.unwrap(poolKey_.currency0), token1_
-                );
-            }
-        } else {
-            if (token0_ == NATIVE_COIN) {
-                if (Currency.unwrap(poolKey_.currency0) != address(0))
-                {
-                    revert
-                        IPancakeSwapV4StandardModule
-                        .Currency0DtToken0(
-                        Currency.unwrap(poolKey_.currency0), token0_
-                    );
-                }
-            } else if (Currency.unwrap(poolKey_.currency0) != token0_)
-            {
-                revert IPancakeSwapV4StandardModule.Currency0DtToken0(
-                    Currency.unwrap(poolKey_.currency0), token0_
-                );
-            }
-
-            if (token1_ == NATIVE_COIN) {
-                revert
-                    IPancakeSwapV4StandardModule
-                    .NativeCoinCannotBeToken1();
-            } else if (Currency.unwrap(poolKey_.currency1) != token1_)
-            {
-                revert IPancakeSwapV4StandardModule.Currency1DtToken1(
-                    Currency.unwrap(poolKey_.currency1), token1_
-                );
-            }
-        }
-    }
-
-    function _checkPermissions(
-        PoolKey memory poolKey_
-    ) internal {
-        if (
-            poolKey_.parameters.hasOffsetEnabled(
-                HOOKS_BEFORE_REMOVE_LIQUIDITY_OFFSET
-            )
-                || poolKey_.parameters.hasOffsetEnabled(
-                    HOOKS_AFTER_REMOVE_LIQUIDITY_OFFSET
-                )
-                || poolKey_.parameters.hasOffsetEnabled(
-                    HOOKS_AFTER_ADD_LIQUIDITY_OFFSET
-                )
-        ) {
-            revert
-                IPancakeSwapV4StandardModule
-                .NoRemoveOrAddLiquidityHooks();
-        }
-    }
-
-    // solhint-disable-next-line function-max-lines
-    function _getFeesEarned(
-        GetFeesPayload memory feeInfo_
-    ) private view returns (uint256 fee0, uint256 fee1) {
-        Tick.Info memory lower = feeInfo_.poolManager.getPoolTickInfo(
-            feeInfo_.poolId, feeInfo_.lowerTick
-        );
-        Tick.Info memory upper = feeInfo_.poolManager.getPoolTickInfo(
-            feeInfo_.poolId, feeInfo_.upperTick
-        );
-
-        ComputeFeesPayload memory payload = ComputeFeesPayload({
-            feeGrowthInsideLast: feeInfo_.feeGrowthInside0Last,
-            feeGrowthOutsideLower: lower.feeGrowthOutside0X128,
-            feeGrowthOutsideUpper: upper.feeGrowthOutside0X128,
-            feeGrowthGlobal: 0,
-            poolId: feeInfo_.poolId,
-            poolManager: feeInfo_.poolManager,
-            liquidity: feeInfo_.liquidity,
-            tick: feeInfo_.tick,
-            lowerTick: feeInfo_.lowerTick,
-            upperTick: feeInfo_.upperTick
-        });
-
-        (payload.feeGrowthGlobal,) =
-            feeInfo_.poolManager.getFeeGrowthGlobals(feeInfo_.poolId);
-
-        fee0 = _computeFeesEarned(payload);
-        payload.feeGrowthInsideLast = feeInfo_.feeGrowthInside1Last;
-        payload.feeGrowthOutsideLower = lower.feeGrowthOutside1X128;
-        payload.feeGrowthOutsideUpper = upper.feeGrowthOutside0X128;
-        (, payload.feeGrowthGlobal) =
-            feeInfo_.poolManager.getFeeGrowthGlobals(feeInfo_.poolId);
-        fee1 = _computeFeesEarned(payload);
-    }
-
-    function _computeFeesEarned(
-        ComputeFeesPayload memory computeFees_
-    ) private pure returns (uint256 fee) {
-        unchecked {
-            // calculate fee growth below
-            uint256 feeGrowthBelow;
-            if (computeFees_.tick >= computeFees_.lowerTick) {
-                feeGrowthBelow = computeFees_.feeGrowthOutsideLower;
-            } else {
-                feeGrowthBelow = computeFees_.feeGrowthGlobal
-                    - computeFees_.feeGrowthOutsideLower;
-            }
-
-            // calculate fee growth above
-            uint256 feeGrowthAbove;
-            if (computeFees_.tick < computeFees_.upperTick) {
-                feeGrowthAbove = computeFees_.feeGrowthOutsideUpper;
-            } else {
-                feeGrowthAbove = computeFees_.feeGrowthGlobal
-                    - computeFees_.feeGrowthOutsideUpper;
-            }
-
-            uint256 feeGrowthInside = computeFees_.feeGrowthGlobal
-                - feeGrowthBelow - feeGrowthAbove;
-            fee = FullMath.mulDiv(
-                computeFees_.liquidity,
-                feeGrowthInside - computeFees_.feeGrowthInsideLast,
-                0x100000000000000000000000000000000
-            );
-        }
-    }
-
-    function _checkMinReturn(
-        IPancakeSwapV4StandardModule self,
-        bool zeroForOne_,
-        uint256 expectedMinReturn_,
-        uint256 amountIn_,
-        uint8 decimals0_,
-        uint8 decimals1_
-    ) internal view {
-        if (zeroForOne_) {
-            if (
-                FullMath.mulDiv(
-                    expectedMinReturn_, 10 ** decimals0_, amountIn_
-                )
-                    < FullMath.mulDiv(
-                        self.oracle().getPrice0(),
-                        PIPS - self.maxSlippage(),
-                        PIPS
-                    )
-            ) {
-                revert
-                    IPancakeSwapV4StandardModule
-                    .ExpectedMinReturnTooLow();
-            }
-        } else {
-            if (
-                FullMath.mulDiv(
-                    expectedMinReturn_, 10 ** decimals1_, amountIn_
-                )
-                    < FullMath.mulDiv(
-                        self.oracle().getPrice1(),
-                        PIPS - self.maxSlippage(),
-                        PIPS
-                    )
-            ) {
-                revert
-                    IPancakeSwapV4StandardModule
-                    .ExpectedMinReturnTooLow();
-            }
-        }
-    }
-
     function _checkCurrencyBalances(
         IVault pancakeVault_,
         PoolKey memory poolKey_
@@ -1758,5 +1183,59 @@ library PancakeSwapV4 {
                 return (i, length);
             }
         }
+    }
+
+    function _checkMinReturn(
+        IPancakeSwapV4StandardModule self,
+        bool zeroForOne_,
+        uint256 expectedMinReturn_,
+        uint256 amountIn_,
+        uint8 decimals0_,
+        uint8 decimals1_
+    ) internal view {
+        if (zeroForOne_) {
+            if (
+                FullMath.mulDiv(
+                    expectedMinReturn_, 10 ** decimals0_, amountIn_
+                )
+                    < FullMath.mulDiv(
+                        self.oracle().getPrice0(),
+                        PIPS - self.maxSlippage(),
+                        PIPS
+                    )
+            ) {
+                revert
+                    IPancakeSwapV4StandardModule
+                    .ExpectedMinReturnTooLow();
+            }
+        } else {
+            if (
+                FullMath.mulDiv(
+                    expectedMinReturn_, 10 ** decimals1_, amountIn_
+                )
+                    < FullMath.mulDiv(
+                        self.oracle().getPrice1(),
+                        PIPS - self.maxSlippage(),
+                        PIPS
+                    )
+            ) {
+                revert
+                    IPancakeSwapV4StandardModule
+                    .ExpectedMinReturnTooLow();
+            }
+        }
+    }
+
+    function _getLeftOvers(
+        IPancakeSwapV4StandardModule self_,
+        PoolKey memory poolKey_
+    ) internal view returns (uint256 leftOver0, uint256 leftOver1) {
+        leftOver0 = Currency.unwrap(poolKey_.currency0) == address(0)
+            ? address(this).balance
+            : IERC20Metadata(Currency.unwrap(poolKey_.currency0))
+                .balanceOf(address(this));
+        leftOver1 = IERC20Metadata(
+            Currency.unwrap(poolKey_.currency1)
+        ).balanceOf(address(this));
     }
 }

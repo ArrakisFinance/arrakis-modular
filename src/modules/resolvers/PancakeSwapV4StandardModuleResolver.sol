@@ -12,6 +12,7 @@ import {IArrakisLPModule} from "../../interfaces/IArrakisLPModule.sol";
 import {UnderlyingPayload} from "../../structs/SPancakeSwapV4.sol";
 import {BASE} from "../../constants/CArrakis.sol";
 import {PancakeSwapV4} from "../../libraries/PancakeSwapV4.sol";
+import {PancakeUnderlyingV4} from "../../libraries/PancakeUnderlyingV4.sol";
 import {Range as PoolRange} from "../../structs/SPancakeSwapV4.sol";
 
 import {ICLPoolManager} from
@@ -141,7 +142,7 @@ contract PancakeSwapV4StandardModuleResolver is
         }
 
         if (totalSupply > 0) {
-            (uint256 current0, uint256 current1) = PancakeSwapV4
+            (uint256 current0, uint256 current1) = PancakeUnderlyingV4
                 .totalUnderlyingForMint(underlyingPayload, BASE);
 
             shareToMint = computeMintAmounts(
@@ -155,7 +156,7 @@ contract PancakeSwapV4StandardModuleResolver is
                 shareToMint, BASE, totalSupply
             );
 
-            (amount0ToDeposit, amount1ToDeposit) = PancakeSwapV4
+            (amount0ToDeposit, amount1ToDeposit) = PancakeUnderlyingV4
                 .totalUnderlyingForMint(underlyingPayload, proportion);
         } else {
             (uint256 init0, uint256 init1) =

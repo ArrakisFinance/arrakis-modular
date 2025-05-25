@@ -18,6 +18,8 @@ import {
     NATIVE_COIN_DECIMALS
 } from "../constants/CArrakis.sol";
 import {PancakeSwapV4} from "../libraries/PancakeSwapV4.sol";
+import {PancakeUnderlyingV4} from
+    "../libraries/PancakeUnderlyingV4.sol"; 
 import {
     SwapPayload,
     Range as PoolRange,
@@ -62,6 +64,11 @@ import {
 import {IVault} from "@pancakeswap/v4-core/src/interfaces/IVault.sol";
 import {FullMath} from
     "@pancakeswap/v4-core/src/pool-cl/libraries/FullMath.sol";
+import {
+    HOOKS_BEFORE_REMOVE_LIQUIDITY_OFFSET,
+    HOOKS_AFTER_REMOVE_LIQUIDITY_OFFSET,
+    HOOKS_AFTER_ADD_LIQUIDITY_OFFSET
+} from "@pancakeswap/v4-core/src/pool-cl/interfaces/ICLHooks.sol";
 
 /// @notice this module can set pancakeswap v4 pool that have a generic hook,
 /// that don't require specific action to become liquidity provider.
@@ -81,9 +88,11 @@ abstract contract PancakeSwapV4StandardModule is
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
     using Hooks for IHooks;
+    using Hooks for bytes32;
     using Address for address payable;
     using BalanceDeltaLibrary for BalanceDelta;
     using PancakeSwapV4 for IPancakeSwapV4StandardModule;
+    using PancakeUnderlyingV4 for IPancakeSwapV4StandardModule;
 
     // #region enum.
 
@@ -267,10 +276,10 @@ abstract contract PancakeSwapV4StandardModule is
 
         // #region poolKey initialization.
 
-        PancakeSwapV4._checkTokens(
+        _checkTokens(
             poolKey_, _token0, _token1, isInversed_
         );
-        PancakeSwapV4._checkPermissions(poolKey_);
+        _checkPermissions(poolKey_);
 
         /// @dev check if the pool is initialized.
         PoolId poolId = poolKey_.toId();
@@ -363,10 +372,10 @@ abstract contract PancakeSwapV4StandardModule is
     ) external onlyManager nonReentrant whenNotPaused {
         PoolKey memory _poolKey = poolKey;
 
-        PancakeSwapV4._checkTokens(
+        _checkTokens(
             poolKey_, address(token0), address(token1), isInversed
         );
-        PancakeSwapV4._checkPermissions(poolKey_);
+        _checkPermissions(poolKey_);
 
         if (
             poolKey_.fee == _poolKey.fee
@@ -633,7 +642,7 @@ abstract contract PancakeSwapV4StandardModule is
     {
         PoolKey memory _poolKey = poolKey;
         PoolRange[] memory poolRanges =
-            PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
+            _getPoolRanges(_ranges, _poolKey);
 
         uint256 fees0;
         uint256 fees1;
@@ -645,7 +654,7 @@ abstract contract PancakeSwapV4StandardModule is
             (uint160 sqrtPriceX96_,,,) =
                 poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
 
-            (amount0, amount1, fees0, fees1) = PancakeSwapV4
+            (amount0, amount1, fees0, fees1) = PancakeUnderlyingV4
                 .totalUnderlyingAtPriceWithFees(
                 UnderlyingPayload({
                     ranges: poolRanges,
@@ -678,7 +687,7 @@ abstract contract PancakeSwapV4StandardModule is
     ) external view returns (uint256 amount0, uint256 amount1) {
         PoolKey memory _poolKey = poolKey;
         PoolRange[] memory poolRanges =
-            PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
+            _getPoolRanges(_ranges, _poolKey);
 
         uint256 fees0;
         uint256 fees1;
@@ -687,7 +696,7 @@ abstract contract PancakeSwapV4StandardModule is
             (uint256 leftOver0, uint256 leftOver1) =
             IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
 
-            (amount0, amount1, fees0, fees1) = PancakeSwapV4
+            (amount0, amount1, fees0, fees1) = PancakeUnderlyingV4
                 .totalUnderlyingAtPriceWithFees(
                 UnderlyingPayload({
                     ranges: poolRanges,
@@ -722,7 +731,7 @@ abstract contract PancakeSwapV4StandardModule is
         // check if pool current price is not too far from oracle price.
         PoolKey memory _poolKey = poolKey;
         (address _token0, address _token1) =
-            IPancakeSwapV4StandardModule(this)._getTokens(_poolKey);
+            _getTokens(_poolKey);
 
         uint8 token0Decimals = _token0 == address(0)
             ? NATIVE_COIN_DECIMALS
@@ -792,7 +801,7 @@ abstract contract PancakeSwapV4StandardModule is
     {
         PoolKey memory _poolKey = poolKey;
         PoolRange[] memory poolRanges =
-            PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
+            _getPoolRanges(_ranges, _poolKey);
 
         (uint256 leftOver0, uint256 leftOver1) =
             IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
@@ -800,7 +809,7 @@ abstract contract PancakeSwapV4StandardModule is
         (uint160 sqrtPriceX96_,,,) =
             poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
 
-        (,, uint256 fee0, uint256 fee1) = PancakeSwapV4
+        (,, uint256 fee0, uint256 fee1) = PancakeUnderlyingV4
             .totalUnderlyingAtPriceWithFees(
             UnderlyingPayload({
                 ranges: poolRanges,
@@ -827,7 +836,7 @@ abstract contract PancakeSwapV4StandardModule is
     {
         PoolKey memory _poolKey = poolKey;
         PoolRange[] memory poolRanges =
-            PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
+            _getPoolRanges(_ranges, _poolKey);
 
         (uint256 leftOver0, uint256 leftOver1) =
             IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
@@ -835,7 +844,7 @@ abstract contract PancakeSwapV4StandardModule is
         (uint160 sqrtPriceX96_,,,) =
             poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
 
-        (,, uint256 fee0, uint256 fee1) = PancakeSwapV4
+        (,, uint256 fee0, uint256 fee1) = PancakeUnderlyingV4
             .totalUnderlyingAtPriceWithFees(
             UnderlyingPayload({
                 ranges: poolRanges,
@@ -923,6 +932,116 @@ abstract contract PancakeSwapV4StandardModule is
             amount0Burned,
             amount1Burned
         );
+    }
+
+    function _checkTokens(
+        PoolKey memory poolKey_,
+        address token0_,
+        address token1_,
+        bool isInversed_
+    ) internal pure {
+        if (isInversed_) {
+            /// @dev Currency.unwrap(poolKey_.currency1) == address(0) is not possible
+            /// @dev because currency0 should be lower currency1.
+
+            if (token0_ == NATIVE_COIN) {
+                revert
+                    IPancakeSwapV4StandardModule
+                    .NativeCoinCannotBeToken1();
+            } else if (Currency.unwrap(poolKey_.currency1) != token0_)
+            {
+                revert IPancakeSwapV4StandardModule.Currency1DtToken0(
+                    Currency.unwrap(poolKey_.currency1), token0_
+                );
+            }
+
+            if (token1_ == NATIVE_COIN) {
+                if (Currency.unwrap(poolKey_.currency0) != address(0))
+                {
+                    revert
+                        IPancakeSwapV4StandardModule
+                        .Currency0DtToken1(
+                        Currency.unwrap(poolKey_.currency0), token1_
+                    );
+                }
+            } else if (Currency.unwrap(poolKey_.currency0) != token1_)
+            {
+                revert IPancakeSwapV4StandardModule.Currency0DtToken1(
+                    Currency.unwrap(poolKey_.currency0), token1_
+                );
+            }
+        } else {
+            if (token0_ == NATIVE_COIN) {
+                if (Currency.unwrap(poolKey_.currency0) != address(0))
+                {
+                    revert
+                        IPancakeSwapV4StandardModule
+                        .Currency0DtToken0(
+                        Currency.unwrap(poolKey_.currency0), token0_
+                    );
+                }
+            } else if (Currency.unwrap(poolKey_.currency0) != token0_)
+            {
+                revert IPancakeSwapV4StandardModule.Currency0DtToken0(
+                    Currency.unwrap(poolKey_.currency0), token0_
+                );
+            }
+
+            if (token1_ == NATIVE_COIN) {
+                revert
+                    IPancakeSwapV4StandardModule
+                    .NativeCoinCannotBeToken1();
+            } else if (Currency.unwrap(poolKey_.currency1) != token1_)
+            {
+                revert IPancakeSwapV4StandardModule.Currency1DtToken1(
+                    Currency.unwrap(poolKey_.currency1), token1_
+                );
+            }
+        }
+    }
+
+    function _checkPermissions(
+        PoolKey memory poolKey_
+    ) internal {
+        if (
+            poolKey_.parameters.hasOffsetEnabled(
+                HOOKS_BEFORE_REMOVE_LIQUIDITY_OFFSET
+            )
+                || poolKey_.parameters.hasOffsetEnabled(
+                    HOOKS_AFTER_REMOVE_LIQUIDITY_OFFSET
+                )
+                || poolKey_.parameters.hasOffsetEnabled(
+                    HOOKS_AFTER_ADD_LIQUIDITY_OFFSET
+                )
+        ) {
+            revert
+                IPancakeSwapV4StandardModule
+                .NoRemoveOrAddLiquidityHooks();
+        }
+    }
+
+    function _getPoolRanges(
+        IPancakeSwapV4StandardModule.Range[] storage ranges_,
+        PoolKey memory poolKey_
+    ) internal view returns (PoolRange[] memory poolRanges) {
+        uint256 length = ranges_.length;
+        poolRanges = new PoolRange[](length);
+        for (uint256 i; i < length; i++) {
+            IPancakeSwapV4StandardModule.Range memory range =
+                ranges_[i];
+            poolRanges[i] = PoolRange({
+                lowerTick: range.tickLower,
+                upperTick: range.tickUpper,
+                poolKey: poolKey_
+            });
+        }
+    }
+
+    function _getTokens(
+        PoolKey memory poolKey_
+    ) internal view returns (address _token0, address _token1) {
+        _token0 = Currency.unwrap(poolKey_.currency0);
+        _token1 = Currency.unwrap(poolKey_.currency1);
     }
 
     // #endregion internal functions.

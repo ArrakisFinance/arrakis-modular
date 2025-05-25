@@ -3,13 +3,20 @@ src = "src"
 out = "out"
 libs = ["lib"]
 ffi = true
-fs_permissions = [{ access = "read-write", path = ".forge-snapshots/"}]
+fs_permissions = [{ access = "read-write", path = ".forge-snapshots/"}, { access = "read", path = "./optimized-out" }]
 evm_version = "cancun"
 auto_detect_solc = true
 optimizer = true
-optimizer-runs = 10_000
+optimizer-runs = 1
 via_ir = true
+optimizerSteps = ''
+sparse_mode = true
 [fmt]
 line_length = 70
 multiline_func_header = "params_first"
 number_underscore = "thousands"
+
+[profile.optimized]
+out = "optimized-out"
+test = "src"
+via_ir = true
