@@ -89,28 +89,42 @@ library UniswapV4 {
                 IArrakisLPModule module =
                     IArrakisLPModule(address(self));
 
+                address manager = module.metaVault().manager();
                 (
                     rebalanceResult.managerFee0,
                     rebalanceResult.managerFee1
                 ) = _collectAndSendFeesToManager(
                     poolManager,
                     poolKey_,
-                    module.metaVault().manager(),
+                    manager,
                     module.managerFeePIPS(),
                     rebalanceResult.fee0,
                     rebalanceResult.fee1
                 );
 
-                result = self.isInversed()
-                    ? abi.encode(
+                if (self.isInversed()) {
+                    result = abi.encode(
                         rebalanceResult.amount1Minted,
                         rebalanceResult.amount0Minted,
                         rebalanceResult.amount1Burned,
                         rebalanceResult.amount0Burned,
                         rebalanceResult.managerFee1,
                         rebalanceResult.managerFee0
-                    )
-                    : abi.encode(
+                    );
+
+                    if (
+                        rebalanceResult.managerFee0 > 0
+                            || rebalanceResult.managerFee1 > 0
+                    ) {
+                        emit IArrakisLPModule
+                            .LogWithdrawManagerBalance(
+                            manager,
+                            rebalanceResult.managerFee1,
+                            rebalanceResult.managerFee0
+                        );
+                    }
+                } else {
+                    result = abi.encode(
                         rebalanceResult.amount0Minted,
                         rebalanceResult.amount1Minted,
                         rebalanceResult.amount0Burned,
@@ -118,6 +132,19 @@ library UniswapV4 {
                         rebalanceResult.managerFee0,
                         rebalanceResult.managerFee1
                     );
+
+                    if (
+                        rebalanceResult.managerFee0 > 0
+                            || rebalanceResult.managerFee1 > 0
+                    ) {
+                        emit IArrakisLPModule
+                            .LogWithdrawManagerBalance(
+                            manager,
+                            rebalanceResult.managerFee0,
+                            rebalanceResult.managerFee1
+                        );
+                    }
+                }
             }
         }
 
@@ -320,23 +347,19 @@ library UniswapV4 {
         uint256 fee0_,
         uint256 fee1_
     ) internal returns (uint256 managerFee0, uint256 managerFee1) {
-        managerFee0 = FullMath.mulDivRoundingUp(fee0_, managerFeePIPS_, PIPS);
+        managerFee0 =
+            FullMath.mulDivRoundingUp(fee0_, managerFeePIPS_, PIPS);
         if (managerFee0 > 0) {
             poolManager_.take(
                 poolKey_.currency0, manager_, managerFee0
             );
         }
 
-        managerFee1 = FullMath.mulDivRoundingUp(fee1_, managerFeePIPS_, PIPS);
+        managerFee1 =
+            FullMath.mulDivRoundingUp(fee1_, managerFeePIPS_, PIPS);
         if (managerFee1 > 0) {
             poolManager_.take(
                 poolKey_.currency1, manager_, managerFee1
-            );
-        }
-
-        if (managerFee0 > 0 || managerFee1 > 0) {
-            emit IArrakisLPModule.LogWithdrawManagerBalance(
-                manager_, managerFee0, managerFee1
             );
         }
     }
@@ -965,6 +988,7 @@ library UniswapV4 {
         address manager;
         IArrakisLPModule module;
 
+        bool isInversed = self.isInversed();
         {
             {
                 // #region send manager fees.
@@ -991,18 +1015,21 @@ library UniswapV4 {
                     );
                 }
 
-                if (managerFee0 > 0 || managerFee1 > 0) {
-                    emit IArrakisLPModule.LogWithdrawManagerBalance(
-                        manager, managerFee0, managerFee1
-                    );
-                }
-
                 // #endregion send manager fees.
 
                 // #region mint extra collected fees.
 
                 uint256 extraCollect0 = deposit_.fee0 - managerFee0;
                 uint256 extraCollect1 = deposit_.fee1 - managerFee1;
+
+                if (managerFee0 > 0 || managerFee1 > 0) {
+                    (managerFee0, managerFee1) = isInversed
+                        ? (managerFee1, managerFee0)
+                        : (managerFee0, managerFee1);
+                    emit IArrakisLPModule.LogWithdrawManagerBalance(
+                        manager, managerFee0, managerFee1
+                    );
+                }
 
                 if (extraCollect0 > 0) {
                     poolManager.take(
@@ -1060,7 +1087,7 @@ library UniswapV4 {
 
                     (leftOver0, leftOver1) = module.getInits();
 
-                    if (self.isInversed()) {
+                    if (isInversed) {
                         (leftOver0, leftOver1) =
                             (leftOver1, leftOver0);
                     }
@@ -1132,7 +1159,7 @@ library UniswapV4 {
         amount0 = amount0 + deposit_.leftOverToMint0;
         amount1 = amount1 + deposit_.leftOverToMint1;
 
-        return self.isInversed()
+        return isInversed
             ? (abi.encode(amount1, amount0), deposit_.notFirstDeposit)
             : (abi.encode(amount0, amount1), deposit_.notFirstDeposit);
     }

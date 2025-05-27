@@ -20,8 +20,10 @@ import {
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 
 import {PoolKey} from "@pancakeswap/v4-core/src/types/PoolKey.sol";
-import {PoolId, PoolIdLibrary} from
-    "@pancakeswap/v4-core/src/types/PoolId.sol";
+import {
+    PoolId,
+    PoolIdLibrary
+} from "@pancakeswap/v4-core/src/types/PoolId.sol";
 import {
     BalanceDeltaLibrary,
     BalanceDelta
@@ -89,28 +91,43 @@ library PancakeSwapV4 {
                 IArrakisLPModule module =
                     IArrakisLPModule(address(self));
 
+                address manager = module.metaVault().manager();
+
                 (
                     rebalanceResult.managerFee0,
                     rebalanceResult.managerFee1
                 ) = _collectAndSendFeesToManager(
                     pancakeVault,
                     poolKey_,
-                    module.metaVault().manager(),
+                    manager,
                     module.managerFeePIPS(),
                     rebalanceResult.fee0,
                     rebalanceResult.fee1
                 );
 
-                result = self.isInversed()
-                    ? abi.encode(
+                if (self.isInversed()) {
+                    result = abi.encode(
                         rebalanceResult.amount1Minted,
                         rebalanceResult.amount0Minted,
                         rebalanceResult.amount1Burned,
                         rebalanceResult.amount0Burned,
                         rebalanceResult.managerFee1,
                         rebalanceResult.managerFee0
-                    )
-                    : abi.encode(
+                    );
+
+                    if (
+                        rebalanceResult.managerFee0 > 0
+                            || rebalanceResult.managerFee1 > 0
+                    ) {
+                        emit IArrakisLPModule
+                            .LogWithdrawManagerBalance(
+                            manager,
+                            rebalanceResult.managerFee1,
+                            rebalanceResult.managerFee0
+                        );
+                    }
+                } else {
+                    result = abi.encode(
                         rebalanceResult.amount0Minted,
                         rebalanceResult.amount1Minted,
                         rebalanceResult.amount0Burned,
@@ -118,6 +135,19 @@ library PancakeSwapV4 {
                         rebalanceResult.managerFee0,
                         rebalanceResult.managerFee1
                     );
+
+                    if (
+                        rebalanceResult.managerFee0 > 0
+                            || rebalanceResult.managerFee1 > 0
+                    ) {
+                        emit IArrakisLPModule
+                            .LogWithdrawManagerBalance(
+                            manager,
+                            rebalanceResult.managerFee0,
+                            rebalanceResult.managerFee1
+                        );
+                    }
+                }
             }
         }
 
@@ -324,23 +354,19 @@ library PancakeSwapV4 {
         uint256 fee0_,
         uint256 fee1_
     ) internal returns (uint256 managerFee0, uint256 managerFee1) {
-        managerFee0 = FullMath.mulDivRoundingUp(fee0_, managerFeePIPS_, PIPS);
+        managerFee0 =
+            FullMath.mulDivRoundingUp(fee0_, managerFeePIPS_, PIPS);
         if (managerFee0 > 0) {
             pancakeVault_.take(
                 poolKey_.currency0, manager_, managerFee0
             );
         }
 
-        managerFee1 = FullMath.mulDivRoundingUp(fee1_, managerFeePIPS_, PIPS);
+        managerFee1 =
+            FullMath.mulDivRoundingUp(fee1_, managerFeePIPS_, PIPS);
         if (managerFee1 > 0) {
             pancakeVault_.take(
                 poolKey_.currency1, manager_, managerFee1
-            );
-        }
-
-        if (managerFee0 > 0 || managerFee1 > 0) {
-            emit IArrakisLPModule.LogWithdrawManagerBalance(
-                manager_, managerFee0, managerFee1
             );
         }
     }
@@ -969,6 +995,7 @@ library PancakeSwapV4 {
 
         address manager;
         IArrakisLPModule module;
+        bool isInversed = self.isInversed();
 
         {
             {
@@ -996,18 +1023,21 @@ library PancakeSwapV4 {
                     );
                 }
 
-                if (managerFee0 > 0 || managerFee1 > 0) {
-                    emit IArrakisLPModule.LogWithdrawManagerBalance(
-                        manager, managerFee0, managerFee1
-                    );
-                }
-
                 // #endregion send manager fees.
 
                 // #region mint extra collected fees.
 
                 uint256 extraCollect0 = deposit_.fee0 - managerFee0;
                 uint256 extraCollect1 = deposit_.fee1 - managerFee1;
+
+                if (managerFee0 > 0 || managerFee1 > 0) {
+                    (managerFee0, managerFee1) = isInversed
+                        ? (managerFee1, managerFee0)
+                        : (managerFee0, managerFee1);
+                    emit IArrakisLPModule.LogWithdrawManagerBalance(
+                        manager, managerFee0, managerFee1
+                    );
+                }
 
                 if (extraCollect0 > 0) {
                     pancakeVault.take(
