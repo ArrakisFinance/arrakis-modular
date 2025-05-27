@@ -320,14 +320,14 @@ library UniswapV4 {
         uint256 fee0_,
         uint256 fee1_
     ) internal returns (uint256 managerFee0, uint256 managerFee1) {
-        managerFee0 = FullMath.mulDiv(fee0_, managerFeePIPS_, PIPS);
+        managerFee0 = FullMath.mulDivRoundingUp(fee0_, managerFeePIPS_, PIPS);
         if (managerFee0 > 0) {
             poolManager_.take(
                 poolKey_.currency0, manager_, managerFee0
             );
         }
 
-        managerFee1 = FullMath.mulDiv(fee1_, managerFeePIPS_, PIPS);
+        managerFee1 = FullMath.mulDivRoundingUp(fee1_, managerFeePIPS_, PIPS);
         if (managerFee1 > 0) {
             poolManager_.take(
                 poolKey_.currency1, manager_, managerFee1
@@ -704,10 +704,10 @@ library UniswapV4 {
             IArrakisLPModule module = IArrakisLPModule(address(self));
             uint256 managerFeePIPS = module.managerFeePIPS();
             {
-                uint256 managerFee0 = FullMath.mulDiv(
+                uint256 managerFee0 = FullMath.mulDivRoundingUp(
                     withdraw_.fee0, managerFeePIPS, PIPS
                 );
-                uint256 managerFee1 = FullMath.mulDiv(
+                uint256 managerFee1 = FullMath.mulDivRoundingUp(
                     withdraw_.fee1, managerFeePIPS, PIPS
                 );
 
@@ -784,8 +784,9 @@ library UniswapV4 {
                     withdraw_.amount1 -= managerFee1;
                 }
                 if (managerFee0 > 0 || managerFee1 > 0) {
-                    (managerFee0, managerFee1) = isInversed ?
-                        (managerFee1, managerFee0) : (managerFee0, managerFee1);
+                    (managerFee0, managerFee1) = isInversed
+                        ? (managerFee1, managerFee0)
+                        : (managerFee0, managerFee1);
                     emit IArrakisLPModule.LogWithdrawManagerBalance(
                         manager, managerFee0, managerFee1
                     );
@@ -972,10 +973,10 @@ library UniswapV4 {
                 manager = module.metaVault().manager();
                 uint256 _managerFeePIPS = module.managerFeePIPS();
 
-                uint256 managerFee0 = FullMath.mulDiv(
+                uint256 managerFee0 = FullMath.mulDivRoundingUp(
                     deposit_.fee0, _managerFeePIPS, PIPS
                 );
-                uint256 managerFee1 = FullMath.mulDiv(
+                uint256 managerFee1 = FullMath.mulDivRoundingUp(
                     deposit_.fee1, _managerFeePIPS, PIPS
                 );
 
