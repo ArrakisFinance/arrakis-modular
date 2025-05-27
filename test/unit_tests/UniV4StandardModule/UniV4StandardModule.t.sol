@@ -47,6 +47,8 @@ import {
     CurrencyLibrary
 } from "@uniswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {PoolId, PoolIdLibrary} from
+    "@uniswap/v4-core/src/types/PoolId.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
@@ -80,6 +82,7 @@ interface IERC20USDT {
 contract UniV4StandardModuleTest is TestWrapper {
     using StateLibrary for IPoolManager;
     using TransientStateLibrary for IPoolManager;
+    using PoolIdLibrary for PoolKey;
 
     // #region constants.
 
@@ -3429,11 +3432,11 @@ contract UniV4StandardModuleTest is TestWrapper {
         module.withdrawManagerBalance();
 
         assertEq(
-            IERC20Metadata(USDC).balanceOf(address(manager)), 344
+            IERC20Metadata(USDC).balanceOf(address(manager)), 345
         );
         assertEq(
             IERC20Metadata(WETH).balanceOf(address(manager)),
-            29_641_691_633_406
+            29_641_691_633_407
         );
     }
 
@@ -4196,6 +4199,15 @@ contract UniV4StandardModuleTest is TestWrapper {
             tickUpper: tickUpper
         });
 
+        PoolId poolId = poolKey.toId();
+
+        IUniV4StandardModule.Range[] memory ranges =
+            module.getRanges();
+
+        (sqrtPriceX96,,,) = IPoolManager(poolManager).getSlot0(
+            poolId
+        );
+
         (uint256 amount0, uint256 amount1) = module.totalUnderlying();
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
@@ -4206,6 +4218,22 @@ contract UniV4StandardModuleTest is TestWrapper {
             amount1 / 2
         );
 
+        (uint128 liq,,) = IPoolManager(poolManager).getPositionInfo(
+            poolKey.toId(),
+            address(module),
+            ranges[0].tickLower,
+            ranges[0].tickUpper,
+            bytes32(0)
+        );
+
+        (uint256 amt0, uint256 amt1) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            SafeCast.toUint128(liquidity)
+        );
+
         liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
@@ -4213,15 +4241,23 @@ contract UniV4StandardModuleTest is TestWrapper {
             )
         });
 
+        (uint256 amt0ToBurn, uint256 amt1ToBurn) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(ranges[0].tickLower),
+            TickMath.getSqrtPriceAtTick(ranges[0].tickUpper),
+            liq
+        );
+
         vm.prank(manager);
         vm.expectRevert(IUniV4StandardModule.BurnToken0.selector);
         module.rebalance(
             liquidityRanges,
             swapPayload,
-            2_002_634_382,
-            1_276_829_913_980_718_268,
-            872_684_510,
-            344_768_409_376_855_241
+            amt0ToBurn + 2,
+            amt1ToBurn,
+            amt0,
+            amt1
         );
 
         // #endregion change ranges.
@@ -4318,6 +4354,15 @@ contract UniV4StandardModuleTest is TestWrapper {
             tickUpper: tickUpper
         });
 
+        PoolId poolId = poolKey.toId();
+
+        IUniV4StandardModule.Range[] memory ranges =
+            module.getRanges();
+
+        (sqrtPriceX96,,,) = IPoolManager(poolManager).getSlot0(
+            poolId
+        );
+
         (uint256 amount0, uint256 amount1) = module.totalUnderlying();
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
@@ -4328,6 +4373,22 @@ contract UniV4StandardModuleTest is TestWrapper {
             amount1 / 2
         );
 
+        (uint128 liq,,) = IPoolManager(poolManager).getPositionInfo(
+            poolKey.toId(),
+            address(module),
+            ranges[0].tickLower,
+            ranges[0].tickUpper,
+            bytes32(0)
+        );
+
+        (uint256 amt0, uint256 amt1) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            SafeCast.toUint128(liquidity)
+        );
+
         liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
@@ -4335,15 +4396,23 @@ contract UniV4StandardModuleTest is TestWrapper {
             )
         });
 
+        (uint256 amt0ToBurn, uint256 amt1ToBurn) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(ranges[0].tickLower),
+            TickMath.getSqrtPriceAtTick(ranges[0].tickUpper),
+            liq
+        );
+
         vm.prank(manager);
         vm.expectRevert(IUniV4StandardModule.BurnToken1.selector);
         module.rebalance(
             liquidityRanges,
             swapPayload,
-            2_002_634_381,
-            1_276_829_913_980_718_269,
-            872_684_510,
-            344_768_409_376_855_241
+            amt0ToBurn,
+            amt1ToBurn + 2,
+            amt0,
+            amt1
         );
 
         // #endregion change ranges.
@@ -4440,6 +4509,15 @@ contract UniV4StandardModuleTest is TestWrapper {
             tickUpper: tickUpper
         });
 
+        PoolId poolId = poolKey.toId();
+
+        IUniV4StandardModule.Range[] memory ranges =
+            module.getRanges();
+
+        (sqrtPriceX96,,,) = IPoolManager(poolManager).getSlot0(
+            poolId
+        );
+
         (uint256 amount0, uint256 amount1) = module.totalUnderlying();
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
@@ -4450,6 +4528,22 @@ contract UniV4StandardModuleTest is TestWrapper {
             amount1 / 2
         );
 
+        (uint128 liq,,) = IPoolManager(poolManager).getPositionInfo(
+            poolKey.toId(),
+            address(module),
+            ranges[0].tickLower,
+            ranges[0].tickUpper,
+            bytes32(0)
+        );
+
+        (uint256 amt0, uint256 amt1) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            SafeCast.toUint128(liquidity)
+        );
+
         liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
@@ -4457,15 +4551,23 @@ contract UniV4StandardModuleTest is TestWrapper {
             )
         });
 
+        (uint256 amt0ToBurn, uint256 amt1ToBurn) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            liq
+        );
+
         vm.prank(manager);
         vm.expectRevert(IUniV4StandardModule.MintToken0.selector);
         module.rebalance(
             liquidityRanges,
             swapPayload,
-            2_002_634_381,
-            1_276_829_913_980_718_268,
-            872_684_511,
-            344_768_409_376_855_241
+            amt0ToBurn,
+            amt1ToBurn,
+            amt0 + 2,
+            amt1
         );
 
         // #endregion change ranges.
@@ -4562,6 +4664,23 @@ contract UniV4StandardModuleTest is TestWrapper {
             tickUpper: tickUpper
         });
 
+        PoolId poolId = poolKey.toId();
+
+        IUniV4StandardModule.Range[] memory ranges =
+            module.getRanges();
+
+        (sqrtPriceX96,,,) = IPoolManager(poolManager).getSlot0(
+            poolId
+        );
+
+        (uint128 liq,,) = IPoolManager(poolManager).getPositionInfo(
+            poolKey.toId(),
+            address(module),
+            ranges[0].tickLower,
+            ranges[0].tickUpper,
+            bytes32(0)
+        );
+
         (uint256 amount0, uint256 amount1) = module.totalUnderlying();
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
@@ -4570,6 +4689,22 @@ contract UniV4StandardModuleTest is TestWrapper {
             TickMath.getSqrtPriceAtTick(tickUpper),
             amount0 / 2,
             amount1 / 2
+        );
+
+        (uint256 amt0, uint256 amt1) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            SafeCast.toUint128(liquidity)
+        );
+
+        (uint256 amt0ToBurn, uint256 amt1ToBurn) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            liq
         );
 
         liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
@@ -4584,10 +4719,10 @@ contract UniV4StandardModuleTest is TestWrapper {
         module.rebalance(
             liquidityRanges,
             swapPayload,
-            2_002_634_381,
-            1_276_829_913_980_718_268,
-            872_684_510,
-            344_768_409_376_855_242
+            amt0ToBurn,
+            amt1ToBurn,
+            amt0,
+            amt1 + 2
         );
 
         // #endregion change ranges.
@@ -5509,11 +5644,11 @@ contract UniV4StandardModuleTest is TestWrapper {
         assertEq(IERC20Metadata(WETH).balanceOf(receiver), amount1);
 
         assertEq(
-            IERC20Metadata(USDC).balanceOf(address(manager)), 344
+            IERC20Metadata(USDC).balanceOf(address(manager)), 345
         );
         assertEq(
             IERC20Metadata(WETH).balanceOf(address(manager)),
-            29_641_691_633_406
+            29_641_691_633_407
         );
 
         // #endregion withdraw.
@@ -7297,7 +7432,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         balance0 = module.managerBalance0();
 
-        assertEq(balance0, 344);
+        assertEq(balance0, 345);
     }
 
     // #endregion test managerBalance0.
@@ -7386,7 +7521,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         balance1 = module.managerBalance1();
 
-        assertEq(balance1, 29_641_691_633_406);
+        assertEq(balance1, 29_641_691_633_407);
     }
 
     // #endregion test managerBalance0.

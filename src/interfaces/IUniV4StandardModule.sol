@@ -57,15 +57,12 @@ interface IUniV4StandardModule {
         int128 liquidity;
     }
 
-    event LogApproval(
-        address indexed spender, address[] tokens, uint256[] amounts
-    );
-
     // #endregion structs.
 
     // #region events.
-
-    event LogSetPool(PoolKey oldPoolKey, PoolKey poolKey);
+    event LogApproval(
+        address indexed spender, address[] tokens, uint256[] amounts
+    );
     event LogRebalance(
         LiquidityRange[] liquidityRanges,
         uint256 amount0Minted,
@@ -73,7 +70,8 @@ interface IUniV4StandardModule {
         uint256 amount0Burned,
         uint256 amount1Burned
     );
-
+    event LogSetPool(PoolKey oldPoolKey, PoolKey poolKey);
+    event LogWithdrawETH(address indexed withdrawer, uint256 amount);
     // #endregion events.
 
     // #region only meta vault owner functions.

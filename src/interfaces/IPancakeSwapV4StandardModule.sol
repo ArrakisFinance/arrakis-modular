@@ -75,6 +75,7 @@ interface IPancakeSwapV4StandardModule {
     );
     event LogSetPool(PoolKey oldPoolKey, PoolKey poolKey);
     event LogSetRewardReceiver(address rewardReceiver);
+    event LogWithdrawETH(address indexed withdrawer, uint256 amount);
     // #endregion events.
 
     /// @notice initialize function to delegate call onced the beacon proxy is deployed,
@@ -193,14 +194,16 @@ interface IPancakeSwapV4StandardModule {
     /// will be used to proctect rebalances.
     function oracle() external view returns (IOracleWrapper);
 
-
     /// @notice function used to get the max slippage that
     /// can occur during swap rebalance.
     function maxSlippage() external view returns (uint24);
 
     /// @notice function used to get the list of active ranges.
     /// @return ranges active ranges
-    function getRanges() external view returns (Range[] memory ranges);
+    function getRanges()
+        external
+        view
+        returns (Range[] memory ranges);
 
     // #endregion view functions.
 }

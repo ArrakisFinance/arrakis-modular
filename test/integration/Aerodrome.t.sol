@@ -41,6 +41,7 @@ import {IOracleWrapper} from "../../src/interfaces/IOracleWrapper.sol";
 import {INonfungiblePositionManager} from
     "../../src/interfaces/INonfungiblePositionManager.sol";
 import {IVoter} from "../../src/interfaces/IVoter.sol";
+import {ICLGauge} from "../../src/interfaces/ICLGauge.sol";
 import {IUniswapV3Factory} from
     "../../src/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "../../src/interfaces/IUniswapV3Pool.sol";
@@ -3703,6 +3704,21 @@ contract AerodromeStandardModulePrivateTest is
 
         // #endregion do swap.
 
+        uint256[] memory tokenIds =
+            AerodromeStandardModulePrivate(module).tokenIds();
+
+        console.log("Token IDs : ", tokenIds.length);
+        console.log(
+            "Rewards of tokenId 0 : ",
+            ICLGauge(IVoter(voter).gauges(address(pool))).rewards(
+                tokenIds[0]
+            )
+        );
+
+        console.log("Rewards rate : ",
+            ICLGauge(IVoter(voter).gauges(address(pool))).rewardRate()
+        );
+
         blockNumber = block.number;
         timestamp = block.timestamp;
 
@@ -3713,12 +3729,16 @@ contract AerodromeStandardModulePrivateTest is
 
         assertEq(IERC20Metadata(AERO).balanceOf(owner), 0);
 
+        console.log(
+            "AERO Balance : ", IERC20Metadata(AERO).balanceOf(owner)
+        );
+
         vm.prank(owner);
         IAerodromeStandardModulePrivate(module).claimRewards(owner);
 
-        // console.log(
-        //     "AERO Balance : ", IERC20Metadata(AERO).balanceOf(owner)
-        // );
+        console.log(
+            "AERO Balance : ", IERC20Metadata(AERO).balanceOf(owner)
+        );
 
         assertGt(IERC20Metadata(AERO).balanceOf(owner), 0);
 
@@ -3765,6 +3785,12 @@ contract AerodromeStandardModulePrivateTest is
         assertGt(IERC20Metadata(USDC).balanceOf(withdrawer), 0);
 
         // #endregion withdraw partial.
+
+        blockNumber = block.number;
+        timestamp = block.timestamp;
+
+        vm.warp(timestamp + 100);
+        vm.roll(blockNumber + 100);
 
         // #region do another swap.
 
