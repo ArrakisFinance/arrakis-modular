@@ -212,8 +212,8 @@ abstract contract PancakeSwapV4StandardModule is
 
     /// @notice initialize function to delegate call onced the beacon proxy is deployed,
     /// for initializing the pancake swap v4 standard module.
-    /// @param init0_ initial amount of token0 to provide to uniswap standard module.
-    /// @param init1_ initial amount of token1 to provide to uniswap standard module.
+    /// @param init0_ initial amount of token0 to provide to pancake swap standard module.
+    /// @param init1_ initial amount of token1 to provide to pancake swap standard module.
     /// @param isInversed_ boolean to check if the poolKey's currencies pair are inversed,
     /// compared to the module's tokens pair.
     /// @param poolKey_ pool key of the pancake swap v4 pool that will be used by the module.
