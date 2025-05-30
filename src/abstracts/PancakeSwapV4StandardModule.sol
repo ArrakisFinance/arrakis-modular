@@ -133,7 +133,7 @@ abstract contract PancakeSwapV4StandardModule is
 
     // #region storage gaps.
 
-    uint256[49] internal __gap;
+    uint256[37] internal __gap;
 
     // #endregion storage gaps.
 
