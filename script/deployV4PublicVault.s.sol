@@ -70,6 +70,7 @@ address constant stratAnnouncer =
 address constant factory = 0x820FB8127a689327C863de8433278d6181123982;
 address constant nft = 0x44A801e7E2E073bd8bcE4bCCf653239Fa156B762;
 
+//// !!!!!! CHECK THAT DECIMAL OF ORACLE IS MATCHING TOKEN PAIR DECIMALS !!!!!! ////
 OracleDeployment constant oracleDeployment =
     OracleDeployment.UniV4Oracle;
 
