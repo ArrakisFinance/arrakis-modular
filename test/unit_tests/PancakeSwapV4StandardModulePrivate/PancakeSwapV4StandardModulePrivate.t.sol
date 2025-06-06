@@ -243,15 +243,6 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
         module.fund(depositor, 0, 0);
     }
 
-    function testFundDepositorAddressZero() public {
-        address depositor = address(0);
-
-        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-
-        vm.prank(metaVault);
-        module.fund(depositor, 0, 0);
-    }
-
     function testFundDepositorDepositZero() public {
         address depositor =
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));

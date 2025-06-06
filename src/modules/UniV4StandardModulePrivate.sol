@@ -67,8 +67,6 @@ contract UniV4StandardModulePrivate is
     ) external payable onlyMetaVault whenNotPaused nonReentrant {
         // #region checks.
 
-        if (depositor_ == address(0)) revert AddressZero();
-
         if (amount0_ == 0 && amount1_ == 0) revert DepositZero();
 
         if (poolKey.currency0.isAddressZero()) {

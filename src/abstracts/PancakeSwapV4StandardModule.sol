@@ -25,6 +25,8 @@ import {
     Withdraw
 } from "../structs/SPancakeSwapV4.sol";
 import {IDistributor} from "../interfaces/IDistributor.sol";
+import {PancakeUnderlyingV4} from
+    "../libraries/PancakeUnderlyingV4.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -38,7 +40,6 @@ import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {ICLPoolManager} from
     "@pancakeswap/v4-core/src/pool-cl/interfaces/ICLPoolManager.sol";
@@ -49,16 +50,6 @@ import {
     PoolId,
     PoolIdLibrary
 } from "@pancakeswap/v4-core/src/types/PoolId.sol";
-import {
-    Currency,
-    CurrencyLibrary
-} from "@pancakeswap/v4-core/src/types/Currency.sol";
-import {Hooks} from "@pancakeswap/v4-core/src/libraries/Hooks.sol";
-import {IHooks} from "@pancakeswap/v4-core/src/interfaces/IHooks.sol";
-import {
-    BalanceDelta,
-    BalanceDeltaLibrary
-} from "@pancakeswap/v4-core/src/types/BalanceDelta.sol";
 import {IVault} from "@pancakeswap/v4-core/src/interfaces/IVault.sol";
 import {FullMath} from
     "@pancakeswap/v4-core/src/pool-cl/libraries/FullMath.sol";
@@ -79,11 +70,8 @@ abstract contract PancakeSwapV4StandardModule is
 {
     using SafeERC20 for IERC20Metadata;
     using PoolIdLibrary for PoolKey;
-    using CurrencyLibrary for Currency;
-    using Hooks for IHooks;
-    using Address for address payable;
-    using BalanceDeltaLibrary for BalanceDelta;
     using PancakeSwapV4 for IPancakeSwapV4StandardModule;
+    using Address for address payable;
 
     // #region enum.
 
@@ -142,6 +130,12 @@ abstract contract PancakeSwapV4StandardModule is
     mapping(bytes32 => bool) internal _activeRanges;
 
     // #endregion internal properties.
+
+    // #region storage gaps.
+
+    uint256[37] internal __gap;
+
+    // #endregion storage gaps.
 
     // #region modifiers.
 
@@ -217,13 +211,13 @@ abstract contract PancakeSwapV4StandardModule is
     // #endregion guardian functions.
 
     /// @notice initialize function to delegate call onced the beacon proxy is deployed,
-    /// for initializing the uniswap v4 standard module.
-    /// @param init0_ initial amount of token0 to provide to uniswap standard module.
-    /// @param init1_ initial amount of token1 to provide to uniswap standard module.
+    /// for initializing the pancake swap v4 standard module.
+    /// @param init0_ initial amount of token0 to provide to pancake swap standard module.
+    /// @param init1_ initial amount of token1 to provide to pancake swap standard module.
     /// @param isInversed_ boolean to check if the poolKey's currencies pair are inversed,
     /// compared to the module's tokens pair.
-    /// @param poolKey_ pool key of the uniswap v4 pool that will be used by the module.
-    /// @param oracle_ address of the oracle used by the uniswap v4 standard module.
+    /// @param poolKey_ pool key of the pancake swap v4 pool that will be used by the module.
+    /// @param oracle_ address of the oracle used by the pancake swap v4 standard module.
     /// @param maxSlippage_ allowed to manager for rebalancing the inventory using
     /// swap.
     /// @param metaVault_ address of the meta vault.
@@ -300,6 +294,7 @@ abstract contract PancakeSwapV4StandardModule is
 
     // #region vault owner functions.
 
+    /// @inheritdoc IPancakeSwapV4StandardModule
     function withdrawEth(
         uint256 amount_
     ) external nonReentrant whenNotPaused {
@@ -310,8 +305,11 @@ abstract contract PancakeSwapV4StandardModule is
 
         ethWithdrawers[msg.sender] -= amount_;
         payable(msg.sender).sendValue(amount_);
+
+        emit LogWithdrawETH(msg.sender, amount_);
     }
 
+    /// @inheritdoc IPancakeSwapV4StandardModule
     function approve(
         address spender_,
         address[] calldata tokens_,
@@ -345,7 +343,7 @@ abstract contract PancakeSwapV4StandardModule is
     // #region only manager functions.
 
     /// @notice function used to set the pool for the module.
-    /// @param poolKey_ pool key of the uniswap v4 pool that will be used by the module.
+    /// @param poolKey_ pool key of the pancake swap v4 pool that will be used by the module.
     /// @param liquidityRanges_ list of liquidity ranges to be used by the module on the new pool.
     /// @param swapPayload_ swap payload to be used during rebalance.
     /// @param minBurn0_ minimum amount of token0 to burn.
@@ -643,9 +641,9 @@ abstract contract PancakeSwapV4StandardModule is
             IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
 
             (uint160 sqrtPriceX96_,,,) =
-                poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
+                poolManager.getSlot0(_poolKey.toId());
 
-            (amount0, amount1, fees0, fees1) = PancakeSwapV4
+            (amount0, amount1, fees0, fees1) = PancakeUnderlyingV4
                 .totalUnderlyingAtPriceWithFees(
                 UnderlyingPayload({
                     ranges: poolRanges,
@@ -658,10 +656,10 @@ abstract contract PancakeSwapV4StandardModule is
             );
         }
 
-        amount0 =
-            amount0 - FullMath.mulDiv(fees0, managerFeePIPS, PIPS);
-        amount1 =
-            amount1 - FullMath.mulDiv(fees1, managerFeePIPS, PIPS);
+        amount0 = amount0
+            - FullMath.mulDivRoundingUp(fees0, managerFeePIPS, PIPS);
+        amount1 = amount1
+            - FullMath.mulDivRoundingUp(fees1, managerFeePIPS, PIPS);
 
         if (isInversed) {
             (amount0, amount1) = (amount1, amount0);
@@ -687,7 +685,7 @@ abstract contract PancakeSwapV4StandardModule is
             (uint256 leftOver0, uint256 leftOver1) =
             IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
 
-            (amount0, amount1, fees0, fees1) = PancakeSwapV4
+            (amount0, amount1, fees0, fees1) = PancakeUnderlyingV4
                 .totalUnderlyingAtPriceWithFees(
                 UnderlyingPayload({
                     ranges: poolRanges,
@@ -701,9 +699,9 @@ abstract contract PancakeSwapV4StandardModule is
         }
 
         amount0 =
-            amount0 - FullMath.mulDiv(fees0, managerFeePIPS, PIPS);
+            amount0 - FullMath.mulDivRoundingUp(fees0, managerFeePIPS, PIPS);
         amount1 =
-            amount1 - FullMath.mulDiv(fees1, managerFeePIPS, PIPS);
+            amount1 - FullMath.mulDivRoundingUp(fees1, managerFeePIPS, PIPS);
 
         if (isInversed) {
             (amount0, amount1) = (amount1, amount0);
@@ -765,8 +763,8 @@ abstract contract PancakeSwapV4StandardModule is
 
         // #region check deviation.
 
-        uint256 deviation = FullMath.mulDiv(
-            FullMath.mulDiv(
+        uint256 deviation = FullMath.mulDivRoundingUp(
+            FullMath.mulDivRoundingUp(
                 poolPrice > oraclePrice
                     ? poolPrice - oraclePrice
                     : oraclePrice - poolPrice,
@@ -790,31 +788,7 @@ abstract contract PancakeSwapV4StandardModule is
         view
         returns (uint256 managerFee0)
     {
-        PoolKey memory _poolKey = poolKey;
-        PoolRange[] memory poolRanges =
-            PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
-
-        (uint256 leftOver0, uint256 leftOver1) =
-            IPancakeSwapV4StandardModule(this)._getLeftOvers(_poolKey);
-
-        (uint160 sqrtPriceX96_,,,) =
-            poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
-
-        (,, uint256 fee0, uint256 fee1) = PancakeSwapV4
-            .totalUnderlyingAtPriceWithFees(
-            UnderlyingPayload({
-                ranges: poolRanges,
-                poolManager: poolManager,
-                self: address(this),
-                leftOver0: leftOver0,
-                leftOver1: leftOver1
-            }),
-            sqrtPriceX96_
-        );
-
-        managerFee0 = isInversed
-            ? FullMath.mulDiv(fee1, managerFeePIPS, PIPS)
-            : FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
+        return _managerBalance(true);
     }
 
     /// @notice function used to get manager token1 balance.
@@ -825,6 +799,16 @@ abstract contract PancakeSwapV4StandardModule is
         view
         returns (uint256 managerFee1)
     {
+        return _managerBalance(false);
+    }
+
+    // #endregion view functions.
+
+    // #region internal functions.
+
+    function _managerBalance(
+        bool isToken0_
+    ) internal view returns (uint256 managerBalance) {
         PoolKey memory _poolKey = poolKey;
         PoolRange[] memory poolRanges =
             PancakeSwapV4._getPoolRanges(_ranges, _poolKey);
@@ -835,7 +819,7 @@ abstract contract PancakeSwapV4StandardModule is
         (uint160 sqrtPriceX96_,,,) =
             poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
 
-        (,, uint256 fee0, uint256 fee1) = PancakeSwapV4
+        (,, uint256 fee0, uint256 fee1) = PancakeUnderlyingV4
             .totalUnderlyingAtPriceWithFees(
             UnderlyingPayload({
                 ranges: poolRanges,
@@ -847,14 +831,12 @@ abstract contract PancakeSwapV4StandardModule is
             sqrtPriceX96_
         );
 
-        managerFee1 = isInversed
-            ? FullMath.mulDiv(fee0, managerFeePIPS, PIPS)
-            : FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
+        (fee0, fee1) = isInversed ? (fee1, fee0) : (fee0, fee1);
+
+        managerBalance = isToken0_
+            ? FullMath.mulDivRoundingUp(fee0, managerFeePIPS, PIPS)
+            : FullMath.mulDivRoundingUp(fee1, managerFeePIPS, PIPS);
     }
-
-    // #endregion view functions.
-
-    // #region internal functions.
 
     function _lockAcquired(
         Action action_,

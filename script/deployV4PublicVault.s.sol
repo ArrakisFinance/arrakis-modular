@@ -44,17 +44,19 @@ enum OracleDeployment {
 
 // #endregion enums.
 
-address constant token0 = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
+address constant token0 = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
 address constant token1 = NATIVE_COIN;
 uint24 constant fee = 500;
 int24 constant tickSpacing = 10;
 address constant hooks = address(0);
 uint160 constant sqrtPrice = 33965778792757789688229654398626;
+uint256 constant init0 = 1;
+uint256 constant init1 = 1;
 
 bool constant isInversed = true;
 
 bytes32 constant salt =
-    keccak256(abi.encode("BASE ETH/USDC Uni V4 private vault beta 2"));
+    keccak256(abi.encode("SEPOLIA ETH/USDC Uni V4 public vault beta 1"));
 address constant vaultOwner =
     0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 uint24 constant maxSlippage = TEN_PERCENT / 2;
@@ -93,7 +95,7 @@ address constant chainlinkOracleWrapper = address(0);
 bool constant sendOwnershipToSafe = false;
 address constant safe = address(0);
 
-contract DeployV4PrivateVault is CreateXScript {
+contract DeployV4PublicVault is CreateXScript {
     using PoolIdLibrary for PoolKey;
 
     function setUp() public {}
@@ -101,7 +103,7 @@ contract DeployV4PrivateVault is CreateXScript {
     function run() public {
         address poolManager = getPoolManager();
 
-        address uniV4PrivateUpgradeableBeacon = getUpgradeableBeacon();
+        address uniV4PublicUpgradeableBeacon = getUpgradeableBeacon();
 
         vm.startBroadcast();
 
@@ -184,12 +186,12 @@ contract DeployV4PrivateVault is CreateXScript {
 
         // #endregion create uni V4 oracle.
 
-        // #region create private vault.
+        // #region create public vault.
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
             IUniV4StandardModule.initialize.selector,
-            1, // not important for private vault.
-            1, // not important for private vault.
+            init0,
+            init1,
             isInversed,
             poolKey,
             IOracleWrapper(oracle),
@@ -205,20 +207,20 @@ contract DeployV4PrivateVault is CreateXScript {
         );
 
         address vault = IArrakisMetaVaultFactory(factory)
-            .deployPrivateVault(
+            .deployPublicVault(
             salt,
             token0,
             token1,
             vaultOwner,
-            uniV4PrivateUpgradeableBeacon,
+            uniV4PublicUpgradeableBeacon,
             moduleCreationPayload,
             initManagementPayload
         );
 
-        console.logString("Uniswap Private Vault Address : ");
+        console.logString("Uniswap Public Vault Address : ");
         console.logAddress(vault);
 
-        // #endregion create private vault.
+        // #endregion create public vault.
 
         // #region initialize oracle.
 
@@ -229,30 +231,30 @@ contract DeployV4PrivateVault is CreateXScript {
 
         // #region whitelist bunker module.
 
-        if (vaultOwner == msg.sender) {
-            address[] memory beacons = new address[](1);
-            beacons[0] = getBunkerModule();
+        // if (vaultOwner == msg.sender) {
+        //     address[] memory beacons = new address[](1);
+        //     beacons[0] = getBunkerModule();
 
-            bytes[] memory payloads = new bytes[](1);
-            payloads[0] = abi.encodeWithSelector(
-                IBunkerModule.initialize.selector, vault
-            );
+        //     bytes[] memory payloads = new bytes[](1);
+        //     payloads[0] = abi.encodeWithSelector(
+        //         IBunkerModule.initialize.selector, vault
+        //     );
 
-            IArrakisMetaVault(vault).whitelistModules(
-                beacons, payloads
-            );
-        }
+        //     IArrakisMetaVault(vault).whitelistModules(
+        //         beacons, payloads
+        //     );
+        // }
 
         // #endregion whitelist bunker module.
 
         // #region send ownership to safe.
 
-        if (sendOwnershipToSafe) {
-            ERC721(nft).approve(safe, uint256(uint160(vault)));
-            ERC721(nft).safeTransferFrom(
-                msg.sender, safe, uint256(uint160(vault))
-            );
-        }
+        // if (sendOwnershipToSafe) {
+        //     ERC721(nft).approve(safe, uint256(uint160(vault)));
+        //     ERC721(nft).safeTransferFrom(
+        //         msg.sender, safe, uint256(uint160(vault))
+        //     );
+        // }
 
         // #endregion send ownership to safe.
 
@@ -263,36 +265,8 @@ contract DeployV4PrivateVault is CreateXScript {
         uint256 chainId = block.chainid;
 
         // mainnet
-        if (chainId == 1) {
-            return 0x022a0C7dc85Fc3fF81f9f8Ef65Ae2813A062F556;
-        }
-        // polygon
-        else if (chainId == 137) {
-            return 0xFb4e25800b77BcD09227729FFCC145685797f408;
-        }
-        // optimism
-        else if (chainId == 10) {
-            return 0x413fc8E6F0B95D1f45de01b17e9441ec41eD01AB;
-        }
-        // sepolia
-        else if (chainId == 11_155_111) {
-            return 0xC0b7FaC163566A768B4F30d06fD4b08bb6b987F0;
-        }
-        // base
-        else if (chainId == 8453) {
-            return 0x97d42db1B71B1c9a811a73ce3505Ac00f9f6e5fB;
-        }
-        // Ink
-        else if (chainId == 57_073) {
-            return 0xCc8989978668ad377369C0cC720192377a6006e3;
-        }
-        // Unichain
-        else if (chainId == 130) {
-            return 0xCc8989978668ad377369C0cC720192377a6006e3;
-        }
-        // Arbitrum
-        else if (chainId == 42_161) {
-            return 0xe1a76410dfB11d6C60a43838FA853519f13dEef4;
+        if (chainId == 11_155_111) {
+            return 0xBCb6702BC617298a14cbb258AE6dbaf02Bd49596;
         }
         // default
         else {
@@ -304,36 +278,8 @@ contract DeployV4PrivateVault is CreateXScript {
         uint256 chainId = block.chainid;
 
         // mainnet
-        if (chainId == 1) {
-            return 0xFf0474792DEe71935a0CeF1306D93fC1DCF47BD9;
-        }
-        // polygon
-        else if (chainId == 137) {
-            return 0xD4ae05C8928d4850cDD0f800322108E6B1a8F3eB;
-        }
-        // optimism
-        else if (chainId == 10) {
-            return 0x79FC92aFa1Ce5476010644380156790d2fC52168;
-        }
-        // sepolia
-        else if (chainId == 11_155_111) {
+        if (chainId == 11_155_111) {
             return 0xB4dA34605c26BA152d465DeB885889070105BB5F;
-        }
-        // base
-        else if (chainId == 8453) {
-            return 0x3025b46A9814a69EAf8699EDf905784Ee22C3ABB;
-        }
-        // Ink
-        else if (chainId == 57_073) {
-            return 0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73;
-        }
-        // Unichain
-        else if (chainId == 130) {
-            return 0x4B6FEE838b3dADd5f0846a9f2d74081de96e6f73;
-        }
-        // Arbitrum
-        else if (chainId == 42_161) {
-            return 0xe25F763fa58de798AF2e454e916F527cdD17E885;
         }
         // default
         else {
@@ -345,36 +291,8 @@ contract DeployV4PrivateVault is CreateXScript {
         uint256 chainId = block.chainid;
 
         // mainnet
-        if (chainId == 1) {
-            return 0x000000000004444c5dc75cB358380D2e3dE08A90;
-        }
-        // polygon
-        else if (chainId == 137) {
-            return 0x67366782805870060151383F4BbFF9daB53e5cD6;
-        }
-        // optimism
-        else if (chainId == 10) {
-            return 0x9a13F98Cb987694C9F086b1F5eB990EeA8264Ec3;
-        }
-        // sepolia
-        else if (chainId == 11_155_111) {
+        if (chainId == 11_155_111) {
             return 0xE03A1074c86CFeDd5C142C4F04F1a1536e203543;
-        }
-        // base
-        else if (chainId == 8453) {
-            return 0x498581fF718922c3f8e6A244956aF099B2652b2b;
-        }
-        // Ink
-        else if (chainId == 57_073) {
-            return 0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32;
-        }
-        // Unichain
-        else if (chainId == 130) {
-            return 0x1F98400000000000000000000000000000000004;
-        }
-        // Arbitrum
-        else if (chainId == 42_161) {
-            return 0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32;
         }
         // default
         else {
