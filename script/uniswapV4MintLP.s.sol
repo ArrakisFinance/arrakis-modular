@@ -46,7 +46,7 @@ contract MintBetweenPrices is Script {
     int24 constant TICK_SPACING = 10;
     address constant HOOKS = address(0);
 
-    uint160 constant DESIRED_SQRT_PRICE = 1123710556419588856013850;
+    uint160 constant TARGET_SQRT_PRICE = 1123710556419588856013850;
     uint128 constant LIQUIDITY_UNITS = 1_000;
     uint128 constant MAX_AMOUNT0 = 20 ether;
     uint128 constant MAX_AMOUNT1 = 10 * 1e6; // USDC: 6 decimals
@@ -141,7 +141,7 @@ contract MintBetweenPrices is Script {
         uint160 currentSqrtPrice = _getSqrtPrice(poolKey.toId());
         (int24 tickLower, int24 tickUpper) = _computeTickRange(
             currentSqrtPrice,
-            DESIRED_SQRT_PRICE
+            TARGET_SQRT_PRICE
         );
 
         int24 currentTick = TickMath.getTickAtSqrtPrice(currentSqrtPrice);
