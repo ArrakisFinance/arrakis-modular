@@ -57,7 +57,6 @@ contract UniswapV4PriceManagement is Script {
     address constant HOOKS = address(0);
 
     // Position parameters
-    uint160 constant DESIRED_SQRT_PRICE = 1123710556419588856013850;
     uint128 constant LIQUIDITY_UNITS = 1_000;
     uint128 constant MAX_AMOUNT0 = 20 ether;
     uint128 constant MAX_AMOUNT1 = 10 * 1e6; // USDC: 6 decimals
@@ -191,7 +190,7 @@ contract UniswapV4PriceManagement is Script {
         uint160 currentSqrtPrice = _getSqrtPrice(poolKey.toId());
         (int24 tickLower, int24 tickUpper) = _computeTickRange(
             currentSqrtPrice,
-            DESIRED_SQRT_PRICE
+            TARGET_SQRT_PRICE
         );
 
         int24 currentTick = TickMath.getTickAtSqrtPrice(currentSqrtPrice);
