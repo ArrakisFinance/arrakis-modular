@@ -33,11 +33,11 @@ contract MintBetweenPrices is Script {
     address constant POOL_MANAGER_ADDRESS =
         0x498581fF718922c3f8e6A244956aF099B2652b2b;
 
-    IPoolManager public immutable poolManager = 
+    IPoolManager public immutable poolManager =
         IPoolManager(POOL_MANAGER_ADDRESS);
-    IPositionManager public immutable positionMgr = 
+    IPositionManager public immutable positionManager =
         IPositionManager(POSITION_MANAGER);
-    IMulticall_v4 public immutable positionMgrMulticall =
+    IMulticall_v4 public immutable positionManagerMulticall =
         IMulticall_v4(POSITION_MANAGER);
     IPermit2 public immutable permit2 = IPermit2(PERMIT2_ADDRESS);
 
@@ -172,16 +172,16 @@ contract MintBetweenPrices is Script {
         bytes[] memory queryIdAndMintLiquidityCalls = new bytes[](2);
 
         queryIdAndMintLiquidityCalls[0] = abi.encodeWithSelector(
-            positionMgr.nextTokenId.selector
+            positionManager.nextTokenId.selector
         );
 
         queryIdAndMintLiquidityCalls[1] = abi.encodeWithSelector(
-            positionMgr.modifyLiquidities.selector,
+            positionManager.modifyLiquidities.selector,
             abi.encode(actions, params),
             deadline
         );
 
-        bytes[] memory callsResults = positionMgrMulticall
+        bytes[] memory callsResults = positionManagerMulticall
             .multicall{value: ethValue}(queryIdAndMintLiquidityCalls);
 
         uint256 positionId = abi.decode(callsResults[0], (uint256));

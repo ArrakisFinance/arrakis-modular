@@ -35,7 +35,7 @@ contract BurnLPPosition is Script {
 
     IPoolManager public immutable poolManager =
         IPoolManager(POOL_MANAGER_ADDRESS);
-    IPositionManager public immutable positionMgr =
+    IPositionManager public immutable positionManager =
         IPositionManager(POSITION_MANAGER);
     IPermit2 public immutable permit2 = IPermit2(PERMIT2_ADDRESS);
 
@@ -160,7 +160,7 @@ contract BurnLPPosition is Script {
         uint256 deadline = block.timestamp + 2 minutes;
 
         // Execute the burn transaction - no approval needed
-        positionMgr.modifyLiquidities(abi.encode(actions, params), deadline);
+        positionManager.modifyLiquidities(abi.encode(actions, params), deadline);
 
         console.log("Liquidity position burned");
     }

@@ -9,10 +9,6 @@ forge-std/=lib/forge-std/src/
 @valantis-hot/contracts-test/=lib/valantis-hot/test/
 @uniswap/v4-core=./lib/v4-periphery/lib/v4-core
 @uniswap/v4-periphery/=./lib/v4-periphery/
-<<<<<<< HEAD
 @uniswap/permit2/=./lib/v4-periphery/lib/permit2/
 @pancakeswap/v4-core/=./lib/infinity-core/
 lib/infinity-core/:@openzeppelin/contracts/=/lib/infinity-core/lib/openzeppelin-contracts/contracts/
-=======
-@uniswap/permit2/=./lib/v4-periphery/lib/permit2/
->>>>>>> 0e067fe (feat: uni v4 mint LP script)

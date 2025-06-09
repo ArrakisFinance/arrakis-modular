@@ -8,16 +8,32 @@ import "@uniswap/v4-core/src/types/PoolKey.sol";
 import "@uniswap/v4-core/src/types/Currency.sol";
 import "@uniswap/v4-core/src/types/PoolId.sol";
 
-address constant poolManagerAddress = 0x000000000004444c5dc75cB358380D2e3dE08A90;
-address constant token0 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
-address constant token1 = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
-uint24 constant fee = 499;
-int24 constant tickSpacing = 10;
-address constant hooks = address(0);
+/**
+ * @title CreatePool
+ * @notice Script that creates a Uniswap V4 pool with the specified user parameters
+ */
+contract CreatePool is Script {
+    // ───────────── Immutable Environment ─────────────
+    address constant POOL_MANAGER_ADDRESS = 
+        0x498581fF718922c3f8e6A244956aF099B2652b2b;
 
-uint160 constant startingSqrtPriceX96 = 79228162514264337593543950336; // 1:1 default
+    IPoolManager public immutable poolManager =
+        IPoolManager(POOL_MANAGER_ADDRESS);
 
-contract UniV4CreatePool is Script {
+    // ───────────── User Parameters ─────────────
+    address constant token0 = 
+        0x4200000000000000000000000000000000000006; // WETH
+    address constant token1 = 
+        0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; // USDC
+    uint24 constant fee = 499;
+    int24 constant tickSpacing = 10;
+    address constant hooks = address(0);
+
+    uint160 constant startingSqrtPriceX96 = 
+        79228162514264337593543950336; // 1:1 default
+
+
+    // ───────────── Entry Points ─────────────
     function run() external {
         vm.startBroadcast();
 
@@ -40,9 +56,6 @@ contract UniV4CreatePool is Script {
             tickSpacing: tickSpacing,
             hooks: IHooks(hooks)
         });
-
-        // Initialize the PoolManager contract
-        IPoolManager poolManager = IPoolManager(poolManagerAddress);
 
         // Create the pool
         // @dev Potential custom errrors:
