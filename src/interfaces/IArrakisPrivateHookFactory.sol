@@ -8,6 +8,16 @@ interface IArrakisPrivateHookFactory {
 
     // #endregion errors.
 
+    // #region events.
+
+    event LogCreatePrivateHook(
+        address indexed hook,
+        address indexed module,
+        bytes32 salt
+    );
+
+    // #endregion events.
+
     function createPrivateHook(
         address module_,
         bytes32 salt_

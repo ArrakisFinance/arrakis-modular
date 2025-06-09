@@ -25,6 +25,7 @@ import {
 } from "../structs/SUniswapV4.sol";
 import {UnderlyingV4} from "../libraries/UnderlyingV4.sol";
 import {UniswapV4} from "../libraries/UniswapV4.sol";
+import {IDistributor} from "../interfaces/IDistributor.sol";
 
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -41,14 +42,8 @@ import {ReentrancyGuardUpgradeable} from
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
-import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
-import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
-import {
-    Currency,
-    CurrencyLibrary
-} from "@uniswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {
     PoolId,
@@ -58,12 +53,6 @@ import {IUnlockCallback} from
     "@uniswap/v4-core/src/interfaces/callback/IUnlockCallback.sol";
 import {StateLibrary} from
     "@uniswap/v4-core/src/libraries/StateLibrary.sol";
-import {TransientStateLibrary} from
-    "@uniswap/v4-core/src/libraries/TransientStateLibrary.sol";
-import {
-    BalanceDelta,
-    BalanceDeltaLibrary
-} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 
 /// @notice this module can only set uni v4 pool that have generic hook,
 /// that don't require specific action to become liquidity provider.
@@ -81,12 +70,8 @@ abstract contract UniV4StandardModule is
 {
     using SafeERC20 for IERC20Metadata;
     using PoolIdLibrary for PoolKey;
-    using CurrencyLibrary for Currency;
-    using Hooks for IHooks;
     using Address for address payable;
     using StateLibrary for IPoolManager;
-    using TransientStateLibrary for IPoolManager;
-    using BalanceDeltaLibrary for BalanceDelta;
     using UniswapV4 for IUniV4StandardModule;
 
     // #region enum.
@@ -103,6 +88,8 @@ abstract contract UniV4StandardModule is
 
     /// @notice function used to get the uniswap v4 pool manager.
     IPoolManager public immutable poolManager;
+    IDistributor public immutable distributor;
+    address public immutable collector;
 
     // #endregion immutable properties.
 
@@ -145,6 +132,12 @@ abstract contract UniV4StandardModule is
 
     // #endregion internal properties.
 
+    // #region storage gaps.
+
+    uint256[37] internal __gap;
+
+    // #endregion storage gaps.
+
     // #region modifiers.
 
     modifier onlyManager() {
@@ -171,15 +164,24 @@ abstract contract UniV4StandardModule is
 
     // #endregion modifiers.
 
-    constructor(address poolManager_, address guardian_) {
+    constructor(
+        address poolManager_,
+        address guardian_,
+        address distributor_,
+        address collector_
+    ) {
         // #region checks.
         if (poolManager_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
+        if (distributor_ == address(0)) revert AddressZero();
+        if (collector_ == address(0)) revert AddressZero();
         // #endregion checks.
 
         poolManager = IPoolManager(poolManager_);
 
         _guardian = guardian_;
+        distributor = IDistributor(distributor_);
+        collector = collector_;
 
         _disableInitializers();
     }
@@ -266,6 +268,10 @@ abstract contract UniV4StandardModule is
 
         // #endregion poolKey initialization.
 
+        IDistributor(distributor).toggleOperator(
+            address(this), collector
+        );
+
         __ReentrancyGuard_init();
         __Pausable_init();
     }
@@ -280,6 +286,7 @@ abstract contract UniV4StandardModule is
 
     // #region vault owner functions.
 
+    /// @inheritdoc IUniV4StandardModule
     function withdrawEth(
         uint256 amount_
     ) external nonReentrant whenNotPaused {
@@ -290,32 +297,40 @@ abstract contract UniV4StandardModule is
 
         ethWithdrawers[msg.sender] -= amount_;
         payable(msg.sender).sendValue(amount_);
+
+        emit LogWithdrawETH(msg.sender, amount_);
     }
 
+    /// @inheritdoc IUniV4StandardModule
     function approve(
         address spender_,
-        uint256 amount0_,
-        uint256 amount1_
+        address[] calldata tokens_,
+        uint256[] calldata amounts_
     ) external nonReentrant whenNotPaused {
         if (msg.sender != IOwnable(address(metaVault)).owner()) {
             revert OnlyMetaVaultOwner();
         }
-
-        IERC20Metadata _token0 = token0;
-        IERC20Metadata _token1 = token1;
-
-        if (address(_token0) != NATIVE_COIN) {
-            _token0.forceApprove(spender_, amount0_);
-        } else {
-            ethWithdrawers[spender_] = amount0_;
-        }
-        if (address(_token1) != NATIVE_COIN) {
-            _token1.forceApprove(spender_, amount1_);
-        } else {
-            ethWithdrawers[spender_] = amount1_;
+        uint256 length = tokens_.length;
+        if (length != amounts_.length) {
+            revert LengthsNotEqual();
         }
 
-        emit LogApproval(spender_, amount0_, amount1_);
+        for (uint256 i; i < length; i++) {
+            address token = tokens_[i];
+            uint256 amount = amounts_[i];
+
+            if (token == address(0)) {
+                revert AddressZero();
+            }
+
+            if (address(token) != NATIVE_COIN) {
+                IERC20Metadata(token).forceApprove(spender_, amount);
+            } else {
+                ethWithdrawers[spender_] = amount;
+            }
+        }
+
+        emit LogApproval(spender_, tokens_, amounts_);
     }
 
     // #endregion vault owner functions.
@@ -640,10 +655,10 @@ abstract contract UniV4StandardModule is
             );
         }
 
-        amount0 =
-            amount0 - FullMath.mulDiv(fees0, managerFeePIPS, PIPS);
-        amount1 =
-            amount1 - FullMath.mulDiv(fees1, managerFeePIPS, PIPS);
+        amount0 = amount0
+            - FullMath.mulDivRoundingUp(fees0, managerFeePIPS, PIPS);
+        amount1 = amount1
+            - FullMath.mulDivRoundingUp(fees1, managerFeePIPS, PIPS);
 
         if (isInversed) {
             (amount0, amount1) = (amount1, amount0);
@@ -682,10 +697,10 @@ abstract contract UniV4StandardModule is
             );
         }
 
-        amount0 =
-            amount0 - FullMath.mulDiv(fees0, managerFeePIPS, PIPS);
-        amount1 =
-            amount1 - FullMath.mulDiv(fees1, managerFeePIPS, PIPS);
+        amount0 = amount0
+            - FullMath.mulDivRoundingUp(fees0, managerFeePIPS, PIPS);
+        amount1 = amount1
+            - FullMath.mulDivRoundingUp(fees1, managerFeePIPS, PIPS);
 
         if (isInversed) {
             (amount0, amount1) = (amount1, amount0);
@@ -747,8 +762,8 @@ abstract contract UniV4StandardModule is
 
         // #region check deviation.
 
-        uint256 deviation = FullMath.mulDiv(
-            FullMath.mulDiv(
+        uint256 deviation = FullMath.mulDivRoundingUp(
+            FullMath.mulDivRoundingUp(
                 poolPrice > oraclePrice
                     ? poolPrice - oraclePrice
                     : oraclePrice - poolPrice,
@@ -772,31 +787,7 @@ abstract contract UniV4StandardModule is
         view
         returns (uint256 managerFee0)
     {
-        PoolKey memory _poolKey = poolKey;
-        PoolRange[] memory poolRanges =
-            UniswapV4._getPoolRanges(_ranges, _poolKey);
-
-        (uint256 leftOver0, uint256 leftOver1) =
-            IUniV4StandardModule(this)._getLeftOvers(_poolKey);
-
-        (uint160 sqrtPriceX96_,,,) =
-            poolManager.getSlot0(PoolIdLibrary.toId(_poolKey));
-
-        (,, uint256 fee0, uint256 fee1) = UnderlyingV4
-            .totalUnderlyingAtPriceWithFees(
-            UnderlyingPayload({
-                ranges: poolRanges,
-                poolManager: poolManager,
-                self: address(this),
-                leftOver0: leftOver0,
-                leftOver1: leftOver1
-            }),
-            sqrtPriceX96_
-        );
-
-        managerFee0 = isInversed
-            ? FullMath.mulDiv(fee1, managerFeePIPS, PIPS)
-            : FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
+        return _managerBalance(true);
     }
 
     /// @notice function used to get manager token1 balance.
@@ -807,6 +798,16 @@ abstract contract UniV4StandardModule is
         view
         returns (uint256 managerFee1)
     {
+        return _managerBalance(false);
+    }
+
+    // #endregion view functions.
+
+    // #region internal functions.
+
+    function _managerBalance(
+        bool isToken0_
+    ) internal view returns (uint256 managerBalance) {
         PoolKey memory _poolKey = poolKey;
         PoolRange[] memory poolRanges =
             UniswapV4._getPoolRanges(_ranges, _poolKey);
@@ -829,14 +830,12 @@ abstract contract UniV4StandardModule is
             sqrtPriceX96_
         );
 
-        managerFee1 = isInversed
-            ? FullMath.mulDiv(fee0, managerFeePIPS, PIPS)
-            : FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
+        (fee0, fee1) = isInversed ? (fee1, fee0) : (fee0, fee1);
+
+        managerBalance = isToken0_
+            ? FullMath.mulDivRoundingUp(fee0, managerFeePIPS, PIPS)
+            : FullMath.mulDivRoundingUp(fee1, managerFeePIPS, PIPS);
     }
-
-    // #endregion view functions.
-
-    // #region internal functions.
 
     function _unlockCallback(
         Action action_,

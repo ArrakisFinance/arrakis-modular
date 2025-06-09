@@ -7,9 +7,6 @@ import {
     RangeData
 } from "../structs/SUniswapV4.sol";
 import {BASE, PIPS} from "../constants/CArrakis.sol";
-import {IUniV4ModuleBase} from "../interfaces/IUniV4ModuleBase.sol";
-import {IUniV4StandardModule} from
-    "../interfaces/IUniV4StandardModule.sol";
 import {IArrakisLPModule} from "../interfaces/IArrakisLPModule.sol";
 
 import {IPoolManager} from
@@ -23,6 +20,8 @@ import {
     PoolIdLibrary,
     PoolId
 } from "@uniswap/v4-core/src/types/PoolId.sol";
+import {PoolKey} from
+    "@uniswap/v4-core/src/types/PoolKey.sol";
 import {StateLibrary} from
     "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TransientStateLibrary} from
@@ -39,6 +38,7 @@ import {SafeCast} from
 library UnderlyingV4 {
     using StateLibrary for IPoolManager;
     using TransientStateLibrary for IPoolManager;
+    using PoolIdLibrary for PoolKey;
 
     // solhint-disable-next-line function-max-lines
     function totalUnderlyingForMint(
@@ -68,9 +68,9 @@ library UnderlyingV4 {
         uint256 managerFeePIPS =
             IArrakisLPModule(underlyingPayload_.self).managerFeePIPS();
 
-        fee0 = fee0 - FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
+        fee0 = fee0 - FullMath.mulDivRoundingUp(fee0, managerFeePIPS, PIPS);
 
-        fee1 = fee1 - FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
+        fee1 = fee1 - FullMath.mulDivRoundingUp(fee1, managerFeePIPS, PIPS);
 
         amount0 += FullMath.mulDivRoundingUp(
             proportion_, fee0 + underlyingPayload_.leftOver0, BASE
@@ -129,7 +129,7 @@ library UnderlyingV4 {
     {
         if (sqrtPriceX96_ == 0) {
             (sqrtPriceX96_,,,) = underlying_.poolManager.getSlot0(
-                PoolIdLibrary.toId(underlying_.range.poolKey)
+                underlying_.range.poolKey.toId()
             );
         }
 
@@ -160,7 +160,7 @@ library UnderlyingV4 {
         )
     {
         (uint160 sqrtPriceX96,,,) = underlying_.poolManager.getSlot0(
-            PoolIdLibrary.toId(underlying_.range.poolKey)
+            underlying_.range.poolKey.toId()
         );
         PositionUnderlying memory positionUnderlying =
         PositionUnderlying({
@@ -192,7 +192,7 @@ library UnderlyingV4 {
         Position.State memory positionState;
         {
             PoolId poolId =
-                PoolIdLibrary.toId(positionUnderlying_.poolKey);
+                positionUnderlying_.poolKey.toId();
 
             // compute current fees earned
             (
@@ -254,7 +254,7 @@ library UnderlyingV4 {
         )
     {
         PoolId poolId =
-            PoolIdLibrary.toId(positionUnderlying_.poolKey);
+            positionUnderlying_.poolKey.toId();
 
         // compute current fees earned
         (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128) =

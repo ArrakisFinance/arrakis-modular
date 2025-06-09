@@ -74,8 +74,7 @@ contract MigrationHelperTest is TestWrapper {
 
         palmTerms =
             vm.addr(uint256(keccak256(abi.encode("PALMTerms"))));
-        poolManager =
-            _deployPoolManager();
+        poolManager = _deployPoolManager();
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
 
         safe = address(new SafeMock(WETH, USDC));
@@ -146,12 +145,25 @@ contract MigrationHelperTest is TestWrapper {
 
     // #region test migrate vault function.
 
+    function test_migrate_vault_payload_outdated() public {
+        migrationHelper = new MigrationHelper(
+            palmTerms, factory, manager, poolManager, WETH, owner
+        );
+
+        IMigrationHelper.Migration memory migration;
+
+        vm.expectRevert(IMigrationHelper.PayloadOutdated.selector);
+        migrationHelper.migrateVault(migration);
+    }
+
     function test_migrate_vault_unauthorized() public {
         migrationHelper = new MigrationHelper(
             palmTerms, factory, manager, poolManager, WETH, owner
         );
 
         IMigrationHelper.Migration memory migration;
+
+        migration.timestampLimit = block.timestamp + 60;
 
         vm.expectRevert(Ownable.Unauthorized.selector);
         migrationHelper.migrateVault(migration);
@@ -194,7 +206,9 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -242,7 +256,9 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -290,7 +306,9 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -337,6 +355,8 @@ contract MigrationHelperTest is TestWrapper {
 
         MigrationHelper.Migration memory migration;
 
+        migration.timestampLimit = block.timestamp + 60;
+
         migration.poolCreation.poolKey = poolKey;
         migration.poolCreation.sqrtPriceX96 = 0;
         migration.safe = safe;
@@ -345,9 +365,7 @@ contract MigrationHelperTest is TestWrapper {
         // #endregion create migration struct.
 
         vm.prank(safe);
-        vm.expectRevert(
-            IMigrationHelper.InvalidSqrtPrice.selector
-        );
+        vm.expectRevert(IMigrationHelper.InvalidSqrtPrice.selector);
         migrationHelper.migrateVault(migration);
     }
 
@@ -388,7 +406,9 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -438,8 +458,10 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
-        
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
+
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -487,8 +509,10 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
-        
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
+
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -536,8 +560,10 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
-        
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
+
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -585,8 +611,10 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
-        
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
+
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -634,7 +662,9 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -682,7 +712,9 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -730,7 +762,9 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -778,7 +812,9 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -826,7 +862,9 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
 
@@ -874,7 +912,9 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
         migration.rebalancePayloads = new bytes[](1);
@@ -923,7 +963,9 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
         migration.rebalancePayloads = new bytes[](1);
@@ -972,7 +1014,9 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
         migration.rebalancePayloads = new bytes[](1);
@@ -1021,7 +1065,9 @@ contract MigrationHelperTest is TestWrapper {
         MigrationHelper.Migration memory migration;
 
         migration.poolCreation.poolKey = poolKey;
-        migration.poolCreation.sqrtPriceX96 = 1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.poolCreation.sqrtPriceX96 =
+            1_356_476_084_642_877_807_665_053_548_195_417;
+        migration.timestampLimit = block.timestamp + 60;
         migration.safe = safe;
         migration.closeTerm.vault = IArrakisV2(address(vaultV2));
         migration.rebalancePayloads = new bytes[](1);

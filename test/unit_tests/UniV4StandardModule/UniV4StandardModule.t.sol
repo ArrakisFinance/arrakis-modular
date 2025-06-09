@@ -47,6 +47,8 @@ import {
     CurrencyLibrary
 } from "@uniswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {PoolId, PoolIdLibrary} from
+    "@uniswap/v4-core/src/types/PoolId.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
@@ -80,6 +82,7 @@ interface IERC20USDT {
 contract UniV4StandardModuleTest is TestWrapper {
     using StateLibrary for IPoolManager;
     using TransientStateLibrary for IPoolManager;
+    using PoolIdLibrary for PoolKey;
 
     // #region constants.
 
@@ -89,6 +92,9 @@ contract UniV4StandardModuleTest is TestWrapper {
         0xdAC17F958D2ee523a2206206994597C13D831ec7;
     address public constant WETH =
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+
+    address public constant distributor =
+        0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
 
     // #endregion constants.
 
@@ -101,6 +107,7 @@ contract UniV4StandardModuleTest is TestWrapper {
     address public metaVault;
     address public guardian;
     address public owner;
+    address public collector;
 
     // #region mocks contracts.
 
@@ -114,6 +121,8 @@ contract UniV4StandardModuleTest is TestWrapper {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
+        collector =
+            vm.addr(uint256(keccak256(abi.encode("Collector"))));
 
         // #region meta vault creation.
 
@@ -177,7 +186,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -303,7 +312,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
     function testConstructorPoolManagerAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        new UniV4StandardModulePublic(address(0), guardian);
+        new UniV4StandardModulePublic(address(0), guardian, distributor, collector);
     }
 
     function testConstructorMetaVaultAddressZero() public {
@@ -312,7 +321,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -336,7 +345,7 @@ contract UniV4StandardModuleTest is TestWrapper {
     function testConstructorGuardianAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         new UniV4StandardModulePublic(
-            address(poolManager), address(0)
+            address(poolManager), address(0), distributor, collector
         );
     }
 
@@ -359,7 +368,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -407,7 +416,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -453,7 +462,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -499,7 +508,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -547,7 +556,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -595,7 +604,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -643,7 +652,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -687,7 +696,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -738,7 +747,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -787,7 +796,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         poolManager.unlock(abi.encode(2));
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -828,7 +837,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -859,7 +868,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implmentation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -931,7 +940,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -971,19 +980,69 @@ contract UniV4StandardModuleTest is TestWrapper {
         address spender =
             vm.addr(uint256(keccak256(abi.encode("Spender"))));
 
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
+
+        tokens[0] = NATIVE_COIN;
+        tokens[1] = USDC;
+        amounts[0] = 1e18;
+        amounts[1] = 3000e6;
+
         vm.expectRevert(
             IUniV4StandardModule.OnlyMetaVaultOwner.selector
         );
         vm.prank(notMetaVaultOwner);
-        module.approve(spender, 3000e6, 1e18);
+        module.approve(spender, tokens, amounts);
+    }
+
+    function testApproveLengthsNotEqual() public {
+        address spender =
+            vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        address[] memory tokens = new address[](1);
+        uint256[] memory amounts = new uint256[](2);
+
+        tokens[0] = NATIVE_COIN;
+        amounts[0] = 1e18;
+        amounts[1] = 3000e6;
+
+        vm.expectRevert(
+            IUniV4StandardModule.LengthsNotEqual.selector
+        );
+        vm.prank(owner);
+        module.approve(spender, tokens, amounts);
+    }
+
+    function testApproveAddressZero() public {
+        address spender =
+            vm.addr(uint256(keccak256(abi.encode("Spender"))));
+
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
+
+        tokens[1] = USDC;
+        amounts[0] = 1e18;
+        amounts[1] = 3000e6;
+
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+        vm.prank(owner);
+        module.approve(spender, tokens, amounts);
     }
 
     function testApprove() public {
         address spender =
             vm.addr(uint256(keccak256(abi.encode("Spender"))));
 
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
+
+        tokens[0] = WETH;
+        tokens[1] = USDC;
+        amounts[0] = 1e18;
+        amounts[1] = 3000e6;
+
         vm.prank(owner);
-        module.approve(spender, 3000e6, 1e18);
+        module.approve(spender, tokens, amounts);
 
         assertEq(
             IERC20Metadata(USDC).allowance(address(module), spender),
@@ -1019,7 +1078,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -1044,67 +1103,16 @@ contract UniV4StandardModuleTest is TestWrapper {
         address spender =
             vm.addr(uint256(keccak256(abi.encode("Spender"))));
 
-        vm.prank(owner);
-        module.approve(spender, 3000e6, 1e18);
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
 
-        assertEq(
-            IERC20Metadata(USDC).allowance(address(module), spender),
-            3000e6
-        );
-        assertEq(module.ethWithdrawers(spender), 1e18);
-    }
-
-    function testApproveToken1Native() public {
-        uint256 init0 = 1e18;
-        uint256 init1 = 3000e6;
-
-        Currency currency0 = Currency.wrap(address(0));
-        Currency currency1 = Currency.wrap(USDC);
-
-        poolKey = PoolKey({
-            currency0: currency0,
-            currency1: currency1,
-            fee: 10_000,
-            tickSpacing: 20,
-            hooks: IHooks(address(0))
-        });
-
-        sqrtPriceX96 = 4_073_749_093_844_602_324_196_220; // 2645,5 USDC/WETH.
-
-        poolManager.unlock(abi.encode(2));
-
-        ArrakisMetaVaultMock(metaVault).setTokens(NATIVE_COIN, USDC);
-
-        {
-            address implementation = address(
-                new UniV4StandardModulePublic(
-                    address(poolManager), guardian
-                )
-            );
-
-            bytes memory data = abi.encodeWithSelector(
-                IUniV4StandardModule.initialize.selector,
-                init0,
-                init1,
-                false,
-                poolKey,
-                IOracleWrapper(address(oracle)),
-                TEN_PERCENT,
-                metaVault
-            );
-
-            module = UniV4StandardModulePublic(
-                payable(
-                    address(new ERC1967Proxy(implementation, data))
-                )
-            );
-        }
-
-        address spender =
-            vm.addr(uint256(keccak256(abi.encode("Spender"))));
+        tokens[0] = NATIVE_COIN;
+        tokens[1] = USDC;
+        amounts[0] = 1e18;
+        amounts[1] = 3000e6;
 
         vm.prank(owner);
-        module.approve(spender, 1e18, 3000e6);
+        module.approve(spender, tokens, amounts);
 
         assertEq(
             IERC20Metadata(USDC).allowance(address(module), spender),
@@ -1172,7 +1180,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -1194,8 +1202,16 @@ contract UniV4StandardModuleTest is TestWrapper {
             );
         }
 
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
+
+        tokens[0] = NATIVE_COIN;
+        tokens[1] = USDC;
+        amounts[0] = 1e18;
+        amounts[1] = 3000e6;
+
         vm.prank(owner);
-        module.approve(spender, 1e18, 3000e6);
+        module.approve(spender, tokens, amounts);
 
         assertEq(
             IERC20Metadata(USDC).allowance(address(module), spender),
@@ -2545,7 +2561,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -2608,7 +2624,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -2672,7 +2688,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -2737,7 +2753,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -2860,7 +2876,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -2923,7 +2939,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -2986,7 +3002,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -3416,11 +3432,11 @@ contract UniV4StandardModuleTest is TestWrapper {
         module.withdrawManagerBalance();
 
         assertEq(
-            IERC20Metadata(USDC).balanceOf(address(manager)), 344
+            IERC20Metadata(USDC).balanceOf(address(manager)), 345
         );
         assertEq(
             IERC20Metadata(WETH).balanceOf(address(manager)),
-            29_641_691_633_406
+            29_641_691_633_407
         );
     }
 
@@ -4183,6 +4199,15 @@ contract UniV4StandardModuleTest is TestWrapper {
             tickUpper: tickUpper
         });
 
+        PoolId poolId = poolKey.toId();
+
+        IUniV4StandardModule.Range[] memory ranges =
+            module.getRanges();
+
+        (sqrtPriceX96,,,) = IPoolManager(poolManager).getSlot0(
+            poolId
+        );
+
         (uint256 amount0, uint256 amount1) = module.totalUnderlying();
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
@@ -4193,6 +4218,22 @@ contract UniV4StandardModuleTest is TestWrapper {
             amount1 / 2
         );
 
+        (uint128 liq,,) = IPoolManager(poolManager).getPositionInfo(
+            poolKey.toId(),
+            address(module),
+            ranges[0].tickLower,
+            ranges[0].tickUpper,
+            bytes32(0)
+        );
+
+        (uint256 amt0, uint256 amt1) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            SafeCast.toUint128(liquidity)
+        );
+
         liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
@@ -4200,15 +4241,23 @@ contract UniV4StandardModuleTest is TestWrapper {
             )
         });
 
+        (uint256 amt0ToBurn, uint256 amt1ToBurn) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(ranges[0].tickLower),
+            TickMath.getSqrtPriceAtTick(ranges[0].tickUpper),
+            liq
+        );
+
         vm.prank(manager);
         vm.expectRevert(IUniV4StandardModule.BurnToken0.selector);
         module.rebalance(
             liquidityRanges,
             swapPayload,
-            2_002_634_382,
-            1_276_829_913_980_718_268,
-            872_684_510,
-            344_768_409_376_855_241
+            amt0ToBurn + 2,
+            amt1ToBurn,
+            amt0,
+            amt1
         );
 
         // #endregion change ranges.
@@ -4305,6 +4354,15 @@ contract UniV4StandardModuleTest is TestWrapper {
             tickUpper: tickUpper
         });
 
+        PoolId poolId = poolKey.toId();
+
+        IUniV4StandardModule.Range[] memory ranges =
+            module.getRanges();
+
+        (sqrtPriceX96,,,) = IPoolManager(poolManager).getSlot0(
+            poolId
+        );
+
         (uint256 amount0, uint256 amount1) = module.totalUnderlying();
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
@@ -4315,6 +4373,22 @@ contract UniV4StandardModuleTest is TestWrapper {
             amount1 / 2
         );
 
+        (uint128 liq,,) = IPoolManager(poolManager).getPositionInfo(
+            poolKey.toId(),
+            address(module),
+            ranges[0].tickLower,
+            ranges[0].tickUpper,
+            bytes32(0)
+        );
+
+        (uint256 amt0, uint256 amt1) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            SafeCast.toUint128(liquidity)
+        );
+
         liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
@@ -4322,15 +4396,23 @@ contract UniV4StandardModuleTest is TestWrapper {
             )
         });
 
+        (uint256 amt0ToBurn, uint256 amt1ToBurn) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(ranges[0].tickLower),
+            TickMath.getSqrtPriceAtTick(ranges[0].tickUpper),
+            liq
+        );
+
         vm.prank(manager);
         vm.expectRevert(IUniV4StandardModule.BurnToken1.selector);
         module.rebalance(
             liquidityRanges,
             swapPayload,
-            2_002_634_381,
-            1_276_829_913_980_718_269,
-            872_684_510,
-            344_768_409_376_855_241
+            amt0ToBurn,
+            amt1ToBurn + 2,
+            amt0,
+            amt1
         );
 
         // #endregion change ranges.
@@ -4427,6 +4509,15 @@ contract UniV4StandardModuleTest is TestWrapper {
             tickUpper: tickUpper
         });
 
+        PoolId poolId = poolKey.toId();
+
+        IUniV4StandardModule.Range[] memory ranges =
+            module.getRanges();
+
+        (sqrtPriceX96,,,) = IPoolManager(poolManager).getSlot0(
+            poolId
+        );
+
         (uint256 amount0, uint256 amount1) = module.totalUnderlying();
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
@@ -4437,6 +4528,22 @@ contract UniV4StandardModuleTest is TestWrapper {
             amount1 / 2
         );
 
+        (uint128 liq,,) = IPoolManager(poolManager).getPositionInfo(
+            poolKey.toId(),
+            address(module),
+            ranges[0].tickLower,
+            ranges[0].tickUpper,
+            bytes32(0)
+        );
+
+        (uint256 amt0, uint256 amt1) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            SafeCast.toUint128(liquidity)
+        );
+
         liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
             range: range,
             liquidity: SafeCast.toInt128(
@@ -4444,15 +4551,23 @@ contract UniV4StandardModuleTest is TestWrapper {
             )
         });
 
+        (uint256 amt0ToBurn, uint256 amt1ToBurn) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            liq
+        );
+
         vm.prank(manager);
         vm.expectRevert(IUniV4StandardModule.MintToken0.selector);
         module.rebalance(
             liquidityRanges,
             swapPayload,
-            2_002_634_381,
-            1_276_829_913_980_718_268,
-            872_684_511,
-            344_768_409_376_855_241
+            amt0ToBurn,
+            amt1ToBurn,
+            amt0 + 2,
+            amt1
         );
 
         // #endregion change ranges.
@@ -4549,6 +4664,23 @@ contract UniV4StandardModuleTest is TestWrapper {
             tickUpper: tickUpper
         });
 
+        PoolId poolId = poolKey.toId();
+
+        IUniV4StandardModule.Range[] memory ranges =
+            module.getRanges();
+
+        (sqrtPriceX96,,,) = IPoolManager(poolManager).getSlot0(
+            poolId
+        );
+
+        (uint128 liq,,) = IPoolManager(poolManager).getPositionInfo(
+            poolKey.toId(),
+            address(module),
+            ranges[0].tickLower,
+            ranges[0].tickUpper,
+            bytes32(0)
+        );
+
         (uint256 amount0, uint256 amount1) = module.totalUnderlying();
 
         liquidity = LiquidityAmounts.getLiquidityForAmounts(
@@ -4557,6 +4689,22 @@ contract UniV4StandardModuleTest is TestWrapper {
             TickMath.getSqrtPriceAtTick(tickUpper),
             amount0 / 2,
             amount1 / 2
+        );
+
+        (uint256 amt0, uint256 amt1) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            SafeCast.toUint128(liquidity)
+        );
+
+        (uint256 amt0ToBurn, uint256 amt1ToBurn) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            sqrtPriceX96,
+            TickMath.getSqrtPriceAtTick(tickLower),
+            TickMath.getSqrtPriceAtTick(tickUpper),
+            liq
         );
 
         liquidityRanges[1] = IUniV4StandardModule.LiquidityRange({
@@ -4571,10 +4719,10 @@ contract UniV4StandardModuleTest is TestWrapper {
         module.rebalance(
             liquidityRanges,
             swapPayload,
-            2_002_634_381,
-            1_276_829_913_980_718_268,
-            872_684_510,
-            344_768_409_376_855_242
+            amt0ToBurn,
+            amt1ToBurn,
+            amt0,
+            amt1 + 2
         );
 
         // #endregion change ranges.
@@ -4604,7 +4752,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -4767,7 +4915,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -4922,7 +5070,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -5087,7 +5235,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -5252,7 +5400,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -5496,11 +5644,11 @@ contract UniV4StandardModuleTest is TestWrapper {
         assertEq(IERC20Metadata(WETH).balanceOf(receiver), amount1);
 
         assertEq(
-            IERC20Metadata(USDC).balanceOf(address(manager)), 344
+            IERC20Metadata(USDC).balanceOf(address(manager)), 345
         );
         assertEq(
             IERC20Metadata(WETH).balanceOf(address(manager)),
-            29_641_691_633_406
+            29_641_691_633_407
         );
 
         // #endregion withdraw.
@@ -5649,7 +5797,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -5818,7 +5966,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -5977,7 +6125,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -6145,7 +6293,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -6313,7 +6461,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -6503,7 +6651,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -6756,7 +6904,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -6977,7 +7125,7 @@ contract UniV4StandardModuleTest is TestWrapper {
         {
             address implementation = address(
                 new UniV4StandardModulePublic(
-                    address(poolManager), guardian
+                    address(poolManager), guardian, distributor, collector
                 )
             );
 
@@ -7140,7 +7288,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePublic(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -7284,7 +7432,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         balance0 = module.managerBalance0();
 
-        assertEq(balance0, 344);
+        assertEq(balance0, 345);
     }
 
     // #endregion test managerBalance0.
@@ -7373,7 +7521,7 @@ contract UniV4StandardModuleTest is TestWrapper {
 
         balance1 = module.managerBalance1();
 
-        assertEq(balance1, 29_641_691_633_406);
+        assertEq(balance1, 29_641_691_633_407);
     }
 
     // #endregion test managerBalance0.

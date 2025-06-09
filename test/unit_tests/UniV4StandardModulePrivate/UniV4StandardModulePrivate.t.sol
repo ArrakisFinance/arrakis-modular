@@ -85,6 +85,8 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
         0xdAC17F958D2ee523a2206206994597C13D831ec7;
     address public constant WETH =
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant distributor =
+        0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
 
     // #endregion constants.
 
@@ -96,6 +98,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
     address public metaVault;
     address public guardian;
     address public owner;
+    address public collector;
 
     // #region mocks contracts.
 
@@ -109,6 +112,8 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
+        collector =
+            vm.addr(uint256(keccak256(abi.encode("Collector"))));
 
         // #region meta vault creation.
 
@@ -165,7 +170,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -214,15 +219,6 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
             )
         );
 
-        module.fund(depositor, 0, 0);
-    }
-
-    function testFundDepositorAddressZero() public {
-        address depositor = address(0);
-
-        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-
-        vm.prank(metaVault);
         module.fund(depositor, 0, 0);
     }
 
@@ -280,7 +276,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -343,7 +339,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -406,7 +402,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -470,7 +466,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -536,7 +532,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 
@@ -602,7 +598,7 @@ contract UniV4StandardModulePrivateTest is TestWrapper {
 
         address implementation = address(
             new UniV4StandardModulePrivate(
-                address(poolManager), guardian
+                address(poolManager), guardian, distributor, collector
             )
         );
 

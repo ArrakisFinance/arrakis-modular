@@ -127,6 +127,9 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant USDC =
         0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+
+    address public constant distributor =
+        0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
     // #endregion constant properties.
 
     // #region arrakis modular contracts.
@@ -184,6 +187,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
     address public owner;
     address public owner0;
     address public owner1;
+    address public collector;
 
     /// @dev should be used as a private module.
     address public uniswapStandardModuleImplementation;
@@ -246,6 +250,8 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         owner0 = vm.addr(10);
         owner1 = vm.addr(11);
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
+        collector =
+            vm.addr(uint256(keccak256(abi.encode("Collector"))));
         executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
         stratAnnouncer =
             vm.addr(uint256(keccak256(abi.encode("StratAnnouncer"))));
@@ -1400,6 +1406,8 @@ contract UniswapV4PrivateIntegration is TestWrapper {
 
         IMigrationHelper.Migration memory migration;
 
+        migration.timestampLimit = block.timestamp + 60;
+
         migration.safe = GELOwner;
         migration.closeTerm.vault = IArrakisV2(GELV2Vault);
         migration.closeTerm.newOwner = address(0);
@@ -1522,6 +1530,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         });
 
         migration.poolCreation.sqrtPriceX96 = sqrtPrice;
+        migration.timestampLimit = block.timestamp + 60;
 
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));
@@ -1622,6 +1631,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         migration.poolCreation.poolKey = poolKey;
 
         migration.poolCreation.sqrtPriceX96 = sqrtPrice;
+        migration.timestampLimit = block.timestamp + 60;
 
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));
@@ -1732,6 +1742,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         migration.poolCreation.poolKey = poolKey;
 
         migration.poolCreation.sqrtPriceX96 = sqrtPrice;
+        migration.timestampLimit = block.timestamp + 60;
 
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));
@@ -1857,6 +1868,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         migration.poolCreation.poolKey = poolKey;
 
         migration.poolCreation.sqrtPriceX96 = sqrtPrice;
+        migration.timestampLimit = block.timestamp + 60;
 
         migration.vaultCreation.salt =
             keccak256(abi.encode("Migration salt"));
@@ -1971,6 +1983,8 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         // #region migration payload.
 
         IMigrationHelper.Migration memory migration;
+
+        migration.timestampLimit = block.timestamp + 60;
 
         migration.safe = GELOwner;
         migration.closeTerm.vault = IArrakisV2(GELV2Vault);
@@ -2186,7 +2200,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         // #region create uniswap standard module.
 
         uniswapStandardModuleImplementation = address(
-            new UniV4StandardModulePrivate(poolManager, guardian)
+            new UniV4StandardModulePrivate(poolManager, guardian, distributor, collector)
         );
 
         uniswapStandardModuleBeacon = address(
