@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {
     IPALMTerms,
     IArrakisV2
-} from "../../../../src/interfaces/IPALMTerms.sol";
+} from "../../../../src/interfaces/IPalmTerms.sol";
 
 import {StdCheats} from "forge-std/StdCheats.sol";
 

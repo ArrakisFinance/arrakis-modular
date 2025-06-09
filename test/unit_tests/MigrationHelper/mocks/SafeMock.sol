@@ -5,7 +5,7 @@ import {
     ISafe, Operation
 } from "../../../../src/interfaces/ISafe.sol";
 
-import {IPALMTerms} from "../../../../src/interfaces/IPALMTerms.sol";
+import {IPALMTerms} from "../../../../src/interfaces/IPalmTerms.sol";
 import {IWETH9} from "../../../../src/interfaces/IWETH9.sol";
 import {IArrakisMetaVaultPrivate} from
     "../../../../src/interfaces/IArrakisMetaVaultPrivate.sol";
