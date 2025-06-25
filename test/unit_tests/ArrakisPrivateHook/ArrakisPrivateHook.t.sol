@@ -24,6 +24,10 @@ import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {
+    PoolId,
+    PoolIdLibrary
+} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {BalanceDelta} from
     "@uniswap/v4-core/src/types/BalanceDelta.sol";
 
@@ -40,6 +44,8 @@ import {ArrakisPrivateHookImplementation} from
 // #endregion mocks.
 
 contract ArrakisPrivateHookTest is TestWrapper {
+    using PoolIdLibrary for PoolKey;
+
     // #region constant properties.
     address public hook;
     address public module;
@@ -81,7 +87,7 @@ contract ArrakisPrivateHookTest is TestWrapper {
 
         vm.record();
         ArrakisPrivateHookImplementation impl =
-            new ArrakisPrivateHookImplementation(module, privateHook);
+            new ArrakisPrivateHookImplementation(manager, privateHook);
         (, bytes32[] memory writes) = vm.accesses(address(impl));
         vm.etch(address(privateHook), address(impl).code);
     }
@@ -94,9 +100,7 @@ contract ArrakisPrivateHookTest is TestWrapper {
     }
 
     function testConstructor() public {
-        assertEq(IArrakisPrivateHook(hook).module(), module);
         assertEq(IArrakisPrivateHook(hook).manager(), manager);
-        assertEq(IArrakisPrivateHook(hook).vault(), vault);
     }
 
     // #endregion test constructor.
@@ -148,6 +152,16 @@ contract ArrakisPrivateHookTest is TestWrapper {
         PoolKey memory key;
         IPoolManager.ModifyLiquidityParams memory params;
         bytes memory hookData;
+
+        IArrakisPrivateHook.FeesData memory data = IArrakisPrivateHook
+            .FeesData({
+            module: module,
+            zeroForOneFee: zeroForOneFee,
+            oneForZeroFee: oneForZeroFee
+        });
+
+        vm.prank(executor);
+        IArrakisPrivateHook(hook).setFees(key, data);
 
         vm.prank(module);
         IHooks(hook).beforeAddLiquidity(sender, key, params, hookData);
@@ -212,7 +226,7 @@ contract ArrakisPrivateHookTest is TestWrapper {
 
     // #region test beforeSwap.
 
-    function testBeforeSwap() public {
+    function testBeforeSwapModuleNotSet() public {
         address sender =
             vm.addr(uint256(keccak256(abi.encode("Sender"))));
         PoolKey memory key;
@@ -221,15 +235,34 @@ contract ArrakisPrivateHookTest is TestWrapper {
 
         params.zeroForOne = true;
 
-        // #region set fees.
+        vm.expectRevert(IArrakisPrivateHook.ModuleNotSet.selector);
+        (,, uint24 lpFeeOverride) =
+            IHooks(hook).beforeSwap(sender, key, params, hookData);
+    }
+
+    function testBeforeSwap() public {
+        address sender =
+            vm.addr(uint256(keccak256(abi.encode("Sender"))));
+        PoolKey memory key;
+        IPoolManager.SwapParams memory params;
+        bytes memory hookData;
 
         zeroForOneFee = 1000;
         oneForZeroFee = 100_000;
 
+        IArrakisPrivateHook.FeesData memory data = IArrakisPrivateHook
+            .FeesData({
+            module: module,
+            zeroForOneFee: zeroForOneFee,
+            oneForZeroFee: oneForZeroFee
+        });
+
+        params.zeroForOne = true;
+
+        // #region set fees.
+
         vm.prank(executor);
-        IArrakisPrivateHook(hook).setFees(
-            zeroForOneFee, oneForZeroFee
-        );
+        IArrakisPrivateHook(hook).setFees(key, data);
 
         // #endregion set fees.
 
@@ -254,10 +287,15 @@ contract ArrakisPrivateHookTest is TestWrapper {
         zeroForOneFee = 1000;
         oneForZeroFee = 100_000;
 
+        IArrakisPrivateHook.FeesData memory data = IArrakisPrivateHook
+            .FeesData({
+            module: module,
+            zeroForOneFee: zeroForOneFee,
+            oneForZeroFee: oneForZeroFee
+        });
+
         vm.prank(executor);
-        IArrakisPrivateHook(hook).setFees(
-            zeroForOneFee, oneForZeroFee
-        );
+        IArrakisPrivateHook(hook).setFees(key, data);
 
         // #endregion set fees.
 
@@ -332,18 +370,54 @@ contract ArrakisPrivateHookTest is TestWrapper {
         zeroForOneFee = 1000;
         oneForZeroFee = 10_000;
 
+        PoolKey memory key;
+
+        IArrakisPrivateHook.FeesData memory data = IArrakisPrivateHook
+            .FeesData({
+            module: module,
+            zeroForOneFee: zeroForOneFee,
+            oneForZeroFee: oneForZeroFee
+        });
+
         vm.prank(notExecutor);
         vm.expectRevert(
             IArrakisPrivateHook.OnlyVaultExecutor.selector
         );
-        IArrakisPrivateHook(hook).setFees(
-            zeroForOneFee, oneForZeroFee
+        IArrakisPrivateHook(hook).setFees(key, data);
+    }
+
+    function testSetFeesModuleAddressZero() public {
+        zeroForOneFee = 1_000_010;
+        oneForZeroFee = 1000;
+
+        PoolKey memory key;
+
+        IArrakisPrivateHook.FeesData memory data = IArrakisPrivateHook
+            .FeesData({
+            module: address(0),
+            zeroForOneFee: zeroForOneFee,
+            oneForZeroFee: oneForZeroFee
+        });
+
+        vm.prank(executor);
+        vm.expectRevert(
+            IArrakisPrivateHook.AddressZero.selector
         );
+        IArrakisPrivateHook(hook).setFees(key, data);
     }
 
     function testSetFeesZeroForOneFeeNotValid() public {
         zeroForOneFee = 1_000_010;
         oneForZeroFee = 1000;
+
+        PoolKey memory key;
+
+        IArrakisPrivateHook.FeesData memory data = IArrakisPrivateHook
+            .FeesData({
+            module: module,
+            zeroForOneFee: zeroForOneFee,
+            oneForZeroFee: oneForZeroFee
+        });
 
         vm.prank(executor);
         vm.expectRevert(
@@ -351,14 +425,21 @@ contract ArrakisPrivateHookTest is TestWrapper {
                 LPFeeLibrary.LPFeeTooLarge.selector, zeroForOneFee
             )
         );
-        IArrakisPrivateHook(hook).setFees(
-            zeroForOneFee, oneForZeroFee
-        );
+        IArrakisPrivateHook(hook).setFees(key, data);
     }
 
     function testSetFeesOneForZeroFeeNotValid() public {
         zeroForOneFee = 1000;
         oneForZeroFee = 1_000_001;
+
+        PoolKey memory key;
+
+        IArrakisPrivateHook.FeesData memory data = IArrakisPrivateHook
+            .FeesData({
+            module: module,
+            zeroForOneFee: zeroForOneFee,
+            oneForZeroFee: oneForZeroFee
+        });
 
         vm.prank(executor);
         vm.expectRevert(
@@ -366,9 +447,7 @@ contract ArrakisPrivateHookTest is TestWrapper {
                 LPFeeLibrary.LPFeeTooLarge.selector, oneForZeroFee
             )
         );
-        IArrakisPrivateHook(hook).setFees(
-            zeroForOneFee, oneForZeroFee
-        );
+        IArrakisPrivateHook(hook).setFees(key, data);
     }
 
     function testSetFees() public {
@@ -377,17 +456,23 @@ contract ArrakisPrivateHookTest is TestWrapper {
 
         PoolKey memory key;
 
-        vm.prank(executor);
-        IArrakisPrivateHook(hook).setFees(
-            zeroForOneFee, oneForZeroFee
-        );
+        IArrakisPrivateHook.FeesData memory data = IArrakisPrivateHook
+            .FeesData({
+            module: module,
+            zeroForOneFee: zeroForOneFee,
+            oneForZeroFee: oneForZeroFee
+        });
 
-        assertEq(
-            IArrakisPrivateHook(hook).zeroForOneFee(), zeroForOneFee
-        );
-        assertEq(
-            IArrakisPrivateHook(hook).oneForZeroFee(), oneForZeroFee
-        );
+        vm.prank(executor);
+        IArrakisPrivateHook(hook).setFees(key, data);
+
+        IArrakisPrivateHook.FeesData memory feesData;
+        (feesData.module, feesData.zeroForOneFee, feesData.oneForZeroFee) =
+            IArrakisPrivateHook(hook).getFeesData(key.toId());
+
+        assertEq(feesData.module, module);
+        assertEq(feesData.zeroForOneFee, zeroForOneFee);
+        assertEq(feesData.oneForZeroFee, oneForZeroFee);
     }
 
     // #endregion set fees.
