@@ -33,7 +33,26 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
 
     // #endregion immutable properties.
 
-    mapping(PoolId => SetFeesData) public feesData;
+    // #region modifiers.
+
+    /// @notice Modifier that restricts access to only the module associated with the pool
+    /// @param poolKey_ The pool key to check the module for
+    /// @param sender_ The address attempting to call the function
+    /// @dev This modifier can be reused by contracts that inherit from ArrakisPrivateHook
+    /// @dev Reverts with OnlyModule error if the sender is not the authorized module
+    modifier onlyModule(PoolKey calldata poolKey_, address sender_) {
+        FeesData memory _feesData = feesData[poolKey_.toId()];
+
+        if (_feesData.module != sender_) {
+            revert OnlyModule();
+        }
+
+        _;
+    }
+
+    // #endregion modifiers.
+
+    mapping(PoolId => FeesData) public feesData;
 
     constructor(
         address manager_
@@ -47,15 +66,17 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
         manager = manager_;
     }
 
+    /// @inheritdoc IArrakisPrivateHook
     function setFees(
         PoolKey calldata poolKey_,
-        SetFeesData calldata data_
+        FeesData calldata data_
     ) external {
         if (data_.module == address(0)) {
             revert AddressZero();
         }
 
-        address _vault = address(IArrakisLPModule(data_.module).metaVault());
+        address _vault =
+            address(IArrakisLPModule(data_.module).metaVault());
 
         (,,,, address executor,,,) =
             IArrakisStandardManager(manager).vaultInfo(_vault);
@@ -73,10 +94,12 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
 
         PoolId poolId = poolKey_.toId();
 
-        uint24 zeroForOneFee = data_.zeroForOneFee | LPFeeLibrary.OVERRIDE_FEE_FLAG;
-        uint24 oneForZeroFee = data_.oneForZeroFee | LPFeeLibrary.OVERRIDE_FEE_FLAG;
+        uint24 zeroForOneFee =
+            data_.zeroForOneFee | LPFeeLibrary.OVERRIDE_FEE_FLAG;
+        uint24 oneForZeroFee =
+            data_.oneForZeroFee | LPFeeLibrary.OVERRIDE_FEE_FLAG;
 
-        feesData[poolId] = SetFeesData({
+        feesData[poolId] = FeesData({
             module: data_.module,
             zeroForOneFee: zeroForOneFee,
             oneForZeroFee: oneForZeroFee
@@ -118,13 +141,12 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
         PoolKey calldata poolKey_,
         IPoolManager.ModifyLiquidityParams calldata,
         bytes calldata
-    ) external virtual returns (bytes4) {
-        SetFeesData memory _feesData = feesData[poolKey_.toId()];
-
-        if (sender != _feesData.module) {
-            revert OnlyModule();
-        }
-
+    )
+        external
+        virtual
+        onlyModule(poolKey_, sender)
+        returns (bytes4)
+    {
         return IHooks.beforeAddLiquidity.selector;
     }
 
@@ -181,15 +203,8 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
     {
         funcSelector = IHooks.beforeSwap.selector;
 
-        SetFeesData memory _feesData = feesData[poolKey_.toId()];
-
-        if (_feesData.module == address(0)) {
-            revert ModuleNotSet();
-        }
-
-        lpFeeOverride = swapParams_.zeroForOne
-            ? _feesData.zeroForOneFee
-            : _feesData.oneForZeroFee;
+        lpFeeOverride =
+            _overrideFees(poolKey_, swapParams_.zeroForOne);
     }
 
     /// @notice The hook called after a swap.
@@ -230,20 +245,28 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
 
     // #region view functions.
 
-    function zeroForOneFee(
+    /// @inheritdoc IArrakisPrivateHook
+    function getFeesData(
         PoolId id_
-    ) external view returns (uint24) {
-        return feesData[id_].zeroForOneFee.removeOverrideFlag();
-    }
-
-    function oneForZeroFee(
-        PoolId id_
-    ) external view returns (uint24) {
-        return feesData[id_].oneForZeroFee.removeOverrideFlag();
+    )
+        external
+        view
+        returns (
+            address module,
+            uint24 zeroForOneFee,
+            uint24 oneForZeroFee
+        )
+    {
+        return (
+            feesData[id_].module,
+            feesData[id_].zeroForOneFee.removeOverrideFlag(),
+            feesData[id_].oneForZeroFee.removeOverrideFlag()
+        );
     }
 
     // #endregion view functions.
 
+    /// @inheritdoc IArrakisPrivateHook
     function getHookPermissions()
         public
         pure
@@ -268,9 +291,34 @@ contract ArrakisPrivateHook is IHooks, IArrakisPrivateHook {
         });
     }
 
+    // #region internal functions.
+
+    /// @notice Returns the fee override for the given pool and swap direction.
+    /// @param poolKey_ The pool key.
+    /// @param zeroForOne_ The swap direction.
+    /// @return lpFeeOverride The fee override value.
+    function _overrideFees(
+        PoolKey calldata poolKey_,
+        bool zeroForOne_
+    ) internal view returns (uint24 lpFeeOverride) {
+        FeesData memory _feesData = feesData[poolKey_.toId()];
+
+        if (_feesData.module == address(0)) {
+            revert ModuleNotSet();
+        }
+
+        lpFeeOverride = zeroForOne_
+            ? _feesData.zeroForOneFee
+            : _feesData.oneForZeroFee;
+    }
+
+    /// @notice Validates that the given hook address has the correct permissions.
+    /// @param _this The IHooks instance to validate.
     function _validateHookAddress(
         IHooks _this
     ) internal pure virtual {
         Hooks.validateHookPermissions(_this, getHookPermissions());
     }
+
+    // #endregion internal functions.
 }
