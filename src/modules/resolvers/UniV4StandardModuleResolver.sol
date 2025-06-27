@@ -151,7 +151,7 @@ contract UniV4StandardModuleResolver is
                 maxAmount0_,
                 maxAmount1_
             );
-            uint256 proportion = FullMath.mulDivRoundingUp(
+            uint256 proportion = FullMath.mulDiv(
                 shareToMint, BASE, totalSupply
             );
             (amount0ToDeposit, amount1ToDeposit) = UnderlyingV4
