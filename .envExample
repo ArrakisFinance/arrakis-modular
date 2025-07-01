@@ -1,2 +1,3 @@
 ETH_RPC_URL="https://eth-mainnet.g.alchemy.com/v2/YOUR-API-KEY-HERE"
 ETH_BLOCK_NUMBER=18158285
+FOUNDRY_PROFILE=lite
