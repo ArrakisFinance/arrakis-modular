@@ -6,7 +6,7 @@ fs_permissions = [{ access = "read-write", path = ".forge-snapshots/"}]
 evm_version = "cancun"
 auto_detect_solc = true
 optimizer = true
-optimizer-runs = 10_000
+optimizer_runs = 10_000
 additional_compiler_profiles = [ { name = "via-ir", via_ir = true } ]
 compilation_restrictions = [
   { paths = "./src/interfaces/IPancakeSwapV4StandardModule.sol", via_ir = true },
@@ -25,8 +25,9 @@ compilation_restrictions = [
 
 [profile.lite]
 optimizer = false
-optimizer-runs = 0
-via_ir = false
+optimizer_runs = 0
+extra_output_files = []
+dynamic_test_link = true
 
 [fmt]
 line_length = 70
