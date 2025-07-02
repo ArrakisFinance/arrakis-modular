@@ -70,10 +70,11 @@ contract UniV4StandardModuleResolver is
         address module;
         bool isInversed;
 
-        PoolKey memory poolKey;
         UnderlyingPayload memory underlyingPayload;
+        uint256 buffer;
 
         {
+            PoolKey memory poolKey;
             PoolRange[] memory poolRanges;
 
             {
@@ -85,7 +86,7 @@ contract UniV4StandardModuleResolver is
                 IUniV4StandardModule.Range[] memory _ranges =
                     IUniV4StandardModule(module).getRanges();
 
-                uint256 buffer = 2 * _ranges.length;
+                buffer = 2 * _ranges.length;
 
                 if (buffer >= maxAmount0_ || buffer >= maxAmount1_) {
                     revert MaxAmountsTooLow();
@@ -151,7 +152,7 @@ contract UniV4StandardModuleResolver is
                 maxAmount0_,
                 maxAmount1_
             );
-            uint256 proportion = FullMath.mulDiv(
+            uint256 proportion = FullMath.mulDivRoundingUp(
                 shareToMint, BASE, totalSupply
             );
             (amount0ToDeposit, amount1ToDeposit) = UnderlyingV4
@@ -172,6 +173,13 @@ contract UniV4StandardModuleResolver is
                 FullMath.mulDivRoundingUp(shareToMint, init0, BASE);
             amount1ToDeposit =
                 FullMath.mulDivRoundingUp(shareToMint, init1, BASE);
+        }
+
+        if (
+            amount0ToDeposit > maxAmount0_ + buffer
+                || amount1ToDeposit > maxAmount1_ + buffer
+        ) {
+            revert AmountsOverMaxAmounts();
         }
 
         (amount0ToDeposit, amount1ToDeposit) = isInversed
