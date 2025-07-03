@@ -374,6 +374,14 @@ contract ArrakisPublicVaultRouterV2 is
             token0,
             token1
         );
+
+        if (msg.value > 0) {
+            if (token0 == nativeToken && msg.value > amount0) {
+                payable(msg.sender).sendValue(msg.value - amount0);
+            } else if (token1 == nativeToken && msg.value > amount1) {
+                payable(msg.sender).sendValue(msg.value - amount1);
+            }
+        }
     }
 
     /// @notice swapAndAddLiquidityPermit2 transfer tokens to and calls RouterSwapExecutor
