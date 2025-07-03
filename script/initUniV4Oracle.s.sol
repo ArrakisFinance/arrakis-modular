@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
-
+/* 
 import {console} from "forge-std/console.sol";
 import {Script} from "forge-std/Script.sol";
 
@@ -230,3 +230,4 @@ contract InitUniV4Oracle is Script {
         Hooks.validateHookPermissions(hooks, perm);
     }
 }
+ */
