@@ -20,6 +20,7 @@ import {
 } from "../../src/constants/CArrakis.sol";
 import {IArrakisMetaVault} from
     "../../src/interfaces/IArrakisMetaVault.sol";
+import {PancakeV4Oracle} from "../../src/oracles/PancakeV4Oracle.sol";
 
 // #region interfaces.
 
@@ -98,7 +99,6 @@ import {LiquidityAmounts} from
 
 // #region valantis mocks.
 
-import {OracleWrapper} from "./mocks/OracleWrapper.sol";
 import {CollectorMock} from "./mocks/CollectorMock.sol";
 
 // #endregion valantis mocks.
@@ -231,17 +231,17 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         (token0, token1) =
             (IERC20Metadata(USDC), IERC20Metadata(WETH));
 
-        // #region create an oracle.
-
-        oracle = address(new OracleWrapper());
-
-        // #endregion create an oracle.
-
         // #endregion setup.
 
         _setup();
 
         // #region create a uniswap v4 pool.
+
+        // #region create a pancake swap oracle.
+
+        oracle = address(new PancakeV4Oracle(poolManager, false));
+
+        // #endregion create a pancake swap oracle.
 
         Currency currency0 = Currency.wrap(USDC);
         Currency currency1 = Currency.wrap(WETH);
