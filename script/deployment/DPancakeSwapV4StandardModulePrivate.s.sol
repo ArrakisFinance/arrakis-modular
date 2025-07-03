@@ -110,7 +110,7 @@ contract DPancakeSwapV4StandardModulePrivate is CreateXScript {
         );
 
         console.logString(
-            "Upgradeable Beacon Uniswap V4 Private Address : "
+            "Upgradeable Beacon Pancake Swap V4 Private Address : "
         );
         console.logAddress(upgradeableBeacon);
 
