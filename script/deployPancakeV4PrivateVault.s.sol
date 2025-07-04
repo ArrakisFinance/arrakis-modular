@@ -49,18 +49,18 @@ enum OracleDeployment {
 
 // #endregion enums.
 
-address constant token0 = 0x2170Ed0880ac9A755fd29B2688956BD959F933F8;
-address constant token1 = 0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56;
-uint24 constant fee = 500;
-int24 constant tickSpacing = 10;
+address constant token0 = 0x55d398326f99059fF775485246999027B3197955;
+address constant token1 = 0xC0041EF357B183448B235a8Ea73Ce4E4eC8c265F;
+uint24 constant fee = 2500;
+int24 constant tickSpacing = 50;
 address constant hooks = address(0);
 uint160 constant sqrtPrice =
-    33_965_778_792_757_789_688_229_654_398_626;
+    196786905314201300536336999278;
 
-bool constant isInversed = true;
+bool constant isInversed = false;
 
 bytes32 constant salt = keccak256(
-    abi.encode("BASE ETH/BUSD Pancake Swap V4 private vault")
+    abi.encode("BSC USDT/COOKIE Pancake Swap V4 private vault")
 );
 address constant vaultOwner =
     0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
@@ -79,7 +79,7 @@ address constant nft = 0x44A801e7E2E073bd8bcE4bCCf653239Fa156B762;
 OracleDeployment constant oracleDeployment =
     OracleDeployment.PancakeV4Oracle;
 
-bool constant createPool = false;
+bool constant createPool = true;
 
 // #region chainlink oracle wrapper.
 
@@ -98,7 +98,7 @@ bool constant isPriceFeedInversed = false;
 address constant chainlinkOracleWrapper = address(0);
 
 bool constant sendOwnershipToSafe = false;
-address constant safe = address(0);
+address constant safe = 0x45242F3520cF610ABFFCc0e3315c4fC6080b6154;
 
 contract DeployPancakeV4PrivateVault is CreateXScript {
     using PoolIdLibrary for PoolKey;
