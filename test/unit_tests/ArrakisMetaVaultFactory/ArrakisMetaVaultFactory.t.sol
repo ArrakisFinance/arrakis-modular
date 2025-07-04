@@ -474,7 +474,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
             ? (USDC, address(tokenA))
             : (address(tokenA), USDC);
 
-        // #endregion token0 buggy in funtion name.
+        // #endregion token0 buggy in function name.
 
         vm.prank(deployer1);
 
@@ -579,7 +579,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
             ? (USDC, address(tokenA))
             : (address(tokenA), USDC);
 
-        // #endregion token0 buggy in funtion name.
+        // #endregion token0 buggy in function name.
 
         vm.prank(deployer1);
 
@@ -642,7 +642,7 @@ contract ArrakisMetaVaultFactoryTest is TestWrapper {
             ? (USDC, address(tokenA))
             : (address(tokenA), USDC);
 
-        // #endregion token0 buggy in funtion name.
+        // #endregion token0 buggy in function name.
 
         vm.prank(deployer1);
 
