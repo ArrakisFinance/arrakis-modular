@@ -30,7 +30,7 @@ import {IOracleWrapper} from "../src/interfaces/IOracleWrapper.sol";
 import {IPancakeSwapV4StandardModule} from
     "../src/interfaces/IPancakeSwapV4StandardModule.sol";
 import {IArrakisMetaVaultFactory} from
-    "../src/interfaces/IArrakisMetaVaultFactory.sol";
+     "../src/interfaces/IArrakisMetaVaultFactory.sol";
 import {IArrakisMetaVault} from
     "../src/interfaces/IArrakisMetaVault.sol";
 import {IBunkerModule} from "../src/interfaces/IBunkerModule.sol";
@@ -51,35 +51,29 @@ enum OracleDeployment {
 
 address constant token0 = 0x55d398326f99059fF775485246999027B3197955;
 address constant token1 = 0xC0041EF357B183448B235a8Ea73Ce4E4eC8c265F;
-uint24 constant fee = 2500;
+uint24 constant fee = 2506;
 int24 constant tickSpacing = 50;
 address constant hooks = address(0);
 uint160 constant sqrtPrice =
-    196786905314201300536336999278;
-
+    195892493474689299306035126611;
 bool constant isInversed = false;
-
 bytes32 constant salt = keccak256(
-    abi.encode("BSC USDT/COOKIE Pancake Swap V4 private vault")
+    abi.encode("BSC USDT/COOKIE Pancake Swap V4 private vault 16")
 );
 address constant vaultOwner =
-    0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
-uint24 constant maxSlippage = TEN_PERCENT / 2;
-
-uint24 constant maxDeviation = TEN_PERCENT;
+    0xD9311258CE30aB20381ca8498513923C26528Cc7;
+uint24 constant maxSlippage = TEN_PERCENT / 5;
+uint24 constant maxDeviation = TEN_PERCENT / 5;
 uint256 constant cooldownPeriod = 60;
 address constant executor = 0x420966bCf2A0351F26048cD07076627Cde4f79ac;
 address constant stratAnnouncer =
-    0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
-
+    0x45242F3520cF610ABFFCc0e3315c4fC6080b6154;
 address constant factory = 0x820FB8127a689327C863de8433278d6181123982;
 address constant nft = 0x44A801e7E2E073bd8bcE4bCCf653239Fa156B762;
-
 //// !!!!!! CHECK THAT DECIMAL OF ORACLE IS MATCHING TOKEN PAIR DECIMALS !!!!!! ////
 OracleDeployment constant oracleDeployment =
     OracleDeployment.PancakeV4Oracle;
-
-bool constant createPool = true;
+bool constant createPool = false;
 
 // #region chainlink oracle wrapper.
 
@@ -170,45 +164,45 @@ contract DeployPancakeV4PrivateVault is CreateXScript {
 
         // #region create uni V4 oracle.
 
-        address oracle;
+        address oracle = 0xF4e0671a76B1715744a259a0fa0c561eB89e3340;
 
-        if (oracleDeployment == OracleDeployment.PancakeV4Oracle) {
-            oracle =
-                address(new PancakeV4Oracle(poolManager, isInversed));
+        // if (oracleDeployment == OracleDeployment.PancakeV4Oracle) {
+        //     oracle =
+        //         address(new PancakeV4Oracle(poolManager, isInversed));
 
-            console.log("Pancake V4 Oracle : ");
-            console.logAddress(oracle);
-        }
-        if (
-            oracleDeployment
-                == OracleDeployment.ChainlinkOracleWrapper
-        ) {
-            bytes memory initCode = abi.encodePacked(
-                creationCode_chainlinkOracleWrapper,
-                abi.encode(
-                    token0Decimals,
-                    token1Decimals,
-                    priceFeed,
-                    sequencerUpTimeFeed,
-                    outdated,
-                    isPriceFeedInversed
-                )
-            );
+        //     console.log("Pancake V4 Oracle : ");
+        //     console.logAddress(oracle);
+        // }
+        // if (
+        //     oracleDeployment
+        //         == OracleDeployment.ChainlinkOracleWrapper
+        // ) {
+        //     bytes memory initCode = abi.encodePacked(
+        //         creationCode_chainlinkOracleWrapper,
+        //         abi.encode(
+        //             token0Decimals,
+        //             token1Decimals,
+        //             priceFeed,
+        //             sequencerUpTimeFeed,
+        //             outdated,
+        //             isPriceFeedInversed
+        //         )
+        //     );
 
-            oracle = CreateX.deployCreate(initCode);
+        //     oracle = CreateX.deployCreate(initCode);
 
-            console.log("Chainlink Oracle Wrapper : ");
-            console.logAddress(oracle);
-        }
-        if (
-            oracleDeployment
-                == OracleDeployment.DeployedChainlinkOracleWrapper
-        ) {
-            oracle = chainlinkOracleWrapper;
+        //     console.log("Chainlink Oracle Wrapper : ");
+        //     console.logAddress(oracle);
+        // }
+        // if (
+        //     oracleDeployment
+        //         == OracleDeployment.DeployedChainlinkOracleWrapper
+        // ) {
+        //     oracle = chainlinkOracleWrapper;
 
-            console.log("Deployed Chainlink Oracle Wrapper : ");
-            console.logAddress(oracle);
-        }
+        //     console.log("Deployed Chainlink Oracle Wrapper : ");
+        //     console.logAddress(oracle);
+        // }
 
         // #endregion create uni V4 oracle.
 
@@ -231,6 +225,29 @@ contract DeployPancakeV4PrivateVault is CreateXScript {
             stratAnnouncer,
             maxSlippage
         );
+
+        // bytes memory moduleCreationPayload = hex"9f6da90000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055d398326f99059ff775485246999027b3197955000000000000000000000000c0041ef357b183448b235a8ea73ce4e4ec8c265f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a0ffb9c1ce1fe56963b0321b32e7a0302114058b00000000000000000000000000000000000000000000000000000000000009ca0000000000000000000000000000000000000000000000000000000000320000000000000000000000000000f4e0671a76b1715744a259a0fa0c561eb89e33400000000000000000000000000000000000000000000000000000000000004e20";
+        // bytes memory initManagementPayload = hex"000000000000000000000000f4e0671a76b1715744a259a0fa0c561eb89e33400000000000000000000000000000000000000000000000000000000000004e20000000000000000000000000000000000000000000000000000000000000003c000000000000000000000000420966bcf2a0351f26048cd07076627cde4f79ac00000000000000000000000045242f3520cf610abffcc0e3315c4fc6080b61540000000000000000000000000000000000000000000000000000000000004e20";
+
+        // console.logBytes(moduleCreationPayload);
+        // console.log("");
+        // console.logBytes(initManagementPayload);
+
+        // bytes memory payload = abi.encodeWithSelector(IArrakisMetaVaultFactory.deployPrivateVault.selector, salt,
+        //     token0,
+        //     token1,
+        //     vaultOwner,
+        //     pancakeV4PrivateUpgradeableBeacon,
+        //     moduleCreationPayload,
+        //     initManagementPayload);
+
+        // console.logBytes(payload);
+
+        // bytes memory payload = hex"19b56b8b2ecaa7b116cbc6b72e84aeafab241b1a9350d03039b3927efeece3528c32c1fc00000000000000000000000055d398326f99059ff775485246999027b3197955000000000000000000000000c0041ef357b183448b235a8ea73ce4e4ec8c265f000000000000000000000000d9311258ce30ab20381ca8498513923c26528cc7000000000000000000000000e137aeed8783d04fba9c9df89aeccee81468ce5800000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000028000000000000000000000000000000000000000000000000000000000000001649f6da90000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055d398326f99059ff775485246999027b3197955000000000000000000000000c0041ef357b183448b235a8ea73ce4e4ec8c265f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a0ffb9c1ce1fe56963b0321b32e7a0302114058b00000000000000000000000000000000000000000000000000000000000009ca0000000000000000000000000000000000000000000000000000000000320000000000000000000000000000f4e0671a76b1715744a259a0fa0c561eb89e33400000000000000000000000000000000000000000000000000000000000004e200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000f4e0671a76b1715744a259a0fa0c561eb89e33400000000000000000000000000000000000000000000000000000000000004e20000000000000000000000000000000000000000000000000000000000000003c000000000000000000000000420966bcf2a0351f26048cd07076627cde4f79ac00000000000000000000000045242f3520cf610abffcc0e3315c4fc6080b61540000000000000000000000000000000000000000000000000000000000004e20";
+
+        // (bool success,bytes memory result) = factory.call{value: 0}(payload);
+
+        // (address vault) = abi.decode(result, (address));
 
         address vault = IArrakisMetaVaultFactory(factory)
             .deployPrivateVault(
@@ -256,30 +273,30 @@ contract DeployPancakeV4PrivateVault is CreateXScript {
 
         // #region whitelist bunker module.
 
-        if (vaultOwner == msg.sender) {
-            address[] memory beacons = new address[](1);
-            beacons[0] = getBunkerModule();
+        // if (vaultOwner == msg.sender) {
+        //     address[] memory beacons = new address[](1);
+        //     beacons[0] = getBunkerModule();
 
-            bytes[] memory payloads = new bytes[](1);
-            payloads[0] = abi.encodeWithSelector(
-                IBunkerModule.initialize.selector, vault
-            );
+        //     bytes[] memory payloads = new bytes[](1);
+        //     payloads[0] = abi.encodeWithSelector(
+        //         IBunkerModule.initialize.selector, vault
+        //     );
 
-            IArrakisMetaVault(vault).whitelistModules(
-                beacons, payloads
-            );
-        }
+        //     IArrakisMetaVault(vault).whitelistModules(
+        //         beacons, payloads
+        //     );
+        // }
 
         // #endregion whitelist bunker module.
 
         // #region send ownership to safe.
 
-        if (sendOwnershipToSafe) {
-            ERC721(nft).approve(safe, uint256(uint160(vault)));
-            ERC721(nft).safeTransferFrom(
-                msg.sender, safe, uint256(uint160(vault))
-            );
-        }
+        // if (sendOwnershipToSafe) {
+        //     ERC721(nft).approve(safe, uint256(uint160(vault)));
+        //     ERC721(nft).safeTransferFrom(
+        //         msg.sender, safe, uint256(uint160(vault))
+        //     );
+        // }
 
         // #endregion send ownership to safe.
 
