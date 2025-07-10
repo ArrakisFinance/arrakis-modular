@@ -116,7 +116,6 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
     address public metaVault;
     address public guardian;
     address public owner;
-    address public collector;
 
     // #region mocks contracts.
 
@@ -130,8 +129,6 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
-        collector =
-            vm.addr(uint256(keccak256(abi.encode("Collector"))));
 
         // #region meta vault creation.
 
@@ -207,8 +204,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -335,11 +331,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
     function testConstructorPoolManagerAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
         new PancakeSwapV4StandardModulePublic(
-            address(0),
-            guardian,
-            address(pancakeVault),
-            distributor,
-            collector
+            address(0), guardian, address(pancakeVault), distributor
         );
     }
 
@@ -352,8 +344,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -380,8 +371,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
             address(poolManager),
             address(0),
             address(pancakeVault),
-            distributor,
-            collector
+            distributor
         );
     }
 
@@ -410,8 +400,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -467,8 +456,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -522,8 +510,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -577,8 +564,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -634,8 +620,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -691,8 +676,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -748,8 +732,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -801,8 +784,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -863,8 +845,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -922,8 +903,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -972,8 +952,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -1010,8 +989,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -1091,8 +1069,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -1236,8 +1213,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -1347,8 +1323,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -2851,8 +2826,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -2921,8 +2895,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -2994,8 +2967,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -3066,8 +3038,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -3201,8 +3172,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -3271,8 +3241,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -3341,8 +3310,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -5199,8 +5167,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -5376,8 +5343,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -5547,8 +5513,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -5731,8 +5696,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -5917,8 +5881,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -6339,8 +6302,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -6522,8 +6484,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -6697,8 +6658,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -6879,8 +6839,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -7061,8 +7020,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -7267,8 +7225,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -7541,8 +7498,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -7779,8 +7735,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                     address(poolManager),
                     guardian,
                     address(pancakeVault),
-                    distributor,
-                    collector
+                    distributor
                 )
             );
 
@@ -7954,8 +7909,7 @@ contract PancakeSwapV4StandardModuleTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 

@@ -10,6 +10,8 @@ import {IArrakisMetaVault} from "../interfaces/IArrakisMetaVault.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
 import {IGuardian} from "../interfaces/IGuardian.sol";
 import {IOwnable} from "../interfaces/IOwnable.sol";
+import {IPancakeDistributor} from
+    "../interfaces/IPancakeDistributor.sol";
 import {
     PIPS,
     BASE,
@@ -24,7 +26,6 @@ import {
     UnderlyingPayload,
     Withdraw
 } from "../structs/SPancakeSwapV4.sol";
-import {IDistributor} from "../interfaces/IDistributor.sol";
 import {PancakeUnderlyingV4} from
     "../libraries/PancakeUnderlyingV4.sol";
 
@@ -87,8 +88,7 @@ abstract contract PancakeSwapV4StandardModule is
 
     ICLPoolManager public immutable poolManager;
     IVault public immutable vault;
-    IDistributor public immutable distributor;
-    address public immutable collector;
+    IPancakeDistributor public immutable distributor;
 
     // #endregion immutable properties.
 
@@ -128,12 +128,13 @@ abstract contract PancakeSwapV4StandardModule is
 
     Range[] internal _ranges;
     mapping(bytes32 => bool) internal _activeRanges;
+    address internal _rewardReceiver;
 
     // #endregion internal properties.
 
     // #region storage gaps.
 
-    uint256[37] internal __gap;
+    uint256[36] internal __gap;
 
     // #endregion storage gaps.
 
@@ -174,22 +175,19 @@ abstract contract PancakeSwapV4StandardModule is
         address poolManager_,
         address guardian_,
         address vault_,
-        address distributor_,
-        address collector_
+        address distributor_
     ) {
         // #region checks.
         if (poolManager_ == address(0)) revert AddressZero();
         if (guardian_ == address(0)) revert AddressZero();
         if (vault_ == address(0)) revert AddressZero();
         if (distributor_ == address(0)) revert AddressZero();
-        if (collector_ == address(0)) revert AddressZero();
         // #endregion checks.
 
         poolManager = ICLPoolManager(poolManager_);
         _guardian = guardian_;
         vault = IVault(vault_);
-        distributor = IDistributor(distributor_);
-        collector = collector_;
+        distributor = IPancakeDistributor(distributor_);
 
         _disableInitializers();
     }
@@ -275,10 +273,6 @@ abstract contract PancakeSwapV4StandardModule is
         poolKey = poolKey_;
 
         // #endregion poolKey initialization.
-
-        IDistributor(distributor).toggleOperator(
-            address(this), collector
-        );
 
         __ReentrancyGuard_init();
         __Pausable_init();
@@ -487,6 +481,113 @@ abstract contract PancakeSwapV4StandardModule is
         (amount0, amount1) = abi.decode(result, (uint256, uint256));
 
         emit LogWithdraw(receiver_, proportion_, amount0, amount1);
+    }
+
+    function claimRewards(
+        IPancakeDistributor.ClaimParams[] calldata params_,
+        address receiver_
+    ) external onlyMetaVaultOwner nonReentrant whenNotPaused {
+        // #region checks.
+
+        if (receiver_ == address(0)) {
+            revert AddressZero();
+        }
+
+        uint256 length = params_.length;
+
+        if (length == 0) {
+            revert ClaimParamsLengthZero();
+        }
+
+        // #endregion checks.
+
+        // #region claim.
+
+        distributor.claim(params_);
+
+        // #endregion claim.
+
+        uint256 _managerFeePIPS = managerFeePIPS;
+
+        for (uint256 i; i < length; i++) {
+            IPancakeDistributor.ClaimParams memory param = params_[i];
+
+            uint256 managerShare =
+                FullMath.mulDiv(param.amount, _managerFeePIPS, PIPS);
+
+            uint256 balanceOfToken =
+                IERC20Metadata(param.token).balanceOf(address(this));
+
+            IERC20Metadata(param.token).safeTransfer(
+                receiver_, balanceOfToken - managerShare
+            );
+            IERC20Metadata(param.token).safeTransfer(
+                _rewardReceiver, managerShare
+            );
+
+            emit LogClaimReward(
+                param.token, balanceOfToken - managerShare
+            );
+            emit LogClaimManagerReward(param.token, managerShare);
+        }
+    }
+
+    function claimManagerRewards(
+        IPancakeDistributor.ClaimParams[] calldata params_
+    ) external onlyManager nonReentrant whenNotPaused {
+        // #region checks.
+
+        uint256 length = params_.length;
+
+        if (length == 0) {
+            revert ClaimParamsLengthZero();
+        }
+
+        // #endregion checks.
+
+        // #region claim.
+
+        distributor.claim(params_);
+
+        // #endregion claim.
+
+        uint256 _managerFeePIPS = managerFeePIPS;
+
+        for (uint256 i; i < length; i++) {
+            IPancakeDistributor.ClaimParams memory param = params_[i];
+
+            uint256 managerShare =
+                FullMath.mulDiv(param.amount, _managerFeePIPS, PIPS);
+
+            IERC20Metadata(param.token).safeTransfer(
+                _rewardReceiver, managerShare
+            );
+
+            emit LogClaimManagerReward(param.token, managerShare);
+        }
+    }
+
+    function setReceiver(
+        address newReceiver_
+    ) external whenNotPaused {
+        address manager = metaVault.manager();
+
+        if (IOwnable(manager).owner() != msg.sender) {
+            revert OnlyManagerOwner();
+        }
+
+        address oldReceiver = _rewardReceiver;
+        if (newReceiver_ == address(0)) {
+            revert AddressZero();
+        }
+
+        if (oldReceiver == newReceiver_) {
+            revert SameReceiver();
+        }
+
+        _rewardReceiver = newReceiver_;
+
+        emit LogSetReceiver(oldReceiver, newReceiver_);
     }
 
     /// @notice function used to rebalance the inventory of the module.
@@ -698,10 +799,10 @@ abstract contract PancakeSwapV4StandardModule is
             );
         }
 
-        amount0 =
-            amount0 - FullMath.mulDivRoundingUp(fees0, managerFeePIPS, PIPS);
-        amount1 =
-            amount1 - FullMath.mulDivRoundingUp(fees1, managerFeePIPS, PIPS);
+        amount0 = amount0
+            - FullMath.mulDivRoundingUp(fees0, managerFeePIPS, PIPS);
+        amount1 = amount1
+            - FullMath.mulDivRoundingUp(fees1, managerFeePIPS, PIPS);
 
         if (isInversed) {
             (amount0, amount1) = (amount1, amount0);
@@ -800,6 +901,10 @@ abstract contract PancakeSwapV4StandardModule is
         returns (uint256 managerFee1)
     {
         return _managerBalance(false);
+    }
+
+    function rewardReceiver() external view returns (address) {
+        return _rewardReceiver;
     }
 
     // #endregion view functions.

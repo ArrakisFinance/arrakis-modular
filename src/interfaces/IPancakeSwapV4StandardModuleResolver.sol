@@ -8,7 +8,7 @@ interface IPancakeSwapV4StandardModuleResolver {
     error AddressZero();
     error MintZero();
     error NotSupported();
-    
+
     // #endregion errors.
 
     // #region view/pure functions.

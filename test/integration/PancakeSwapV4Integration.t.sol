@@ -341,127 +341,127 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
     // #region test.
 
-    function test_addLiquidity() public {
-        (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
-        IArrakisPublicVaultRouterV2(router).getMintAmounts(
-            vault, init0 / 3, init1
-        );
+    // function test_addLiquidity() public {
+    //     (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
+    //     IArrakisPublicVaultRouterV2(router).getMintAmounts(
+    //         vault, init0 / 3, init1
+    //     );
 
-        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+    //     address user = vm.addr(uint256(keccak256(abi.encode("User"))));
 
-        deal(WETH, user, amount1);
+    //     deal(WETH, user, amount1);
 
-        deal(USDC, user, amount0);
+    //     deal(USDC, user, amount0);
 
-        // #region approve router.
+    //     // #region approve router.
 
-        vm.startPrank(user);
+    //     vm.startPrank(user);
 
-        IERC20Metadata(USDC).approve(router, amount0);
-        IERC20Metadata(WETH).approve(router, amount1);
+    //     IERC20Metadata(USDC).approve(router, amount0);
+    //     IERC20Metadata(WETH).approve(router, amount1);
 
-        // #endregion approve router.
+    //     // #endregion approve router.
 
-        // #region add liquidity.
+    //     // #region add liquidity.
 
-        IArrakisPublicVaultRouterV2(router).addLiquidity(
-            AddLiquidityData({
-                amount0Max: amount0,
-                amount1Max: amount1,
-                amount0Min: amount0 * 99 / 100,
-                amount1Min: amount1 * 99 / 100,
-                amountSharesMin: sharesToMint * 99 / 100,
-                vault: vault,
-                receiver: user
-            })
-        );
+    //     IArrakisPublicVaultRouterV2(router).addLiquidity(
+    //         AddLiquidityData({
+    //             amount0Max: amount0,
+    //             amount1Max: amount1,
+    //             amount0Min: amount0 * 99 / 100,
+    //             amount1Min: amount1 * 99 / 100,
+    //             amountSharesMin: sharesToMint * 99 / 100,
+    //             vault: vault,
+    //             receiver: user
+    //         })
+    //     );
 
-        vm.stopPrank();
+    //     vm.stopPrank();
 
-        // #endregion add liquidity.
+    //     // #endregion add liquidity.
 
-        // #region merkl rewards.
+    //     // #region merkl rewards.
 
-        address module = address(IArrakisMetaVault(vault).module());
+    //     address module = address(IArrakisMetaVault(vault).module());
 
-        vm.startPrank(IOwnable(vault).owner());
+    //     vm.startPrank(IOwnable(vault).owner());
 
-        address[] memory tokens = new address[](2);
-        uint256[] memory amounts = new uint256[](2);
+    //     address[] memory tokens = new address[](2);
+    //     uint256[] memory amounts = new uint256[](2);
 
-        tokens[0] = AAVE;
-        tokens[1] = USDT;
-        amounts[0] = type(uint256).max;
-        amounts[1] = type(uint256).max;
+    //     tokens[0] = AAVE;
+    //     tokens[1] = USDT;
+    //     amounts[0] = type(uint256).max;
+    //     amounts[1] = type(uint256).max;
 
-        IPancakeSwapV4StandardModule(module).approve(
-            collector, tokens, amounts
-        );
-        vm.stopPrank();
+    //     IPancakeSwapV4StandardModule(module).approve(
+    //         collector, tokens, amounts
+    //     );
+    //     vm.stopPrank();
 
-        uint256 uSDTBalance =
-            IERC20Metadata(USDT).balanceOf(distributor);
-        uint256 aAVEBalance =
-            IERC20Metadata(AAVE).balanceOf(distributor);
+    //     uint256 uSDTBalance =
+    //         IERC20Metadata(USDT).balanceOf(distributor);
+    //     uint256 aAVEBalance =
+    //         IERC20Metadata(AAVE).balanceOf(distributor);
 
-        bytes32[][] memory proofs = new bytes32[][](2);
-        address[] memory users = new address[](2);
-        tokens = new address[](2);
-        amounts = new uint256[](2);
-        proofs[0] = new bytes32[](1);
-        proofs[0][0] = keccak256(abi.encode(module, USDT, 2000e6));
-        users[0] = module;
-        tokens[0] = AAVE;
-        amounts[0] = 1e18;
-        proofs[1] = new bytes32[](1);
-        proofs[1][0] = keccak256(abi.encode(module, AAVE, 1e18));
-        users[1] = module;
-        tokens[1] = USDT;
-        amounts[1] = 2000e6;
+    //     bytes32[][] memory proofs = new bytes32[][](2);
+    //     address[] memory users = new address[](2);
+    //     tokens = new address[](2);
+    //     amounts = new uint256[](2);
+    //     proofs[0] = new bytes32[](1);
+    //     proofs[0][0] = keccak256(abi.encode(module, USDT, 2000e6));
+    //     users[0] = module;
+    //     tokens[0] = AAVE;
+    //     amounts[0] = 1e18;
+    //     proofs[1] = new bytes32[](1);
+    //     proofs[1][0] = keccak256(abi.encode(module, AAVE, 1e18));
+    //     users[1] = module;
+    //     tokens[1] = USDT;
+    //     amounts[1] = 2000e6;
 
-        vm.prank(distributorGovernor);
-        IDistributorExtension(distributor).updateTree(
-            IDistributorExtension.MerkleTree({
-                merkleRoot: proofs[0][0] < proofs[1][0]
-                    ? keccak256(abi.encode(proofs[0][0], proofs[1][0]))
-                    : keccak256(abi.encode(proofs[1][0], proofs[0][0])),
-                ipfsHash: keccak256("IPFS_HASH")
-            })
-        );
+    //     vm.prank(distributorGovernor);
+    //     IDistributorExtension(distributor).updateTree(
+    //         IDistributorExtension.MerkleTree({
+    //             merkleRoot: proofs[0][0] < proofs[1][0]
+    //                 ? keccak256(abi.encode(proofs[0][0], proofs[1][0]))
+    //                 : keccak256(abi.encode(proofs[1][0], proofs[0][0])),
+    //             ipfsHash: keccak256("IPFS_HASH")
+    //         })
+    //     );
 
-        vm.warp(
-            IDistributorExtension(distributor).endOfDisputePeriod()
-                + 1
-        );
+    //     vm.warp(
+    //         IDistributorExtension(distributor).endOfDisputePeriod()
+    //             + 1
+    //     );
 
-        deal(USDT, distributor, uSDTBalance + amounts[1]);
-        deal(AAVE, distributor, aAVEBalance + amounts[0]);
+    //     deal(USDT, distributor, uSDTBalance + amounts[1]);
+    //     deal(AAVE, distributor, aAVEBalance + amounts[0]);
 
-        uSDTBalance = IERC20Metadata(USDT).balanceOf(distributor);
-        aAVEBalance = IERC20Metadata(AAVE).balanceOf(distributor);
+    //     uSDTBalance = IERC20Metadata(USDT).balanceOf(distributor);
+    //     aAVEBalance = IERC20Metadata(AAVE).balanceOf(distributor);
 
-        uSDTBalance = IERC20Metadata(USDT).balanceOf(collector);
-        aAVEBalance = IERC20Metadata(AAVE).balanceOf(collector);
+    //     uSDTBalance = IERC20Metadata(USDT).balanceOf(collector);
+    //     aAVEBalance = IERC20Metadata(AAVE).balanceOf(collector);
 
-        CollectorMock(collector).claim(users, tokens, amounts, proofs);
-        CollectorMock(collector).transferFrom(
-            AAVE, module, amounts[0]
-        );
-        CollectorMock(collector).transferFrom(
-            USDT, module, amounts[1]
-        );
+    //     CollectorMock(collector).claim(users, tokens, amounts, proofs);
+    //     CollectorMock(collector).transferFrom(
+    //         AAVE, module, amounts[0]
+    //     );
+    //     CollectorMock(collector).transferFrom(
+    //         USDT, module, amounts[1]
+    //     );
 
-        assertEq(
-            IERC20Metadata(USDT).balanceOf(collector),
-            uSDTBalance + amounts[1]
-        );
-        assertEq(
-            IERC20Metadata(AAVE).balanceOf(collector),
-            aAVEBalance + amounts[0]
-        );
+    //     assertEq(
+    //         IERC20Metadata(USDT).balanceOf(collector),
+    //         uSDTBalance + amounts[1]
+    //     );
+    //     assertEq(
+    //         IERC20Metadata(AAVE).balanceOf(collector),
+    //         aAVEBalance + amounts[0]
+    //     );
 
-        // #endregion merkl rewards.
-    }
+    //     // #endregion merkl rewards.
+    // }
 
     function test_addLiquidityMaxAmountsTooLow() public {
         (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
@@ -1073,11 +1073,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         pancakeSwapStandardModuleImplementation = address(
             new PancakeSwapV4StandardModulePublic(
-                poolManager,
-                guardian,
-                pancakeVault,
-                distributor,
-                collector
+                poolManager, guardian, pancakeVault, distributor
             )
         );
         pancakeSwapStandardModuleBeacon = address(

@@ -109,7 +109,6 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
     address public metaVault;
     address public guardian;
     address public owner;
-    address public collector;
 
     // #region mocks contracts.
 
@@ -123,8 +122,6 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
-        collector =
-            vm.addr(uint256(keccak256(abi.encode("Collector"))));
         // #region meta vault creation.
         metaVault = address(new ArrakisMetaVaultMock(manager, owner));
         ArrakisMetaVaultMock(metaVault).setTokens(USDC, WETH);
@@ -190,8 +187,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -303,8 +299,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -373,8 +368,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -443,8 +437,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -516,8 +509,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -590,8 +582,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 
@@ -664,8 +655,7 @@ contract PancakeSwapV4StandardModulePrivateTest is TestWrapper {
                 address(poolManager),
                 guardian,
                 address(pancakeVault),
-                distributor,
-                collector
+                distributor
             )
         );
 

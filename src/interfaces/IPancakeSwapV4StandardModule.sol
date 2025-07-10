@@ -47,6 +47,9 @@ interface IPancakeSwapV4StandardModule {
     error OnlyManagerOrVaultOwner();
     error LengthsNotEqual();
     error SameRewardReceiver();
+    error ClaimParamsLengthZero();
+    error OnlyManagerOwner();
+    error SameReceiver();
 
     // #endregion errors.
 
@@ -76,6 +79,13 @@ interface IPancakeSwapV4StandardModule {
     event LogSetPool(PoolKey oldPoolKey, PoolKey poolKey);
     event LogSetRewardReceiver(address rewardReceiver);
     event LogWithdrawETH(address indexed withdrawer, uint256 amount);
+    event LogClaimReward(address indexed token, uint256 amount);
+    event LogClaimManagerReward(
+        address indexed token, uint256 amount
+    );
+    event LogSetReceiver(
+        address oldRewardReceiver, address newRewardReceiver
+    );
     // #endregion events.
 
     /// @notice initialize function to delegate call onced the beacon proxy is deployed,
