@@ -2024,6 +2024,126 @@ contract ArrakisPublicVaultRouterV2Test is TestWrapper {
         assertEq(IERC20(WETH).balanceOf(address(vault)), 2e18);
     }
 
+    function testAddLiquidityPermit2NativeCoin() public {
+        // #region create public vault.
+
+        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
+        vault.setTokens(USDC, NATIVE_COIN);
+        vault.mintLPToken(address(1), 1 ether);
+        vault.setAmountToTake(2000e6, 1e18);
+        vault.setModule(address(vault));
+        deal(USDC, address(vault), 2000e6);
+        deal(address(vault), 1e18);
+        vault.setInits(2000e6, 1e18);
+
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0Max: 2000e6,
+            amount1Max: 1e18,
+            amount0Min: 2000e6,
+            amount1Min: 1e18,
+            amountSharesMin: 0,
+            vault: address(vault),
+            receiver: address(0)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
+        permitted[0] = TokenPermissions({token: USDC, amount: 2000e6});
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        deal(USDC, address(this), 2000e6);
+        deal(address(this), 1e18 + 100);
+        IERC20(USDC).approve(address(PERMIT2), 2000e6);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
+        assertEq(address(this).balance, 1e18 + 100);
+
+        router.addLiquidityPermit2{value: 1e18 + 100}(params);
+
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
+        assertEq(address(vault).balance, 2e18);
+        assertEq(address(this).balance, 100);
+    }
+
+    function testAddLiquidityPermit2NativeCoinBis() public {
+        // #region create public vault.
+
+        ArrakisPublicVaultMock vault = new ArrakisPublicVaultMock();
+        vault.setTokens(NATIVE_COIN, USDC);
+        vault.mintLPToken(address(1), 1 ether);
+        vault.setAmountToTake(1e18, 2000e6);
+        vault.setModule(address(vault));
+        deal(USDC, address(vault), 2000e6);
+        deal(address(vault), 1e18);
+        vault.setInits(1e18, 2000e6);
+
+        // #endregion create public vault.
+        // #region add vault to mock factory.
+
+        factory.addPublicVault(address(vault));
+
+        // #endregion add vault to mock factory.
+
+        AddLiquidityData memory addData = AddLiquidityData({
+            amount0Max: 1e18,
+            amount1Max: 2000e6,
+            amount0Min: 1e18,
+            amount1Min: 2000e6,
+            amountSharesMin: 0,
+            vault: address(vault),
+            receiver: address(0)
+        });
+
+        TokenPermissions[] memory permitted =
+            new TokenPermissions[](1);
+        permitted[0] = TokenPermissions({token: USDC, amount: 2000e6});
+
+        PermitBatchTransferFrom memory permit =
+        PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: 1,
+            deadline: type(uint256).max
+        });
+
+        AddLiquidityPermit2Data memory params =
+        AddLiquidityPermit2Data({
+            addData: addData,
+            permit: permit,
+            signature: ""
+        });
+
+        deal(USDC, address(this), 2000e6);
+        deal(address(this), 1e18 + 100);
+        IERC20(USDC).approve(address(PERMIT2), 2000e6);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 2000e6);
+        assertEq(address(this).balance, 1e18 + 100);
+
+        router.addLiquidityPermit2{value: 1e18 + 100}(params);
+
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 4000e6);
+        assertEq(address(vault).balance, 2e18);
+        assertEq(address(this).balance, 100);
+    }
+
     // #endregion test addLiquidityPermit2.
 
     // #region test swapAndAddLiquidityPermit2.
