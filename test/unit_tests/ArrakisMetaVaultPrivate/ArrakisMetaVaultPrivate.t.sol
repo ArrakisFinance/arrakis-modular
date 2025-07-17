@@ -85,7 +85,7 @@ contract ArrakisMetaVaultPrivateTest is
 
         vault.initialize(address(module));
 
-        // #endregion initiliaze vault.
+        // #endregion initialize vault.
     }
 
     // #region test constructor.
