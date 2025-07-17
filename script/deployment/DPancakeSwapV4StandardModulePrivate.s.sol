@@ -35,6 +35,15 @@ import {UpgradeableBeacon} from
 
 // #endregion Binance smart chain.
 
+// #region Binance smart chain fix.
+
+// PancakeSwapV4StandardModulePrivate : 0x10348a0A633b12De588293c87dE66B597781bbD1.
+// UpgradeableBeacon : 0xEF770D34d89eFe21fc7FB7391Af8F23772C2037f.
+// PancakeSwap V4 : 0xce4F5354fC463efba631FB8295D154133A335828.
+// PancakeSwap V4 Underlying : 0xa57751A5068dD0A9b2986093F04929e300e855A9.
+
+// #endregion Binance smart chain fix.
+
 // #endregion production deployment.
 
 contract DPancakeSwapV4StandardModulePrivate is CreateXScript {
