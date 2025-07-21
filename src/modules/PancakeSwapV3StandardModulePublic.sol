@@ -10,12 +10,15 @@ import {IPancakeSwapV3StandardModule} from
 import {NATIVE_COIN, BASE} from "../constants/CArrakis.sol";
 import {IUniswapV3Pool} from "../interfaces/IUniswapV3Pool.sol";
 import {Range} from "../structs/SUniswapV3.sol";
+import {UnderlyingV3} from "../libraries/UnderlyingV3.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
+import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 /// @notice this module can only set pancake v3 pool that have generic hook,
 /// that don't require specific action to become liquidity provider.
@@ -40,7 +43,10 @@ contract PancakeSwapV3StandardModulePublic is
 
     bool public notFirstDeposit;
 
-    constructor(address guardian_) PancakeSwapV3StandardModule(guardian_) {}
+    constructor(
+        address guardian_,
+        address factory_
+    ) PancakeSwapV3StandardModule(guardian_, factory_) {}
 
     /// @notice function used by metaVault to deposit tokens into the strategy.
     /// @param depositor_ address that will provide the tokens.
@@ -64,26 +70,34 @@ contract PancakeSwapV3StandardModulePublic is
 
         if (proportion_ == 0) revert ProportionZero();
 
-        // PancakeSwap V3 doesn't support native coin
-        if (address(token0) == NATIVE_COIN || address(token1) == NATIVE_COIN) {
-            revert("PancakeSwap V3 doesn't support native coin");
-        }
-
         // #endregion checks.
 
+        uint256 total0;
+        uint256 total1;
+
         // Calculate deposit amounts based on current underlying values
-        (uint256 total0, uint256 total1) = this.totalUnderlying();
-        
-        amount0 = (total0 * proportion_) / BASE;
-        amount1 = (total1 * proportion_) / BASE;
+
+        if (!notFirstDeposit) {
+            (total0, total1) = (_init0, _init1);
+            notFirstDeposit = true;
+        } else {
+            (total0, total1) = totalUnderlying();
+        }
+
+        amount0 = FullMath.mulDivRoundingUp(total0, proportion_, BASE);
+        amount1 = FullMath.mulDivRoundingUp(total1, proportion_, BASE);
 
         // Transfer tokens from depositor to this contract
         if (amount0 > 0) {
-            token0.safeTransferFrom(depositor_, address(this), amount0);
+            token0.safeTransferFrom(
+                depositor_, address(this), amount0
+            );
         }
 
         if (amount1 > 0) {
-            token1.safeTransferFrom(depositor_, address(this), amount1);
+            token1.safeTransferFrom(
+                depositor_, address(this), amount1
+            );
         }
 
         // Expand active ranges by proportion
@@ -122,9 +136,11 @@ contract PancakeSwapV3StandardModulePublic is
 
     /// @notice Expand active ranges by proportion by adding liquidity to existing positions
     /// @param proportion_ proportion to expand the ranges by
-    function _expandRangesByProportion(uint256 proportion_) internal {
+    function _expandRangesByProportion(
+        uint256 proportion_
+    ) internal {
         // Get current ranges
-        Range[] memory ranges = this.getRanges();
+        Range[] memory ranges = getRanges();
         uint256 length = ranges.length;
 
         if (length == 0) {
@@ -136,10 +152,8 @@ contract PancakeSwapV3StandardModulePublic is
         // For each active range, add liquidity proportionally
         for (uint256 i; i < length; i++) {
             Range memory range = ranges[i];
-            bytes32 positionId = keccak256(
-                abi.encodePacked(
-                    address(this), range.lowerTick, range.upperTick
-                )
+            bytes32 positionId = UnderlyingV3.getPositionId(
+                address(this), range.lowerTick, range.upperTick
             );
 
             if (_activeRanges[positionId]) {
@@ -150,7 +164,11 @@ contract PancakeSwapV3StandardModulePublic is
                 if (currentLiquidity > 0) {
                     // Calculate additional liquidity to add
                     uint128 additionalLiquidity = uint128(
-                        (uint256(currentLiquidity) * proportion_) / BASE
+                        FullMath.mulDiv(
+                            uint256(currentLiquidity),
+                            proportion_,
+                            BASE
+                        )
                     );
 
                     if (additionalLiquidity > 0) {

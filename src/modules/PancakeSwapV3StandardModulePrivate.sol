@@ -35,7 +35,7 @@ contract PancakeSwapV3StandardModulePrivate is
 
     // #endregion public constants.
 
-    constructor(address guardian_) PancakeSwapV3StandardModule(guardian_) {}
+    constructor(address guardian_, address factory_) PancakeSwapV3StandardModule(guardian_, factory_) {}
 
     /// @notice fund function for private vault.
     /// @param depositor_ address that will provide the tokens.
@@ -49,11 +49,6 @@ contract PancakeSwapV3StandardModulePrivate is
         // #region checks.
 
         if (amount0_ == 0 && amount1_ == 0) revert DepositZero();
-
-        // PancakeSwap V3 doesn't support native coin
-        if (address(token0) == NATIVE_COIN || address(token1) == NATIVE_COIN) {
-            revert("PancakeSwap V3 doesn't support native coin");
-        }
 
         // #endregion checks.
 

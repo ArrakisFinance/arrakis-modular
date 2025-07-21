@@ -2,14 +2,13 @@
 pragma solidity ^0.8.19;
 
 import {IOracleWrapper} from "./IOracleWrapper.sol";
-import {Rebalance, Range} from "../structs/SUniswapV3.sol";
+import {Rebalance, Range, PositionLiquidity} from "../structs/SUniswapV3.sol";
 
 interface IPancakeSwapV3StandardModule {
     // #region errors.
 
     error OnlyMetaVaultOwner();
     error MaxSlippageGtTenPercent();
-    error SqrtPriceZero();
     error AmountZero();
     error InsufficientFunds();
     error LengthsNotEqual();
@@ -19,17 +18,36 @@ interface IPancakeSwapV3StandardModule {
     error BurnToken0();
     error BurnToken1();
     error OverMaxDeviation();
+    error NativeCoinNotSupported();
+    error PoolNotFound();
+    error ExpectedMinReturnTooLow();
+    error WrongRouter();
+    error SlippageTooHigh();
+    error OnlyPool();
 
     // #endregion errors.
 
     // #region events.
+
+    event LogApproval(
+        address indexed spender, address[] tokens, uint256[] amounts
+    );
+    event LogRebalance(
+        PositionLiquidity[] burns,
+        PositionLiquidity[] mints,
+        uint256 amount0Minted,
+        uint256 amount1Minted,
+        uint256 amount0Burned,
+        uint256 amount1Burned
+    );
+    event LogSetPool(address oldPool, address pool);
 
     // #endregion events.
 
     function initialize(
         uint256 init0_,
         uint256 init1_,
-        address pool_,
+        uint24 fee_,
         IOracleWrapper oracle_,
         uint24 maxSlippage_,
         address metaVault_
@@ -42,18 +60,11 @@ interface IPancakeSwapV3StandardModule {
     ) external;
 
     function setPool(
-        address pool_
+        uint24 fee_
     ) external;
 
     function rebalance(
         Rebalance calldata rebalance_
-    ) external;
-
-    /// @notice function used to withdraw eth from the module.
-    /// @dev these fund will be used to swap eth to the other token
-    /// of the currencyPair to rebalance the inventory inside a single tx.
-    function withdrawEth(
-        uint256 amount_
     ) external;
 
     function uniswapV3MintCallback(
