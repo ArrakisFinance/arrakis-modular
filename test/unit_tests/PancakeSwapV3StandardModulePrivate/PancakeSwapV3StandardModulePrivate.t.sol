@@ -90,6 +90,7 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
     address public guardian;
     address public owner;
     address public factory;
+    address public distributor;
 
     // #region mocks contracts.
 
@@ -103,6 +104,7 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
+        distributor = vm.addr(uint256(keccak256(abi.encode("Distributor"))));
 
         // #region meta vault creation.
 
@@ -143,7 +145,7 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new PancakeSwapV3StandardModulePrivate(guardian, factory)
+            new PancakeSwapV3StandardModulePrivate(guardian, factory, distributor)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -210,7 +212,7 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
         nativeVault.setTokens(NATIVE_COIN, WETH);
 
         address implementation = address(
-            new PancakeSwapV3StandardModulePrivate(guardian, factory)
+            new PancakeSwapV3StandardModulePrivate(guardian, factory, distributor)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -238,7 +240,7 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
         nativeVault.setTokens(USDC, NATIVE_COIN);
 
         address implementation = address(
-            new PancakeSwapV3StandardModulePrivate(guardian, factory)
+            new PancakeSwapV3StandardModulePrivate(guardian, factory, distributor)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -381,18 +383,21 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
     // #region test set pool.
 
     function testSetPool() public {
+        Rebalance memory rebalance;
         address newPool = address(new UniswapV3PoolMock(USDC, WETH));
 
         UniswapV3FactoryMock(factory).setPool(address(newPool));
 
         vm.prank(manager);
-        module.setPool(0);
+        module.setPool(0, rebalance);
 
         assertEq(module.pool(), newPool);
     }
 
     function testSetPoolOnlyManager() public {
         address newPool = address(new UniswapV3PoolMock(USDC, WETH));
+
+        Rebalance memory rebalance;
 
         UniswapV3FactoryMock(factory).setPool(address(newPool));
 
@@ -403,25 +408,28 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
                 manager
             )
         );
-        module.setPool(0);
+        module.setPool(0, rebalance);
     }
 
     function testSetPoolAddressZero() public {
+        Rebalance memory rebalance;
         UniswapV3FactoryMock(factory).setPool(address(0));
 
         vm.prank(manager);
         vm.expectRevert(
             IPancakeSwapV3StandardModule.PoolNotFound.selector
         );
-        module.setPool(0);
+        module.setPool(0, rebalance);
     }
 
     function testSetPoolSamePool() public {
+        Rebalance memory rebalance;
+
         vm.prank(manager);
         vm.expectRevert(
             IPancakeSwapV3StandardModule.SamePool.selector
         );
-        module.setPool(0);
+        module.setPool(0, rebalance);
     }
 
     // #endregion test set pool.

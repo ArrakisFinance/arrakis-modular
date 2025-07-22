@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import {IOracleWrapper} from "./IOracleWrapper.sol";
+import {IPancakeDistributor} from "./IPancakeDistributor.sol";
 import {Rebalance, Range, PositionLiquidity} from "../structs/SUniswapV3.sol";
 
 interface IPancakeSwapV3StandardModule {
@@ -24,6 +25,9 @@ interface IPancakeSwapV3StandardModule {
     error WrongRouter();
     error SlippageTooHigh();
     error OnlyPool();
+    error ClaimParamsLengthZero();
+    error OnlyManagerOwner();
+    error SameReceiver();
 
     // #endregion errors.
 
@@ -40,7 +44,23 @@ interface IPancakeSwapV3StandardModule {
         uint256 amount0Burned,
         uint256 amount1Burned
     );
-    event LogSetPool(address oldPool, address pool);
+    event LogSetPool(
+        address oldPool,
+        address pool,
+        Rebalance rebalance
+    );
+    event LogSetReceiver(
+        address oldReceiver,
+        address newReceiver
+    );
+    event LogClaimManagerReward(
+        address indexed token,
+        uint256 amount
+    );
+    event LogClaimReward(
+        address indexed token,
+        uint256 amount
+    );
 
     // #endregion events.
 
@@ -50,6 +70,7 @@ interface IPancakeSwapV3StandardModule {
         uint24 fee_,
         IOracleWrapper oracle_,
         uint24 maxSlippage_,
+        address rewardReceiver_,
         address metaVault_
     ) external;
 
@@ -60,7 +81,8 @@ interface IPancakeSwapV3StandardModule {
     ) external;
 
     function setPool(
-        uint24 fee_
+        uint24 fee_,
+        Rebalance calldata rebalance_
     ) external;
 
     function rebalance(
@@ -71,6 +93,19 @@ interface IPancakeSwapV3StandardModule {
         uint256 amount0Owed,
         uint256 amount1Owed,
         bytes calldata data
+    ) external;
+
+    function setReceiver(
+        address newReceiver_
+    ) external;
+
+    function claimManagerRewards(
+        IPancakeDistributor.ClaimParams[] calldata params_
+    ) external;
+
+    function claimRewards(
+        IPancakeDistributor.ClaimParams[] calldata params_,
+        address receiver_
     ) external;
 
     // #region view functions.
@@ -87,6 +122,8 @@ interface IPancakeSwapV3StandardModule {
         external
         view
         returns (Range[] memory ranges);
+
+    function rewardReceiver() external view returns (address);
 
     // #endregion view functions.
 }

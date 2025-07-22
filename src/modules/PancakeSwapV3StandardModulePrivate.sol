@@ -5,7 +5,6 @@ import {IArrakisLPModulePrivate} from
     "../interfaces/IArrakisLPModulePrivate.sol";
 import {PancakeSwapV3StandardModule} from
     "../abstracts/PancakeSwapV3StandardModule.sol";
-import {NATIVE_COIN} from "../constants/CArrakis.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {SafeERC20} from
@@ -35,7 +34,11 @@ contract PancakeSwapV3StandardModulePrivate is
 
     // #endregion public constants.
 
-    constructor(address guardian_, address factory_) PancakeSwapV3StandardModule(guardian_, factory_) {}
+    constructor(
+        address guardian_,
+        address factory_,
+        address distributor_
+    ) PancakeSwapV3StandardModule(guardian_, factory_, distributor_) {}
 
     /// @notice fund function for private vault.
     /// @param depositor_ address that will provide the tokens.
@@ -66,11 +69,15 @@ contract PancakeSwapV3StandardModulePrivate is
     ) internal {
         // Transfer tokens from depositor to this contract
         if (amount0_ > 0) {
-            token0.safeTransferFrom(depositor_, address(this), amount0_);
+            token0.safeTransferFrom(
+                depositor_, address(this), amount0_
+            );
         }
 
         if (amount1_ > 0) {
-            token1.safeTransferFrom(depositor_, address(this), amount1_);
+            token1.safeTransferFrom(
+                depositor_, address(this), amount1_
+            );
         }
     }
 

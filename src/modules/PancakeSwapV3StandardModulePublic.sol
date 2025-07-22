@@ -7,7 +7,7 @@ import {PancakeSwapV3StandardModule} from
     "../abstracts/PancakeSwapV3StandardModule.sol";
 import {IPancakeSwapV3StandardModule} from
     "../interfaces/IPancakeSwapV3StandardModule.sol";
-import {NATIVE_COIN, BASE} from "../constants/CArrakis.sol";
+import {BASE} from "../constants/CArrakis.sol";
 import {IUniswapV3Pool} from "../interfaces/IUniswapV3Pool.sol";
 import {Range} from "../structs/SUniswapV3.sol";
 import {UnderlyingV3} from "../libraries/UnderlyingV3.sol";
@@ -45,8 +45,9 @@ contract PancakeSwapV3StandardModulePublic is
 
     constructor(
         address guardian_,
-        address factory_
-    ) PancakeSwapV3StandardModule(guardian_, factory_) {}
+        address factory_,
+        address distributor_
+    ) PancakeSwapV3StandardModule(guardian_, factory_, distributor_) {}
 
     /// @notice function used by metaVault to deposit tokens into the strategy.
     /// @param depositor_ address that will provide the tokens.

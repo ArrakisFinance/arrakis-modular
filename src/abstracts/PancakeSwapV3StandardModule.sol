@@ -14,12 +14,12 @@ import {IUniswapV3PoolVariant} from
     "../interfaces/IUniswapV3PoolVariant.sol";
 import {IUniswapV3FactoryVariant} from
     "../interfaces/IUniswapV3FactoryVariant.sol";
+import {IPancakeDistributor} from "../interfaces/IPancakeDistributor.sol";
 import {
     PIPS,
     BASE,
     NATIVE_COIN,
-    TEN_PERCENT,
-    NATIVE_COIN_DECIMALS
+    TEN_PERCENT
 } from "../constants/CArrakis.sol";
 import {
     Rebalance,
@@ -86,6 +86,10 @@ abstract contract PancakeSwapV3StandardModule is
     uint24 public maxSlippage;
     /// @notice pool address of the module.
     address public pool;
+    /// @notice receiver of the rewards.
+    address public rewardReceiver;
+    /// @notice distributor address.
+    IPancakeDistributor public distributor;
 
     // #endregion public properties.
 
@@ -101,7 +105,7 @@ abstract contract PancakeSwapV3StandardModule is
 
     // #region storage gaps.
 
-    uint256[37] internal __gap;
+    uint256[36] internal __gap;
 
     // #endregion storage gaps.
 
@@ -138,15 +142,16 @@ abstract contract PancakeSwapV3StandardModule is
 
     // #endregion modifiers.
 
-    constructor(address guardian_, address factory_) {
+    constructor(address guardian_, address factory_, address distributor_) {
         // #region checks.
-        if (guardian_ == address(0) || factory_ == address(0)) {
+        if (guardian_ == address(0) || factory_ == address(0) || distributor_ == address(0)) {
             revert AddressZero();
         }
         // #endregion checks.
 
         factory = factory_;
         _guardian = guardian_;
+        distributor = IPancakeDistributor(distributor_);
 
         _disableInitializers();
     }
@@ -175,6 +180,7 @@ abstract contract PancakeSwapV3StandardModule is
     /// @param oracle_ address of the oracle used by the pancake swap v3 standard module.
     /// @param maxSlippage_ allowed to manager for rebalancing the inventory using
     /// swap.
+    /// @param rewardReceiver_ address of the receiver of the rewards.
     /// @param metaVault_ address of the meta vault.
     function initialize(
         uint256 init0_,
@@ -182,11 +188,12 @@ abstract contract PancakeSwapV3StandardModule is
         uint24 fee_,
         IOracleWrapper oracle_,
         uint24 maxSlippage_,
+        address rewardReceiver_,
         address metaVault_
     ) external initializer {
         // #region checks.
         if (
-            metaVault_ == address(0) || address(oracle_) == address(0)
+            metaVault_ == address(0) || address(oracle_) == address(0) || rewardReceiver_ == address(0)
         ) revert AddressZero();
         if (maxSlippage_ > TEN_PERCENT) {
             revert MaxSlippageGtTenPercent();
@@ -240,6 +247,116 @@ abstract contract PancakeSwapV3StandardModule is
     // #region vault owner functions.
 
     /// @inheritdoc IPancakeSwapV3StandardModule
+    function claimRewards(
+        IPancakeDistributor.ClaimParams[] calldata params_,
+        address receiver_
+    ) external onlyMetaVaultOwner nonReentrant whenNotPaused {
+        // #region checks.
+
+        if (receiver_ == address(0)) {
+            revert AddressZero();
+        }
+
+        uint256 length = params_.length;
+
+        if (length == 0) {
+            revert ClaimParamsLengthZero();
+        }
+
+        // #endregion checks.
+
+        // #region claim.
+
+        distributor.claim(params_);
+
+        // #endregion claim.
+
+        address _rewardReceiver = rewardReceiver;
+        uint256 _managerFeePIPS = managerFeePIPS;
+
+        for (uint256 i; i < length; i++) {
+            IPancakeDistributor.ClaimParams memory param = params_[i];
+
+            uint256 managerShare =
+                FullMath.mulDiv(param.amount, _managerFeePIPS, PIPS);
+
+            uint256 balanceOfToken =
+                IERC20Metadata(param.token).balanceOf(address(this));
+
+            IERC20Metadata(param.token).safeTransfer(
+                receiver_, balanceOfToken - managerShare
+            );
+            IERC20Metadata(param.token).safeTransfer(
+                _rewardReceiver, managerShare
+            );
+
+            emit LogClaimReward(
+                param.token, balanceOfToken - managerShare
+            );
+            emit LogClaimManagerReward(param.token, managerShare);
+        }
+    }
+
+    function claimManagerRewards(
+        IPancakeDistributor.ClaimParams[] calldata params_
+    ) external onlyManager nonReentrant whenNotPaused {
+        // #region checks.
+
+        uint256 length = params_.length;
+
+        if (length == 0) {
+            revert ClaimParamsLengthZero();
+        }
+
+        // #endregion checks.
+
+        // #region claim.
+
+        distributor.claim(params_);
+
+        // #endregion claim.
+
+        address _rewardReceiver = rewardReceiver;
+        uint256 _managerFeePIPS = managerFeePIPS;
+
+        for (uint256 i; i < length; i++) {
+            IPancakeDistributor.ClaimParams memory param = params_[i];
+
+            uint256 managerShare =
+                FullMath.mulDiv(param.amount, _managerFeePIPS, PIPS);
+
+            IERC20Metadata(param.token).safeTransfer(
+                _rewardReceiver, managerShare
+            );
+
+            emit LogClaimManagerReward(param.token, managerShare);
+        }
+    }
+
+    function setReceiver(
+        address newReceiver_
+    ) external whenNotPaused {
+        address manager = metaVault.manager();
+
+        if (IOwnable(manager).owner() != msg.sender) {
+            revert OnlyManagerOwner();
+        }
+
+        address oldReceiver = rewardReceiver;
+        if (newReceiver_ == address(0)) {
+            revert AddressZero();
+        }
+
+        if (oldReceiver == newReceiver_) {
+            revert SameReceiver();
+        }
+
+        rewardReceiver = newReceiver_;
+
+        emit LogSetReceiver(oldReceiver, newReceiver_);
+    }
+
+    /// @inheritdoc IPancakeSwapV3StandardModule
     function approve(
         address spender_,
         address[] calldata tokens_,
@@ -271,7 +388,8 @@ abstract contract PancakeSwapV3StandardModule is
     /// @notice function used to set the pool for the module.
     /// @param fee_ fee of the pool of the pancake swap v3 pool that will be used by the module.
     function setPool(
-        uint24 fee_
+        uint24 fee_,
+        Rebalance calldata rebalance_
     ) external onlyManager nonReentrant whenNotPaused {
         address _pool = pool;
 
@@ -296,7 +414,27 @@ abstract contract PancakeSwapV3StandardModule is
 
         // #endregion set Pool.
 
-        emit LogSetPool(_pool, pool_);
+        // #region do rebalance.
+
+        (
+            uint256 amount0Minted,
+            uint256 amount1Minted,
+            uint256 amount0Burned,
+            uint256 amount1Burned
+        ) = _internalRebalance(rebalance_);
+
+        if (rebalance_.minDeposit0 > amount0Minted) {
+            revert MintToken0();
+        }
+        if (rebalance_.minDeposit1 > amount1Minted) {
+            revert MintToken1();
+        }
+        if (rebalance_.minBurn0 > amount0Burned) revert BurnToken0();
+        if (rebalance_.minBurn1 > amount1Burned) revert BurnToken1();
+
+        // #endregion do rebalance.
+
+        emit LogSetPool(_pool, pool_, rebalance_);
     }
 
     // #endregion only manager functions.
@@ -362,17 +500,21 @@ abstract contract PancakeSwapV3StandardModule is
         whenNotPaused
         returns (uint256 amount0, uint256 amount1)
     {
+        uint256 managerFeePIPS_ = managerFeePIPS;
+        uint256 fee0;
+        uint256 fee1;
         // Collect fees from all positions
         uint256 length = _ranges.length;
         for (uint256 i; i < length; i++) {
             Range memory range = _ranges[i];
-            bytes32 positionId = keccak256(
-                abi.encodePacked(
-                    address(this), range.lowerTick, range.upperTick
-                )
+            bytes32 positionId = UnderlyingV3.getPositionId(
+                address(this), range.lowerTick, range.upperTick
             );
 
             if (_activeRanges[positionId]) {
+                (uint256 burn0, uint256 burn1) = IUniswapV3Pool(pool)
+                    .burn(range.lowerTick, range.upperTick, 0);
+                (uint256 collected0, uint256 collected1) =
                 IUniswapV3Pool(pool).collect(
                     address(this),
                     range.lowerTick,
@@ -380,15 +522,14 @@ abstract contract PancakeSwapV3StandardModule is
                     type(uint128).max,
                     type(uint128).max
                 );
+
+                fee0 += burn0 - collected0;
+                fee1 += burn1 - collected1;
             }
         }
 
-        // Calculate manager fees
-        uint256 balance0 = token0.balanceOf(address(this));
-        uint256 balance1 = token1.balanceOf(address(this));
-
-        amount0 = (balance0 * managerFeePIPS) / PIPS;
-        amount1 = (balance1 * managerFeePIPS) / PIPS;
+        amount0 = FullMath.mulDiv(fee0, managerFeePIPS_, PIPS);
+        amount1 = FullMath.mulDiv(fee1, managerFeePIPS_, PIPS);
 
         if (amount0 > 0) {
             token0.safeTransfer(metaVault.manager(), amount0);
@@ -480,10 +621,6 @@ abstract contract PancakeSwapV3StandardModule is
                 token1: address(token1)
             })
         );
-
-        // Subtract manager fees
-        amount0 = amount0 - ((amount0 * managerFeePIPS) / PIPS);
-        amount1 = amount1 - ((amount1 * managerFeePIPS) / PIPS);
     }
 
     /// @notice function used to get the amounts of token0 and token1 sitting
@@ -507,10 +644,6 @@ abstract contract PancakeSwapV3StandardModule is
             }),
             priceX96_
         );
-
-        // Subtract manager fees
-        amount0 = amount0 - ((amount0 * managerFeePIPS) / PIPS);
-        amount1 = amount1 - ((amount1 * managerFeePIPS) / PIPS);
     }
 
     /// @notice function used to validate if module state is not manipulated
@@ -577,10 +710,28 @@ abstract contract PancakeSwapV3StandardModule is
     function _managerBalance(
         bool isToken0_
     ) internal view returns (uint256 managerBalance) {
-        uint256 balance = isToken0_
-            ? token0.balanceOf(address(this))
-            : token1.balanceOf(address(this));
-        managerBalance = (balance * managerFeePIPS) / PIPS;
+        (,, uint256 fee0, uint256 fee1) = UnderlyingV3
+            .totalUnderlyingWithFees(
+            UnderlyingPayloadV3({
+                ranges: _ranges,
+                pool: pool,
+                self: address(this),
+                leftOver0: token0.balanceOf(address(this)),
+                leftOver1: token1.balanceOf(address(this)),
+                token0: address(token0),
+                token1: address(token1)
+            })
+        );
+
+        if (isToken0_) {
+            (managerBalance,) = UnderlyingV3.subtractAdminFees(
+                fee0, fee1, managerFeePIPS
+            );
+        } else {
+            (, managerBalance) = UnderlyingV3.subtractAdminFees(
+                fee0, fee1, managerFeePIPS
+            );
+        }
     }
 
     function _withdraw(
@@ -593,7 +744,7 @@ abstract contract PancakeSwapV3StandardModule is
         uint256 amount1Collected;
 
         for (uint256 i; i < length; i++) {
-            Range memory range = _ranges[i];
+            Range memory range = _ranges[length - i - 1];
             bytes32 positionId = UnderlyingV3.getPositionId(
                 address(this), range.lowerTick, range.upperTick
             );
@@ -632,6 +783,12 @@ abstract contract PancakeSwapV3StandardModule is
 
                         amount0Collected += collected0;
                         amount1Collected += collected1;
+                    }
+
+                    if (liquidityToRemove == liquidity) {
+                        _activeRanges[positionId] = false;
+                        _ranges[length - i - 1] = _ranges[length - 1];
+                        _ranges.pop();
                     }
                 }
             }
@@ -694,26 +851,47 @@ abstract contract PancakeSwapV3StandardModule is
         // Burn liquidity from specified ranges
         for (uint256 i; i < length; i++) {
             PositionLiquidity memory burn = rebalance_.burns[i];
-            (uint256 burn0, uint256 burn1) = IUniswapV3Pool(pool).burn(
-                burn.range.lowerTick,
-                burn.range.upperTick,
-                burn.liquidity
-            );
-            amount0Burned += burn0;
-            amount1Burned += burn1;
 
-            (uint256 collected0, uint256 collected1) = IUniswapV3Pool(
-                pool
-            ).collect(
+            bytes32 positionId = UnderlyingV3.getPositionId(
                 address(this),
                 burn.range.lowerTick,
-                burn.range.upperTick,
-                type(uint128).max,
-                type(uint128).max
+                burn.range.upperTick
             );
 
-            amount0Collected += collected0;
-            amount1Collected += collected1;
+            if (_activeRanges[positionId]) {
+                (uint128 liquidity,,,,) =
+                    IUniswapV3Pool(pool).positions(positionId);
+
+                (uint256 burn0, uint256 burn1) = IUniswapV3Pool(pool)
+                    .burn(
+                    burn.range.lowerTick,
+                    burn.range.upperTick,
+                    burn.liquidity
+                );
+                amount0Burned += burn0;
+                amount1Burned += burn1;
+
+                (uint256 collected0, uint256 collected1) =
+                IUniswapV3Pool(pool).collect(
+                    address(this),
+                    burn.range.lowerTick,
+                    burn.range.upperTick,
+                    type(uint128).max,
+                    type(uint128).max
+                );
+
+                amount0Collected += collected0;
+                amount1Collected += collected1;
+
+                if (burn.liquidity == liquidity) {
+                    (, uint256 index) =
+                        UnderlyingV3.rangeExists(_ranges, burn.range);
+
+                    _activeRanges[positionId] = false;
+                    _ranges[index] = _ranges[length - 1];
+                    _ranges.pop();
+                }
+            }
         }
 
         // #region collect manager fees.
@@ -758,18 +936,14 @@ abstract contract PancakeSwapV3StandardModule is
                 amount0Minted += mint0;
                 amount1Minted += mint1;
 
-                // Update active ranges
-                bytes32 positionId = keccak256(
-                    abi.encodePacked(
-                        address(this),
-                        mint.range.lowerTick,
-                        mint.range.upperTick
-                    )
+                bytes32 positionId = UnderlyingV3.getPositionId(
+                    address(this),
+                    mint.range.lowerTick,
+                    mint.range.upperTick
                 );
-                _activeRanges[positionId] = true;
 
                 // Add to ranges array if not already present
-                _addRangeIfNotExists(mint.range);
+                _addRangeIfNotExists(positionId, mint.range);
             }
         }
 
@@ -801,15 +975,13 @@ abstract contract PancakeSwapV3StandardModule is
 
         if (swapPayload_.zeroForOne) {
             _token0.forceApprove(
-                swapPayload_.router,
-                swapPayload_.amountIn
+                swapPayload_.router, swapPayload_.amountIn
             );
 
             balance = _token1.balanceOf(address(this));
         } else {
             _token1.forceApprove(
-                swapPayload_.router,
-                swapPayload_.amountIn
+                swapPayload_.router, swapPayload_.amountIn
             );
 
             balance = _token0.balanceOf(address(this));
@@ -820,9 +992,7 @@ abstract contract PancakeSwapV3StandardModule is
         }
 
         {
-            swapPayload_.router.functionCall(
-                swapPayload_.payload
-            );
+            swapPayload_.router.functionCall(swapPayload_.payload);
         }
 
         if (swapPayload_.zeroForOne) {
@@ -850,10 +1020,8 @@ abstract contract PancakeSwapV3StandardModule is
         uint256 fee1;
         for (uint256 i; i < length; i++) {
             Range memory range = _ranges[i];
-            bytes32 positionId = keccak256(
-                abi.encodePacked(
-                    address(this), range.lowerTick, range.upperTick
-                )
+            bytes32 positionId = UnderlyingV3.getPositionId(
+                address(this), range.lowerTick, range.upperTick
             );
 
             if (_activeRanges[positionId]) {
@@ -861,11 +1029,14 @@ abstract contract PancakeSwapV3StandardModule is
                     IUniswapV3Pool(pool).positions(positionId);
 
                 if (liquidity > 0) {
-                    (uint256 burn0, uint256 burn1) = IUniswapV3Pool(pool).burn(
+                    (uint256 burn0, uint256 burn1) = IUniswapV3Pool(
+                        pool
+                    ).burn(
                         range.lowerTick, range.upperTick, liquidity
                     );
 
-                    (uint256 collected0, uint256 collected1) = IUniswapV3Pool(pool).collect(
+                    (uint256 collected0, uint256 collected1) =
+                    IUniswapV3Pool(pool).collect(
                         address(this),
                         range.lowerTick,
                         range.upperTick,
@@ -886,8 +1057,10 @@ abstract contract PancakeSwapV3StandardModule is
             uint256 managerFeePIPS_ = managerFeePIPS;
             address manager = metaVault.manager();
 
-            uint256 managerFee0 = FullMath.mulDiv(fee0, managerFeePIPS_, PIPS);
-            uint256 managerFee1 = FullMath.mulDiv(fee1, managerFeePIPS_, PIPS);
+            uint256 managerFee0 =
+                FullMath.mulDiv(fee0, managerFeePIPS_, PIPS);
+            uint256 managerFee1 =
+                FullMath.mulDiv(fee1, managerFeePIPS_, PIPS);
 
             if (managerFee0 > 0) {
                 token0.safeTransfer(manager, managerFee0);
@@ -902,23 +1075,24 @@ abstract contract PancakeSwapV3StandardModule is
     }
 
     function _addRangeIfNotExists(
+        bytes32 positionId_,
         Range memory range_
     ) internal {
         bytes32 rangeHash =
             keccak256(abi.encode(range_.lowerTick, range_.upperTick));
 
         for (uint256 i; i < _ranges.length; i++) {
+            Range memory range = _ranges[i];
             if (
                 keccak256(
-                    abi.encode(
-                        _ranges[i].lowerTick, _ranges[i].upperTick
-                    )
+                    abi.encode(range.lowerTick, range.upperTick)
                 ) == rangeHash
             ) {
                 return; // Range already exists
             }
         }
 
+        _activeRanges[positionId_] = true;
         _ranges.push(range_);
     }
 

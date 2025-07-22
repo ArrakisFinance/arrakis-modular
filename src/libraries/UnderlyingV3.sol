@@ -10,7 +10,8 @@ import {
     RangeData,
     PositionUnderlyingV3,
     ComputeFeesPayload,
-    GetFeesPayload
+    GetFeesPayload,
+    Range
 } from "../structs/SUniswapV3.sol";
 import {PIPS} from "../constants/CArrakis.sol";
 
@@ -488,12 +489,12 @@ library UnderlyingV3 {
     function subtractAdminFees(
         uint256 rawFee0_,
         uint256 rawFee1_,
-        uint256 managerFeeBPS_
+        uint256 managerFeePIPS_
     ) public pure returns (uint256 fee0, uint256 fee1) {
         fee0 = rawFee0_
-            - FullMath.mulDiv(rawFee0_, managerFeeBPS_, PIPS);
+            - FullMath.mulDiv(rawFee0_, managerFeePIPS_, PIPS);
         fee1 = rawFee1_
-            - FullMath.mulDiv(rawFee1_, managerFeeBPS_, PIPS);
+            - FullMath.mulDiv(rawFee1_, managerFeePIPS_, PIPS);
     }
 
     function getPositionId(
@@ -503,5 +504,21 @@ library UnderlyingV3 {
     ) public pure returns (bytes32 positionId) {
         return
             keccak256(abi.encodePacked(self_, lowerTick_, upperTick_));
+    }
+
+    function rangeExists(Range[] memory currentRanges_, Range memory range_)
+        public
+        pure
+        returns (bool ok, uint256 index)
+    {
+        for (uint256 i; i < currentRanges_.length; i++) {
+            ok =
+                range_.lowerTick == currentRanges_[i].lowerTick &&
+                range_.upperTick == currentRanges_[i].upperTick;
+            if (ok) {
+                index = i;
+                break;
+            }
+        }
     }
 }

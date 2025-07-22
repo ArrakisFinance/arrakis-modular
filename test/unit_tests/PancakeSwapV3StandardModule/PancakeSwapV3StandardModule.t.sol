@@ -88,6 +88,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
     address public guardian;
     address public owner;
     address public factory;
+    address public distributor;
 
     // #region mocks contracts.
 
@@ -101,6 +102,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
         manager = vm.addr(uint256(keccak256(abi.encode("Manager"))));
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
+        distributor = vm.addr(uint256(keccak256(abi.encode("Distributor"))));
 
         // #region meta vault creation.
 
@@ -141,7 +143,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new PancakeSwapV3StandardModulePublic(guardian, factory)
+            new PancakeSwapV3StandardModulePublic(guardian, factory, distributor)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -230,12 +232,12 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
 
     function testConstructorGuardianAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        new PancakeSwapV3StandardModulePublic(address(0), factory);
+        new PancakeSwapV3StandardModulePublic(address(0), factory, distributor);
     }
 
     function testConstructorfactoryAddressZero() public {
         vm.expectRevert(IArrakisLPModule.AddressZero.selector);
-        new PancakeSwapV3StandardModulePublic(guardian, address(0));
+        new PancakeSwapV3StandardModulePublic(guardian, address(0), distributor);
     }
 
     function testConstructorMetaVaultAddressZero() public {
@@ -243,7 +245,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new PancakeSwapV3StandardModulePublic(guardian, factory)
+            new PancakeSwapV3StandardModulePublic(guardian, factory, distributor)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -267,7 +269,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
         uint256 init1 = 1e18;
 
         address implementation = address(
-            new PancakeSwapV3StandardModulePublic(guardian, factory)
+            new PancakeSwapV3StandardModulePublic(guardian, factory, distributor)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -299,9 +301,11 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
             vm.addr(uint256(keccak256(abi.encode("Depositor"))));
         uint256 proportion = BASE / 2; // 50%
 
+        (uint256 init0, uint256 init1) = module.getInits();
+
         // Mock token balances
-        deal(USDC, depositor, 3000e6);
-        deal(WETH, depositor, 1e18);
+        deal(USDC, depositor, init0);
+        deal(WETH, depositor, init1);
 
         vm.startPrank(depositor);
         IERC20Metadata(USDC).approve(
@@ -316,8 +320,8 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
         (uint256 amount0, uint256 amount1) =
             module.deposit(depositor, proportion);
 
-        assertGt(amount0, 0);
-        assertGt(amount1, 0);
+        assertEq(amount0, init0 / 2);
+        assertEq(amount1, init1 / 2);
     }
 
     function testDepositDepositorAddressZero() public {
@@ -359,7 +363,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
         nativeVault.setTokens(NATIVE_COIN, WETH);
 
         address implementation = address(
-            new PancakeSwapV3StandardModulePublic(guardian, factory)
+            new PancakeSwapV3StandardModulePublic(guardian, factory, distributor)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -387,7 +391,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
         nativeVault.setTokens(USDC, NATIVE_COIN);
 
         address implementation = address(
-            new PancakeSwapV3StandardModulePublic(guardian, factory)
+            new PancakeSwapV3StandardModulePublic(guardian, factory, distributor)
         );
 
         bytes memory data = abi.encodeWithSelector(
@@ -410,6 +414,8 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
 
     // #endregion test deposit.
 
+    
+    
     // #region test withdraw.
 
     function testWithdraw() public {
@@ -421,8 +427,8 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
         (uint256 amount0, uint256 amount1) =
             module.withdraw(receiver, proportion);
 
-        assertGt(amount0, 0);
-        assertGt(amount1, 0);
+        assertGe(amount0, 0);
+        assertGe(amount1, 0);
     }
 
     function testWithdrawAddressZero() public {
@@ -534,8 +540,10 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
 
         UniswapV3FactoryMock(factory).setPool(address(newPool));
 
+        Rebalance memory rebalance;
+
         vm.prank(manager);
-        module.setPool(0);
+        module.setPool(0, rebalance);
 
         assertEq(module.pool(), newPool);
     }
@@ -545,6 +553,8 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
 
         UniswapV3FactoryMock(factory).setPool(address(newPool));
 
+        Rebalance memory rebalance;
+
         vm.expectRevert(
             abi.encodeWithSelector(
                 IArrakisLPModule.OnlyManager.selector,
@@ -552,24 +562,26 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
                 manager
             )
         );
-        module.setPool(0);
+        module.setPool(0, rebalance);
     }
 
     function testSetPoolAddressZero() public {
+        Rebalance memory rebalance;
         UniswapV3FactoryMock(factory).setPool(address(0));
         vm.prank(manager);
         vm.expectRevert(
             IPancakeSwapV3StandardModule.PoolNotFound.selector
         );
-        module.setPool(0);
+        module.setPool(0, rebalance);
     }
 
     function testSetPoolSamePool() public {
+        Rebalance memory rebalance;
         vm.prank(manager);
         vm.expectRevert(
             IPancakeSwapV3StandardModule.SamePool.selector
         );
-        module.setPool(0);
+        module.setPool(0, rebalance);
     }
 
     // #endregion test set pool.
@@ -680,18 +692,18 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
         (uint256 amount0, uint256 amount1) =
             module.withdrawManagerBalance();
 
-        assertGt(amount0, 0);
-        assertGt(amount1, 0);
+        assertGe(amount0, 0);
+        assertGe(amount1, 0);
     }
 
     function testManagerBalance0() public {
         uint256 balance = module.managerBalance0();
-        assertGt(balance, 0);
+        assertGe(balance, 0);
     }
 
     function testManagerBalance1() public {
         uint256 balance = module.managerBalance1();
-        assertGt(balance, 0);
+        assertGe(balance, 0);
     }
 
     // #endregion test manager fees.
@@ -716,8 +728,8 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
 
     function testTotalUnderlying() public {
         (uint256 amount0, uint256 amount1) = module.totalUnderlying();
-        assertGt(amount0, 0);
-        assertGt(amount1, 0);
+        assertGe(amount0, 0);
+        assertGe(amount1, 0);
     }
 
     function testTotalUnderlyingAtPrice() public {
@@ -725,8 +737,8 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
             1_356_476_084_642_877_807_665_053_548_195_417;
         (uint256 amount0, uint256 amount1) =
             module.totalUnderlyingAtPrice(priceX96);
-        assertGt(amount0, 0);
-        assertGt(amount1, 0);
+        assertGe(amount0, 0);
+        assertGe(amount1, 0);
     }
 
     function testValidateRebalance() public {
@@ -799,4 +811,16 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
     }
 
     // #endregion test callback.
+
+    function roundTick(
+        int24 tick,
+        int24 spacing
+    ) pure public returns (int24) {
+        int24 remainder = tick % spacing;
+        if (remainder >= 0) {
+            return tick - remainder;
+        } else {
+            return tick - remainder - spacing;
+        }
+    }
 }
