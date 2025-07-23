@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.19;
 
 import {console} from "forge-std/console.sol";
 
@@ -23,6 +23,15 @@ import {UpgradeableBeacon} from
 
 // #endregion Sepolia deployment.
 
+// #region Base deployment.
+
+// Base Underlying V4 : 0x0A8b27B6b7d0BB383Bc6E95883761EF6A9457aa4
+// Base Uniswap V4 : 0xdab7731679Db852157962C5be149F9B699c67c11
+// Base UniswapV4StandardPublic : 0x53f9fb26edce653320c57A88e6C34D29283fb101
+// Base UpgradeableBeacon : 0xd7B40220cf9adDF6A713f424a1f113C89cd6B283
+
+// @endregion Base deployment.
+
 contract DUniV4StandardModulePublic is CreateXScript {
     uint88 public version = uint88(
         uint256(
@@ -41,8 +50,10 @@ contract DUniV4StandardModulePublic is CreateXScript {
         0xAf6f9640092cB1236E5DB6E517576355b6C40b7f;
 
     address public constant distributor =
-        0x5Be2b4F6394d91a782331e0896B8613c995Ba5F5;
+        0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
     // implementation address : 0x6eaB56B0C1888dC80e06C39F6B18364737205dDB
+
+    address public constant controller = address(1);
 
     function setUp() public {}
 
@@ -56,7 +67,7 @@ contract DUniV4StandardModulePublic is CreateXScript {
 
         bytes memory initCode = abi.encodePacked(
             type(UniV4StandardModulePublic).creationCode,
-            abi.encode(poolManager, guardian, distributor, msg.sender)
+            abi.encode(poolManager, guardian, distributor, controller)
         );
 
         bytes32 salt = bytes32(
