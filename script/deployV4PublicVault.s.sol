@@ -44,19 +44,22 @@ enum OracleDeployment {
 
 // #endregion enums.
 
-address constant token0 = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
-address constant token1 = NATIVE_COIN;
-uint24 constant fee = 500;
-int24 constant tickSpacing = 10;
+address constant token0 = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
+address constant token1 = 0x98d0baa52b2D063E780DE12F615f963Fe8537553;
+uint24 constant fee = 10_000;
+int24 constant tickSpacing = 200;
 address constant hooks = address(0);
-uint160 constant sqrtPrice = 33965778792757789688229654398626;
+uint160 constant sqrtPrice =
+    33_965_778_792_757_789_688_229_654_398_626;
 uint256 constant init0 = 1;
 uint256 constant init1 = 1;
 
-bool constant isInversed = true;
+bool constant isInversed = false;
+bool constant noNATIVECOIN = true;
 
-bytes32 constant salt =
-    keccak256(abi.encode("SEPOLIA ETH/USDC Uni V4 public vault beta 1"));
+bytes32 constant salt = keccak256(
+    abi.encode("BASE USDC/KAITO Uni V4 public vault beta 1")
+);
 address constant vaultOwner =
     0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 uint24 constant maxSlippage = TEN_PERCENT / 2;
@@ -72,7 +75,7 @@ address constant nft = 0x44A801e7E2E073bd8bcE4bCCf653239Fa156B762;
 
 //// !!!!!! CHECK THAT DECIMAL OF ORACLE IS MATCHING TOKEN PAIR DECIMALS !!!!!! ////
 OracleDeployment constant oracleDeployment =
-    OracleDeployment.UniV4Oracle;
+    OracleDeployment.DeployedChainlinkOracleWrapper;
 
 bool constant createPool = false;
 
@@ -90,7 +93,8 @@ bool constant isPriceFeedInversed = false;
 
 // #endregion chainlink oracle wrapper.
 
-address constant chainlinkOracleWrapper = address(0);
+address constant chainlinkOracleWrapper =
+    0x74Cd898138a1E966dF15c38728621Ad3Ef5a10D0;
 
 bool constant sendOwnershipToSafe = false;
 address constant safe = address(0);
@@ -114,17 +118,27 @@ contract DeployV4PublicVault is CreateXScript {
 
         PoolKey memory poolKey;
 
-        if (isInversed) {
-            poolKey = PoolKey({
-                currency0: CurrencyLibrary.ADDRESS_ZERO,
-                currency1: Currency.wrap(token0),
-                fee: fee,
-                tickSpacing: tickSpacing,
-                hooks: IHooks(hooks)
-            });
+        if (!noNATIVECOIN) {
+            if (isInversed) {
+                poolKey = PoolKey({
+                    currency0: CurrencyLibrary.ADDRESS_ZERO,
+                    currency1: Currency.wrap(token0),
+                    fee: fee,
+                    tickSpacing: tickSpacing,
+                    hooks: IHooks(hooks)
+                });
+            } else {
+                poolKey = PoolKey({
+                    currency0: CurrencyLibrary.ADDRESS_ZERO,
+                    currency1: Currency.wrap(token1),
+                    fee: fee,
+                    tickSpacing: tickSpacing,
+                    hooks: IHooks(hooks)
+                });
+            }
         } else {
             poolKey = PoolKey({
-                currency0: CurrencyLibrary.ADDRESS_ZERO,
+                currency0: Currency.wrap(token0),
                 currency1: Currency.wrap(token1),
                 fee: fee,
                 tickSpacing: tickSpacing,
@@ -226,7 +240,6 @@ contract DeployV4PublicVault is CreateXScript {
 
         // do it manually after.
 
-
         // #endregion initialize oracle.
 
         // #region whitelist bunker module.
@@ -268,6 +281,9 @@ contract DeployV4PublicVault is CreateXScript {
         if (chainId == 11_155_111) {
             return 0xBCb6702BC617298a14cbb258AE6dbaf02Bd49596;
         }
+        if (chainId == 8453) {
+            return 0xd7B40220cf9adDF6A713f424a1f113C89cd6B283;
+        }
         // default
         else {
             revert("Not supported network!");
@@ -281,6 +297,9 @@ contract DeployV4PublicVault is CreateXScript {
         if (chainId == 11_155_111) {
             return 0xB4dA34605c26BA152d465DeB885889070105BB5F;
         }
+        if (chainId == 8453) {
+            return 0x3025b46A9814a69EAf8699EDf905784Ee22C3ABB;
+        }
         // default
         else {
             revert("Not supported network!");
@@ -293,6 +312,9 @@ contract DeployV4PublicVault is CreateXScript {
         // mainnet
         if (chainId == 11_155_111) {
             return 0xE03A1074c86CFeDd5C142C4F04F1a1536e203543;
+        }
+        if (chainId == 8453) {
+            return 0x498581fF718922c3f8e6A244956aF099B2652b2b;
         }
         // default
         else {
