@@ -58,10 +58,10 @@ uint160 constant sqrtPrice =
     195892493474689299306035126611;
 bool constant isInversed = false;
 bytes32 constant salt = keccak256(
-    abi.encode("BSC USDT/COOKIE Pancake Swap V4 private vault 16")
+    abi.encode("BSC USDT/COOKIE Pancake Swap V4 private vault 21")
 );
 address constant vaultOwner =
-    0xD9311258CE30aB20381ca8498513923C26528Cc7;
+    0x81a1e7F34b9bABf172087cF5df8A4DF6500e9d4d;
 uint24 constant maxSlippage = TEN_PERCENT / 5;
 uint24 constant maxDeviation = TEN_PERCENT / 5;
 uint256 constant cooldownPeriod = 60;
@@ -164,45 +164,47 @@ contract DeployPancakeV4PrivateVault is CreateXScript {
 
         // #region create uni V4 oracle.
 
-        address oracle = 0xF4e0671a76B1715744a259a0fa0c561eB89e3340;
+        // address oracle = 0xF4e0671a76B1715744a259a0fa0c561eB89e3340;
 
-        // if (oracleDeployment == OracleDeployment.PancakeV4Oracle) {
-        //     oracle =
-        //         address(new PancakeV4Oracle(poolManager, isInversed));
+        address oracle;
 
-        //     console.log("Pancake V4 Oracle : ");
-        //     console.logAddress(oracle);
-        // }
-        // if (
-        //     oracleDeployment
-        //         == OracleDeployment.ChainlinkOracleWrapper
-        // ) {
-        //     bytes memory initCode = abi.encodePacked(
-        //         creationCode_chainlinkOracleWrapper,
-        //         abi.encode(
-        //             token0Decimals,
-        //             token1Decimals,
-        //             priceFeed,
-        //             sequencerUpTimeFeed,
-        //             outdated,
-        //             isPriceFeedInversed
-        //         )
-        //     );
+        if (oracleDeployment == OracleDeployment.PancakeV4Oracle) {
+            oracle =
+                address(new PancakeV4Oracle(poolManager, isInversed));
 
-        //     oracle = CreateX.deployCreate(initCode);
+            console.log("Pancake V4 Oracle : ");
+            console.logAddress(oracle);
+        }
+        if (
+            oracleDeployment
+                == OracleDeployment.ChainlinkOracleWrapper
+        ) {
+            bytes memory initCode = abi.encodePacked(
+                creationCode_chainlinkOracleWrapper,
+                abi.encode(
+                    token0Decimals,
+                    token1Decimals,
+                    priceFeed,
+                    sequencerUpTimeFeed,
+                    outdated,
+                    isPriceFeedInversed
+                )
+            );
 
-        //     console.log("Chainlink Oracle Wrapper : ");
-        //     console.logAddress(oracle);
-        // }
-        // if (
-        //     oracleDeployment
-        //         == OracleDeployment.DeployedChainlinkOracleWrapper
-        // ) {
-        //     oracle = chainlinkOracleWrapper;
+            oracle = CreateX.deployCreate(initCode);
 
-        //     console.log("Deployed Chainlink Oracle Wrapper : ");
-        //     console.logAddress(oracle);
-        // }
+            console.log("Chainlink Oracle Wrapper : ");
+            console.logAddress(oracle);
+        }
+        if (
+            oracleDeployment
+                == OracleDeployment.DeployedChainlinkOracleWrapper
+        ) {
+            oracle = chainlinkOracleWrapper;
+
+            console.log("Deployed Chainlink Oracle Wrapper : ");
+            console.logAddress(oracle);
+        }
 
         // #endregion create uni V4 oracle.
 
@@ -308,7 +310,7 @@ contract DeployPancakeV4PrivateVault is CreateXScript {
 
         // binance smart chain
         if (chainId == 56) {
-            return 0xE137AeED8783D04fBa9c9Df89aEcCEE81468cE58;
+            return 0x741d420ee761FD4Bd0b4573C916e30950C87e639;
         }
         // default
         else {

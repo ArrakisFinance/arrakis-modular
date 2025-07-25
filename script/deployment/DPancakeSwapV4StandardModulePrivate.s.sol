@@ -35,6 +35,22 @@ import {UpgradeableBeacon} from
 
 // #endregion Binance smart chain.
 
+// #region Binance smart chain fix.
+
+// PancakeSwapV4StandardModulePrivate : 0x10348a0A633b12De588293c87dE66B597781bbD1.
+// UpgradeableBeacon : 0xEF770D34d89eFe21fc7FB7391Af8F23772C2037f.
+// PancakeSwap V4 : 0xce4F5354fC463efba631FB8295D154133A335828.
+// PancakeSwap V4 Underlying : 0xa57751A5068dD0A9b2986093F04929e300e855A9.
+
+// v2 :
+
+// PancakeSwapV4StandardModulePrivate : 0x3dA00380b4D56101685d058785FDe25FE9C53C39.
+// UpgradeableBeacon : 0x741d420ee761fd4bd0b4573c916e30950c87e639.
+// PancakeSwap V4 : 0xce4F5354fC463efba631FB8295D154133A335828.
+// PancakeSwap V4 Underlying : 0x9b9e4e7218a21011276742cCAFB6933CF7F595F3.
+
+// #endregion Binance smart chain fix.
+
 // #endregion production deployment.
 
 contract DPancakeSwapV4StandardModulePrivate is CreateXScript {
@@ -42,7 +58,7 @@ contract DPancakeSwapV4StandardModulePrivate is CreateXScript {
         uint256(
             keccak256(
                 abi.encode(
-                    "Pancake Standard Private Module version 1.0.0"
+                    "Pancake Standard Private Module version 1.0.2"
                 )
             )
         )

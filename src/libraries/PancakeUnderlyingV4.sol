@@ -381,7 +381,7 @@ library PancakeUnderlyingV4 {
         fee0 = _computeFeesEarned(payload);
         payload.feeGrowthInsideLast = feeInfo_.feeGrowthInside1Last;
         payload.feeGrowthOutsideLower = lower.feeGrowthOutside1X128;
-        payload.feeGrowthOutsideUpper = upper.feeGrowthOutside0X128;
+        payload.feeGrowthOutsideUpper = upper.feeGrowthOutside1X128;
         (, payload.feeGrowthGlobal) =
             feeInfo_.poolManager.getFeeGrowthGlobals(feeInfo_.poolId);
         fee1 = _computeFeesEarned(payload);
