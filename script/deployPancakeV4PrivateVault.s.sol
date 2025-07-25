@@ -310,7 +310,7 @@ contract DeployPancakeV4PrivateVault is CreateXScript {
 
         // binance smart chain
         if (chainId == 56) {
-            return 0xEF770D34d89eFe21fc7FB7391Af8F23772C2037f;
+            return 0x741d420ee761fd4bd0b4573c916e30950c87e639;
         }
         // default
         else {
