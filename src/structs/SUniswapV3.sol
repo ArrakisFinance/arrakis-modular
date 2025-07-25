@@ -8,13 +8,46 @@ import {INonfungiblePositionManager} from
 struct Range {
     int24 lowerTick;
     int24 upperTick;
-    uint24 feeTier;
+}
+
+struct PositionLiquidity {
+    uint128 liquidity;
+    Range range;
+}
+
+struct Rebalance {
+    PositionLiquidity[] burns;
+    PositionLiquidity[] mints;
+    SwapPayload swap;
+    uint256 minBurn0;
+    uint256 minBurn1;
+    uint256 minDeposit0;
+    uint256 minDeposit1;
+}
+
+struct UnderlyingPayloadV3 {
+    Range[] ranges;
+    address pool;
+    address self;
+    uint256 leftOver0;
+    uint256 leftOver1;
+    address token0;
+    address token1;
 }
 
 struct PositionUnderlying {
     address nftPositionManager;
     address factory;
     uint256 tokenId;
+}
+
+struct PositionUnderlyingV3 {
+    bytes32 positionId;
+    uint160 sqrtPriceX96;
+    address pool;
+    int24 tick;
+    int24 lowerTick;
+    int24 upperTick;
 }
 
 struct UnderlyingPayload {
@@ -29,7 +62,7 @@ struct UnderlyingPayload {
 struct GetFeesPayload {
     uint256 feeGrowthInside0Last;
     uint256 feeGrowthInside1Last;
-    IUniswapV3Pool pool;
+    address pool;
     uint128 liquidity;
     int24 tick;
     int24 lowerTick;
@@ -41,6 +74,7 @@ struct ComputeFeesPayload {
     uint256 feeGrowthOutsideLower;
     uint256 feeGrowthOutsideUpper;
     uint256 feeGrowthGlobal;
+    address pool;
     uint128 liquidity;
     int24 tick;
     int24 lowerTick;
@@ -69,4 +103,10 @@ struct RebalanceParams {
     uint256 minBurn1;
     uint256 minDeposit0;
     uint256 minDeposit1;
+}
+
+struct RangeData {
+    address self;
+    Range range;
+    address pool;
 }
