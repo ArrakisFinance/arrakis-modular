@@ -12,13 +12,14 @@ import {console} from "forge-std/console.sol";
 
 import {IArrakisLPModule} from "../src/interfaces/IArrakisLPModule.sol";
 import {IArrakisMetaVault} from "../src/interfaces/IArrakisMetaVault.sol";
+import {IArrakisMetaVaultPrivate} from "../src/interfaces/IArrakisMetaVaultPrivate.sol";
 import {IPancakeSwapV4StandardModule} from "../src/interfaces/IPancakeSwapV4StandardModule.sol";
 
 // #endregion modular.
 
 import {PancakeUnderlyingV4} from "../src/libraries/PancakeUnderlyingV4.sol";
 import {PancakeSwapV4} from "../src/libraries/PancakeSwapV4.sol";
-import {PIPS} from "../src/constants/CArrakis.sol";
+import {PIPS, BASE} from "../src/constants/CArrakis.sol";
 
 import {UnderlyingPayload, Range as PoolRange} from "../src/structs/SPancakeSwapV4.sol";
 
@@ -29,8 +30,11 @@ import {ICLPoolManager} from "@pancakeswap/v4-core/src/pool-cl/interfaces/ICLPoo
 import {FullMath} from "@pancakeswap/v4-core/src/pool-cl/libraries/FullMath.sol";
 
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 address constant module = 0x69196b71602D40243b7F5009410B1a4143DF94F7;
+address constant vault = 0x0A4233f53328e16db2De5D7cB07AD7dC6457Dd87;
+address constant owner = 0x45242F3520cF610ABFFCc0e3315c4fC6080b6154;
 
 contract TotalUnderlying is Script {
     using PoolIdLibrary for PoolKey;
@@ -50,7 +54,6 @@ contract TotalUnderlying is Script {
         IERC20Metadata token1 = IArrakisLPModule(module).token1();
 
         console.logAddress(address(uint160(amount1)));
-
 
         // console.log("token0 balance :");
         // console.log(token0.balanceOf(module));
@@ -141,6 +144,23 @@ contract TotalUnderlying is Script {
         console.log(result0);
         console.log("result1 :");
         console.log(result1);
+
+        uint256 balance0 = token0.balanceOf(owner);
+        uint256 balance1 = token1.balanceOf(owner);
+
+        console.log("balance0 :");
+        console.log(balance0);
+        console.log("balance1 :");
+        console.log(balance1);
+
+        vm.startPrank(owner);
+        IArrakisMetaVaultPrivate(vault).withdraw(BASE, owner);
+        vm.stopPrank();
+
+        console.log("balance0 :");
+        console.log(token0.balanceOf(owner) - balance0);
+        console.log("balance1 :");
+        console.log(token1.balanceOf(owner) - balance1);
 
         // console.log("leftOver0 :");
         // console.log(leftOver0);
