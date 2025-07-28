@@ -46,6 +46,8 @@ import {ReentrancyGuardUpgradeable} from
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
+import {console} from "forge-std/console.sol";
+
 /// @notice this module can set pancakeswap v3 pool that have a generic hook,
 /// that don't require specific action to become liquidity provider.
 /// @dev due to native coin standard difference between pancakeswap and arrakis,
@@ -554,7 +556,7 @@ abstract contract PancakeSwapV3StandardModule is
         emit LogSetManagerFeePIPS(_managerFeePIPS, newFeePIPS_);
     }
 
-    function uniswapV3MintCallback(
+    function pancakeV3MintCallback(
         uint256 amount0Owed,
         uint256 amount1Owed,
         bytes calldata

@@ -645,7 +645,7 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
 
         // Mock the pool calling the callback
         vm.prank(address(pool));
-        module.uniswapV3MintCallback(amount0Owed, amount1Owed, "");
+        module.pancakeV3MintCallback(amount0Owed, amount1Owed, "");
     }
 
     function testUniswapV3MintCallbackOnlyPool() public {
@@ -655,7 +655,7 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
         vm.expectRevert(
             IPancakeSwapV3StandardModule.OnlyPool.selector
         );
-        module.uniswapV3MintCallback(amount0Owed, amount1Owed, "");
+        module.pancakeV3MintCallback(amount0Owed, amount1Owed, "");
     }
 
     // #endregion test callback.
