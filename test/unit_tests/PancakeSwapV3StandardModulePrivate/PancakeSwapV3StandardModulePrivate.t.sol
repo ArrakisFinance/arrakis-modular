@@ -91,6 +91,7 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
     address public owner;
     address public factory;
     address public distributor;
+    address public rewardReceiver;
 
     // #region mocks contracts.
 
@@ -105,6 +106,7 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
         distributor = vm.addr(uint256(keccak256(abi.encode("Distributor"))));
+        rewardReceiver = vm.addr(uint256(keccak256(abi.encode("Reward Receiver"))));
 
         // #region meta vault creation.
 
@@ -155,6 +157,7 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
             0,
             IOracleWrapper(address(oracle)),
             TEN_PERCENT,
+            rewardReceiver,
             metaVault
         );
 
@@ -222,6 +225,7 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
             0,
             IOracleWrapper(address(oracle)),
             TEN_PERCENT,
+            rewardReceiver,
             address(nativeVault)
         );
 
@@ -250,6 +254,7 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
             0,
             IOracleWrapper(address(oracle)),
             TEN_PERCENT,
+            rewardReceiver,
             address(nativeVault)
         );
 
