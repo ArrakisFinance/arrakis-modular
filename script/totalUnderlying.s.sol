@@ -154,6 +154,18 @@ contract TotalUnderlying is Script {
         console.log(balance1);
 
         vm.startPrank(owner);
+        IArrakisMetaVaultPrivate(vault).withdraw(BASE/2, owner);
+        vm.stopPrank();
+
+        uint256 interBalance0 = token0.balanceOf(owner) - balance0;
+        uint256 interBalance1 = token1.balanceOf(owner) - balance1;
+
+        console.log("balance0 :");
+        console.log(interBalance0);
+        console.log("balance1 :");
+        console.log(interBalance1);
+
+        vm.startPrank(owner);
         IArrakisMetaVaultPrivate(vault).withdraw(BASE, owner);
         vm.stopPrank();
 
