@@ -89,6 +89,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
     address public owner;
     address public factory;
     address public distributor;
+    address public rewardReceiver;
 
     // #region mocks contracts.
 
@@ -103,6 +104,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
         pauser = vm.addr(uint256(keccak256(abi.encode("Pauser"))));
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
         distributor = vm.addr(uint256(keccak256(abi.encode("Distributor"))));
+        rewardReceiver = vm.addr(uint256(keccak256(abi.encode("Reward Receiver"))));
 
         // #region meta vault creation.
 
@@ -153,6 +155,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
             0,
             IOracleWrapper(address(oracle)),
             TEN_PERCENT,
+            rewardReceiver,
             metaVault
         );
 
@@ -255,6 +258,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
             0,
             IOracleWrapper(address(oracle)),
             TEN_PERCENT,
+            rewardReceiver,
             address(0)
         );
 
@@ -279,6 +283,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
             0,
             IOracleWrapper(address(oracle)),
             TEN_PERCENT + 1,
+            rewardReceiver,
             metaVault
         );
 
@@ -373,6 +378,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
             0,
             IOracleWrapper(address(oracle)),
             TEN_PERCENT,
+            rewardReceiver,
             address(nativeVault)
         );
 
@@ -401,6 +407,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
             0,
             IOracleWrapper(address(oracle)),
             TEN_PERCENT,
+            rewardReceiver,
             address(nativeVault)
         );
 
@@ -786,7 +793,7 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
 
     // #region test callback.
 
-    function testUniswapV3MintCallback() public {
+    function testPancakeV3MintCallback() public {
         // This test verifies the callback function works correctly
         // The callback should transfer tokens to the pool
         uint256 amount0Owed = 3000e6;
@@ -797,17 +804,17 @@ contract PancakeSwapV3StandardModuleTest is TestWrapper {
 
         // Mock the pool calling the callback
         vm.prank(address(pool));
-        module.uniswapV3MintCallback(amount0Owed, amount1Owed, "");
+        module.pancakeV3MintCallback(amount0Owed, amount1Owed, "");
     }
 
-    function testUniswapV3MintCallbackOnlyPool() public {
+    function testPancakeV3MintCallbackOnlyPool() public {
         uint256 amount0Owed = 1000e6;
         uint256 amount1Owed = 1e18;
 
         vm.expectRevert(
             IPancakeSwapV3StandardModule.OnlyPool.selector
         );
-        module.uniswapV3MintCallback(amount0Owed, amount1Owed, "");
+        module.pancakeV3MintCallback(amount0Owed, amount1Owed, "");
     }
 
     // #endregion test callback.

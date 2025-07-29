@@ -14,7 +14,8 @@ import {IUniswapV3PoolVariant} from
     "../interfaces/IUniswapV3PoolVariant.sol";
 import {IUniswapV3FactoryVariant} from
     "../interfaces/IUniswapV3FactoryVariant.sol";
-import {IPancakeDistributor} from "../interfaces/IPancakeDistributor.sol";
+import {IPancakeDistributor} from
+    "../interfaces/IPancakeDistributor.sol";
 import {
     PIPS,
     BASE,
@@ -45,6 +46,8 @@ import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
+
+
 
 /// @notice this module can set pancakeswap v3 pool that have a generic hook,
 /// that don't require specific action to become liquidity provider.
@@ -142,9 +145,16 @@ abstract contract PancakeSwapV3StandardModule is
 
     // #endregion modifiers.
 
-    constructor(address guardian_, address factory_, address distributor_) {
+    constructor(
+        address guardian_,
+        address factory_,
+        address distributor_
+    ) {
         // #region checks.
-        if (guardian_ == address(0) || factory_ == address(0) || distributor_ == address(0)) {
+        if (
+            guardian_ == address(0) || factory_ == address(0)
+                || distributor_ == address(0)
+        ) {
             revert AddressZero();
         }
         // #endregion checks.
@@ -190,10 +200,10 @@ abstract contract PancakeSwapV3StandardModule is
         uint24 maxSlippage_,
         address rewardReceiver_,
         address metaVault_
-    ) external initializer {
-        // #region checks.
+    ) external initializer {        // #region checks.
         if (
-            metaVault_ == address(0) || address(oracle_) == address(0) || rewardReceiver_ == address(0)
+            metaVault_ == address(0) || address(oracle_) == address(0)
+                || rewardReceiver_ == address(0)
         ) revert AddressZero();
         if (maxSlippage_ > TEN_PERCENT) {
             revert MaxSlippageGtTenPercent();
@@ -554,7 +564,7 @@ abstract contract PancakeSwapV3StandardModule is
         emit LogSetManagerFeePIPS(_managerFeePIPS, newFeePIPS_);
     }
 
-    function uniswapV3MintCallback(
+    function pancakeV3MintCallback(
         uint256 amount0Owed,
         uint256 amount1Owed,
         bytes calldata
@@ -739,56 +749,62 @@ abstract contract PancakeSwapV3StandardModule is
         uint256 proportion_
     ) internal returns (uint256 amount0, uint256 amount1) {
         // Remove liquidity proportionally from all positions
-        uint256 length = _ranges.length;
         uint256 amount0Collected;
         uint256 amount1Collected;
 
-        for (uint256 i; i < length; i++) {
-            Range memory range = _ranges[length - i - 1];
-            bytes32 positionId = UnderlyingV3.getPositionId(
-                address(this), range.lowerTick, range.upperTick
-            );
+        uint256 leftOver0 = token0.balanceOf(address(this));
+        uint256 leftOver1 = token1.balanceOf(address(this));
 
-            if (_activeRanges[positionId]) {
-                // Get current liquidity for this position
-                (uint128 liquidity,,,,) =
-                    IUniswapV3Pool(pool).positions(positionId);
+        {
+            uint256 length = _ranges.length;
+            for (uint256 i; i < length; i++) {
+                Range memory range = _ranges[length - i - 1];
+                bytes32 positionId = UnderlyingV3.getPositionId(
+                    address(this), range.lowerTick, range.upperTick
+                );
 
-                if (liquidity > 0) {
-                    uint128 liquidityToRemove = SafeCast.toUint128(
-                        FullMath.mulDiv(
-                            uint256(liquidity), proportion_, BASE
-                        )
-                    );
+                if (_activeRanges[positionId]) {
+                    // Get current liquidity for this position
+                    (uint128 liquidity,,,,) =
+                        IUniswapV3Pool(pool).positions(positionId);
 
-                    if (liquidityToRemove > 0) {
-                        (uint256 burn0, uint256 burn1) =
-                        IUniswapV3Pool(pool).burn(
-                            range.lowerTick,
-                            range.upperTick,
-                            liquidityToRemove
+                    if (liquidity > 0) {
+                        uint128 liquidityToRemove = SafeCast.toUint128(
+                            FullMath.mulDiv(
+                                uint256(liquidity), proportion_, BASE
+                            )
                         );
 
-                        amount0 += burn0;
-                        amount1 += burn1;
+                        if (liquidityToRemove > 0) {
+                            (uint256 burn0, uint256 burn1) =
+                            IUniswapV3Pool(pool).burn(
+                                range.lowerTick,
+                                range.upperTick,
+                                liquidityToRemove
+                            );
 
-                        (uint256 collected0, uint256 collected1) =
-                        IUniswapV3Pool(pool).collect(
-                            address(this),
-                            range.lowerTick,
-                            range.upperTick,
-                            type(uint128).max,
-                            type(uint128).max
-                        );
+                            amount0 += burn0;
+                            amount1 += burn1;
 
-                        amount0Collected += collected0;
-                        amount1Collected += collected1;
-                    }
+                            (uint256 collected0, uint256 collected1) =
+                            IUniswapV3Pool(pool).collect(
+                                address(this),
+                                range.lowerTick,
+                                range.upperTick,
+                                type(uint128).max,
+                                type(uint128).max
+                            );
 
-                    if (liquidityToRemove == liquidity) {
-                        _activeRanges[positionId] = false;
-                        _ranges[length - i - 1] = _ranges[length - 1];
-                        _ranges.pop();
+                            amount0Collected += collected0;
+                            amount1Collected += collected1;
+                        }
+
+                        if (liquidityToRemove == liquidity) {
+                            _activeRanges[positionId] = false;
+                            _ranges[length - i - 1] =
+                                _ranges[length - 1];
+                            _ranges.pop();
+                        }
                     }
                 }
             }
@@ -817,9 +833,11 @@ abstract contract PancakeSwapV3StandardModule is
             }
 
             amount0 = amount0
-                - FullMath.mulDiv(fee0 - managerFee0, proportion_, BASE);
+                - FullMath.mulDiv(fee0 - managerFee0, proportion_, BASE)
+                + FullMath.mulDiv(leftOver0, proportion_, BASE);
             amount1 = amount1
-                - FullMath.mulDiv(fee1 - managerFee1, proportion_, BASE);
+                - FullMath.mulDiv(fee1 - managerFee1, proportion_, BASE)
+                + FullMath.mulDiv(leftOver1, proportion_, BASE);
         }
 
         // #endregion get manager share.

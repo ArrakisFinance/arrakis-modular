@@ -89,7 +89,7 @@ interface IPancakeSwapV3StandardModule {
         Rebalance calldata rebalance_
     ) external;
 
-    function uniswapV3MintCallback(
+    function pancakeV3MintCallback(
         uint256 amount0Owed,
         uint256 amount1Owed,
         bytes calldata data

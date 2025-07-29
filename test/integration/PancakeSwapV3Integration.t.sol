@@ -11,10 +11,13 @@ import {PancakeSwapV3StandardModulePrivate} from
 import {BunkerModule} from "../../src/modules/BunkerModule.sol";
 import {
     NATIVE_COIN,
-    TEN_PERCENT
+    TEN_PERCENT,
+    BASE
 } from "../../src/constants/CArrakis.sol";
 import {IArrakisMetaVault} from
     "../../src/interfaces/IArrakisMetaVault.sol";
+import {IArrakisMetaVaultPrivate} from
+    "../../src/interfaces/IArrakisMetaVaultPrivate.sol";
 import {IArrakisMetaVaultFactory} from
     "../../src/interfaces/IArrakisMetaVaultFactory.sol";
 import {IArrakisStandardManager} from
@@ -24,11 +27,17 @@ import {IModuleRegistry} from
     "../../src/interfaces/IModuleRegistry.sol";
 import {IPauser} from "../../src/interfaces/IPauser.sol";
 import {IOwnable} from "../../src/interfaces/IOwnable.sol";
+import {IPancakeSwapV3StandardModule} from
+    "../../src/interfaces/IPancakeSwapV3StandardModule.sol";
 import {
-    IPancakeSwapV3StandardModule
-} from "../../src/interfaces/IPancakeSwapV3StandardModule.sol";
-import {SwapPayload} from "../../src/structs/SUniswapV3.sol";
+    Rebalance,
+    SwapPayload,
+    PositionLiquidity,
+    Range
+} from "../../src/structs/SUniswapV3.sol";
 import {IOracleWrapper} from "../../src/interfaces/IOracleWrapper.sol";
+import {IUniswapV3PoolVariant} from
+    "../../src/interfaces/IUniswapV3PoolVariant.sol";
 
 // #region openzeppelin.
 
@@ -45,20 +54,40 @@ import {SafeCast} from
 
 import {LiquidityAmounts} from
     "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
+import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
 
+import {IDistributorExtension} from
+    "./utils/IDistributorExtension.sol";
 
-contract UniswapV3IntegrationTest is TestWrapper {
+// #region mocks.
+
+import {OracleWrapper} from "./mocks/OracleWrapper.sol";
+
+// #endregion mocks.
+
+// #region interfaces.
+
+interface IUniswapV3SwapCallback {
+    function uniswapV3SwapCallback(
+        int256 amount0Delta,
+        int256 amount1Delta,
+        bytes calldata data
+    ) external;
+}
+
+// #endregion interfaces.
+
+contract PancakeSwapV3StandardModuleTest is
+    TestWrapper,
+    IUniswapV3SwapCallback
+{
     using SafeERC20 for IERC20Metadata;
 
     // #region constant properties.
     address public constant WETH =
-        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant USDC =
-        0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address public constant USDT =
-        0xdAC17F958D2ee523a2206206994597C13D831ec7;
-    address public constant AAVE =
-        0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
+        0x2170Ed0880ac9A755fd29B2688956BD959F933F8;
+    address public constant BUSD =
+        0x55d398326f99059fF775485246999027B3197955;
 
     // #region arrakis modular contracts.
 
@@ -85,8 +114,471 @@ contract UniswapV3IntegrationTest is TestWrapper {
     address public constant weth =
         0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
+    address public constant privateRegistryOwner =
+        0x7ddBE55B78FbDe1B0A0b57cc05EE469ccF700585;
+
+    address public constant distributor =
+        0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
+    address public constant distributorGovernor =
+        0x529619a10129396a2F642cae32099C1eA7FA2834;
+
     // #endregion arrakis modular contracts.
 
-    address public owner;
+    // #region pancake swap address.
 
+    /// @dev pool fee = 500, tickSpacing = 10
+    address public constant pool =
+        0xBe141893E4c6AD9272e8C04BAB7E6a10604501a5;
+    address public constant pancakeSwapV3Factory =
+        0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865;
+
+    // #endregion pancake swap address.
+
+    address public owner;
+    address public collector;
+    address public deployer;
+    address public rewardReceiver;
+
+    address public bunkerImplementation;
+    address public bunkerBeacon;
+
+    /// @dev should be used as a private module.
+    address public pancakeSwapStandardModuleImplementation;
+    address public pancakeSwapStandardModuleBeacon;
+
+    address public privateModule;
+    address public vault;
+    address public executor;
+    address public stratAnnouncer;
+
+    // #region arrakis.
+
+    address public router;
+    address public swapExecutor;
+    address public pancakeSwapV4resolver;
+
+    // #endregion arrakis.
+
+    // #region vault infos.
+
+    uint256 public init0;
+    uint256 public init1;
+    uint24 public maxSlippage;
+    address public oracle;
+
+    // #endregion vault infos.
+
+    IERC20Metadata public token0;
+    IERC20Metadata public token1;
+
+    function setUp() public {
+        // #region reset fork.
+
+        _reset(vm.envString("BSC_RPC_URL"), 55_590_662);
+
+        // #endregion reset fork.
+
+        owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
+
+        /// @dev we will not use it so we mock it.
+        executor = vm.addr(uint256(keccak256(abi.encode("Executor"))));
+        stratAnnouncer = vm.addr(
+            uint256(keccak256(abi.encode("Strategy Announcer")))
+        );
+        deployer = vm.addr(uint256(keccak256(abi.encode("Deployer"))));
+        rewardReceiver =
+            vm.addr(uint256(keccak256(abi.encode("Reward Receiver"))));
+
+        (token0, token1) =
+            (IERC20Metadata(WETH), IERC20Metadata(BUSD));
+
+        // #region create an oracle.
+
+        oracle = address(new OracleWrapper());
+
+        // #endregion create an oracle.
+
+        // #region create a uniswap v3 module and whitelist it.
+
+        _createModuleAndWhitelist();
+
+        // #endregion create a uniswap v3 module and whitelist it.
+
+        /// @dev 2% slippage.
+        maxSlippage = 20_000;
+
+        init0 = 1;
+        init1 = 1;
+
+        // #region create a uniswap v3 vault.
+
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IPancakeSwapV3StandardModule.initialize.selector,
+            init0,
+            init1,
+            500,
+            IOracleWrapper(oracle),
+            maxSlippage,
+            rewardReceiver
+        );
+
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
+
+        // #endregion create a uniswap v3 vault.
+
+        bytes32 salt =
+            bytes32(uint256(keccak256(abi.encode("salt toto"))));
+
+        vm.prank(deployer);
+        vault = IArrakisMetaVaultFactory(factory).deployPrivateVault(
+            salt,
+            WETH,
+            BUSD,
+            owner,
+            pancakeSwapStandardModuleBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
+    }
+
+    // #region callback.
+
+    function uniswapV3SwapCallback(
+        int256 amount0Delta,
+        int256 amount1Delta,
+        bytes calldata data
+    ) external {}
+
+    // #endregion callback.
+
+    // #region tests.
+
+    function test_fund_rebalance_withdraw() public {
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 10 * 10 ** 18;
+            amount1 = 40_000 * 10 ** 18;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            // #region fund.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+
+            // #endregion fund.
+        }
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            params.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            vm.prank(arrakisStandardManager);
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+
+            // #region let's do another rebalance.
+
+            params.burns = new PositionLiquidity[](1);
+            params.burns[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            (params.minBurn0, params.minBurn1) = LiquidityAmounts
+                .getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            lowerTick = (tick - 1000) / 10 * 10;
+            upperTick = (tick + 1000) / 10 * 10;
+
+            liquidity = LiquidityAmounts.getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0 - 1, // due to rounding down
+                amount1 - 1 // due to rounding down
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            vm.prank(arrakisStandardManager);
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+
+            // #endregion let's do another rebalance.
+        }
+
+        // #region withdraw.
+
+        uint256 balance0 = token0.balanceOf(owner);
+        uint256 balance1 = token1.balanceOf(owner);
+
+        vm.startPrank(owner);
+
+        IArrakisMetaVaultPrivate(vault).withdraw(BASE, owner);
+
+        vm.stopPrank();
+
+        assertEq(token0.balanceOf(owner) - balance0, amount0 - 2);
+        assertEq(token1.balanceOf(owner) - balance1, amount1 - 2);
+
+        // #endregion withdraw.
+    }
+
+    function test_fund_rebalance_with_swap_and_withdraw() public {
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 2*(10 * 10 ** 18);
+            amount1 = 0;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            // #region fund.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+
+            // #endregion fund.
+        }
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(PancakeSwapV3StandardModuleTest.swap.selector, WETH, BUSD, amount0 / 2, 40_000 * 10 ** 18),
+                router: address(this),
+                amountIn: amount0 / 2,
+                expectedMinReturn: 40_000 * 10 ** 18,
+                zeroForOne: true
+            });
+
+            amount1 = 40_000 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            vm.prank(arrakisStandardManager);
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+
+        // #region withdraw.
+
+        uint256 balance0 = token0.balanceOf(owner);
+        uint256 balance1 = token1.balanceOf(owner);
+
+        vm.startPrank(owner);
+
+        IArrakisMetaVaultPrivate(vault).withdraw(BASE, owner);
+
+        vm.stopPrank();
+
+        assertEq(token0.balanceOf(owner) - balance0, (amount0 / 2) - 1);
+        assertEq(token1.balanceOf(owner) - balance1, amount1 - 1);
+
+        // #endregion withdraw.
+    }
+
+    function test_claim_rewards() public {
+        
+    }
+
+    // #endregion tests.
+
+    // #region swap.
+
+    function swap(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMin) external {
+        uint256 balanceOut = IERC20Metadata(tokenOut).balanceOf(msg.sender);
+        deal(tokenOut, msg.sender, amountOutMin + balanceOut);
+
+        IERC20Metadata(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+    }
+
+    // #endregion swap.
+
+    // #region internal helper functions.
+
+    function _createModuleAndWhitelist() internal {
+        // #region create a uniswap v3 module.
+
+        address implementation = address(
+            new PancakeSwapV3StandardModulePrivate(
+                guardian, pancakeSwapV3Factory, distributor
+            )
+        );
+
+        pancakeSwapStandardModuleBeacon =
+            address(new UpgradeableBeacon(implementation));
+
+        UpgradeableBeacon(pancakeSwapStandardModuleBeacon)
+            .transferOwnership(arrakisTimeLock);
+
+        address[] memory beacons = new address[](1);
+        beacons[0] = address(pancakeSwapStandardModuleBeacon);
+
+        vm.prank(privateRegistryOwner);
+        IModuleRegistry(privateRegistry).whitelistBeacons(beacons);
+
+        // #endregion create a uniswap v3 module.
+    }
+
+    // #endregion internal helper functions.
 }
