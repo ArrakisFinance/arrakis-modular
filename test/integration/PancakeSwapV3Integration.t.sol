@@ -537,6 +537,10 @@ contract PancakeSwapV3StandardModuleTest is
         // #endregion withdraw.
     }
 
+    function test_claim_rewards() public {
+        
+    }
+
     // #endregion tests.
 
     // #region swap.
