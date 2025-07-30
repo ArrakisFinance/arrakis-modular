@@ -683,15 +683,18 @@ abstract contract PancakeSwapV3StandardModule is
         view
         returns (uint256 amount0, uint256 amount1)
     {
+        IERC20Metadata _token0 = token0;
+        IERC20Metadata _token1 = token1;
+
         (amount0, amount1,,) = UnderlyingV3.totalUnderlyingWithFees(
             UnderlyingPayloadV3({
                 ranges: _ranges,
                 pool: pool,
                 self: address(this),
-                leftOver0: token0.balanceOf(address(this)),
-                leftOver1: token1.balanceOf(address(this)),
-                token0: address(token0),
-                token1: address(token1)
+                leftOver0: _token0.balanceOf(address(this)),
+                leftOver1: _token1.balanceOf(address(this)),
+                token0: address(_token0),
+                token1: address(_token1)
             })
         );
     }

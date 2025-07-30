@@ -37,6 +37,7 @@ import {
     Range
 } from "../../src/structs/SUniswapV3.sol";
 import {IOracleWrapper} from "../../src/interfaces/IOracleWrapper.sol";
+import {IUniswapV3Pool} from "../../src/interfaces/IUniswapV3Pool.sol";
 import {IUniswapV3PoolVariant} from
     "../../src/interfaces/IUniswapV3PoolVariant.sol";
 import {IPancakeDistributor} from
@@ -79,7 +80,7 @@ import {OracleWrapper} from "./mocks/OracleWrapper.sol";
 // #region interfaces.
 
 interface IUniswapV3SwapCallback {
-    function uniswapV3SwapCallback(
+    function pancakeV3SwapCallback(
         int256 amount0Delta,
         int256 amount1Delta,
         bytes calldata data
@@ -265,12 +266,20 @@ contract PancakeSwapV3StandardModuleTest is
 
     // #region callback.
 
-    function uniswapV3SwapCallback(
+    function pancakeV3SwapCallback(
         int256 amount0Delta,
         int256 amount1Delta,
         bytes calldata data
     ) external {
-        
+        if (amount0Delta > 0) {
+            deal(WETH, address(this), uint256(amount0Delta));
+            IERC20Metadata(WETH).safeTransfer(msg.sender, uint256(amount0Delta));
+        }
+
+        if (amount1Delta > 0) {
+            deal(BUSD, address(this), uint256(amount1Delta));
+            IERC20Metadata(BUSD).safeTransfer(msg.sender, uint256(amount1Delta));
+        }
     }
 
     // #endregion callback.
@@ -368,7 +377,22 @@ contract PancakeSwapV3StandardModuleTest is
             IPancakeSwapV3StandardModule(module).rebalance(params);
             // #endregion let's do a rebalance.
 
+            // #region do pool swap.
+
+            IUniswapV3Pool(pool).swap(
+                address(this),
+                true,
+                int256(amount0 / 100),
+                TickMath.MIN_SQRT_RATIO + 1,
+                ""
+            );
+
+            // #endregion do pool swap.
+
             // #region let's do another rebalance.
+
+            (sqrtPriceX96, tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
 
             params.burns = new PositionLiquidity[](1);
             params.burns[0] = PositionLiquidity({
@@ -416,6 +440,8 @@ contract PancakeSwapV3StandardModuleTest is
 
         // #region withdraw.
 
+        (amount0, amount1) = IArrakisMetaVault(vault).totalUnderlying();
+
         uint256 balance0 = token0.balanceOf(owner);
         uint256 balance1 = token1.balanceOf(owner);
 
@@ -425,8 +451,8 @@ contract PancakeSwapV3StandardModuleTest is
 
         vm.stopPrank();
 
-        assertEq(token0.balanceOf(owner) - balance0, amount0 - 2);
-        assertEq(token1.balanceOf(owner) - balance1, amount1 - 2);
+        assertEq(token0.balanceOf(owner) - balance0, amount0);
+        assertEq(token1.balanceOf(owner) - balance1, amount1);
 
         // #endregion withdraw.
     }

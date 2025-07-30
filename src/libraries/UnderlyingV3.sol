@@ -442,7 +442,7 @@ library UnderlyingV3 {
         amount0 += fee0After
             + underlyingPayload_.leftOver0;
         amount1 += fee1After
-            + underlyingPayload_.leftOver0;
+            + underlyingPayload_.leftOver1;
     }
 
     function _computeFeesEarned(
