@@ -12,7 +12,8 @@ import {BunkerModule} from "../../src/modules/BunkerModule.sol";
 import {
     NATIVE_COIN,
     TEN_PERCENT,
-    BASE
+    BASE,
+    PIPS
 } from "../../src/constants/CArrakis.sol";
 import {IArrakisMetaVault} from
     "../../src/interfaces/IArrakisMetaVault.sol";
@@ -38,6 +39,10 @@ import {
 import {IOracleWrapper} from "../../src/interfaces/IOracleWrapper.sol";
 import {IUniswapV3PoolVariant} from
     "../../src/interfaces/IUniswapV3PoolVariant.sol";
+import {IPancakeDistributor} from
+    "../../src/interfaces/IPancakeDistributor.sol";
+import {IArrakisLPModule} from
+    "../../src/interfaces/IArrakisLPModule.sol";
 
 // #region openzeppelin.
 
@@ -49,17 +54,23 @@ import {UpgradeableBeacon} from
     "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {IAccessControl} from
+    "@openzeppelin/contracts/access/IAccessControl.sol";
 
 // #endregion openzeppelin.
 
 import {LiquidityAmounts} from
     "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
 import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
+import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-import {IDistributorExtension} from
-    "./utils/IDistributorExtension.sol";
+import {IPancakeDistributorExtension} from
+    "./utils/IPancakeDistributorExtension.sol";
 
 // #region mocks.
+
+import {Hashes} from
+    "@pancakeswap/v4-core/lib/openzeppelin-contracts/contracts/utils/cryptography/Hashes.sol";
 
 import {OracleWrapper} from "./mocks/OracleWrapper.sol";
 
@@ -88,6 +99,8 @@ contract PancakeSwapV3StandardModuleTest is
         0x2170Ed0880ac9A755fd29B2688956BD959F933F8;
     address public constant BUSD =
         0x55d398326f99059fF775485246999027B3197955;
+    address public constant CAKE =
+        0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82;
 
     // #region arrakis modular contracts.
 
@@ -118,9 +131,11 @@ contract PancakeSwapV3StandardModuleTest is
         0x7ddBE55B78FbDe1B0A0b57cc05EE469ccF700585;
 
     address public constant distributor =
-        0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
-    address public constant distributorGovernor =
-        0x529619a10129396a2F642cae32099C1eA7FA2834;
+        0xEA8620aAb2F07a0ae710442590D649ADE8440877;
+    address public constant distributorOwner =
+        0xfa206DAB60c014bEb6833004D8848910165e6047;
+    bytes32 public constant MERKLE_ROOT_SETTER =
+        0x4a5561f79cf422ddc88aee07ed24396a108d5ffadb60f190c137922af74b2c39;
 
     // #endregion arrakis modular contracts.
 
@@ -254,7 +269,9 @@ contract PancakeSwapV3StandardModuleTest is
         int256 amount0Delta,
         int256 amount1Delta,
         bytes calldata data
-    ) external {}
+    ) external {
+        
+    }
 
     // #endregion callback.
 
@@ -433,7 +450,7 @@ contract PancakeSwapV3StandardModuleTest is
                 );
             }
 
-            amount0 = 2*(10 * 10 ** 18);
+            amount0 = 2 * (10 * 10 ** 18);
             amount1 = 0;
 
             deal(WETH, depositor, amount0);
@@ -470,7 +487,13 @@ contract PancakeSwapV3StandardModuleTest is
             // #region swap.
 
             params.swap = SwapPayload({
-                payload: abi.encodeWithSelector(PancakeSwapV3StandardModuleTest.swap.selector, WETH, BUSD, amount0 / 2, 40_000 * 10 ** 18),
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    WETH,
+                    BUSD,
+                    amount0 / 2,
+                    40_000 * 10 ** 18
+                ),
                 router: address(this),
                 amountIn: amount0 / 2,
                 expectedMinReturn: 40_000 * 10 ** 18,
@@ -531,25 +554,309 @@ contract PancakeSwapV3StandardModuleTest is
 
         vm.stopPrank();
 
-        assertEq(token0.balanceOf(owner) - balance0, (amount0 / 2) - 1);
+        assertEq(
+            token0.balanceOf(owner) - balance0, (amount0 / 2) - 1
+        );
         assertEq(token1.balanceOf(owner) - balance1, amount1 - 1);
 
         // #endregion withdraw.
     }
 
     function test_claim_rewards() public {
-        
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 10 * 10 ** 18;
+            amount1 = 40_000 * 10 ** 18;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            // #region fund.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+
+            // #endregion fund.
+        }
+
+        // #region rewards.
+
+        uint256 cakeBalance =
+            IERC20Metadata(CAKE).balanceOf(distributor);
+        uint256 busdBalance =
+            IERC20Metadata(BUSD).balanceOf(distributor);
+
+        IPancakeDistributor.ClaimParams[] memory params =
+            new IPancakeDistributor.ClaimParams[](1);
+        IPancakeDistributor.ClaimEscrowed[] memory escrowed =
+            new IPancakeDistributor.ClaimEscrowed[](0);
+
+        params[0].proof = new bytes32[](1);
+        params[0].token = CAKE;
+        params[0].amount = IPancakeDistributorExtension(distributor)
+            .claimedAmounts(CAKE, module) + 1_000_000_000_000_000_000;
+        // params[0].proof[0] = keccak256(bytes.concat(keccak256(abi.encode(block.chainid, module, CAKE, params[0].amount))));
+        params[0].proof[0] = keccak256(abi.encode("TOTO"));
+
+        bytes32 root = Hashes.commutativeKeccak256(
+            params[0].proof[0],
+            keccak256(
+                bytes.concat(
+                    keccak256(
+                        abi.encode(
+                            block.chainid,
+                            module,
+                            CAKE,
+                            params[0].amount
+                        )
+                    )
+                )
+            )
+        );
+
+        vm.prank(distributorOwner);
+        IAccessControl(distributor).grantRole(
+            MERKLE_ROOT_SETTER, address(this)
+        );
+
+        IPancakeDistributorExtension(distributor).setMerkleTree(
+            root, keccak256(abi.encode("IpfsHash"))
+        );
+
+        vm.warp(
+            IPancakeDistributorExtension(distributor)
+                .endOfDisputePeriod() + 1
+        );
+
+        // #endregion rewards.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        assertEq(IERC20Metadata(CAKE).balanceOf(receiver), 0);
+
+        vm.prank(owner);
+        IPancakeSwapV3StandardModule(module).claimRewards(
+            params, escrowed, receiver
+        );
+
+        uint256 managerFeePIPS =
+            IArrakisLPModule(module).managerFeePIPS();
+
+        address rewardReceiver =
+            IPancakeSwapV3StandardModule(module).rewardReceiver();
+
+        assertEq(
+            IERC20Metadata(CAKE).balanceOf(receiver),
+            FullMath.mulDiv(
+                1_000_000_000_000_000_000, managerFeePIPS, PIPS
+            )
+        );
+
+        assertEq(
+            IERC20Metadata(CAKE).balanceOf(rewardReceiver),
+            FullMath.mulDiv(
+                1_000_000_000_000_000_000, managerFeePIPS, PIPS
+            )
+        );
+    }
+
+    function test_manager_claim_rewards() public {
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 10 * 10 ** 18;
+            amount1 = 40_000 * 10 ** 18;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            // #region fund.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+
+            // #endregion fund.
+        }
+
+        // #region rewards.
+
+        uint256 cakeBalance =
+            IERC20Metadata(CAKE).balanceOf(distributor);
+        uint256 busdBalance =
+            IERC20Metadata(BUSD).balanceOf(distributor);
+
+        IPancakeDistributor.ClaimParams[] memory params =
+            new IPancakeDistributor.ClaimParams[](1);
+        IPancakeDistributor.ClaimEscrowed[] memory escrowed =
+            new IPancakeDistributor.ClaimEscrowed[](0);
+
+        params[0].proof = new bytes32[](1);
+        params[0].token = CAKE;
+        params[0].amount = IPancakeDistributorExtension(distributor)
+            .claimedAmounts(CAKE, module) + 1_000_000_000_000_000_000;
+        // params[0].proof[0] = keccak256(bytes.concat(keccak256(abi.encode(block.chainid, module, CAKE, params[0].amount))));
+        params[0].proof[0] = keccak256(abi.encode("TOTO"));
+
+        bytes32 root = Hashes.commutativeKeccak256(
+            params[0].proof[0],
+            keccak256(
+                bytes.concat(
+                    keccak256(
+                        abi.encode(
+                            block.chainid,
+                            module,
+                            CAKE,
+                            params[0].amount
+                        )
+                    )
+                )
+            )
+        );
+
+        vm.prank(distributorOwner);
+        IAccessControl(distributor).grantRole(
+            MERKLE_ROOT_SETTER, address(this)
+        );
+
+        IPancakeDistributorExtension(distributor).setMerkleTree(
+            root, keccak256(abi.encode("IpfsHash"))
+        );
+
+        vm.warp(
+            IPancakeDistributorExtension(distributor)
+                .endOfDisputePeriod() + 1
+        );
+
+        // #endregion rewards.
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        uint256 managerFeePIPS =
+            IArrakisLPModule(module).managerFeePIPS();
+
+        assertEq(IERC20Metadata(CAKE).balanceOf(receiver), 0);
+
+        // #region claim manager rewards.
+
+        vm.prank(arrakisStandardManager);
+        IPancakeSwapV3StandardModule(module).claimManagerRewards(
+            params
+        );
+
+        // #endregion claim manager rewards.
+
+        // #region claim rewards.
+
+        params = new IPancakeDistributor.ClaimParams[](0);
+        escrowed = new IPancakeDistributor.ClaimEscrowed[](1);
+        escrowed[0].token = CAKE;
+        escrowed[0].amount = FullMath.mulDiv(
+            1_000_000_000_000_000_000, managerFeePIPS, PIPS
+        );
+
+        vm.prank(owner);
+        IPancakeSwapV3StandardModule(module).claimRewards(
+            params, escrowed, receiver
+        );
+
+        // #endregion claim rewards.
+
+        address rewardReceiver =
+            IPancakeSwapV3StandardModule(module).rewardReceiver();
+
+        assertEq(
+            IERC20Metadata(CAKE).balanceOf(receiver),
+            FullMath.mulDiv(
+                1_000_000_000_000_000_000, managerFeePIPS, PIPS
+            )
+        );
+
+        assertEq(
+            IERC20Metadata(CAKE).balanceOf(rewardReceiver),
+            FullMath.mulDiv(
+                1_000_000_000_000_000_000, managerFeePIPS, PIPS
+            )
+        );
     }
 
     // #endregion tests.
 
     // #region swap.
 
-    function swap(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMin) external {
-        uint256 balanceOut = IERC20Metadata(tokenOut).balanceOf(msg.sender);
+    function swap(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 amountOutMin
+    ) external {
+        uint256 balanceOut =
+            IERC20Metadata(tokenOut).balanceOf(msg.sender);
         deal(tokenOut, msg.sender, amountOutMin + balanceOut);
 
-        IERC20Metadata(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        IERC20Metadata(tokenIn).safeTransferFrom(
+            msg.sender, address(this), amountIn
+        );
     }
 
     // #endregion swap.

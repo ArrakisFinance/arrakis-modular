@@ -26,6 +26,7 @@ interface IPancakeSwapV3StandardModule {
     error SlippageTooHigh();
     error OnlyPool();
     error ClaimParamsLengthZero();
+    error RewardTokenNotAllowed();
     error OnlyManagerOwner();
     error SameReceiver();
 
@@ -52,6 +53,10 @@ interface IPancakeSwapV3StandardModule {
     event LogSetReceiver(
         address oldReceiver,
         address newReceiver
+    );
+    event LogClaimEscrowed(
+        address indexed token,
+        uint256 amount
     );
     event LogClaimManagerReward(
         address indexed token,
@@ -105,6 +110,7 @@ interface IPancakeSwapV3StandardModule {
 
     function claimRewards(
         IPancakeDistributor.ClaimParams[] calldata params_,
+        IPancakeDistributor.ClaimEscrowed[] calldata escrowed_,
         address receiver_
     ) external;
 

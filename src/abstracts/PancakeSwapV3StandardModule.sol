@@ -47,8 +47,6 @@ import {ReentrancyGuardUpgradeable} from
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-
-
 /// @notice this module can set pancakeswap v3 pool that have a generic hook,
 /// that don't require specific action to become liquidity provider.
 /// @dev due to native coin standard difference between pancakeswap and arrakis,
@@ -67,6 +65,8 @@ abstract contract PancakeSwapV3StandardModule is
 
     // #region public immutables.
     address public immutable factory;
+    /// @notice distributor address.
+    IPancakeDistributor public immutable distributor;
     // #endregion public immutables.
 
     // #region internal immutables.
@@ -91,8 +91,6 @@ abstract contract PancakeSwapV3StandardModule is
     address public pool;
     /// @notice receiver of the rewards.
     address public rewardReceiver;
-    /// @notice distributor address.
-    IPancakeDistributor public distributor;
 
     // #endregion public properties.
 
@@ -200,7 +198,8 @@ abstract contract PancakeSwapV3StandardModule is
         uint24 maxSlippage_,
         address rewardReceiver_,
         address metaVault_
-    ) external initializer {        // #region checks.
+    ) external initializer {
+        // #region checks.
         if (
             metaVault_ == address(0) || address(oracle_) == address(0)
                 || rewardReceiver_ == address(0)
@@ -214,6 +213,7 @@ abstract contract PancakeSwapV3StandardModule is
         metaVault = IArrakisMetaVault(metaVault_);
         oracle = oracle_;
         maxSlippage = maxSlippage_;
+        rewardReceiver = rewardReceiver_;
 
         address _token0 = IArrakisMetaVault(metaVault_).token0();
         address _token1 = IArrakisMetaVault(metaVault_).token1();
@@ -259,6 +259,7 @@ abstract contract PancakeSwapV3StandardModule is
     /// @inheritdoc IPancakeSwapV3StandardModule
     function claimRewards(
         IPancakeDistributor.ClaimParams[] calldata params_,
+        IPancakeDistributor.ClaimEscrowed[] calldata escrowed_,
         address receiver_
     ) external onlyMetaVaultOwner nonReentrant whenNotPaused {
         // #region checks.
@@ -267,13 +268,56 @@ abstract contract PancakeSwapV3StandardModule is
             revert AddressZero();
         }
 
-        uint256 length = params_.length;
-
-        if (length == 0) {
+        if (params_.length == 0 && escrowed_.length == 0) {
             revert ClaimParamsLengthZero();
         }
 
         // #endregion checks.
+
+        // #region escrowed.
+
+        uint256 length = escrowed_.length;
+
+        for (uint256 i; i < length; i++) {
+            IPancakeDistributor.ClaimEscrowed memory escrowed =
+                escrowed_[i];
+
+            if (escrowed.token == address(0)) {
+                revert AddressZero();
+            }
+
+            if (
+                escrowed.token == address(token0)
+                    || escrowed.token == address(token1)
+            ) {
+                revert RewardTokenNotAllowed();
+            }
+
+            uint256 balanceToken = IERC20Metadata(escrowed.token)
+                .balanceOf(address(this));
+
+            if (balanceToken < escrowed.amount) {
+                revert InsufficientFunds();
+            }
+
+            IERC20Metadata(escrowed.token).safeTransfer(
+                receiver_, escrowed.amount
+            );
+
+            emit LogClaimEscrowed(escrowed.token, escrowed.amount);
+        }
+
+        // #endregion escrowed.
+
+        length = params_.length;
+        uint256[] memory balances = new uint256[](length);
+
+        for (uint256 i; i < length; i++) {
+            IPancakeDistributor.ClaimParams memory param = params_[i];
+
+            balances[i] =
+                IERC20Metadata(param.token).balanceOf(address(this));
+        }
 
         // #region claim.
 
@@ -286,23 +330,25 @@ abstract contract PancakeSwapV3StandardModule is
 
         for (uint256 i; i < length; i++) {
             IPancakeDistributor.ClaimParams memory param = params_[i];
+            uint256 balance = IERC20Metadata(param.token).balanceOf(
+                address(this)
+            ) - balances[i];
+
+            if (balance == 0) {
+                continue;
+            }
 
             uint256 managerShare =
-                FullMath.mulDiv(param.amount, _managerFeePIPS, PIPS);
-
-            uint256 balanceOfToken =
-                IERC20Metadata(param.token).balanceOf(address(this));
+                FullMath.mulDiv(balance, _managerFeePIPS, PIPS);
 
             IERC20Metadata(param.token).safeTransfer(
-                receiver_, balanceOfToken - managerShare
+                receiver_, balance - managerShare
             );
             IERC20Metadata(param.token).safeTransfer(
                 _rewardReceiver, managerShare
             );
 
-            emit LogClaimReward(
-                param.token, balanceOfToken - managerShare
-            );
+            emit LogClaimReward(param.token, balance - managerShare);
             emit LogClaimManagerReward(param.token, managerShare);
         }
     }
@@ -320,6 +366,15 @@ abstract contract PancakeSwapV3StandardModule is
 
         // #endregion checks.
 
+        uint256[] memory balances = new uint256[](length);
+
+        for (uint256 i; i < length; i++) {
+            IPancakeDistributor.ClaimParams memory param = params_[i];
+
+            balances[i] =
+                IERC20Metadata(param.token).balanceOf(address(this));
+        }
+
         // #region claim.
 
         distributor.claim(params_);
@@ -331,9 +386,16 @@ abstract contract PancakeSwapV3StandardModule is
 
         for (uint256 i; i < length; i++) {
             IPancakeDistributor.ClaimParams memory param = params_[i];
+            uint256 balance = IERC20Metadata(param.token).balanceOf(
+                address(this)
+            ) - balances[i];
+
+            if (balance == 0) {
+                continue;
+            }
 
             uint256 managerShare =
-                FullMath.mulDiv(param.amount, _managerFeePIPS, PIPS);
+                FullMath.mulDiv(balance, _managerFeePIPS, PIPS);
 
             IERC20Metadata(param.token).safeTransfer(
                 _rewardReceiver, managerShare
@@ -522,8 +584,9 @@ abstract contract PancakeSwapV3StandardModule is
             );
 
             if (_activeRanges[positionId]) {
-                (uint256 burn0, uint256 burn1) = IUniswapV3Pool(pool)
-                    .burn(range.lowerTick, range.upperTick, 0);
+                IUniswapV3Pool(pool).burn(
+                    range.lowerTick, range.upperTick, 0
+                );
                 (uint256 collected0, uint256 collected1) =
                 IUniswapV3Pool(pool).collect(
                     address(this),
@@ -533,8 +596,8 @@ abstract contract PancakeSwapV3StandardModule is
                     type(uint128).max
                 );
 
-                fee0 += burn0 - collected0;
-                fee1 += burn1 - collected1;
+                fee0 += collected0;
+                fee1 += collected1;
             }
         }
 
@@ -833,10 +896,10 @@ abstract contract PancakeSwapV3StandardModule is
             }
 
             amount0 = amount0
-                - FullMath.mulDiv(fee0 - managerFee0, proportion_, BASE)
+                + FullMath.mulDiv(fee0 - managerFee0, proportion_, BASE)
                 + FullMath.mulDiv(leftOver0, proportion_, BASE);
             amount1 = amount1
-                - FullMath.mulDiv(fee1 - managerFee1, proportion_, BASE)
+                + FullMath.mulDiv(fee1 - managerFee1, proportion_, BASE)
                 + FullMath.mulDiv(leftOver1, proportion_, BASE);
         }
 

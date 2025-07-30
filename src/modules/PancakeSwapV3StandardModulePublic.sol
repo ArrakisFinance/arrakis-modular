@@ -29,15 +29,11 @@ contract PancakeSwapV3StandardModulePublic is
     using Address for address payable;
     using SafeERC20 for IERC20Metadata;
 
-    // #region errors.
-
-    // #endregion errors.
-
     // #region public constants.
 
     /// @dev id = keccak256(abi.encode("PancakeSwapV3StandardModulePublic"))
     bytes32 public constant id =
-        0xf8a84b2e3e22d069766d4756d362bc5c6eb85d74765bf4feeb8c017f9e8c7938;
+        0x918c66e50fd8ae37316bc2160d5f23b3f5d59ccd1972c9a515dc2f8ac22875b6;
 
     // #endregion public constants.
 
@@ -70,6 +66,8 @@ contract PancakeSwapV3StandardModulePublic is
         if (depositor_ == address(0)) revert AddressZero();
 
         if (proportion_ == 0) revert ProportionZero();
+
+        if(msg.value > 0) revert NativeCoinNotSupported();
 
         // #endregion checks.
 
