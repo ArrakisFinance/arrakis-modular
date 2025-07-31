@@ -1958,6 +1958,50 @@ contract PancakeSwapV3StandardModuleTest is
 
     // #endregion tests set pool.
 
+    // #region tests withdraw.
+
+    function  test_withdraw_revert_only_meta_vault() public {
+        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        uint256 proportion = BASE/2;
+
+        address module = address(IArrakisMetaVault(vault).module());
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisLPModule.OnlyMetaVault.selector,
+                address(this),
+                vault
+            )
+        );
+        IArrakisLPModule(module).withdraw(
+            receiver, proportion
+        );
+    }
+
+    function test_withdraw_revert_proportion_is_zero() public {
+        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        uint256 proportion = 0;
+
+        address module = address(IArrakisMetaVault(vault).module());
+
+        vm.expectRevert(IArrakisLPModule.ProportionZero.selector);
+        vm.prank(vault);
+        IArrakisLPModule(module).withdraw(receiver, proportion);
+    }
+
+    function test_withdraw_revert_proportion_gt_base() public {
+        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        uint256 proportion = BASE + 1;
+
+        address module = address(IArrakisMetaVault(vault).module());
+
+        vm.expectRevert(IArrakisLPModule.ProportionGtBASE.selector);
+        vm.prank(vault);
+        IArrakisLPModule(module).withdraw(receiver, proportion);
+    }
+
+    // #endregion tests withdraw.
+
     // #endregion tests units.
 
     // #region swap.
