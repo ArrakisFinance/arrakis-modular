@@ -57,6 +57,8 @@ import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IAccessControl} from
     "@openzeppelin/contracts/access/IAccessControl.sol";
+import {ERC1967Proxy} from
+    "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 // #endregion openzeppelin.
 
@@ -273,18 +275,22 @@ contract PancakeSwapV3StandardModuleTest is
     ) external {
         if (amount0Delta > 0) {
             deal(WETH, address(this), uint256(amount0Delta));
-            IERC20Metadata(WETH).safeTransfer(msg.sender, uint256(amount0Delta));
+            IERC20Metadata(WETH).safeTransfer(
+                msg.sender, uint256(amount0Delta)
+            );
         }
 
         if (amount1Delta > 0) {
             deal(BUSD, address(this), uint256(amount1Delta));
-            IERC20Metadata(BUSD).safeTransfer(msg.sender, uint256(amount1Delta));
+            IERC20Metadata(BUSD).safeTransfer(
+                msg.sender, uint256(amount1Delta)
+            );
         }
     }
 
     // #endregion callback.
 
-    // #region tests.
+    // #region tests integration.
 
     function test_fund_rebalance_withdraw() public {
         uint256 amount0;
@@ -440,7 +446,8 @@ contract PancakeSwapV3StandardModuleTest is
 
         // #region withdraw.
 
-        (amount0, amount1) = IArrakisMetaVault(vault).totalUnderlying();
+        (amount0, amount1) =
+            IArrakisMetaVault(vault).totalUnderlying();
 
         uint256 balance0 = token0.balanceOf(owner);
         uint256 balance1 = token1.balanceOf(owner);
@@ -866,7 +873,1092 @@ contract PancakeSwapV3StandardModuleTest is
         );
     }
 
-    // #endregion tests.
+    // #endregion tests integration.
+
+    // #region tests units.
+
+    // #region tests initialize function.
+
+    function test_initialize_reverts_if_metaVault_is_zero_address()
+        public
+    {
+        address g =
+            vm.addr(uint256(keccak256(abi.encode("Guardian"))));
+        address f = vm.addr(uint256(keccak256(abi.encode("Factory"))));
+        address d =
+            vm.addr(uint256(keccak256(abi.encode("Distributor"))));
+
+        PancakeSwapV3StandardModulePrivate p =
+            new PancakeSwapV3StandardModulePrivate(g, f, d);
+
+        bytes memory data = abi.encodeWithSelector(
+            IPancakeSwapV3StandardModule.initialize.selector,
+            1,
+            1,
+            500,
+            IOracleWrapper(oracle),
+            20_000,
+            rewardReceiver,
+            address(0)
+        );
+
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+        address(new ERC1967Proxy(address(p), data));
+    }
+
+    function test_initialize_reverts_if_oracle_is_zero_address()
+        public
+    {
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IPancakeSwapV3StandardModule.initialize.selector,
+            init0,
+            init1,
+            500,
+            IOracleWrapper(address(0)),
+            maxSlippage,
+            rewardReceiver
+        );
+
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
+
+        bytes32 salt =
+            bytes32(uint256(keccak256(abi.encode("salt toto 2"))));
+
+        vm.prank(deployer);
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+        vault = IArrakisMetaVaultFactory(factory).deployPrivateVault(
+            salt,
+            WETH,
+            BUSD,
+            owner,
+            pancakeSwapStandardModuleBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
+    }
+
+    function test_initialize_reverts_if_rewardReceiver_is_zero_address(
+    ) public {
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IPancakeSwapV3StandardModule.initialize.selector,
+            init0,
+            init1,
+            500,
+            IOracleWrapper(oracle),
+            maxSlippage,
+            address(0)
+        );
+
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
+
+        bytes32 salt =
+            bytes32(uint256(keccak256(abi.encode("salt toto 2"))));
+
+        vm.prank(deployer);
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+        vault = IArrakisMetaVaultFactory(factory).deployPrivateVault(
+            salt,
+            WETH,
+            BUSD,
+            owner,
+            pancakeSwapStandardModuleBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
+    }
+
+    function test_initialize_reverts_if_slippage_is_greater_than_ten_percent(
+    ) public {
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IPancakeSwapV3StandardModule.initialize.selector,
+            init0,
+            init1,
+            500,
+            IOracleWrapper(oracle),
+            TEN_PERCENT + 1,
+            rewardReceiver
+        );
+
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
+
+        bytes32 salt =
+            bytes32(uint256(keccak256(abi.encode("salt toto 2"))));
+
+        vm.prank(deployer);
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule
+                .MaxSlippageGtTenPercent
+                .selector
+        );
+        vault = IArrakisMetaVaultFactory(factory).deployPrivateVault(
+            salt,
+            WETH,
+            BUSD,
+            owner,
+            pancakeSwapStandardModuleBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
+    }
+
+    function test_initialize_reverts_if_inits_are_zeros() public {
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IPancakeSwapV3StandardModule.initialize.selector,
+            0,
+            0,
+            500,
+            IOracleWrapper(oracle),
+            maxSlippage,
+            rewardReceiver
+        );
+
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
+
+        bytes32 salt =
+            bytes32(uint256(keccak256(abi.encode("salt toto 2"))));
+
+        vm.prank(deployer);
+        vm.expectRevert(IArrakisLPModule.InitsAreZeros.selector);
+        vault = IArrakisMetaVaultFactory(factory).deployPrivateVault(
+            salt,
+            WETH,
+            BUSD,
+            owner,
+            pancakeSwapStandardModuleBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
+    }
+
+    function test_initialize_reverts_if_native_coin_is_used()
+        public
+    {
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IPancakeSwapV3StandardModule.initialize.selector,
+            init0,
+            init1,
+            500,
+            IOracleWrapper(oracle),
+            maxSlippage,
+            rewardReceiver
+        );
+
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
+
+        bytes32 salt =
+            bytes32(uint256(keccak256(abi.encode("salt toto 2"))));
+
+        vm.prank(deployer);
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule
+                .NativeCoinNotSupported
+                .selector
+        );
+        vault = IArrakisMetaVaultFactory(factory).deployPrivateVault(
+            salt,
+            BUSD,
+            NATIVE_COIN,
+            owner,
+            pancakeSwapStandardModuleBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
+    }
+
+    function test_initialize_reverts_if_pool_not_found() public {
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IPancakeSwapV3StandardModule.initialize.selector,
+            init0,
+            init1,
+            600,
+            IOracleWrapper(oracle),
+            maxSlippage,
+            rewardReceiver
+        );
+
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
+
+        bytes32 salt =
+            bytes32(uint256(keccak256(abi.encode("salt toto 2"))));
+
+        vm.prank(deployer);
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule.PoolNotFound.selector
+        );
+        vault = IArrakisMetaVaultFactory(factory).deployPrivateVault(
+            salt,
+            WETH,
+            BUSD,
+            owner,
+            pancakeSwapStandardModuleBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
+    }
+
+    // #endregion tests initialize function.
+
+    // #region tests claim rewards.
+
+    function test_claim_rewards_reverts_only_meta_vault_owner()
+        public
+    {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule.OnlyMetaVaultOwner.selector
+        );
+        IPancakeSwapV3StandardModule(module).claimRewards(
+            new IPancakeDistributor.ClaimParams[](0),
+            new IPancakeDistributor.ClaimEscrowed[](0),
+            receiver
+        );
+    }
+
+    function test_claim_rewards_reverts_if_receiver_is_zero_address()
+        public
+    {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+        vm.prank(owner);
+        IPancakeSwapV3StandardModule(module).claimRewards(
+            new IPancakeDistributor.ClaimParams[](0),
+            new IPancakeDistributor.ClaimEscrowed[](0),
+            address(0)
+        );
+    }
+
+    function test_claim_rewards_reverts_if_array_length_is_zero()
+        public
+    {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule
+                .ClaimParamsLengthZero
+                .selector
+        );
+        vm.prank(owner);
+        IPancakeSwapV3StandardModule(module).claimRewards(
+            new IPancakeDistributor.ClaimParams[](0),
+            new IPancakeDistributor.ClaimEscrowed[](0),
+            receiver
+        );
+    }
+
+    function test_claim_rewards_reverts_if_token_is_zero_address()
+        public
+    {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        IPancakeDistributor.ClaimEscrowed[] memory params =
+            new IPancakeDistributor.ClaimEscrowed[](1);
+
+        params[0] = IPancakeDistributor.ClaimEscrowed({
+            token: address(0),
+            amount: 1000 * 10 ** 18
+        });
+
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+        vm.prank(owner);
+        IPancakeSwapV3StandardModule(module).claimRewards(
+            new IPancakeDistributor.ClaimParams[](0), params, receiver
+        );
+    }
+
+    function test_claim_rewards_reverts_if_reward_token_not_allowed()
+        public
+    {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        IPancakeDistributor.ClaimEscrowed[] memory params =
+            new IPancakeDistributor.ClaimEscrowed[](1);
+
+        params[0] = IPancakeDistributor.ClaimEscrowed({
+            token: WETH,
+            amount: 1000 * 10 ** 18
+        });
+
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule
+                .RewardTokenNotAllowed
+                .selector
+        );
+        vm.prank(owner);
+        IPancakeSwapV3StandardModule(module).claimRewards(
+            new IPancakeDistributor.ClaimParams[](0), params, receiver
+        );
+    }
+    // #endregion tests claim rewards.
+
+    // #region tests claim manager rewards.
+
+    function test_claim_manager_rewards_reverts_only_manager()
+        public
+    {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisLPModule.OnlyManager.selector,
+                address(this),
+                arrakisStandardManager
+            )
+        );
+        IPancakeSwapV3StandardModule(module).claimManagerRewards(
+            new IPancakeDistributor.ClaimParams[](0)
+        );
+    }
+
+    function test_claim_manager_rewards_reverts_length_is_zero()
+        public
+    {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule
+                .ClaimParamsLengthZero
+                .selector
+        );
+        vm.prank(arrakisStandardManager);
+        IPancakeSwapV3StandardModule(module).claimManagerRewards(
+            new IPancakeDistributor.ClaimParams[](0)
+        );
+    }
+
+    // #endregion tests claim manager rewards.
+
+    // #region tests set receiver.
+
+    function test_set_receiver_reverts_only_manager() public {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule.OnlyManagerOwner.selector
+        );
+        IPancakeSwapV3StandardModule(module).setReceiver(address(0));
+    }
+
+    function test_set_receiver_reverts_if_receiver_is_zero_address()
+        public
+    {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        address managerOwner =
+            IOwnable(arrakisStandardManager).owner();
+
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+        vm.prank(managerOwner);
+
+        IPancakeSwapV3StandardModule(module).setReceiver(address(0));
+    }
+
+    function test_set_receiver_reverts_if_receiver_is_same_as_current(
+    ) public {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        address managerOwner =
+            IOwnable(arrakisStandardManager).owner();
+
+        vm.prank(managerOwner);
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule.SameReceiver.selector
+        );
+        IPancakeSwapV3StandardModule(module).setReceiver(
+            rewardReceiver
+        );
+    }
+    // #endregion tests set receiver.
+
+    // #region tests approve.
+
+    // #endregion tests approve.
+
+    // #region tests set pool.
+
+    function test_set_pool_reverts_only_manager() public {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        Rebalance memory rebalance;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisLPModule.OnlyManager.selector,
+                address(this),
+                arrakisStandardManager
+            )
+        );
+        IPancakeSwapV3StandardModule(module).setPool(600, rebalance);
+    }
+
+    function test_set_pool_reverts_pool_not_found() public {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        Rebalance memory rebalance;
+
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule.PoolNotFound.selector
+        );
+        vm.prank(arrakisStandardManager);
+        IPancakeSwapV3StandardModule(module).setPool(600, rebalance);
+    }
+
+    function test_set_pool_reverts_mint_token0() public {
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 2 * (10 * 10 ** 18);
+            amount1 = 0;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            // #region fund.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+
+            // #endregion fund.
+        }
+
+        Rebalance memory p;
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    WETH,
+                    BUSD,
+                    amount0 / 2,
+                    40_000 * 10 ** 18
+                ),
+                router: address(this),
+                amountIn: amount0 / 2,
+                expectedMinReturn: 40_000 * 10 ** 18,
+                zeroForOne: true
+            });
+
+            amount1 = 40_000 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+            p.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+            p.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            vm.prank(arrakisStandardManager);
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+
+        p.minDeposit0 = type(uint256).max;
+
+        p.mints[0].range.lowerTick = p.mints[0].range.lowerTick / 200 * 200;
+        p.mints[0].range.upperTick = p.mints[0].range.upperTick / 200 * 200;
+
+        address pool = 0x83c38557a0576Ad38dEf24abaFA17c2C218cb9E4;
+
+        (uint160 sqrtPriceX96, ,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+        uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(p.mints[0].range.lowerTick),
+                TickMath.getSqrtRatioAtTick(p.mints[0].range.upperTick),
+                amount0 - 2,
+                amount1 - 2
+            );
+
+        p.mints[0].liquidity = liquidity;
+
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule.MintToken0.selector
+        );
+        vm.prank(arrakisStandardManager);
+        IPancakeSwapV3StandardModule(module).setPool(10_000, p);
+    }
+
+    function test_set_pool_reverts_mint_token1() public {
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 2 * (10 * 10 ** 18);
+            amount1 = 0;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            // #region fund.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+
+            // #endregion fund.
+        }
+
+        Rebalance memory p;
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    WETH,
+                    BUSD,
+                    amount0 / 2,
+                    40_000 * 10 ** 18
+                ),
+                router: address(this),
+                amountIn: amount0 / 2,
+                expectedMinReturn: 40_000 * 10 ** 18,
+                zeroForOne: true
+            });
+
+            amount1 = 40_000 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+            p.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+            p.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            vm.prank(arrakisStandardManager);
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+
+        p.minDeposit1 = type(uint256).max;
+
+        p.mints[0].range.lowerTick = p.mints[0].range.lowerTick / 200 * 200;
+        p.mints[0].range.upperTick = p.mints[0].range.upperTick / 200 * 200;
+
+        address pool = 0x83c38557a0576Ad38dEf24abaFA17c2C218cb9E4;
+
+        (uint160 sqrtPriceX96, ,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+        uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(p.mints[0].range.lowerTick),
+                TickMath.getSqrtRatioAtTick(p.mints[0].range.upperTick),
+                amount0 - 2,
+                amount1 - 2
+            );
+
+        p.mints[0].liquidity = liquidity;
+
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule.MintToken1.selector
+        );
+        vm.prank(arrakisStandardManager);
+        IPancakeSwapV3StandardModule(module).setPool(10_000, p);
+    }
+
+    function test_set_pool_reverts_burn_token0() public {
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 2 * (10 * 10 ** 18);
+            amount1 = 0;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            // #region fund.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+
+            // #endregion fund.
+        }
+
+        Rebalance memory p;
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    WETH,
+                    BUSD,
+                    amount0 / 2,
+                    40_000 * 10 ** 18
+                ),
+                router: address(this),
+                amountIn: amount0 / 2,
+                expectedMinReturn: 40_000 * 10 ** 18,
+                zeroForOne: true
+            });
+
+            amount1 = 40_000 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+            p.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+            p.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            vm.prank(arrakisStandardManager);
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+
+        p.minBurn0 = type(uint256).max;
+
+        p.mints[0].range.lowerTick = p.mints[0].range.lowerTick / 200 * 200;
+        p.mints[0].range.upperTick = p.mints[0].range.upperTick / 200 * 200;
+
+        address pool = 0x83c38557a0576Ad38dEf24abaFA17c2C218cb9E4;
+
+        (uint160 sqrtPriceX96, ,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+        uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(p.mints[0].range.lowerTick),
+                TickMath.getSqrtRatioAtTick(p.mints[0].range.upperTick),
+                amount0 - 2,
+                amount1 - 2
+            );
+
+        p.mints[0].liquidity = liquidity;
+
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule.BurnToken0.selector
+        );
+        vm.prank(arrakisStandardManager);
+        IPancakeSwapV3StandardModule(module).setPool(10_000, p);
+    }
+
+    function test_set_pool_reverts_burn_token1() public {
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 2 * (10 * 10 ** 18);
+            amount1 = 0;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            // #region fund.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+
+            // #endregion fund.
+        }
+
+        Rebalance memory p;
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    WETH,
+                    BUSD,
+                    amount0 / 2,
+                    40_000 * 10 ** 18
+                ),
+                router: address(this),
+                amountIn: amount0 / 2,
+                expectedMinReturn: 40_000 * 10 ** 18,
+                zeroForOne: true
+            });
+
+            amount1 = 40_000 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+            p.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+            p.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            vm.prank(arrakisStandardManager);
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+
+        p.minBurn1 = type(uint256).max;
+
+        p.mints[0].range.lowerTick = p.mints[0].range.lowerTick / 200 * 200;
+        p.mints[0].range.upperTick = p.mints[0].range.upperTick / 200 * 200;
+
+        address pool = 0x83c38557a0576Ad38dEf24abaFA17c2C218cb9E4;
+
+        (uint160 sqrtPriceX96, ,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+        uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(p.mints[0].range.lowerTick),
+                TickMath.getSqrtRatioAtTick(p.mints[0].range.upperTick),
+                amount0 - 2,
+                amount1 - 2
+            );
+
+        p.mints[0].liquidity = liquidity;
+
+        vm.expectRevert(
+            IPancakeSwapV3StandardModule.BurnToken1.selector
+        );
+        vm.prank(arrakisStandardManager);
+        IPancakeSwapV3StandardModule(module).setPool(10_000, p);
+    }
+
+    // #endregion tests set pool.
+
+    // #endregion tests units.
 
     // #region swap.
 

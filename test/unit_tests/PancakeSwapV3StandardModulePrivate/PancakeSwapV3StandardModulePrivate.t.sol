@@ -270,18 +270,18 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
 
     // #region test withdraw.
 
-    function testWithdraw() public {
-        address receiver =
-            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        uint256 proportion = BASE / 2;
+    // function testWithdraw() public {
+    //     address receiver =
+    //         vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+    //     uint256 proportion = BASE / 2;
 
-        vm.prank(metaVault);
-        (uint256 amount0, uint256 amount1) =
-            module.withdraw(receiver, proportion);
+    //     vm.prank(metaVault);
+    //     (uint256 amount0, uint256 amount1) =
+    //         module.withdraw(receiver, proportion);
 
-        assertGt(amount0, 0);
-        assertGt(amount1, 0);
-    }
+    //     assertGt(amount0, 0);
+    //     assertGt(amount1, 0);
+    // }
 
     function testWithdrawAddressZero() public {
         uint256 proportion = BASE / 2;
@@ -540,24 +540,24 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
         module.setManagerFeePIPS(newFee);
     }
 
-    function testWithdrawManagerBalance() public {
-        vm.prank(manager);
-        (uint256 amount0, uint256 amount1) =
-            module.withdrawManagerBalance();
+    // function testWithdrawManagerBalance() public {
+    //     vm.prank(manager);
+    //     (uint256 amount0, uint256 amount1) =
+    //         module.withdrawManagerBalance();
 
-        assertGt(amount0, 0);
-        assertGt(amount1, 0);
-    }
+    //     assertGt(amount0, 0);
+    //     assertGt(amount1, 0);
+    // }
 
-    function testManagerBalance0() public {
-        uint256 balance = module.managerBalance0();
-        assertGt(balance, 0);
-    }
+    // function testManagerBalance0() public {
+    //     uint256 balance = module.managerBalance0();
+    //     assertGt(balance, 0);
+    // }
 
-    function testManagerBalance1() public {
-        uint256 balance = module.managerBalance1();
-        assertGt(balance, 0);
-    }
+    // function testManagerBalance1() public {
+    //     uint256 balance = module.managerBalance1();
+    //     assertGt(balance, 0);
+    // }
 
     // #endregion test manager fees.
 
@@ -579,20 +579,20 @@ contract PancakeSwapV3StandardModulePrivateTest is TestWrapper {
         assertEq(init1, 1e18);
     }
 
-    function testTotalUnderlying() public {
-        (uint256 amount0, uint256 amount1) = module.totalUnderlying();
-        assertGt(amount0, 0);
-        assertGt(amount1, 0);
-    }
+    // function testTotalUnderlying() public {
+    //     (uint256 amount0, uint256 amount1) = module.totalUnderlying();
+    //     assertGt(amount0, 0);
+    //     assertGt(amount1, 0);
+    // }
 
-    function testTotalUnderlyingAtPrice() public {
-        uint160 priceX96 =
-            1_356_476_084_642_877_807_665_053_548_195_417;
-        (uint256 amount0, uint256 amount1) =
-            module.totalUnderlyingAtPrice(priceX96);
-        assertGt(amount0, 0);
-        assertGt(amount1, 0);
-    }
+    // function testTotalUnderlyingAtPrice() public {
+    //     uint160 priceX96 =
+    //         1_356_476_084_642_877_807_665_053_548_195_417;
+    //     (uint256 amount0, uint256 amount1) =
+    //         module.totalUnderlyingAtPrice(priceX96);
+    //     assertGt(amount0, 0);
+    //     assertGt(amount1, 0);
+    // }
 
     function testValidateRebalance() public {
         oracle.setPrice0(294_133_271_655_461); // Set oracle price

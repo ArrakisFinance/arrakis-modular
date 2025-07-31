@@ -474,9 +474,7 @@ abstract contract PancakeSwapV3StandardModule is
 
         // #region remove any remaining liquidity on the previous pool.
 
-        if (_pool != address(0)) {
-            _removeAllLiquidity();
-        }
+        _removeAllLiquidity();
 
         // #endregion remove any remaining liquidity on the previous pool.
 
@@ -575,6 +573,8 @@ abstract contract PancakeSwapV3StandardModule is
         uint256 managerFeePIPS_ = managerFeePIPS;
         uint256 fee0;
         uint256 fee1;
+        address manager = metaVault.manager();
+        address _pool = pool;
         // Collect fees from all positions
         uint256 length = _ranges.length;
         for (uint256 i; i < length; i++) {
@@ -584,11 +584,11 @@ abstract contract PancakeSwapV3StandardModule is
             );
 
             if (_activeRanges[positionId]) {
-                IUniswapV3Pool(pool).burn(
+                IUniswapV3Pool(_pool).burn(
                     range.lowerTick, range.upperTick, 0
                 );
                 (uint256 collected0, uint256 collected1) =
-                IUniswapV3Pool(pool).collect(
+                IUniswapV3Pool(_pool).collect(
                     address(this),
                     range.lowerTick,
                     range.upperTick,
@@ -605,10 +605,10 @@ abstract contract PancakeSwapV3StandardModule is
         amount1 = FullMath.mulDiv(fee1, managerFeePIPS_, PIPS);
 
         if (amount0 > 0) {
-            token0.safeTransfer(metaVault.manager(), amount0);
+            token0.safeTransfer(manager, amount0);
         }
         if (amount1 > 0) {
-            token1.safeTransfer(metaVault.manager(), amount1);
+            token1.safeTransfer(manager, amount1);
         }
     }
 
