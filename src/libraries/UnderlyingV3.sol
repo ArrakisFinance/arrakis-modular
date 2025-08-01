@@ -22,7 +22,6 @@ import {
 import {SqrtPriceMath} from "@v3-lib-0.8/contracts/SqrtPriceMath.sol";
 import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -63,17 +62,13 @@ library UnderlyingV3 {
         amount0 += FullMath.mulDivRoundingUp(
             mintAmount_,
             fee0After
-                + IERC20(underlyingPayload_.token0).balanceOf(
-                    underlyingPayload_.self
-                ),
+                + underlyingPayload_.leftOver0,
             totalSupply_
         );
         amount1 += FullMath.mulDivRoundingUp(
             mintAmount_,
             fee1After
-                + IERC20(underlyingPayload_.token1).balanceOf(
-                    underlyingPayload_.self
-                ),
+                + underlyingPayload_.leftOver1,
             totalSupply_
         );
     }
@@ -445,13 +440,9 @@ library UnderlyingV3 {
             subtractAdminFees(fee0, fee1, module.managerFeePIPS());
 
         amount0 += fee0After
-            + IERC20(underlyingPayload_.token0).balanceOf(
-                underlyingPayload_.self
-            );
+            + underlyingPayload_.leftOver0;
         amount1 += fee1After
-            + IERC20(underlyingPayload_.token1).balanceOf(
-                underlyingPayload_.self
-            );
+            + underlyingPayload_.leftOver1;
     }
 
     function _computeFeesEarned(

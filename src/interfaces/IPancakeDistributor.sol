@@ -10,6 +10,11 @@ interface IPancakeDistributor {
         bytes32[] proof;
     }
 
+    struct ClaimEscrowed {
+        address token;
+        uint256 amount;
+    }
+
     /// @notice Allows users to claim their rewards
     /// @param claimParams An array of claim parameters
     function claim(
