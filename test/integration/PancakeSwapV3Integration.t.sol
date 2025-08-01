@@ -711,7 +711,7 @@ contract PancakeSwapV3StandardModuleTest is
 
         assertEq(
             IERC20Metadata(CAKE).balanceOf(receiver),
-            FullMath.mulDiv(
+            1_000_000_000_000_000_000 - FullMath.mulDiv(
                 1_000_000_000_000_000_000, managerFeePIPS, PIPS
             )
         );
@@ -845,7 +845,7 @@ contract PancakeSwapV3StandardModuleTest is
         escrowed = new IPancakeDistributor.ClaimEscrowed[](1);
         escrowed[0].token = CAKE;
         escrowed[0].amount = FullMath.mulDiv(
-            1_000_000_000_000_000_000, managerFeePIPS, PIPS
+            1_000_000_000_000_000_000, PIPS - managerFeePIPS, PIPS
         );
 
         vm.prank(owner);
