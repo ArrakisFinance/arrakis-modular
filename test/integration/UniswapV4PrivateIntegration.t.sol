@@ -1281,6 +1281,504 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         // #endregion do withdraw throught the module.
     }
 
+    function test_withdraw_through_safe_module_case_5() public {
+        // #region create a safe.
+
+        address[] memory owners = new address[](2);
+        owners[0] = owner0;
+        owners[1] = owner1;
+
+        bytes memory payload = abi.encodeWithSelector(
+            IGnosisSafe.setup.selector,
+            owners,
+            1,
+            address(0),
+            "",
+            fallbackHandler,
+            address(0),
+            0,
+            payable(address(0))
+        );
+
+        address safe = address(
+            IGnosisSafeProxyFactory(gnosisSafeProxyFactory)
+                .createProxy(gnosisSafe, payload)
+        );
+
+        // #endregion create a safe.
+
+        // #region create a vault.
+
+        bytes32 salt =
+            keccak256(abi.encode("Private vault Univ4 salt"));
+        init0 = 1;
+        init1 = 0;
+        maxSlippage = 10_000;
+
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            false,
+            poolKey,
+            IOracleWrapper(oracle),
+            maxSlippage
+        );
+
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
+
+        vault = IArrakisMetaVaultFactory(factory).deployPrivateVault(
+            salt,
+            USDC,
+            WETH,
+            safe,
+            uniswapStandardModuleBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
+
+        privateModule = address(IArrakisMetaVault(vault).module());
+
+        // #endregion create a vault.
+
+        // #region whitelist safe as depositor.
+
+        bytes memory signatures;
+
+        {
+            address[] memory depositors = new address[](1);
+            depositors[0] = owner0;
+
+            uint256 nonce = IGnosisSafe(safe).nonce();
+
+            bytes32 txHash = IGnosisSafe(safe).getTransactionHash(
+                vault,
+                0,
+                abi.encodeWithSelector(
+                    IArrakisMetaVaultPrivate
+                        .whitelistDepositors
+                        .selector,
+                    depositors
+                ),
+                Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                address(0),
+                nonce
+            );
+
+            // #region create a signature.
+
+            signatures = _getSignature(txHash);
+
+            vm.prank(owner0);
+            IGnosisSafe(safe).execTransaction(
+                vault,
+                0,
+                abi.encodeWithSelector(
+                    IArrakisMetaVaultPrivate
+                        .whitelistDepositors
+                        .selector,
+                    depositors
+                ),
+                Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                payable(address(0)),
+                signatures
+            );
+
+            // #endregion create a signature.
+
+            depositors = IArrakisMetaVaultPrivate(vault).depositors();
+        }
+
+        // #endregion whitelist safe as depositor.
+
+        // #region deposit into the vault.
+
+        {
+            uint256 amount0 = 3000e6;
+            uint256 amount1 = 0;
+
+            deal(USDC, owner0, amount0);
+            deal(WETH, owner0, amount1);
+
+            vm.startPrank(owner0);
+            IERC20Metadata(USDC).approve(privateModule, amount0);
+            IERC20Metadata(WETH).approve(privateModule, amount1);
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+            vm.stopPrank();
+        }
+
+        // #endregion deposit into the vault.
+
+        // #region whitelist withdrawal module.
+
+        {
+            bytes memory payload = abi.encodeWithSelector(
+                IGnosisSafe.enableModule.selector,
+                address(withdrawHelper)
+            );
+
+            uint256 nonce = IGnosisSafe(safe).nonce();
+
+            bytes32 txHash = IGnosisSafe(safe).getTransactionHash(
+                safe,
+                0,
+                payload,
+                Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                address(0),
+                nonce
+            );
+
+            signatures = _getSignature(txHash);
+
+            vm.prank(owner1);
+            IGnosisSafe(safe).execTransaction(
+                safe,
+                0,
+                payload,
+                Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                payable(address(0)),
+                signatures
+            );
+        }
+
+        // #endregion whitelist withdrawal module.
+
+        // #region do withdraw throught the module.
+
+        {
+            bytes memory payload;
+            {
+                uint256 amount0 = 3000e6 / 2;
+                uint256 amount1 = 0;
+
+                payload = abi.encodeWithSelector(
+                    WithdrawHelper.withdraw.selector,
+                    safe,
+                    vault,
+                    amount0,
+                    amount1,
+                    safe
+                );
+            }
+
+            {
+                uint256 nonce = IGnosisSafe(safe).nonce();
+
+                bytes32 txHash = IGnosisSafe(safe).getTransactionHash(
+                    address(withdrawHelper),
+                    0,
+                    payload,
+                    Operation.Call,
+                    0,
+                    0,
+                    0,
+                    address(0),
+                    address(0),
+                    nonce
+                );
+
+                signatures = _getSignature(txHash);
+            }
+
+            uint256 balance0 = IERC20Metadata(USDC).balanceOf(safe);
+            uint256 balance1 = IERC20Metadata(WETH).balanceOf(safe);
+
+            vm.prank(owner1);
+            IGnosisSafe(safe).execTransaction(
+                address(withdrawHelper),
+                0,
+                payload,
+                Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                payable(address(0)),
+                signatures
+            );
+
+            assertEq(
+                IERC20Metadata(USDC).balanceOf(safe) - balance0,
+                3000e6 / 2
+            );
+            assertEq(IERC20Metadata(WETH).balanceOf(safe), balance1);
+        }
+
+        // #endregion do withdraw throught the module.
+    }
+
+    function test_withdraw_through_safe_module_case_6() public {
+        // #region create a safe.
+
+        address[] memory owners = new address[](2);
+        owners[0] = owner0;
+        owners[1] = owner1;
+
+        bytes memory payload = abi.encodeWithSelector(
+            IGnosisSafe.setup.selector,
+            owners,
+            1,
+            address(0),
+            "",
+            fallbackHandler,
+            address(0),
+            0,
+            payable(address(0))
+        );
+
+        address safe = address(
+            IGnosisSafeProxyFactory(gnosisSafeProxyFactory)
+                .createProxy(gnosisSafe, payload)
+        );
+
+        // #endregion create a safe.
+
+        // #region create a vault.
+
+        bytes32 salt =
+            keccak256(abi.encode("Private vault Univ4 salt"));
+        init0 = 1;
+        init1 = 0;
+        maxSlippage = 10_000;
+
+        bytes memory moduleCreationPayload = abi.encodeWithSelector(
+            IUniV4StandardModule.initialize.selector,
+            init0,
+            init1,
+            false,
+            poolKey,
+            IOracleWrapper(oracle),
+            maxSlippage
+        );
+
+        bytes memory initManagementPayload = abi.encode(
+            IOracleWrapper(oracle),
+            TEN_PERCENT,
+            uint256(60),
+            executor,
+            stratAnnouncer,
+            maxSlippage
+        );
+
+        vault = IArrakisMetaVaultFactory(factory).deployPrivateVault(
+            salt,
+            USDC,
+            WETH,
+            safe,
+            uniswapStandardModuleBeacon,
+            moduleCreationPayload,
+            initManagementPayload
+        );
+
+        privateModule = address(IArrakisMetaVault(vault).module());
+
+        // #endregion create a vault.
+
+        // #region whitelist safe as depositor.
+
+        bytes memory signatures;
+
+        {
+            address[] memory depositors = new address[](1);
+            depositors[0] = owner0;
+
+            uint256 nonce = IGnosisSafe(safe).nonce();
+
+            bytes32 txHash = IGnosisSafe(safe).getTransactionHash(
+                vault,
+                0,
+                abi.encodeWithSelector(
+                    IArrakisMetaVaultPrivate
+                        .whitelistDepositors
+                        .selector,
+                    depositors
+                ),
+                Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                address(0),
+                nonce
+            );
+
+            // #region create a signature.
+
+            signatures = _getSignature(txHash);
+
+            vm.prank(owner0);
+            IGnosisSafe(safe).execTransaction(
+                vault,
+                0,
+                abi.encodeWithSelector(
+                    IArrakisMetaVaultPrivate
+                        .whitelistDepositors
+                        .selector,
+                    depositors
+                ),
+                Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                payable(address(0)),
+                signatures
+            );
+
+            // #endregion create a signature.
+
+            depositors = IArrakisMetaVaultPrivate(vault).depositors();
+        }
+
+        // #endregion whitelist safe as depositor.
+
+        // #region deposit into the vault.
+
+        {
+            uint256 amount0 = 0;
+            uint256 amount1 = 1e18;
+
+            deal(USDC, owner0, amount0);
+            deal(WETH, owner0, amount1);
+
+            vm.startPrank(owner0);
+            IERC20Metadata(USDC).approve(privateModule, amount0);
+            IERC20Metadata(WETH).approve(privateModule, amount1);
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+            vm.stopPrank();
+        }
+
+        // #endregion deposit into the vault.
+
+        // #region whitelist withdrawal module.
+
+        {
+            bytes memory payload = abi.encodeWithSelector(
+                IGnosisSafe.enableModule.selector,
+                address(withdrawHelper)
+            );
+
+            uint256 nonce = IGnosisSafe(safe).nonce();
+
+            bytes32 txHash = IGnosisSafe(safe).getTransactionHash(
+                safe,
+                0,
+                payload,
+                Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                address(0),
+                nonce
+            );
+
+            signatures = _getSignature(txHash);
+
+            vm.prank(owner1);
+            IGnosisSafe(safe).execTransaction(
+                safe,
+                0,
+                payload,
+                Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                payable(address(0)),
+                signatures
+            );
+        }
+
+        // #endregion whitelist withdrawal module.
+
+        // #region do withdraw throught the module.
+
+        {
+            bytes memory payload;
+            {
+                uint256 amount0 = 0;
+                uint256 amount1 = 1e18 / 2;
+
+                payload = abi.encodeWithSelector(
+                    WithdrawHelper.withdraw.selector,
+                    safe,
+                    vault,
+                    amount0,
+                    amount1,
+                    safe
+                );
+            }
+
+            {
+                uint256 nonce = IGnosisSafe(safe).nonce();
+
+                bytes32 txHash = IGnosisSafe(safe).getTransactionHash(
+                    address(withdrawHelper),
+                    0,
+                    payload,
+                    Operation.Call,
+                    0,
+                    0,
+                    0,
+                    address(0),
+                    address(0),
+                    nonce
+                );
+
+                signatures = _getSignature(txHash);
+            }
+
+            uint256 balance0 = IERC20Metadata(USDC).balanceOf(safe);
+            uint256 balance1 = IERC20Metadata(WETH).balanceOf(safe);
+
+            vm.prank(owner1);
+            IGnosisSafe(safe).execTransaction(
+                address(withdrawHelper),
+                0,
+                payload,
+                Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                payable(address(0)),
+                signatures
+            );
+
+            assertEq(IERC20Metadata(USDC).balanceOf(safe), balance0);
+            assertEq(
+                IERC20Metadata(WETH).balanceOf(safe) - balance1,
+                1e18 / 2
+            );
+        }
+
+        // #endregion do withdraw throught the module.
+    }
+
     // #endregion withdraw module.
 
     // #region migration module.
@@ -1828,8 +2326,7 @@ contract UniswapV4PrivateIntegration is TestWrapper {
 
         // #endregion create migration helper.
 
-        UniV4Oracle oracle =
-            new UniV4Oracle(poolManager, true);
+        UniV4Oracle oracle = new UniV4Oracle(poolManager, true);
 
         // #region create a GEL pool on uniswap v4.
 
@@ -2200,7 +2697,9 @@ contract UniswapV4PrivateIntegration is TestWrapper {
         // #region create uniswap standard module.
 
         uniswapStandardModuleImplementation = address(
-            new UniV4StandardModulePrivate(poolManager, guardian, distributor, collector)
+            new UniV4StandardModulePrivate(
+                poolManager, guardian, distributor, collector
+            )
         );
 
         uniswapStandardModuleBeacon = address(
