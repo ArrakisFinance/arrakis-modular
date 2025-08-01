@@ -1486,22 +1486,23 @@ contract PancakeSwapV3StandardModuleTest is
 
         p.minDeposit0 = type(uint256).max;
 
-        p.mints[0].range.lowerTick = p.mints[0].range.lowerTick / 200 * 200;
-        p.mints[0].range.upperTick = p.mints[0].range.upperTick / 200 * 200;
+        p.mints[0].range.lowerTick =
+            p.mints[0].range.lowerTick / 200 * 200;
+        p.mints[0].range.upperTick =
+            p.mints[0].range.upperTick / 200 * 200;
 
         address pool = 0x83c38557a0576Ad38dEf24abaFA17c2C218cb9E4;
 
-        (uint160 sqrtPriceX96, ,,,,,) =
-                IUniswapV3PoolVariant(pool).slot0();
+        (uint160 sqrtPriceX96,,,,,,) =
+            IUniswapV3PoolVariant(pool).slot0();
 
-        uint128 liquidity = LiquidityAmounts
-                .getLiquidityForAmounts(
-                sqrtPriceX96,
-                TickMath.getSqrtRatioAtTick(p.mints[0].range.lowerTick),
-                TickMath.getSqrtRatioAtTick(p.mints[0].range.upperTick),
-                amount0 - 2,
-                amount1 - 2
-            );
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtRatioAtTick(p.mints[0].range.lowerTick),
+            TickMath.getSqrtRatioAtTick(p.mints[0].range.upperTick),
+            amount0 - 2,
+            amount1 - 2
+        );
 
         p.mints[0].liquidity = liquidity;
 
@@ -1634,22 +1635,23 @@ contract PancakeSwapV3StandardModuleTest is
 
         p.minDeposit1 = type(uint256).max;
 
-        p.mints[0].range.lowerTick = p.mints[0].range.lowerTick / 200 * 200;
-        p.mints[0].range.upperTick = p.mints[0].range.upperTick / 200 * 200;
+        p.mints[0].range.lowerTick =
+            p.mints[0].range.lowerTick / 200 * 200;
+        p.mints[0].range.upperTick =
+            p.mints[0].range.upperTick / 200 * 200;
 
         address pool = 0x83c38557a0576Ad38dEf24abaFA17c2C218cb9E4;
 
-        (uint160 sqrtPriceX96, ,,,,,) =
-                IUniswapV3PoolVariant(pool).slot0();
+        (uint160 sqrtPriceX96,,,,,,) =
+            IUniswapV3PoolVariant(pool).slot0();
 
-        uint128 liquidity = LiquidityAmounts
-                .getLiquidityForAmounts(
-                sqrtPriceX96,
-                TickMath.getSqrtRatioAtTick(p.mints[0].range.lowerTick),
-                TickMath.getSqrtRatioAtTick(p.mints[0].range.upperTick),
-                amount0 - 2,
-                amount1 - 2
-            );
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtRatioAtTick(p.mints[0].range.lowerTick),
+            TickMath.getSqrtRatioAtTick(p.mints[0].range.upperTick),
+            amount0 - 2,
+            amount1 - 2
+        );
 
         p.mints[0].liquidity = liquidity;
 
@@ -1782,22 +1784,23 @@ contract PancakeSwapV3StandardModuleTest is
 
         p.minBurn0 = type(uint256).max;
 
-        p.mints[0].range.lowerTick = p.mints[0].range.lowerTick / 200 * 200;
-        p.mints[0].range.upperTick = p.mints[0].range.upperTick / 200 * 200;
+        p.mints[0].range.lowerTick =
+            p.mints[0].range.lowerTick / 200 * 200;
+        p.mints[0].range.upperTick =
+            p.mints[0].range.upperTick / 200 * 200;
 
         address pool = 0x83c38557a0576Ad38dEf24abaFA17c2C218cb9E4;
 
-        (uint160 sqrtPriceX96, ,,,,,) =
-                IUniswapV3PoolVariant(pool).slot0();
+        (uint160 sqrtPriceX96,,,,,,) =
+            IUniswapV3PoolVariant(pool).slot0();
 
-        uint128 liquidity = LiquidityAmounts
-                .getLiquidityForAmounts(
-                sqrtPriceX96,
-                TickMath.getSqrtRatioAtTick(p.mints[0].range.lowerTick),
-                TickMath.getSqrtRatioAtTick(p.mints[0].range.upperTick),
-                amount0 - 2,
-                amount1 - 2
-            );
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtRatioAtTick(p.mints[0].range.lowerTick),
+            TickMath.getSqrtRatioAtTick(p.mints[0].range.upperTick),
+            amount0 - 2,
+            amount1 - 2
+        );
 
         p.mints[0].liquidity = liquidity;
 
@@ -1930,22 +1933,23 @@ contract PancakeSwapV3StandardModuleTest is
 
         p.minBurn1 = type(uint256).max;
 
-        p.mints[0].range.lowerTick = p.mints[0].range.lowerTick / 200 * 200;
-        p.mints[0].range.upperTick = p.mints[0].range.upperTick / 200 * 200;
+        p.mints[0].range.lowerTick =
+            p.mints[0].range.lowerTick / 200 * 200;
+        p.mints[0].range.upperTick =
+            p.mints[0].range.upperTick / 200 * 200;
 
         address pool = 0x83c38557a0576Ad38dEf24abaFA17c2C218cb9E4;
 
-        (uint160 sqrtPriceX96, ,,,,,) =
-                IUniswapV3PoolVariant(pool).slot0();
+        (uint160 sqrtPriceX96,,,,,,) =
+            IUniswapV3PoolVariant(pool).slot0();
 
-        uint128 liquidity = LiquidityAmounts
-                .getLiquidityForAmounts(
-                sqrtPriceX96,
-                TickMath.getSqrtRatioAtTick(p.mints[0].range.lowerTick),
-                TickMath.getSqrtRatioAtTick(p.mints[0].range.upperTick),
-                amount0 - 2,
-                amount1 - 2
-            );
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtRatioAtTick(p.mints[0].range.lowerTick),
+            TickMath.getSqrtRatioAtTick(p.mints[0].range.upperTick),
+            amount0 - 2,
+            amount1 - 2
+        );
 
         p.mints[0].liquidity = liquidity;
 
@@ -1960,9 +1964,10 @@ contract PancakeSwapV3StandardModuleTest is
 
     // #region tests withdraw.
 
-    function  test_withdraw_revert_only_meta_vault() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
-        uint256 proportion = BASE/2;
+    function test_withdraw_revert_only_meta_vault() public {
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        uint256 proportion = BASE / 2;
 
         address module = address(IArrakisMetaVault(vault).module());
 
@@ -1973,13 +1978,12 @@ contract PancakeSwapV3StandardModuleTest is
                 vault
             )
         );
-        IArrakisLPModule(module).withdraw(
-            receiver, proportion
-        );
+        IArrakisLPModule(module).withdraw(receiver, proportion);
     }
 
     function test_withdraw_revert_proportion_is_zero() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         uint256 proportion = 0;
 
         address module = address(IArrakisMetaVault(vault).module());
@@ -1990,7 +1994,8 @@ contract PancakeSwapV3StandardModuleTest is
     }
 
     function test_withdraw_revert_proportion_gt_base() public {
-        address receiver = vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
         uint256 proportion = BASE + 1;
 
         address module = address(IArrakisMetaVault(vault).module());
@@ -2001,6 +2006,1426 @@ contract PancakeSwapV3StandardModuleTest is
     }
 
     // #endregion tests withdraw.
+
+    // #region tests rebalance.
+
+    function test_rebalance_reverts_mint_token0() public {
+        // #region deposit.
+
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 2 * (10 * 10 ** 18);
+            amount1 = 0;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+        }
+
+        // #endregion deposit.
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    WETH,
+                    BUSD,
+                    amount0 / 2,
+                    40_000 * 10 ** 18
+                ),
+                router: address(this),
+                amountIn: amount0 / 2,
+                expectedMinReturn: 40_000 * 10 ** 18,
+                zeroForOne: true
+            });
+
+            amount1 = 40_000 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            params.minDeposit0 = type(uint256).max;
+
+            vm.prank(arrakisStandardManager);
+            vm.expectRevert(
+                IPancakeSwapV3StandardModule.MintToken0.selector
+            );
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+    }
+
+    function test_rebalance_reverts_mint_token1() public {
+        // #region deposit.
+
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 2 * (10 * 10 ** 18);
+            amount1 = 0;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+        }
+
+        // #endregion deposit.
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    WETH,
+                    BUSD,
+                    amount0 / 2,
+                    40_000 * 10 ** 18
+                ),
+                router: address(this),
+                amountIn: amount0 / 2,
+                expectedMinReturn: 40_000 * 10 ** 18,
+                zeroForOne: true
+            });
+
+            amount1 = 40_000 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            params.minDeposit1 = type(uint256).max;
+
+            vm.prank(arrakisStandardManager);
+            vm.expectRevert(
+                IPancakeSwapV3StandardModule.MintToken1.selector
+            );
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+    }
+
+    function test_rebalance_reverts_burn_token0() public {
+        // #region deposit.
+
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 2 * (10 * 10 ** 18);
+            amount1 = 0;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+        }
+
+        // #endregion deposit.
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    WETH,
+                    BUSD,
+                    amount0 / 2,
+                    40_000 * 10 ** 18
+                ),
+                router: address(this),
+                amountIn: amount0 / 2,
+                expectedMinReturn: 40_000 * 10 ** 18,
+                zeroForOne: true
+            });
+
+            amount1 = 40_000 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            params.minBurn0 = type(uint256).max;
+
+            vm.prank(arrakisStandardManager);
+            vm.expectRevert(
+                IPancakeSwapV3StandardModule.BurnToken0.selector
+            );
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+    }
+
+    function test_rebalance_reverts_burn_token1() public {
+        // #region deposit.
+
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 2 * (10 * 10 ** 18);
+            amount1 = 0;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+        }
+
+        // #endregion deposit.
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    WETH,
+                    BUSD,
+                    amount0 / 2,
+                    40_000 * 10 ** 18
+                ),
+                router: address(this),
+                amountIn: amount0 / 2,
+                expectedMinReturn: 40_000 * 10 ** 18,
+                zeroForOne: true
+            });
+
+            amount1 = 40_000 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0 / 2,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            params.minBurn1 = type(uint256).max;
+
+            vm.prank(arrakisStandardManager);
+            vm.expectRevert(
+                IPancakeSwapV3StandardModule.BurnToken1.selector
+            );
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+    }
+
+    function test_rebalance_reverts_expected_min_return_too_low_case_1(
+    ) public {
+        // #region deposit.
+
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 2 * (10 * 10 ** 18);
+            amount1 = 0;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+        }
+
+        // #endregion deposit.
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    WETH,
+                    BUSD,
+                    amount0 / 2,
+                    40_000 * 10 ** 18
+                ),
+                router: address(this),
+                amountIn: amount0 / 2,
+                expectedMinReturn: (40_000 * 10 ** 18) / 2,
+                zeroForOne: true
+            });
+
+            amount1 = 40_000 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            // #region set oracle price.
+
+            OracleWrapper(oracle).setPrice0(
+                FullMath.mulDiv(
+                    40_000 * 10 ** 18, 10 ** 18, params.swap.amountIn
+                )
+            );
+
+            OracleWrapper(oracle).setPrice1(
+                FullMath.mulDiv(
+                    40_000 * 10 ** 18, 10 ** 18, params.swap.amountIn
+                )
+            );
+
+            // #endregion set oracle price.
+
+            vm.prank(arrakisStandardManager);
+            vm.expectRevert(
+                IPancakeSwapV3StandardModule
+                    .ExpectedMinReturnTooLow
+                    .selector
+            );
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+    }
+
+    function test_rebalance_reverts_expected_min_return_too_low_case_2(
+    ) public {
+        // #region deposit.
+
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 0;
+            amount1 = 2 * (40_000 * 10 ** 18);
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+        }
+
+        // #endregion deposit.
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    BUSD,
+                    WETH,
+                    40_000 * 10 ** 18,
+                    amount0 / 2
+                ),
+                router: address(this),
+                amountIn: amount1 / 2,
+                expectedMinReturn: (10 * 10 ** 18) / 2,
+                zeroForOne: false
+            });
+
+            amount0 = 10 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1 / 2
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            // #region set oracle price.
+
+            OracleWrapper(oracle).setPrice0(
+                FullMath.mulDiv(
+                    10 * 10 ** 18, 10 ** 18, params.swap.amountIn
+                )
+            );
+
+            OracleWrapper(oracle).setPrice1(
+                FullMath.mulDiv(
+                    10 * 10 ** 18, 10 ** 18, params.swap.amountIn
+                )
+            );
+
+            // #endregion set oracle price.
+
+            vm.prank(arrakisStandardManager);
+            vm.expectRevert(
+                IPancakeSwapV3StandardModule
+                    .ExpectedMinReturnTooLow
+                    .selector
+            );
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+    }
+
+    function test_rebalance_reverts_expected_slippage_too_high_case_1(
+    ) public {
+        // #region deposit.
+
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 2 * (10 * 10 ** 18);
+            amount1 = 0;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+        }
+
+        // #endregion deposit.
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    WETH,
+                    BUSD,
+                    amount0 / 2,
+                    40_000 * 10 ** 18
+                ),
+                router: address(this),
+                amountIn: amount0 / 2,
+                expectedMinReturn: (40_000 * 10 ** 18) * 2,
+                zeroForOne: true
+            });
+
+            amount1 = 40_000 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            // #region set oracle price.
+
+            // #endregion set oracle price.
+
+            vm.prank(arrakisStandardManager);
+            vm.expectRevert(
+                IPancakeSwapV3StandardModule.SlippageTooHigh.selector
+            );
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+    }
+
+    function test_rebalance_reverts_expected_slippage_too_high_case_2(
+    ) public {
+        // #region deposit.
+
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 0;
+            amount1 = 2 * (40_000 * 10 ** 18);
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+        }
+
+        // #endregion deposit.
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    BUSD,
+                    WETH,
+                    40_000 * 10 ** 18,
+                    amount0 / 2
+                ),
+                router: address(this),
+                amountIn: amount1 / 2,
+                expectedMinReturn: (10 * 10 ** 18) * 2,
+                zeroForOne: false
+            });
+
+            amount0 = 10 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1 / 2
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            vm.prank(arrakisStandardManager);
+            vm.expectRevert(
+                IPancakeSwapV3StandardModule.SlippageTooHigh.selector
+            );
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+    }
+
+    // #endregion tests rebalance.
+
+    // #region tests withdraw manager balance.
+
+    function test_withdraw_manager_balance() public {
+        // #region deposit.
+
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 2 * (10 * 10 ** 18);
+            amount1 = 0;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+        }
+
+        // #endregion deposit.
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    WETH,
+                    BUSD,
+                    amount0 / 2,
+                    40_000 * 10 ** 18
+                ),
+                router: address(this),
+                amountIn: amount0 / 2,
+                expectedMinReturn: 40_000 * 10 ** 18,
+                zeroForOne: true
+            });
+
+            amount1 = 40_000 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            vm.prank(arrakisStandardManager);
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+
+        // #region do pool swap.
+
+        IUniswapV3Pool(pool).swap(
+            address(this),
+            true,
+            int256(amount0 / 100),
+            TickMath.MIN_SQRT_RATIO + 1,
+            ""
+        );
+
+        IUniswapV3Pool(pool).swap(
+            address(this),
+            false,
+            int256(amount1 / 100),
+            TickMath.MAX_SQRT_RATIO - 1,
+            ""
+        );
+
+        // #endregion do pool swap.
+
+        // #region withdraw manager balance.
+
+        uint256 managerBalance0 =
+            IERC20Metadata(WETH).balanceOf(arrakisStandardManager);
+        uint256 managerBalance1 =
+            IERC20Metadata(BUSD).balanceOf(arrakisStandardManager);
+
+        vm.prank(arrakisStandardManager);
+        IArrakisLPModule(module).withdrawManagerBalance();
+
+        assertGt(
+            IERC20Metadata(WETH).balanceOf(arrakisStandardManager),
+            managerBalance0
+        );
+        assertGt(
+            IERC20Metadata(BUSD).balanceOf(arrakisStandardManager),
+            managerBalance1
+        );
+
+        // #endregion withdraw manager balance.
+    }
+
+    // #endregion tests withdraw manager balance.
+
+    // #region tests set manager fees.
+
+    function test_set_manager_fee_pips_revert_only_manager() public {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        uint256 newFeePIPS = 1000;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisLPModule.OnlyManager.selector,
+                address(this),
+                arrakisStandardManager
+            )
+        );
+        IArrakisLPModule(module).setManagerFeePIPS(newFeePIPS);
+    }
+
+    function test_set_manager_fee_pips_revert_same_manager_fee()
+        public
+    {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        uint256 newFeePIPS = 500_000;
+
+        vm.expectRevert(IArrakisLPModule.SameManagerFee.selector);
+        vm.prank(arrakisStandardManager);
+        IArrakisLPModule(module).setManagerFeePIPS(newFeePIPS);
+    }
+
+    function test_set_manager_fee_pips_revert_new_fee_pips_gt_pips()
+        public
+    {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        uint256 newFeePIPS = 1_000_001;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisLPModule.NewFeesGtPIPS.selector, newFeePIPS
+            )
+        );
+        vm.prank(arrakisStandardManager);
+        IArrakisLPModule(module).setManagerFeePIPS(newFeePIPS);
+    }
+
+    function test_set_manager_fee_pips() public {
+        // #region deposit.
+
+        uint256 amount0;
+        uint256 amount1;
+        address module;
+
+        {
+            address depositor =
+                vm.addr(uint256(keccak256(abi.encode("Depositor"))));
+
+            {
+                address[] memory depositors = new address[](1);
+                depositors[0] = depositor;
+
+                vm.prank(owner);
+                IArrakisMetaVaultPrivate(vault).whitelistDepositors(
+                    depositors
+                );
+            }
+
+            amount0 = 2 * (10 * 10 ** 18);
+            amount1 = 0;
+
+            deal(WETH, depositor, amount0);
+            deal(BUSD, depositor, amount1);
+
+            // #region get module address.
+
+            module = address(IArrakisMetaVault(vault).module());
+
+            // #endregion get module address.
+
+            vm.startPrank(depositor);
+
+            IERC20Metadata(IArrakisMetaVault(vault).token0())
+                .safeApprove(module, amount0);
+            IERC20Metadata(IArrakisMetaVault(vault).token1())
+                .safeApprove(module, amount1);
+
+            IArrakisMetaVaultPrivate(vault).deposit(amount0, amount1);
+
+            vm.stopPrank();
+        }
+
+        // #endregion deposit.
+
+        {
+            // #region let's do a rebalance.
+
+            int24 lowerTick;
+            int24 upperTick;
+            Rebalance memory params;
+
+            // #region swap.
+
+            params.swap = SwapPayload({
+                payload: abi.encodeWithSelector(
+                    PancakeSwapV3StandardModuleTest.swap.selector,
+                    WETH,
+                    BUSD,
+                    amount0 / 2,
+                    40_000 * 10 ** 18
+                ),
+                router: address(this),
+                amountIn: amount0 / 2,
+                expectedMinReturn: 40_000 * 10 ** 18,
+                zeroForOne: true
+            });
+
+            amount1 = 40_000 * 10 ** 18;
+
+            // #endregion swap.
+
+            params.mints = new PositionLiquidity[](1);
+
+            // #region mint.
+
+            (uint160 sqrtPriceX96, int24 tick,,,,,) =
+                IUniswapV3PoolVariant(pool).slot0();
+
+            lowerTick = (tick - 100) / 10 * 10;
+            upperTick = (tick + 100) / 10 * 10;
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                amount0,
+                amount1
+            );
+
+            (params.minDeposit0, params.minDeposit1) =
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(lowerTick),
+                TickMath.getSqrtRatioAtTick(upperTick),
+                liquidity
+            );
+
+            params.mints[0] = PositionLiquidity({
+                liquidity: liquidity,
+                range: Range({lowerTick: lowerTick, upperTick: upperTick})
+            });
+
+            // #endregion mint
+
+            vm.prank(arrakisStandardManager);
+            IPancakeSwapV3StandardModule(module).rebalance(params);
+            // #endregion let's do a rebalance.
+        }
+
+        // #region do pool swap.
+
+        IUniswapV3Pool(pool).swap(
+            address(this),
+            true,
+            int256(amount0 / 100),
+            TickMath.MIN_SQRT_RATIO + 1,
+            ""
+        );
+
+        IUniswapV3Pool(pool).swap(
+            address(this),
+            false,
+            int256(amount1 / 100),
+            TickMath.MAX_SQRT_RATIO - 1,
+            ""
+        );
+
+        // #endregion do pool swap.
+
+        uint256 newFeePIPS = 1_000_001;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IArrakisLPModule.NewFeesGtPIPS.selector, newFeePIPS
+            )
+        );
+        vm.prank(arrakisStandardManager);
+        IArrakisLPModule(module).setManagerFeePIPS(newFeePIPS);
+
+        // #region withdraw manager balance.
+
+        uint256 managerBalance0 =
+            IERC20Metadata(WETH).balanceOf(arrakisStandardManager);
+        uint256 managerBalance1 =
+            IERC20Metadata(BUSD).balanceOf(arrakisStandardManager);
+
+        vm.prank(arrakisStandardManager);
+        IArrakisLPModule(module).withdrawManagerBalance();
+
+        assertGt(
+            IERC20Metadata(WETH).balanceOf(arrakisStandardManager),
+            managerBalance0
+        );
+        assertGt(
+            IERC20Metadata(BUSD).balanceOf(arrakisStandardManager),
+            managerBalance1
+        );
+
+        // #endregion withdraw manager balance.
+    }
+
+    // #endregion tests set manager fees.
+
+    // #region tests validate rebalance.
+
+    function test_validate_rebalance_revert_over_max_deviation()
+        public
+    {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        uint24 maxDeviation = 10_000;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPancakeSwapV3StandardModule.OverMaxDeviation.selector,
+                maxDeviation
+            )
+        );
+        IArrakisLPModule(module).validateRebalance(
+            IOracleWrapper(oracle), maxDeviation
+        );
+    }
+
+    function test_validate_rebalance()
+        public
+    {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        uint24 maxDeviation = 10_000;
+
+        (uint160 sqrtPriceX96,,,,,,) =
+            IUniswapV3PoolVariant(pool).slot0();
+
+        uint256 poolPrice;
+        if (sqrtPriceX96 <= type(uint128).max) {
+            poolPrice = FullMath.mulDiv(
+                uint256(sqrtPriceX96) * uint256(sqrtPriceX96),
+                10 ** 18,
+                1 << 192
+            );
+        } else {
+            poolPrice = FullMath.mulDiv(
+                FullMath.mulDiv(
+                    uint256(sqrtPriceX96),
+                    uint256(sqrtPriceX96),
+                    1 << 64
+                ),
+                10 ** 18,
+                1 << 128
+            );
+        }
+
+        OracleWrapper(oracle).setPrice0(poolPrice);
+        IArrakisLPModule(module).validateRebalance(
+            IOracleWrapper(oracle), maxDeviation
+        );
+    }
+
+    // #endregion tests validate rebalance.
 
     // #endregion tests units.
 

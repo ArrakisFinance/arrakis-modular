@@ -731,26 +731,51 @@ abstract contract PancakeSwapV3StandardModule is
         IOracleWrapper oracle_,
         uint24 maxDeviation_
     ) external view {
+        IERC20Metadata _token0 = token0;
+        IERC20Metadata _token1 = token1;
         // check if pool current price is not too far from oracle price.
         (uint160 sqrtPriceX96,,,,,,) =
             IUniswapV3PoolVariant(pool).slot0();
 
-        uint256 poolPrice = (
-            uint256(sqrtPriceX96) * uint256(sqrtPriceX96)
-                * (10 ** token0.decimals())
-        ) >> 192;
+        uint8 token0Decimals = _token0.decimals();
+        uint8 token1Decimals = _token1.decimals();
+
+        uint256 poolPrice;
+
+        if (sqrtPriceX96 <= type(uint128).max) {
+            poolPrice = FullMath.mulDiv(
+                uint256(sqrtPriceX96) * uint256(sqrtPriceX96),
+                10 ** token0Decimals,
+                1 << 192
+            );
+        } else {
+            poolPrice = FullMath.mulDiv(
+                FullMath.mulDiv(
+                    uint256(sqrtPriceX96),
+                    uint256(sqrtPriceX96),
+                    1 << 64
+                ),
+                10 ** token0Decimals,
+                1 << 128
+            );
+        }
 
         // #region get oracle price.
         uint256 oraclePrice = oracle_.getPrice0();
         // #endregion get oracle price.
 
         // #region check deviation.
-        uint256 priceDiff = poolPrice > oraclePrice
-            ? poolPrice - oraclePrice
-            : oraclePrice - poolPrice;
-        uint256 deviation = (
-            priceDiff * (10 ** token1.decimals()) * PIPS
-        ) / (poolPrice * (10 ** token1.decimals()));
+        uint256 deviation = FullMath.mulDivRoundingUp(
+            FullMath.mulDivRoundingUp(
+                poolPrice > oraclePrice
+                    ? poolPrice - oraclePrice
+                    : oraclePrice - poolPrice,
+                10 ** token1Decimals,
+                poolPrice
+            ),
+            PIPS,
+            10 ** token1Decimals
+        );
 
         // #endregion check deviation.
 
@@ -786,16 +811,19 @@ abstract contract PancakeSwapV3StandardModule is
     function _managerBalance(
         bool isToken0_
     ) internal view returns (uint256 managerBalance) {
+        IERC20Metadata _token0 = token0;
+        IERC20Metadata _token1 = token1;
+
         (,, uint256 fee0, uint256 fee1) = UnderlyingV3
             .totalUnderlyingWithFees(
             UnderlyingPayloadV3({
                 ranges: _ranges,
                 pool: pool,
                 self: address(this),
-                leftOver0: token0.balanceOf(address(this)),
-                leftOver1: token1.balanceOf(address(this)),
-                token0: address(token0),
-                token1: address(token1)
+                leftOver0: _token0.balanceOf(address(this)),
+                leftOver1: _token1.balanceOf(address(this)),
+                token0: address(_token0),
+                token1: address(_token1)
             })
         );
 
