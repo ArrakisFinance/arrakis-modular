@@ -11,14 +11,15 @@ import {RouterSwapExecutor} from "../../src/RouterSwapExecutor.sol";
 import {NATIVE_COIN} from "../../src/constants/CArrakis.sol";
 
 // RouterExecutor : 0x19488620Cdf3Ff1B0784AC4529Fb5c5AbAceb1B6
-// RouterExecutor V2 : 0x31e1A0ac6931a9c5BFe149596CcDc9C37C558e54
+// RouterExecutor V2 : 0x31e1A0ac6931a9c5BFe149596CcDc9C37C558e54 (salt = "Router V2 Executor version 1")
+// RouterExecutor V2 : 0x132003c8250142d92DBDC6C7DA098897B35Fa151 (salt = "Router V2 Executor version 1.0.1")
 contract DRouterExecutor is CreateXScript {
     uint88 public version = uint88(
-        uint256(keccak256(abi.encode("Router V2 Executor version 1")))
+        uint256(keccak256(abi.encode("Router V2 Executor version 1.0.1")))
     );
 
     address public constant router =
-        0x64C3Ac1a917953c99eA6a37C8AA8c534B32Eb780;
+        0xD9C59537C71C766589f6d167298CA5A3597A4A2B;
 
     function setUp() public {}
 
