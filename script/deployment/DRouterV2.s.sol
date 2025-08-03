@@ -12,10 +12,11 @@ import {ArrakisPublicVaultRouterV2} from
     "../../src/ArrakisPublicVaultRouterV2.sol";
 import {NATIVE_COIN} from "../../src/constants/CArrakis.sol";
 
-// Router V2 : 0x64c3ac1a917953c99ea6a37c8aa8c534b32eb780
+// Router V2 : 0x64c3ac1a917953c99ea6a37c8aa8c534b32eb780 (salt = "RouterV2 version 1")
+// Router V2 (v1.0.1) : 0xD9C59537C71C766589f6d167298CA5A3597A4A2B (salt = "RouterV2 version 1.0.1")
 contract DRouterV2 is CreateXScript {
     uint88 public version =
-        uint88(uint256(keccak256(abi.encode("RouterV2 version 1"))));
+        uint88(uint256(keccak256(abi.encode("RouterV2 version 1.0.1"))));
 
     address public constant factory =
         0x820FB8127a689327C863de8433278d6181123982;
