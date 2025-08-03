@@ -190,14 +190,14 @@ contract ArrakisPublicVaultRouterV2 is
         // #region interactions.
 
         if (token0 != nativeToken && amount0 > 0) {
-            uint256 balance0 = IERC20(token0).balanceOf(address(this));
+            balance0 = IERC20(token0).balanceOf(address(this));
             IERC20(token0).safeTransferFrom(
                 msg.sender, address(this), amount0
             );
         }
 
         if (token1 != nativeToken && amount1 > 0) {
-            uint256 balance1 = IERC20(token1).balanceOf(address(this));
+            balance1 = IERC20(token1).balanceOf(address(this));
             IERC20(token1).safeTransferFrom(
                 msg.sender, address(this), amount1
             );
@@ -218,7 +218,7 @@ contract ArrakisPublicVaultRouterV2 is
                 IERC20(token0).balanceOf(address(this)) - balance0;
             IERC20(token0).safeTransfer(msg.sender, leftOver0);
         }
-        if (token1 != nativeToken && balance1 > 0) {
+        if (token1 != nativeToken && amount1 > 0) {
             uint256 leftOver1 =
                 IERC20(token1).balanceOf(address(this)) - balance1;
             IERC20(token1).safeTransfer(msg.sender, leftOver1);
