@@ -451,6 +451,72 @@ contract UniswapV4IntegrationTest is TestWrapper {
         // #endregion merkl rewards.
     }
 
+    function test_addLiquidit_resolver_discrepancy() public {
+        // #region base chain.
+
+        _reset(vm.envString("BASE_RPC_URL"), 33712112);
+
+        // #endregion base chain.
+
+        router = _deployArrakisPublicRouter();
+
+        uniV4resolver =
+            _deployUniV4StandardModuleResolver(poolManager);
+
+        address[] memory resolvers = new address[](1);
+        resolvers[0] = uniV4resolver;
+
+        bytes32[] memory ids = new bytes32[](1);
+        ids[0] = keccak256(abi.encode("UniV4StandardModulePublic"));
+
+        vm.prank(owner);
+        IArrakisPublicVaultRouterV2(router).setResolvers(
+            ids, resolvers
+        );
+
+        address v = 0xFc5E9e8314F15269ecF31014a57b56A4b0783A4C;
+        address depo = 0xDdDdc19Cbc49190ea91304E3638a577D0f563a7a;
+
+        uint256 amt0 = 100000;
+        uint256 amt1 = 66666644833580001;
+
+        uint256 amountSharesMin = 6666664483357;
+
+        address t0 = IArrakisMetaVault(v).token0();
+        address t1 = IArrakisMetaVault(v).token1();
+
+        vm.startPrank(depo);
+
+        IERC20Metadata(t0).approve(router, amt0);
+        IERC20Metadata(t1).approve(router, amt1);
+
+        uint256 balance0 = IERC20Metadata(t0).balanceOf(router);
+        uint256 balance1 = IERC20Metadata(t1).balanceOf(router);
+
+        assertEq(balance0, 0);
+        assertEq(balance1, 0);
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: amt0,
+                amount1Max: amt1,
+                amount0Min: amt0,
+                amount1Min: amt1,
+                amountSharesMin: amountSharesMin,
+                vault: v,
+                receiver: depo
+            })
+        );
+
+        balance0 = IERC20Metadata(t0).balanceOf(router);
+        balance1 = IERC20Metadata(t1).balanceOf(router);
+
+        assertEq(balance0, 0);
+        assertEq(balance1, 0);
+
+        vm.stopPrank();
+    }
+
     function test_addLiquidityMaxAmountsTooLow() public {
         (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
         IArrakisPublicVaultRouterV2(router).getMintAmounts(
