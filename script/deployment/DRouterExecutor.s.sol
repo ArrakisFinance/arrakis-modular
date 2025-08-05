@@ -13,13 +13,14 @@ import {NATIVE_COIN} from "../../src/constants/CArrakis.sol";
 // RouterExecutor : 0x19488620Cdf3Ff1B0784AC4529Fb5c5AbAceb1B6
 // RouterExecutor V2 : 0x31e1A0ac6931a9c5BFe149596CcDc9C37C558e54 (salt = "Router V2 Executor version 1")
 // RouterExecutor V2 : 0x132003c8250142d92DBDC6C7DA098897B35Fa151 (salt = "Router V2 Executor version 1.0.1")
+// RouterExecutor V2 : 0xcaaF0c8c3F3C4662A54789F493D851cdC34AeFFD (salt = "Router V2 Executor version 1.0.2") Sepolia
 contract DRouterExecutor is CreateXScript {
     uint88 public version = uint88(
-        uint256(keccak256(abi.encode("Router V2 Executor version 1.0.1")))
+        uint256(keccak256(abi.encode("Router V2 Executor version 1.0.2")))
     );
 
     address public constant router =
-        0xD9C59537C71C766589f6d167298CA5A3597A4A2B;
+        0xB01e27e9560139eb01956522d8C2CAF0ec51DaD7;
 
     function setUp() public {}
 
