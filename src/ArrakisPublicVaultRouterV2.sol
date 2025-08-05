@@ -41,6 +41,8 @@ import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {Ownable} from "@solady/contracts/auth/Ownable.sol";
 // #endregion solady dependencies.
 
+import {console} from "forge-std/console.sol";
+
 contract ArrakisPublicVaultRouterV2 is
     IArrakisPublicVaultRouterV2,
     ReentrancyGuard,
@@ -216,14 +218,16 @@ contract ArrakisPublicVaultRouterV2 is
         if (token0 != nativeToken && amount0 > 0) {
             uint256 leftOver0 =
                 IERC20(token0).balanceOf(address(this)) - balance0;
-            if (leftOver0 > 0)
+            if (leftOver0 > 0) {
                 IERC20(token0).safeTransfer(msg.sender, leftOver0);
+            }
         }
         if (token1 != nativeToken && amount1 > 0) {
             uint256 leftOver1 =
                 IERC20(token1).balanceOf(address(this)) - balance1;
-            if (leftOver1 > 0)
+            if (leftOver1 > 0) {
                 IERC20(token1).safeTransfer(msg.sender, leftOver1);
+            }
         }
 
         if (msg.value > 0) {
