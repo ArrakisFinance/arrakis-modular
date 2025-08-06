@@ -24,6 +24,8 @@ import {StateLibrary} from
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import {console} from "forge-std/console.sol";
+
 contract UniV4StandardModuleResolver is
     IResolver,
     IUniV4StandardModuleResolver
@@ -152,10 +154,12 @@ contract UniV4StandardModuleResolver is
                 maxAmount0_,
                 maxAmount1_
             );
-            uint256 proportion = FullMath.mulDiv(
+            uint256 proportion =
+                FullMath.mulDiv(shareToMint, BASE, totalSupply);
+            shareToMint = proportion * totalSupply / BASE;
+            proportion = FullMath.mulDivRoundingUp(
                 shareToMint, BASE, totalSupply
             );
-            shareToMint = proportion * totalSupply / BASE;
             (amount0ToDeposit, amount1ToDeposit) = UnderlyingV4
                 .totalUnderlyingForMint(underlyingPayload, proportion);
         } else {

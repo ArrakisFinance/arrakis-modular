@@ -500,8 +500,8 @@ contract UniswapV4IntegrationTest is TestWrapper {
             AddLiquidityData({
                 amount0Max: amt0,
                 amount1Max: amt1,
-                amount0Min: amt0,
-                amount1Min: amt1,
+                amount0Min: amt0 * 99 / 100,
+                amount1Min: amt1 * 99 / 100,
                 amountSharesMin: amountSharesMin,
                 vault: v,
                 receiver: depo
