@@ -46,10 +46,10 @@ contract WithdrawHelper is IWithdrawHelper {
                 revert InsufficientUnderlying();
             }
 
-            uint256 proportion0 =
-                FullMath.mulDiv(amount0_, BASE, total0);
-            uint256 proportion1 =
-                FullMath.mulDiv(amount1_, BASE, total1);
+            uint256 proportion0 = amount0_ > 0 ?
+                FullMath.mulDiv(amount0_, BASE, total0) : 0;
+            uint256 proportion1 = amount1_ > 0 ?
+                FullMath.mulDiv(amount1_, BASE, total1) : 0;
 
             proportion =
                 proportion0 > proportion1 ? proportion0 : proportion1;
