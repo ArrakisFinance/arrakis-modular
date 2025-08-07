@@ -3,10 +3,10 @@ pragma solidity ^0.8.19;
 
 import {IArrakisLPModulePublic} from
     "../interfaces/IArrakisLPModulePublic.sol";
-import {PancakeSwapV3StandardModule} from
-    "../abstracts/PancakeSwapV3StandardModule.sol";
-import {IPancakeSwapV3StandardModule} from
-    "../interfaces/IPancakeSwapV3StandardModule.sol";
+import {UniswapV3StandardModule} from
+    "../abstracts/UniswapV3StandardModule.sol";
+import {IUniswapV3StandardModule} from
+    "../interfaces/IUniswapV3StandardModule.sol";
 import {BASE} from "../constants/CArrakis.sol";
 import {IUniswapV3Pool} from "../interfaces/IUniswapV3Pool.sol";
 import {Range} from "../structs/SUniswapV3.sol";
@@ -20,10 +20,10 @@ import {IERC20Metadata} from
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
-/// @notice this module can only set pancake v3 pool that have generic hook,
+/// @notice this module can only set uniswap v3 pool that have generic hook,
 /// that don't require specific action to become liquidity provider.
-contract PancakeSwapV3StandardModulePublic is
-    PancakeSwapV3StandardModule,
+contract UniswapV3StandardModulePublic is
+    UniswapV3StandardModule,
     IArrakisLPModulePublic
 {
     using Address for address payable;
@@ -31,9 +31,9 @@ contract PancakeSwapV3StandardModulePublic is
 
     // #region public constants.
 
-    /// @dev id = keccak256(abi.encode("PancakeSwapV3StandardModulePublic"))
+    /// @dev id = keccak256(abi.encode("UniswapV3StandardModulePublic"))
     bytes32 public constant id =
-        0x918c66e50fd8ae37316bc2160d5f23b3f5d59ccd1972c9a515dc2f8ac22875b6;
+        0xeea66bf39d761bbc0bb66bbf9e9fda67f34d00ba779ebbb4047d11c011ab3793;
 
     // #endregion public constants.
 
@@ -41,9 +41,8 @@ contract PancakeSwapV3StandardModulePublic is
 
     constructor(
         address guardian_,
-        address factory_,
-        address distributor_
-    ) PancakeSwapV3StandardModule(guardian_, factory_, distributor_) {}
+        address factory_
+    ) UniswapV3StandardModule(guardian_, factory_) {}
 
     /// @notice function used by metaVault to deposit tokens into the strategy.
     /// @param depositor_ address that will provide the tokens.
