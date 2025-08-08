@@ -8,8 +8,6 @@ import {IPoolManager} from
     "@pancakeswap/v4-core/src/interfaces/IPoolManager.sol";
 import {ICLPoolManager} from
     "@pancakeswap/v4-core/src/pool-cl/interfaces/ICLPoolManager.sol";
-import {IProtocolFeeController} from
-    "../src/interfaces/IProtocolFeeController.sol";
 import {
     PoolKey,
     Currency
@@ -23,6 +21,8 @@ import {
 import {IHooks} from "@pancakeswap/v4-core/src/interfaces/IHooks.sol";
 import {CLPoolParametersHelper} from
     "@pancakeswap/v4-core/src/pool-cl/libraries/CLPoolParametersHelper.sol";
+import {ProtocolFeeController} from
+    "@pancakeswap/v4-core/src/ProtocolFeeController.sol";
 
 import {
     NATIVE_COIN, TEN_PERCENT
@@ -353,7 +353,7 @@ contract DeployPancakeV4PrivateVault is CreateXScript {
     function getLPFeeFromTotalFee(uint24 fee) public view returns (uint24) {
         address poolManager = getPoolManager();
         address protocolFeeControllerAddress = address(ICLPoolManager(poolManager).protocolFeeController());
-        IProtocolFeeController protocolFeeController = IProtocolFeeController(protocolFeeControllerAddress);
+        ProtocolFeeController protocolFeeController = ProtocolFeeController(protocolFeeControllerAddress);
 
         return protocolFeeController.getLPFeeFromTotalFee(fee);
     }
