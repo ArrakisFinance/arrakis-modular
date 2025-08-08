@@ -256,5 +256,15 @@ interface IArrakisPublicVaultRouterV2 {
             uint256 amount1ToDeposit
         );
 
+    /// @notice getBurnAmounts used to get the amounts we can get from some shares burn.
+    /// @param vault_ meta vault address.
+    /// @param shares_ amount of shares user want to burn.
+    /// @return amount0 amount of token0 user can get from burning 'shares_'.
+    /// @return amount1 amount of token1 user can get from burning 'shares_'.
+    function getBurnAmounts(
+        address vault_,
+        uint256 shares_
+    ) external view returns (uint256 amount0, uint256 amount1);
+
     // #endregion view functions.
 }
