@@ -8,6 +8,8 @@ import {IPoolManager} from
     "@pancakeswap/v4-core/src/interfaces/IPoolManager.sol";
 import {ICLPoolManager} from
     "@pancakeswap/v4-core/src/pool-cl/interfaces/ICLPoolManager.sol";
+import {IProtocolFeeController} from
+    "../src/interfaces/IProtocolFeeController.sol";
 import {
     PoolKey,
     Currency
@@ -114,13 +116,18 @@ contract DeployPancakeV4PrivateVault is CreateXScript {
 
         PoolKey memory poolKey;
 
+        uint24 lpFee = getLPFeeFromTotalFee(totalFee);
+        
+        console.log("LP Fee : ");
+        console.log(lpFee);
+
         if (token0 == NATIVE_COIN || token1 == NATIVE_COIN) {
             if (isInversed) {
                 poolKey = PoolKey({
                     currency0: CurrencyLibrary.NATIVE,
                     currency1: Currency.wrap(token0),
                     poolManager: IPoolManager(poolManager),
-                    fee: fee,
+                    fee: lpFee,
                     hooks: IHooks(hooks),
                     parameters: CLPoolParametersHelper.setTickSpacing(
                         bytes32(0), tickSpacing
@@ -131,7 +138,7 @@ contract DeployPancakeV4PrivateVault is CreateXScript {
                     currency0: CurrencyLibrary.NATIVE,
                     currency1: Currency.wrap(token1),
                     poolManager: IPoolManager(poolManager),
-                    fee: fee,
+                    fee: lpFee,
                     hooks: IHooks(hooks),
                     parameters: CLPoolParametersHelper.setTickSpacing(
                         bytes32(0), tickSpacing
@@ -143,7 +150,7 @@ contract DeployPancakeV4PrivateVault is CreateXScript {
                 currency0: Currency.wrap(token0),
                 currency1: Currency.wrap(token1),
                 poolManager: IPoolManager(poolManager),
-                fee: fee,
+                fee: lpFee,
                 hooks: IHooks(hooks),
                 parameters: CLPoolParametersHelper.setTickSpacing(
                     bytes32(0), tickSpacing
@@ -156,6 +163,7 @@ contract DeployPancakeV4PrivateVault is CreateXScript {
         }
 
         PoolId poolId = poolKey.toId();
+
 
         console.log("Pool Id : ");
         console.logBytes32(PoolId.unwrap(poolId));
@@ -340,5 +348,13 @@ contract DeployPancakeV4PrivateVault is CreateXScript {
         } else {
             revert("Not supported network!");
         }
+    }
+
+    function getLPFeeFromTotalFee(uint24 fee) public view returns (uint24) {
+        address poolManager = getPoolManager();
+        address protocolFeeControllerAddress = address(ICLPoolManager(poolManager).protocolFeeController());
+        IProtocolFeeController protocolFeeController = IProtocolFeeController(protocolFeeControllerAddress);
+
+        return protocolFeeController.getLPFeeFromTotalFee(fee);
     }
 }
