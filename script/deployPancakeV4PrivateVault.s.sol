@@ -53,7 +53,7 @@ enum OracleDeployment {
 
 address constant token0 = 0x55d398326f99059fF775485246999027B3197955;
 address constant token1 = 0xC0041EF357B183448B235a8Ea73Ce4E4eC8c265F;
-uint24 constant fee = 2506;
+uint24 constant totalFee = 2506; // Total fee = LP fee + protocol fee (~33%)
 int24 constant tickSpacing = 50;
 address constant hooks = address(0);
 uint160 constant sqrtPrice =
@@ -75,7 +75,7 @@ address constant nft = 0x44A801e7E2E073bd8bcE4bCCf653239Fa156B762;
 //// !!!!!! CHECK THAT DECIMAL OF ORACLE IS MATCHING TOKEN PAIR DECIMALS !!!!!! ////
 OracleDeployment constant oracleDeployment =
     OracleDeployment.PancakeV4Oracle;
-bool constant createPool = false;
+bool constant createPool = true;
 
 // #region chainlink oracle wrapper.
 
