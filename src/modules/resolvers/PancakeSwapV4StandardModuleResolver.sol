@@ -189,6 +189,32 @@ contract PancakeSwapV4StandardModuleResolver is
             : (amount0ToDeposit, amount1ToDeposit);
     }
 
+    /// @inheritdoc IResolver
+    function getBurnAmounts(
+        address vault_,
+        uint256 shares_
+    ) external view returns (uint256 amount0, uint256 amount1) {
+        if (vault_ == address(0)) {
+            revert AddressZero();
+        }
+
+        uint256 totalSupply = IERC20(vault_).totalSupply();
+
+        if (totalSupply == 0) {
+            revert TotalSupplyZero();
+        }
+        if (shares_ > totalSupply) {
+            revert SharesOverTotalSupply();
+        }
+
+        (uint256 current0, uint256 current1) =
+            IArrakisMetaVault(vault_).totalUnderlying();
+
+        (amount0, amount1) = computeBurnAmounts(
+            shares_, current0, current1, totalSupply
+        );
+    }
+
     function computeMintAmounts(
         uint256 current0_,
         uint256 current1_,
@@ -216,5 +242,18 @@ contract PancakeSwapV4StandardModuleResolver is
             mintAmount =
                 amount0Mint < amount1Mint ? amount0Mint : amount1Mint;
         }
+    }
+
+    function computeBurnAmounts(
+        uint256 shares_,
+        uint256 current0_,
+        uint256 current1_,
+        uint256 totalSupply_
+    ) public pure returns (uint256 amount0, uint256 amount1) {
+        uint256 proportion =
+            FullMath.mulDiv(shares_, BASE, totalSupply_);
+
+        amount0 = FullMath.mulDiv(current0_, proportion, BASE);
+        amount1 = FullMath.mulDiv(current1_, proportion, BASE);
     }
 }
