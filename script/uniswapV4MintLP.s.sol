@@ -35,8 +35,10 @@ contract MintBetweenPrices is Script {
 
     IPoolManager public immutable poolManager =
         IPoolManager(POOL_MANAGER_ADDRESS);
-    IPositionManager public immutable positionMgr =
+    IPositionManager public immutable positionManager =
         IPositionManager(POSITION_MANAGER);
+    IMulticall_v4 public immutable positionManagerMulticall =
+        IMulticall_v4(POSITION_MANAGER);
     IPermit2 public immutable permit2 = IPermit2(PERMIT2_ADDRESS);
 
     // ───────────── User Parameters ─────────────
@@ -166,12 +168,25 @@ contract MintBetweenPrices is Script {
         uint256 deadline = block.timestamp + 2 minutes;
         uint256 ethValue = currency0.isAddressZero() ? MAX_AMOUNT0 : 0;
 
-        positionMgr.modifyLiquidities{value: ethValue}(
+        // Do both operations in a multicall because forge Script execution is not atomic.
+        bytes[] memory queryIdAndMintLiquidityCalls = new bytes[](2);
+
+        queryIdAndMintLiquidityCalls[0] = abi.encodeWithSelector(
+            positionManager.nextTokenId.selector
+        );
+
+        queryIdAndMintLiquidityCalls[1] = abi.encodeWithSelector(
+            positionManager.modifyLiquidities.selector,
             abi.encode(actions, params),
             deadline
         );
 
-        console.log("Liquidity position minted");
+        bytes[] memory callsResults = positionManagerMulticall
+            .multicall{value: ethValue}(queryIdAndMintLiquidityCalls);
+
+        uint256 positionId = abi.decode(callsResults[0], (uint256));
+
+        console.log("Liquidity position minted with id:", positionId);
     }
 
     // ───────────── Helper Functions ─────────────

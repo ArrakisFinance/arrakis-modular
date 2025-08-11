@@ -20,6 +20,12 @@ import "@uniswap/v4-periphery/src/libraries/Actions.sol";
 import "@uniswap/v4-core/src/interfaces/external/IERC20Minimal.sol";
 import "@uniswap/permit2/src/interfaces/IPermit2.sol";
 
+/**
+ * @title UniswapV4PriceManagement
+ * @notice Script that, given a `TARGET_SQRT_PRICE`, mints a limit liquidty position in
+ * that direction, swaps tokens in that direction using `TARGET_SQRT_PRICE` as
+ * limit, and then burns the liquidity from the limit position created.
+ */
 contract UniswapV4PriceManagement is Script {
     using PoolIdLibrary for PoolKey;
     using StateLibrary for IPoolManager;
@@ -47,6 +53,8 @@ contract UniswapV4PriceManagement is Script {
         IPoolManager(POOL_MANAGER_ADDRESS);
     IPositionManager public immutable positionManager =
         IPositionManager(POSITION_MANAGER);
+    IMulticall_v4 public immutable positionManagerMulticall =
+        IMulticall_v4(POSITION_MANAGER);
     IPermit2 public immutable permit2 = IPermit2(PERMIT2_ADDRESS);
 
     // ───────────── User Parameters ─────────────
@@ -76,11 +84,9 @@ contract UniswapV4PriceManagement is Script {
         vm.startBroadcast();
         _run();
         vm.stopBroadcast();
-
-        // _simulate();
     }
 
-    function _simulate() internal {
+    function simulate() external {
         // Fund sender wallet
         dealTokens(msg.sender, token0, MAX_AMOUNT0);
         dealTokens(msg.sender, token1, MAX_AMOUNT1);
@@ -216,16 +222,24 @@ contract UniswapV4PriceManagement is Script {
         uint256 deadline = block.timestamp + 2 minutes;
         uint256 ethValue = currency0.isAddressZero() ? MAX_AMOUNT0 : 0;
 
-        // Get the ID that will be assigned to our position
-        uint256 tokenId = positionManager.nextTokenId();
+        // Do both operations in a multicall because forge Script execution is not atomic.
+        bytes[] memory queryIdAndMintLiquidityCalls = new bytes[](2);
 
-        // Mint the position
-        positionManager.modifyLiquidities{value: ethValue}(
+        queryIdAndMintLiquidityCalls[0] = abi.encodeWithSelector(
+            positionManager.nextTokenId.selector
+        );
+
+        queryIdAndMintLiquidityCalls[1] = abi.encodeWithSelector(
+            positionManager.modifyLiquidities.selector,
             abi.encode(actions, params),
             deadline
         );
 
-        console.log("Liquidity position minted");
+        bytes[] memory callsResults = positionManagerMulticall
+            .multicall{value: ethValue}(queryIdAndMintLiquidityCalls);
+
+        uint256 tokenId = abi.decode(callsResults[0], (uint256));
+
         return tokenId;
     }
 
@@ -361,12 +375,9 @@ contract UniswapV4PriceManagement is Script {
         address t1 = token1;
         if (t0 > t1) (t0, t1) = (t1, t0);
 
-        Currency c0 = Currency.wrap(t0);
-        Currency c1 = Currency.wrap(t1);
-
         poolKey = PoolKey({
-            currency0: c0,
-            currency1: c1,
+            currency0: Currency.wrap(t0),
+            currency1: Currency.wrap(t1),
             fee: FEE_TIER,
             tickSpacing: TICK_SPACING,
             hooks: IHooks(HOOKS)
