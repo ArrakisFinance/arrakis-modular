@@ -211,6 +211,10 @@ contract UniV4StandardModuleResolver is
             revert AddressZero();
         }
 
+        if (shares_ == 0) {
+            revert SharesZero();
+        }
+
         uint256 proportion;
 
         {
@@ -264,6 +268,10 @@ contract UniV4StandardModuleResolver is
 
             amount0 += amt0;
             amount1 += amt1;
+        }
+
+        if (module.isInversed()) {
+            (amount0, amount1) = (amount1, amount0);
         }
     }
 
