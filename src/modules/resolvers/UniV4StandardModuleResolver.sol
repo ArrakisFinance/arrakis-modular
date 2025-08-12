@@ -19,7 +19,10 @@ import {IPoolManager} from
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
-import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {
+    Currency,
+    CurrencyLibrary
+} from "@uniswap/v4-core/src/types/Currency.sol";
 import {StateLibrary} from
     "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {
@@ -268,6 +271,29 @@ contract UniV4StandardModuleResolver is
 
             amount0 += amt0;
             amount1 += amt1;
+        }
+
+        {
+            if (poolKey.currency0 == CurrencyLibrary.ADDRESS_ZERO) {
+                amount0 += FullMath.mulDiv(
+                    address(module).balance, proportion, BASE
+                );
+            } else {
+                amount0 += FullMath.mulDiv(
+                    IERC20(Currency.unwrap(poolKey.currency0))
+                        .balanceOf(address(module)),
+                    proportion,
+                    BASE
+                );
+            }
+
+            amount1 += FullMath.mulDiv(
+                IERC20(Currency.unwrap(poolKey.currency1)).balanceOf(
+                    address(module)
+                ),
+                proportion,
+                BASE
+            );
         }
 
         if (module.isInversed()) {
