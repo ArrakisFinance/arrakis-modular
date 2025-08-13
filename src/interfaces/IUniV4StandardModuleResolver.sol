@@ -12,6 +12,7 @@ interface IUniV4StandardModuleResolver {
     error MintZero();
     error NotSupported();
     error AmountsOverMaxAmounts();
+    error SharesZero();
 
     // #endregion errors.
 
