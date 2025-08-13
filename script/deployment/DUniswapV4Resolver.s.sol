@@ -12,9 +12,10 @@ import {NATIVE_COIN} from "../../src/constants/CArrakis.sol";
 
 // Resolver : 0x9f87Be2d451F39B48AD222Ae9Cd91be442F5E9F9 (salt = "Resolver Uniswap V4 version 1")
 // Resolver V2 (Sepolia) : 0xEa7Ef4135F53a55d7f8e5010E3dB22E953F5C878 (salt = "Resolver Uniswap V4 version 2")
+// Resolver V3 (Sepolia) : 0x375EeC9BCfc0bcd24476a0D46d364680F525FF23 (salt = "Resolver Uniswap V4 version 3")
 contract DUniswapV4Resolver is CreateXScript {
     uint88 public version = uint88(
-        uint256(keccak256(abi.encode("Resolver Uniswap V4 version 2")))
+        uint256(keccak256(abi.encode("Resolver Uniswap V4 version 3")))
     );
 
     function setUp() public {}
