@@ -1192,7 +1192,7 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         (sharesToMint, amount0, amount1) = IArrakisPublicVaultRouterV2(
             router
-        ).getMintAmounts(vault, init0, init1);
+        ).getMintAmounts(vault, init0, init1/2);
 
         address secondUser =
             vm.addr(uint256(keccak256(abi.encode("Second User"))));
