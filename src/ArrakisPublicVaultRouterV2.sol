@@ -932,6 +932,14 @@ contract ArrakisPublicVaultRouterV2 is
         return _getMintAmounts(vault_, maxAmount0_, maxAmount1_);
     }
 
+    /// @inheritdoc IArrakisPublicVaultRouterV2
+    function getBurnAmounts(
+        address vault_,
+        uint256 shares_
+    ) external view returns (uint256 amount0, uint256 amount1) {
+        return _getBurnAmounts(vault_, shares_);
+    }
+
     function getModuleID(
         address module_
     ) public view returns (bytes32) {
@@ -1297,6 +1305,30 @@ contract ArrakisPublicVaultRouterV2 is
         return IResolver(resolver).getMintAmounts(
             vault_, maxAmount0_, maxAmount1_
         );
+    }
+
+    function _getBurnAmounts(
+        address vault_,
+        uint256 shares_
+    ) internal view returns (uint256 amount0, uint256 amount1) {
+        // #region vault's active module id.
+
+        address module = address(IArrakisMetaVault(vault_).module());
+        address resolver;
+
+        try this.getModuleID(module) returns (bytes32 id) {
+            resolver = resolvers[id];
+            if (resolver == address(0)) {
+                revert ModuleNotSupported();
+            }
+        } catch {
+            ///@dev it's a valantis module. Because that module don't IArrakisLPModuleID.
+            resolver = resolvers[bytes32(0)];
+        }
+
+        // #endregion vault's active module id.
+
+        return IResolver(resolver).getBurnAmounts(vault_, shares_);
     }
 
     // #endregion internal view functions.

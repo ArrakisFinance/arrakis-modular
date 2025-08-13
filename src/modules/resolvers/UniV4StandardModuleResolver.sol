@@ -10,25 +10,40 @@ import {IUniV4StandardModule} from
     "../../interfaces/IUniV4StandardModule.sol";
 import {IArrakisLPModule} from "../../interfaces/IArrakisLPModule.sol";
 import {UnderlyingPayload} from "../../structs/SUniswapV4.sol";
-import {BASE} from "../../constants/CArrakis.sol";
+import {BASE, PIPS} from "../../constants/CArrakis.sol";
 import {UnderlyingV4} from "../../libraries/UnderlyingV4.sol";
 import {Range as PoolRange} from "../../structs/SUniswapV4.sol";
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
-import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {
+    Currency,
+    CurrencyLibrary
+} from "@uniswap/v4-core/src/types/Currency.sol";
 import {StateLibrary} from
     "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {
+    PoolIdLibrary,
+    PoolId
+} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {Position} from "@uniswap/v4-core/src/libraries/Position.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
+import {LiquidityAmounts} from
+    "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
 
 contract UniV4StandardModuleResolver is
     IResolver,
     IUniV4StandardModuleResolver
 {
     using StateLibrary for IPoolManager;
+    using PoolIdLibrary for PoolKey;
 
     // #region immutable variables.
 
@@ -152,7 +167,10 @@ contract UniV4StandardModuleResolver is
                 maxAmount0_,
                 maxAmount1_
             );
-            uint256 proportion = FullMath.mulDivRoundingUp(
+            uint256 proportion =
+                FullMath.mulDiv(shareToMint, BASE, totalSupply);
+            shareToMint = proportion * totalSupply / BASE;
+            proportion = FullMath.mulDivRoundingUp(
                 shareToMint, BASE, totalSupply
             );
             (amount0ToDeposit, amount1ToDeposit) = UnderlyingV4
@@ -187,6 +205,102 @@ contract UniV4StandardModuleResolver is
             : (amount0ToDeposit, amount1ToDeposit);
     }
 
+    /// @inheritdoc IResolver
+    function getBurnAmounts(
+        address vault_,
+        uint256 shares_
+    ) external view returns (uint256 amount0, uint256 amount1) {
+        if (vault_ == address(0)) {
+            revert AddressZero();
+        }
+
+        if (shares_ == 0) {
+            revert SharesZero();
+        }
+
+        uint256 proportion;
+
+        {
+            uint256 totalSupply = IERC20(vault_).totalSupply();
+
+            if (totalSupply == 0) {
+                revert TotalSupplyZero();
+            }
+
+            if (shares_ > totalSupply) {
+                revert SharesOverTotalSupply();
+            }
+
+            proportion = FullMath.mulDiv(shares_, BASE, totalSupply);
+        }
+
+        IUniV4StandardModule module = IUniV4StandardModule(
+            address(IArrakisMetaVault(vault_).module())
+        );
+        IUniV4StandardModule.Range[] memory ranges =
+            module.getRanges();
+
+        if (ranges.length == 0) {
+            return (0, 0);
+        }
+
+        PoolKey memory poolKey;
+        (
+            poolKey.currency0,
+            poolKey.currency1,
+            poolKey.fee,
+            poolKey.tickSpacing,
+            poolKey.hooks
+        ) = module.poolKey();
+        PoolId poolId = poolKey.toId();
+
+        (uint160 sqrtPriceX96,,,) =
+            IPoolManager(poolManager).getSlot0(poolId);
+
+        uint256 length = ranges.length;
+
+        for (uint256 i; i < length; i++) {
+            IUniV4StandardModule.Range memory range = ranges[i];
+            (uint256 amt0, uint256 amt1) = computeBurnAmounts(
+                range,
+                poolId,
+                address(module),
+                sqrtPriceX96,
+                proportion
+            );
+
+            amount0 += amt0;
+            amount1 += amt1;
+        }
+
+        {
+            if (poolKey.currency0 == CurrencyLibrary.ADDRESS_ZERO) {
+                amount0 += FullMath.mulDiv(
+                    address(module).balance, proportion, BASE
+                );
+            } else {
+                amount0 += FullMath.mulDiv(
+                    IERC20(Currency.unwrap(poolKey.currency0))
+                        .balanceOf(address(module)),
+                    proportion,
+                    BASE
+                );
+            }
+
+            amount1 += FullMath.mulDiv(
+                IERC20(Currency.unwrap(poolKey.currency1)).balanceOf(
+                    address(module)
+                ),
+                proportion,
+                BASE
+            );
+        }
+
+        if (module.isInversed()) {
+            (amount0, amount1) = (amount1, amount0);
+        }
+    }
+
     function computeMintAmounts(
         uint256 current0_,
         uint256 current1_,
@@ -214,5 +328,55 @@ contract UniV4StandardModuleResolver is
             mintAmount =
                 amount0Mint < amount1Mint ? amount0Mint : amount1Mint;
         }
+    }
+
+    /// @inheritdoc IUniV4StandardModuleResolver
+    function computeBurnAmounts(
+        IUniV4StandardModule.Range memory range_,
+        PoolId poolId_,
+        address module_,
+        uint160 sqrtPriceX96_,
+        uint256 proportion_
+    ) public view returns (uint256 amount0, uint256 amount1) {
+        Position.State memory positionState;
+        (
+            positionState.liquidity,
+            positionState.feeGrowthInside0LastX128,
+            positionState.feeGrowthInside1LastX128
+        ) = IPoolManager(poolManager).getPositionInfo(
+            poolId_, module_, range_.tickLower, range_.tickUpper, ""
+        );
+
+        {
+            (
+                uint256 feeGrowthInside0X128,
+                uint256 feeGrowthInside1X128
+            ) = IPoolManager(poolManager).getFeeGrowthInside(
+                poolId_, range_.tickLower, range_.tickUpper
+            );
+            (amount0, amount1) = UnderlyingV4._getFeesOwned(
+                positionState,
+                feeGrowthInside0X128,
+                feeGrowthInside1X128
+            );
+
+            amount0 = FullMath.mulDiv(amount0, proportion_, BASE);
+            amount1 = FullMath.mulDiv(amount1, proportion_, BASE);
+        }
+
+        (uint256 amount0Current, uint256 amount1Current) =
+        LiquidityAmounts.getAmountsForLiquidity(
+            sqrtPriceX96_,
+            TickMath.getSqrtPriceAtTick(range_.tickLower),
+            TickMath.getSqrtPriceAtTick(range_.tickUpper),
+            SafeCast.toUint128(
+                FullMath.mulDiv(
+                    positionState.liquidity, proportion_, BASE
+                )
+            )
+        );
+
+        amount0 += amount0Current;
+        amount1 += amount1Current;
     }
 }
