@@ -721,6 +721,8 @@ library PancakeSwapV4 {
                     IERC20Metadata(Currency.unwrap(poolKey.currency1))
                         .safeTransfer(withdraw_.receiver, leftOver1ToBurn);
                 }
+
+                result = abi.encode(leftOver0ToBurn, leftOver1ToBurn);
             }
         }
         // #endregion get how much left over we have on poolManager and mint.
@@ -791,9 +793,23 @@ library PancakeSwapV4 {
                     }
 
                     isInversed = self.isInversed();
-                    result = isInversed
-                        ? abi.encode(amount1ToTake, amount0ToTake)
-                        : abi.encode(amount0ToTake, amount1ToTake);
+
+                    {
+                        (
+                            uint256 leftOver0ToBurn,
+                            uint256 leftOver1ToBurn
+                        ) = abi.decode(result, (uint256, uint256));
+
+                        result = isInversed
+                            ? abi.encode(
+                                amount1ToTake + leftOver1ToBurn,
+                                amount0ToTake + leftOver0ToBurn
+                            )
+                            : abi.encode(
+                                amount0ToTake + leftOver0ToBurn,
+                                amount1ToTake + leftOver1ToBurn
+                            );
+                    }
                 }
 
                 // #region manager fees.

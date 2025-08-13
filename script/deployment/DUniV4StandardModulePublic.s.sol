@@ -23,12 +23,20 @@ import {UpgradeableBeacon} from
 
 // #endregion Sepolia deployment.
 
+// #region Sepolia v1.0.1 deployment.
+
+// Sepolia Unviswap V4 : 0x10920959236d82c8fcede6424f7d159cb46cea5e
+// Sepolia UniswapV4StandardPublic : 0x5fFC51E142FEB943D0048a12dc7900Baf0D29D4D
+// Sepolia UpgradeableBeacon : 0x492B9D64Eec5B4F63Ef87208767CCA4796F65968
+
+// #endregion Sepolia v1.0.1 deployment.
+
 contract DUniV4StandardModulePublic is CreateXScript {
     uint88 public version = uint88(
         uint256(
             keccak256(
                 abi.encode(
-                    "Uniswap Standard Public Module version 1.0.0"
+                    "Uniswap Standard Public Module version 1.0.1"
                 )
             )
         )

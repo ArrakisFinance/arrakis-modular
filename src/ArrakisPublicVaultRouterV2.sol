@@ -184,20 +184,15 @@ contract ArrakisPublicVaultRouterV2 is
 
         // #endregion checks.
 
-        uint256 balance0;
-        uint256 balance1;
-
         // #region interactions.
 
         if (token0 != nativeToken && amount0 > 0) {
-            balance0 = IERC20(token0).balanceOf(address(this));
             IERC20(token0).safeTransferFrom(
                 msg.sender, address(this), amount0
             );
         }
 
         if (token1 != nativeToken && amount1 > 0) {
-            balance1 = IERC20(token1).balanceOf(address(this));
             IERC20(token1).safeTransferFrom(
                 msg.sender, address(this), amount1
             );
@@ -212,19 +207,6 @@ contract ArrakisPublicVaultRouterV2 is
             token0,
             token1
         );
-
-        if (token0 != nativeToken && amount0 > 0) {
-            uint256 leftOver0 =
-                IERC20(token0).balanceOf(address(this)) - balance0;
-            if (leftOver0 > 0)
-                IERC20(token0).safeTransfer(msg.sender, leftOver0);
-        }
-        if (token1 != nativeToken && amount1 > 0) {
-            uint256 leftOver1 =
-                IERC20(token1).balanceOf(address(this)) - balance1;
-            if (leftOver1 > 0)
-                IERC20(token1).safeTransfer(msg.sender, leftOver1);
-        }
 
         if (msg.value > 0) {
             if (token0 == nativeToken && msg.value > amount0) {
@@ -934,6 +916,14 @@ contract ArrakisPublicVaultRouterV2 is
         return _getMintAmounts(vault_, maxAmount0_, maxAmount1_);
     }
 
+    /// @inheritdoc IArrakisPublicVaultRouterV2
+    function getBurnAmounts(
+        address vault_,
+        uint256 shares_
+    ) external view returns (uint256 amount0, uint256 amount1) {
+        return _getBurnAmounts(vault_, shares_);
+    }
+
     function getModuleID(
         address module_
     ) public view returns (bytes32) {
@@ -1299,6 +1289,30 @@ contract ArrakisPublicVaultRouterV2 is
         return IResolver(resolver).getMintAmounts(
             vault_, maxAmount0_, maxAmount1_
         );
+    }
+
+    function _getBurnAmounts(
+        address vault_,
+        uint256 shares_
+    ) internal view returns (uint256 amount0, uint256 amount1) {
+        // #region vault's active module id.
+
+        address module = address(IArrakisMetaVault(vault_).module());
+        address resolver;
+
+        try this.getModuleID(module) returns (bytes32 id) {
+            resolver = resolvers[id];
+            if (resolver == address(0)) {
+                revert ModuleNotSupported();
+            }
+        } catch {
+            ///@dev it's a valantis module. Because that module don't IArrakisLPModuleID.
+            resolver = resolvers[bytes32(0)];
+        }
+
+        // #endregion vault's active module id.
+
+        return IResolver(resolver).getBurnAmounts(vault_, shares_);
     }
 
     // #endregion internal view functions.
