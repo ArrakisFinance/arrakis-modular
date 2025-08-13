@@ -3,8 +3,8 @@ pragma solidity ^0.8.19;
 
 import {IArrakisLPModulePrivate} from
     "../interfaces/IArrakisLPModulePrivate.sol";
-import {PancakeSwapV3StandardModule} from
-    "../abstracts/PancakeSwapV3StandardModule.sol";
+import {UniswapV3StandardModule} from
+    "../abstracts/UniswapV3StandardModule.sol";
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {SafeERC20} from
@@ -12,8 +12,8 @@ import {SafeERC20} from
 import {IERC20Metadata} from
     "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-contract PancakeSwapV3StandardModulePrivate is
-    PancakeSwapV3StandardModule,
+contract UniswapV3StandardModulePrivate is
+    UniswapV3StandardModule,
     IArrakisLPModulePrivate
 {
     using Address for address payable;
@@ -21,17 +21,16 @@ contract PancakeSwapV3StandardModulePrivate is
 
     // #region public constants.
 
-    /// @dev id = keccak256(abi.encode("PancakeSwapV3StandardModulePrivate"))
+    /// @dev id = keccak256(abi.encode("UniswapV3StandardModulePrivate"))
     bytes32 public constant id =
-        0x44e4a7ca74b28d7356e41d25bca1843604b4c48e4ae397efa6c5a36d3fa7db7a;
+        0xdd8e5ba3a291a21cb84e292884a78825d22f136e8932aeae51d2e181fe6378ec;
 
     // #endregion public constants.
 
     constructor(
         address guardian_,
-        address factory_,
-        address distributor_
-    ) PancakeSwapV3StandardModule(guardian_, factory_, distributor_) {}
+        address factory_
+    ) UniswapV3StandardModule(guardian_, factory_) {}
 
     /// @notice fund function for private vault.
     /// @param depositor_ address that will provide the tokens.
