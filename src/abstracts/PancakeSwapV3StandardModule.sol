@@ -17,9 +17,16 @@ import {INonfungiblePositionManager} from
 import {IUniswapV3FactoryVariant} from
     "../interfaces/IUniswapV3FactoryVariant.sol";
 import {IUniswapV3Pool} from "../interfaces/IUniswapV3Pool.sol";
+import {IUniswapV3PoolVariant} from
+    "../interfaces/IUniswapV3PoolVariant.sol";
 import {IMasterChefV3} from "../interfaces/IMasterChefV3.sol";
-import {TEN_PERCENT, BASE} from "../constants/CArrakis.sol";
-import {ModifyPosition} from "../structs/SUniswapV3.sol";
+import {TEN_PERCENT, BASE, PIPS} from "../constants/CArrakis.sol";
+import {
+    ModifyPosition,
+    RangeData,
+    Range
+} from "../structs/SUniswapV3.sol";
+import {UnderlyingV3} from "../libraries/UnderlyingV3.sol";
 
 // #region v3-lib.
 
@@ -39,7 +46,8 @@ import {ReentrancyGuardUpgradeable} from
 import {IERC721} from
     "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 // #endregion openzeppelin upgradeable.
 
@@ -117,6 +125,7 @@ abstract contract PancakeSwapV3StandardModule is
 
     /// @notice the list of tokenIds of non fungible position.
     EnumerableSet.UintSet internal _tokenIds;
+    uint256 internal _cakeManagerBalance;
 
     uint256 internal _init0;
     uint256 internal _init1;
@@ -262,7 +271,12 @@ abstract contract PancakeSwapV3StandardModule is
     function withdraw(
         address receiver_,
         uint256 proportion_
-    ) external nonReentrant onlyMetaVault returns (uint256 amount0, uint256 amount1) {
+    )
+        external
+        nonReentrant
+        onlyMetaVault
+        returns (uint256 amount0, uint256 amount1)
+    {
         /// @dev decrease nft position or burn it.
 
         // #region checks.
@@ -282,6 +296,8 @@ abstract contract PancakeSwapV3StandardModule is
         IERC20Metadata _token0 = token0;
         IERC20Metadata _token1 = token1;
 
+        // #region left overs.
+
         amount0 = FullMath.mulDiv(
             _token0.balanceOf(address(this)), proportion_, BASE
         );
@@ -289,9 +305,72 @@ abstract contract PancakeSwapV3StandardModule is
             _token1.balanceOf(address(this)), proportion_, BASE
         );
 
+        // #endregion left overs.
+
         ModifyPosition memory modifyPosition;
 
         modifyPosition.proportion = proportion_;
+
+        uint256 fee0;
+        uint256 fee1;
+
+        for (uint256 i; i < tokenIds.length;) {
+            modifyPosition.tokenId = tokenIds[i];
+            (uint256 amt0, uint256 amt1, uint256 f0, uint256 f1, uint256 cakeCo) =
+                _decreaseLiquidity(modifyPosition);
+
+            fee0 += f0;
+            fee1 += f1;
+
+            amount0 += amt0;
+            amount1 += amt1;
+            cakeAmountCollected += cakeCo;
+
+            unchecked {
+                i += 1;
+            }
+        }
+
+        // #region take the manager share.
+
+        if (cakeAmountCollected > 0) {
+            _cakeManagerBalance += FullMath.mulDiv(
+                cakeAmountCollected, managerFeePIPS, PIPS
+            );
+        }
+
+        // #endregion take the manager share.
+
+        // #region send manager fee.
+
+        {
+            address manager = metaVault.manager();
+
+            if (fee0 > 0) {
+                uint256 managerFee0 = FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
+                _token0.safeTransfer(manager, managerFee0);
+                fee0 = fee0 - managerFee0;
+            }
+            if (fee1 > 0) {
+                uint256 managerFee1 = FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
+                _token1.safeTransfer(cakeReceiver, managerFee1);
+                fee1 = fee1 - managerFee1;
+            }
+        }
+
+        // #endregion send manager fee.
+
+        amount0 = amount0 + FullMath.mulDiv(fee0, proportion_, PIPS);
+        amount1 = amount1 + FullMath.mulDiv(fee1, proportion_, PIPS);
+
+        if (amount0 > 0) {
+            _token0.safeTransfer(receiver_, amount0);
+        }
+        if (amount1 > 0) {
+            _token1.safeTransfer(receiver_, amount1);
+        }
+
+        emit LogWithdraw(receiver_, proportion_, amount0, amount1);
     }
 
     // #region view functions.
@@ -321,14 +400,17 @@ abstract contract PancakeSwapV3StandardModule is
         view
         returns (uint256 amount0, uint256 amount1)
     {
-        // TODO: implement.
+        (uint160 sqrtPriceX96,,,,,,) =
+            IUniswapV3PoolVariant(pool).slot0();
+
+        return _totalUnderlying(sqrtPriceX96);
     }
 
     /// @inheritdoc IArrakisLPModule
     function totalUnderlyingAtPrice(
         uint160 priceX96_
     ) external view returns (uint256 amount0, uint256 amount1) {
-        // TODO: implement.
+        return _totalUnderlying(priceX96_);
     }
 
     /// @inheritdoc IArrakisLPModule
@@ -336,20 +418,191 @@ abstract contract PancakeSwapV3StandardModule is
         IOracleWrapper oracle_,
         uint24 maxDeviation_
     ) external view {
-        // TODO: implement.
+        IERC20Metadata _token0 = token0;
+        IERC20Metadata _token1 = token1;
+
+        uint8 token0Decimals = _token0.decimals();
+        uint8 token1Decimals = _token1.decimals();
+
+        uint256 oraclePrice = oracle_.getPrice0();
+
+        (uint160 sqrtPriceX96,,,,,,) =
+            IUniswapV3PoolVariant(pool).slot0();
+
+        uint256 poolPrice;
+
+        if (sqrtPriceX96 <= type(uint128).max) {
+            poolPrice = FullMath.mulDiv(
+                uint256(sqrtPriceX96) * uint256(sqrtPriceX96),
+                10 ** token0Decimals,
+                1 << 192
+            );
+        } else {
+            poolPrice = FullMath.mulDiv(
+                FullMath.mulDiv(
+                    uint256(sqrtPriceX96),
+                    uint256(sqrtPriceX96),
+                    1 << 64
+                ),
+                10 ** token0Decimals,
+                1 << 128
+            );
+        }
+
+        uint256 deviation = FullMath.mulDiv(
+            FullMath.mulDiv(
+                poolPrice > oraclePrice
+                    ? poolPrice - oraclePrice
+                    : oraclePrice - poolPrice,
+                10 ** token1Decimals,
+                poolPrice
+            ),
+            PIPS,
+            10 ** token1Decimals
+        );
+
+        if (deviation > maxDeviation_) revert OverMaxDeviation();
+    }
+
+    /// @inheritdoc IArrakisLPModule
+    function managerBalance0()
+        external
+        view
+        returns (uint256 managerFee0)
+    {
+        (managerFee0,) = _managerBalance();
+    }
+
+    /// @inheritdoc IArrakisLPModule
+    function managerBalance1()
+        external
+        view
+        returns (uint256 managerFee1)
+    {
+        (, managerFee1) = _managerBalance();
+    }
+
+    /// @inheritdoc IPancakeSwapV3StandardModule
+    function cakeManagerBalance() external view returns (uint256) {
+        uint256 cakeBalance;
+        uint256 length = _tokenIds.length();
+
+        for (uint256 i; i < length;) {
+            uint256 tokenId = _tokenIds.at(i);
+
+            cakeBalance +=
+                IMasterChefV3(masterChefV3).pendingCake(tokenId);
+
+            unchecked {
+                i += 1;
+            }
+        }
+
+        return _cakeManagerBalance
+            + FullMath.mulDiv(cakeBalance, managerFeePIPS, PIPS);
     }
 
     // #endregion view functions.
 
     // #region internal functions.
 
+    function _totalUnderlying(
+        uint160 sqrtPriceX96_
+    ) internal view returns (uint256 amount0, uint256 amount1) {
+        uint256 fee0;
+        uint256 fee1;
+
+        uint256 length = _tokenIds.length();
+
+        address _pool = pool;
+
+        for (uint256 i; i < length;) {
+            uint256 tokenId = _tokenIds.at(i);
+
+            (int24 tickLower, int24 tickUpper,) =
+                _getPosition(tokenId);
+
+            RangeData memory underlying = RangeData({
+                self: nftPositionManager,
+                range: Range({lowerTick: tickLower, upperTick: tickUpper}),
+                pool: _pool
+            });
+
+            (uint256 amt0, uint256 amt1, uint256 f0, uint256 f1) =
+                UnderlyingV3.underlying(underlying, sqrtPriceX96_);
+
+            fee0 += f0;
+            fee1 += f1;
+            amount0 += amt0;
+            amount1 += amt1;
+
+            unchecked {
+                i += 1;
+            }
+        }
+
+        {
+            uint256 _managerFeePIPS = managerFeePIPS;
+
+            fee0 = fee0 - FullMath.mulDiv(fee0, _managerFeePIPS, PIPS);
+            fee1 = fee1 - FullMath.mulDiv(fee1, _managerFeePIPS, PIPS);
+        }
+
+        amount0 = amount0 - fee0;
+        amount1 = amount1 - fee1;
+    }
+
+    function _managerBalance()
+        internal
+        view
+        returns (uint256 managerFee0, uint256 managerFee1)
+    {
+        uint256 fee0;
+        uint256 fee1;
+
+        uint256 length = _tokenIds.length();
+
+        address _pool = pool;
+
+        (uint160 sqrtPriceX96,,,,,,) =
+            IUniswapV3PoolVariant(_pool).slot0();
+
+        for (uint256 i; i < length;) {
+            uint256 tokenId = _tokenIds.at(i);
+
+            (int24 tickLower, int24 tickUpper,) =
+                _getPosition(tokenId);
+
+            RangeData memory underlying = RangeData({
+                self: nftPositionManager,
+                range: Range({lowerTick: tickLower, upperTick: tickUpper}),
+                pool: _pool
+            });
+
+            (,, uint256 f0, uint256 f1) =
+                UnderlyingV3.underlying(underlying, sqrtPriceX96);
+
+            fee0 += f0;
+            fee1 += f1;
+
+            unchecked {
+                i += 1;
+            }
+        }
+
+        uint256 _managerFeePIPS = managerFeePIPS;
+
+        managerFee0 = FullMath.mulDiv(fee0, _managerFeePIPS, PIPS);
+        managerFee1 = FullMath.mulDiv(fee1, _managerFeePIPS, PIPS);
+    }
+
     function _decreaseLiquidity(
         ModifyPosition memory modifyPosition_
     )
         internal
         returns (
-            uint256 amount0ToSend,
-            uint256 amount1ToSend,
+            uint256 burn0,
+            uint256 burn1,
             uint256 fee0,
             uint256 fee1,
             uint256 cakeAmountCollected
@@ -358,8 +611,6 @@ abstract contract PancakeSwapV3StandardModule is
         // #region unstake position.
 
         uint128 liquidity;
-        uint256 burn0;
-        uint256 burn1;
         (cakeAmountCollected, liquidity) =
             _unstake(modifyPosition_.tokenId);
 
@@ -385,7 +636,7 @@ abstract contract PancakeSwapV3StandardModule is
             ).decreaseLiquidity(params);
         }
 
-        (amount0ToSend, amount1ToSend) = INonfungiblePositionManager(
+        (uint256 amount0ToSend, uint256 amount1ToSend) = INonfungiblePositionManager(
             nftPositionManager
         ).collect(
             INonfungiblePositionManager.CollectParams({
@@ -413,6 +664,100 @@ abstract contract PancakeSwapV3StandardModule is
         }
     }
 
+    function _increaseLiquidity(
+        ModifyPosition memory modifyPosition_,
+        uint160 sqrtPriceX96_
+    )
+        internal
+        returns (
+            uint256 amount0Sent,
+            uint256 amount1Sent,
+            uint256 cakeAmountCollected
+        )
+    {
+        // #region increase liquidity.
+
+        uint256 amt0;
+        uint256 amt1;
+
+        {
+            (amt0, amt1) =
+                _principal(modifyPosition_.tokenId, sqrtPriceX96_);
+        }
+
+        {
+            (cakeAmountCollected,) = _unstake(modifyPosition_.tokenId);
+        }
+
+        // #region collect fees.
+
+        INonfungiblePositionManager(nftPositionManager).collect(
+            INonfungiblePositionManager.CollectParams({
+                tokenId: modifyPosition_.tokenId,
+                recipient: address(this),
+                amount0Max: type(uint128).max,
+                amount1Max: type(uint128).max
+            })
+        );
+
+        // #endregion collect fees.
+
+        amt0 = SafeCast.toUint128(
+            FullMath.mulDiv(amt0, modifyPosition_.proportion, BASE)
+        );
+        amt1 = SafeCast.toUint128(
+            FullMath.mulDiv(amt1, modifyPosition_.proportion, BASE)
+        );
+
+        {
+            INonfungiblePositionManager.IncreaseLiquidityParams memory
+                params = INonfungiblePositionManager
+                    .IncreaseLiquidityParams({
+                    tokenId: modifyPosition_.tokenId,
+                    amount0Desired: amt0,
+                    amount1Desired: amt1,
+                    amount0Min: 0,
+                    amount1Min: 0,
+                    deadline: type(uint256).max
+                });
+
+            // #region approves.
+
+            IERC20Metadata _token0 = token0;
+            IERC20Metadata _token1 = token1;
+
+            if (params.amount0Desired > 0) {
+                _token0.forceApprove(
+                    nftPositionManager, params.amount0Desired
+                );
+            }
+            if (params.amount1Desired > 0) {
+                _token1.forceApprove(
+                    nftPositionManager, params.amount1Desired
+                );
+            }
+
+            // #endregion approves.
+
+            (, amount0Sent, amount1Sent) = INonfungiblePositionManager(
+                nftPositionManager
+            ).increaseLiquidity(params);
+
+            if (params.amount0Desired > 0) {
+                _token0.forceApprove(nftPositionManager, 0);
+            }
+            if (params.amount1Desired > 0) {
+                _token1.forceApprove(nftPositionManager, 0);
+            }
+        }
+
+        // #endregion increase liquidity.
+
+        IERC721(nftPositionManager).transferFrom(
+            address(this), masterChefV3, modifyPosition_.tokenId
+        );
+    }
+
     function _unstake(
         uint256 tokenId_
     )
@@ -422,6 +767,109 @@ abstract contract PancakeSwapV3StandardModule is
         (,, liquidity) = _getPosition(tokenId_);
         cakeAmountCollected = IMasterChefV3(masterChefV3).withdraw(
             tokenId_, address(this)
+        );
+    }
+
+    function _mint(
+        INonfungiblePositionManagerPancake.MintParams calldata params_,
+        address token0_,
+        address token1_
+    ) internal returns (uint256 amount0, uint256 amount1) {
+        uint256 tokenId;
+
+        if (params_.token0 != token0_) {
+            revert Token0Mismatch();
+        }
+        if (params_.token1 != token1_) {
+            revert Token1Mismatch();
+        }
+
+        uint24 fee = IUniswapV3Pool(pool).fee();
+
+        if (params_.fee != fee) {
+            revert FeeMismatch();
+        }
+
+        // #region approves.
+
+        if (params_.amount0Desired > 0) {
+            IERC20Metadata(token0_).forceApprove(
+                nftPositionManager, params_.amount0Desired
+            );
+        }
+        if (params_.amount1Desired > 0) {
+            IERC20Metadata(token1_).forceApprove(
+                nftPositionManager, params_.amount1Desired
+            );
+        }
+
+        // #endregion approves.
+
+        (tokenId,, amount0, amount1) =
+        INonfungiblePositionManagerPancake(nftPositionManager).mint(
+            params_
+        );
+
+        if (params_.amount0Desired > 0) {
+            IERC20Metadata(token0_).forceApprove(
+                nftPositionManager, 0
+            );
+        }
+        if (params_.amount1Desired > 0) {
+            IERC20Metadata(token1_).forceApprove(
+                nftPositionManager, 0
+            );
+        }
+
+        _tokenIds.add(tokenId);
+
+        // #region stake.
+
+        IERC721(nftPositionManager).transferFrom(
+            address(this), masterChefV3, tokenId
+        );
+    }
+
+    function _checkMinReturn(
+        bool zeroForOne_,
+        uint256 expectedMinReturn_,
+        uint256 amountIn_,
+        uint8 decimals0_,
+        uint8 decimals1_
+    ) internal view {
+        if (zeroForOne_) {
+            if (
+                FullMath.mulDiv(
+                    expectedMinReturn_, 10 ** decimals0_, amountIn_
+                )
+                    < FullMath.mulDiv(
+                        oracle.getPrice0(), PIPS - maxSlippage, PIPS
+                    )
+            ) revert ExpectedMinReturnTooLow();
+        } else {
+            if (
+                FullMath.mulDiv(
+                    expectedMinReturn_, 10 ** decimals1_, amountIn_
+                )
+                    < FullMath.mulDiv(
+                        oracle.getPrice1(), PIPS - maxSlippage, PIPS
+                    )
+            ) revert ExpectedMinReturnTooLow();
+        }
+    }
+
+    function _principal(
+        uint256 tokenId_,
+        uint160 sqrtRatioX96_
+    ) internal view returns (uint256 amount0, uint256 amount1) {
+        (int24 tickLower, int24 tickUpper, uint128 liquidity) =
+            _getPosition(tokenId_);
+
+        (amount0, amount1) = LiquidityAmounts.getAmountsForLiquidity(
+            sqrtRatioX96_,
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
+            liquidity
         );
     }
 

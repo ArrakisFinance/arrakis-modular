@@ -9,6 +9,11 @@ interface IPancakeSwapV3StandardModule {
     error MaxSlippageGtTenPercent();
     error PoolNotFound();
     error OnlyMetaVaultOwner();
+    error ExpectedMinReturnTooLow();
+    error FeeMismatch();
+    error Token0Mismatch();
+    error Token1Mismatch();
+    error OverMaxDeviation();
 
     // #endregion errors.
 

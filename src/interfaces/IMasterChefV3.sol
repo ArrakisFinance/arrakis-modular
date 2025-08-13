@@ -10,4 +10,8 @@ interface IMasterChefV3 {
         uint256 _tokenId,
         address _to
     ) external returns (uint256 reward);
+
+    function pendingCake(
+        uint256 _tokenId
+    ) external view returns (uint256 reward);
 }
