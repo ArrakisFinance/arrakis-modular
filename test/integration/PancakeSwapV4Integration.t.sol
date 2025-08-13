@@ -31,7 +31,8 @@ import {IArrakisPublicVaultRouter} from
     "../../src/interfaces/IArrakisPublicVaultRouter.sol";
 import {
     IArrakisPublicVaultRouterV2,
-    AddLiquidityData
+    AddLiquidityData,
+    RemoveLiquidityData
 } from "../../src/interfaces/IArrakisPublicVaultRouterV2.sol";
 import {IArrakisStandardManager} from
     "../../src/interfaces/IArrakisStandardManager.sol";
@@ -110,7 +111,7 @@ import {IDistributorExtension} from
 
 // #endregion utils.
 
-contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
+contract PancakeSwapV4IntegrationTest is TestWrapper, ILockCallback {
     using SafeERC20 for IERC20Metadata;
     using CurrencyLibrary for Currency;
     using PoolIdLibrary for PoolKey;
@@ -945,6 +946,173 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         vm.stopPrank();
 
         // #endregion second user deposit.
+    }
+
+    function test_rebalance_then_addLiquidity_then_removeLiquidity() public {
+        (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
+        IArrakisPublicVaultRouterV2(router).getMintAmounts(
+            vault, init0, init1
+        );
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+
+        deal(WETH, user, amount1);
+
+        deal(USDC, user, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(user);
+
+        IERC20Metadata(USDC).approve(router, amount0);
+        IERC20Metadata(WETH).approve(router, amount1);
+
+        // #endregion approve router.
+
+        // #region add liquidity.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: init0,
+                amount1Max: init1,
+                amount0Min: amount0,
+                amount1Min: amount1,
+                amountSharesMin: sharesToMint,
+                vault: vault,
+                receiver: user
+            })
+        );
+
+        (amount0, amount1) =
+            IArrakisMetaVault(vault).totalUnderlying();
+
+        vm.stopPrank();
+
+        // #endregion add liquidity.
+        {
+            // #region rebalance.
+
+            int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
+
+            int24 tickLower = (tick / 10) * 10 - (2 * 10);
+            int24 tickUpper = (tick / 10) * 10 + (2 * 10);
+
+            IPancakeSwapV4StandardModule.Range memory range =
+            IPancakeSwapV4StandardModule.Range({
+                tickLower: tickLower,
+                tickUpper: tickUpper
+            });
+
+            uint128 liquidity = LiquidityAmounts
+                .getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(tickLower),
+                TickMath.getSqrtRatioAtTick(tickUpper),
+                amount0,
+                amount1
+            );
+
+            IPancakeSwapV4StandardModule.LiquidityRange memory
+                liquidityRange = IPancakeSwapV4StandardModule
+                    .LiquidityRange({
+                    range: range,
+                    liquidity: SafeCast.toInt128(
+                        SafeCast.toInt256(uint256(liquidity))
+                    )
+                });
+
+            IPancakeSwapV4StandardModule.LiquidityRange[] memory
+                liquidityRanges = new IPancakeSwapV4StandardModule
+                    .LiquidityRange[](1);
+
+            liquidityRanges[0] = liquidityRange;
+            SwapPayload memory swapPayload;
+
+            vm.startPrank(arrakisStandardManager);
+            IPancakeSwapV4StandardModule(
+                address(IArrakisMetaVault(vault).module())
+            ).rebalance(liquidityRanges, swapPayload, 0, 0, 0, 0);
+            vm.stopPrank();
+
+            // #endregion rebalance.
+        }
+
+        // #region second user deposit.
+
+        (sharesToMint, amount0, amount1) = IArrakisPublicVaultRouterV2(
+            router
+        ).getMintAmounts(vault, init0, init1 / 3);
+
+        address secondUser =
+            vm.addr(uint256(keccak256(abi.encode("Second User"))));
+
+        deal(WETH, secondUser, amount1);
+        deal(USDC, secondUser, amount0);
+
+        // #region approve router.
+
+        vm.startPrank(secondUser);
+
+        IERC20Metadata(USDC).approve(router, init0);
+        IERC20Metadata(WETH).approve(router, init1 / 3);
+
+        // #endregion approve router.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: init0,
+                amount1Max: init1 / 3,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint * 99 / 100,
+                vault: vault,
+                receiver: secondUser
+            })
+        );
+
+        vm.stopPrank();
+
+        // #endregion second user deposit.
+
+        // #region remove liquidity.
+
+        vm.startPrank(secondUser);
+
+        uint256 token0Balance =
+            IERC20Metadata(USDC).balanceOf(secondUser);
+        uint256 token1Balance =
+            IERC20Metadata(WETH).balanceOf(secondUser);
+        uint256 lpTokenBalance =
+            IERC20Metadata(vault).balanceOf(secondUser);
+
+        (uint256 amt0, uint256 amt1) = IArrakisPublicVaultRouterV2(
+            router
+        ).getBurnAmounts(vault, lpTokenBalance/3);
+
+        IERC20Metadata(vault).approve(router, lpTokenBalance);
+
+        IArrakisPublicVaultRouterV2(router).removeLiquidity(
+            RemoveLiquidityData({
+                amount0Min: amt0,
+                amount1Min: amt1,
+                burnAmount: lpTokenBalance/3,
+                vault: vault,
+                receiver: payable(secondUser)
+            })
+        );
+
+        assertGe(
+            IERC20Metadata(WETH).balanceOf(secondUser),
+            token1Balance + amt1
+        );
+        assertGe(
+            IERC20Metadata(USDC).balanceOf(secondUser),
+            token0Balance + amt0
+        );
+
+        vm.stopPrank();
+
+        // #endregion remove liquidity.
     }
 
     // #endregion test.
