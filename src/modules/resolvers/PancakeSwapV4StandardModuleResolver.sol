@@ -27,7 +27,10 @@ import {CLPosition} from
 import {IVault} from "@pancakeswap/v4-core/src/interfaces/IVault.sol";
 import {FullMath} from
     "@pancakeswap/v4-core/src/pool-cl/libraries/FullMath.sol";
-import {Currency} from "@pancakeswap/v4-core/src/types/Currency.sol";
+import {
+    Currency,
+    CurrencyLibrary
+} from "@pancakeswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@pancakeswap/v4-core/src/types/PoolKey.sol";
 import {TickMath} from
     "@pancakeswap/v4-core/src/pool-cl/libraries/TickMath.sol";
@@ -268,7 +271,8 @@ contract PancakeSwapV4StandardModuleResolver is
         uint256 length = ranges.length;
 
         for (uint256 i; i < length; i++) {
-            IPancakeSwapV4StandardModule.Range memory range = ranges[i];
+            IPancakeSwapV4StandardModule.Range memory range =
+                ranges[i];
             (uint256 amt0, uint256 amt1) = computeBurnAmounts(
                 range,
                 poolId,
@@ -280,6 +284,33 @@ contract PancakeSwapV4StandardModuleResolver is
 
             amount0 += amt0;
             amount1 += amt1;
+        }
+
+        {
+            if (CurrencyLibrary.isNative(poolKey.currency0)) {
+                amount0 += FullMath.mulDiv(
+                    address(module).balance, proportion, BASE
+                );
+            } else {
+                amount0 += FullMath.mulDiv(
+                    IERC20(Currency.unwrap(poolKey.currency0))
+                        .balanceOf(address(module)),
+                    proportion,
+                    BASE
+                );
+            }
+
+            amount1 += FullMath.mulDiv(
+                IERC20(Currency.unwrap(poolKey.currency1)).balanceOf(
+                    address(module)
+                ),
+                proportion,
+                BASE
+            );
+        }
+
+        if (module.isInversed()) {
+            (amount0, amount1) = (amount1, amount0);
         }
     }
 
