@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+import {IUniV4StandardModule} from "./IUniV4StandardModule.sol";
+import {PoolId} from "@uniswap/v4-core/src/types/PoolId.sol";
+
 interface IUniV4StandardModuleResolver {
     // #region errors.
 
@@ -9,12 +12,21 @@ interface IUniV4StandardModuleResolver {
     error MintZero();
     error NotSupported();
     error AmountsOverMaxAmounts();
+    error SharesZero();
 
     // #endregion errors.
 
     // #region view/pure functions.
 
     function poolManager() external returns (address);
+
+    function computeBurnAmounts(
+        IUniV4StandardModule.Range calldata range_,
+        PoolId poolId_,
+        address module_,
+        uint160 sqrtPriceX96_,
+        uint256 proportion_
+    ) external view returns (uint256 amount0, uint256 amount1);
 
     function computeMintAmounts(
         uint256 current0_,
