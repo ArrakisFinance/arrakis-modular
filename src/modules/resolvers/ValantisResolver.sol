@@ -3,14 +3,17 @@ pragma solidity ^0.8.19;
 
 import {IResolver} from "../../interfaces/IResolver.sol";
 import {IArrakisMetaVault} from "../../interfaces/IArrakisMetaVault.sol";
-import {BASE} from "../../constants/CArrakis.sol";
+import {IArrakisLPModule} from "../../interfaces/IArrakisLPModule.sol";
+import {IValantisResolver} from "../../interfaces/IValantisResolver.sol";
+import {BASE, PIPS} from "../../constants/CArrakis.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {FullMath} from "@v3-lib-0.8/contracts/FullMath.sol";
 
 contract ValantisResolver is
-    IResolver
+    IResolver,
+    IValantisResolver
 {
     /// @notice getMintAmounts used to get the shares we can mint from some max amounts.
     /// @param vault_ meta vault address.
@@ -62,5 +65,44 @@ contract ValantisResolver is
             FullMath.mulDivRoundingUp(amount0, proportion, BASE);
         amount1ToDeposit =
             FullMath.mulDivRoundingUp(amount1, proportion, BASE);
+    }
+
+    /// @inheritdoc IResolver
+    function getBurnAmounts(
+        address vault_,
+        uint256 shares_
+    ) external view returns (uint256 amount0, uint256 amount1) {
+        if (vault_ == address(0)) {
+            revert AddressZero();
+        }
+
+        uint256 totalSupply = IERC20(vault_).totalSupply();
+
+        if (totalSupply == 0) {
+            revert TotalSupplyZero();
+        }
+        if (shares_ > totalSupply) {
+            revert SharesOverTotalSupply();
+        }
+
+        (uint256 current0, uint256 current1) =
+            IArrakisMetaVault(vault_).totalUnderlying();
+
+        (amount0, amount1) = computeBurnAmounts(
+            shares_, current0, current1, totalSupply
+        );
+    }
+
+    function computeBurnAmounts(
+        uint256 shares_,
+        uint256 current0_,
+        uint256 current1_,
+        uint256 totalSupply_
+    ) public pure returns (uint256 amount0, uint256 amount1) {
+        uint256 proportion =
+            FullMath.mulDiv(shares_, BASE, totalSupply_);
+
+        amount0 = FullMath.mulDiv(current0_, proportion, BASE);
+        amount1 = FullMath.mulDiv(current1_, proportion, BASE);
     }
 }
