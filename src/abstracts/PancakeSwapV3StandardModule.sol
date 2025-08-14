@@ -20,12 +20,21 @@ import {IUniswapV3Pool} from "../interfaces/IUniswapV3Pool.sol";
 import {IUniswapV3PoolVariant} from
     "../interfaces/IUniswapV3PoolVariant.sol";
 import {IMasterChefV3} from "../interfaces/IMasterChefV3.sol";
-import {TEN_PERCENT, BASE, PIPS} from "../constants/CArrakis.sol";
+import {
+    TEN_PERCENT,
+    BASE,
+    PIPS,
+    NATIVE_COIN
+} from "../constants/CArrakis.sol";
 import {
     ModifyPosition,
     RangeData,
     Range
 } from "../structs/SUniswapV3.sol";
+import {
+    RebalanceParams,
+    MintReturnValues
+} from "../structs/SPancakeSwapV3.sol";
 import {UnderlyingV3} from "../libraries/UnderlyingV3.sol";
 
 // #region v3-lib.
@@ -43,11 +52,6 @@ import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {IERC721} from
-    "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {SafeCast} from
-    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 // #endregion openzeppelin upgradeable.
 
@@ -59,6 +63,13 @@ import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from
     "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {IERC721} from
+    "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {IERC721Receiver} from
+    "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {SafeCast} from
+    "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 // #endregion openzeppelin.
 
@@ -67,7 +78,8 @@ abstract contract PancakeSwapV3StandardModule is
     ReentrancyGuardUpgradeable,
     IPancakeSwapV3StandardModule,
     IArrakisLPModule,
-    IArrakisLPModuleID
+    IArrakisLPModuleID,
+    IERC721Receiver
 {
     using SafeERC20 for IERC20Metadata;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -156,6 +168,14 @@ abstract contract PancakeSwapV3StandardModule is
         _;
     }
 
+    modifier onlyManager() {
+        address manager = metaVault.manager();
+        if (manager != msg.sender) {
+            revert OnlyManager(msg.sender, manager);
+        }
+        _;
+    }
+
     // #endregion modifiers.
 
     // #region constructor.
@@ -168,11 +188,14 @@ abstract contract PancakeSwapV3StandardModule is
         address masterChefV3_
     ) {
         // #region checks.
-        if (guardian_ == address(0)) revert AddressZero();
-        if (nftPositionManager_ == address(0)) revert AddressZero();
-        if (factory_ == address(0)) revert AddressZero();
-        if (cake_ == address(0)) revert AddressZero();
-        if (masterChefV3_ == address(0)) revert AddressZero();
+        if (
+            guardian_ == address(0)
+                || nftPositionManager_ == address(0)
+                || factory_ == address(0) || cake_ == address(0)
+                || masterChefV3_ == address(0)
+        ) {
+            revert AddressZero();
+        }
         // #endregion checks.
 
         _guardian = guardian_;
@@ -185,6 +208,16 @@ abstract contract PancakeSwapV3StandardModule is
     }
 
     // #endregion constructor.
+
+    /// @inheritdoc IERC721Receiver
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external returns (bytes4) {
+        return IERC721Receiver.onERC721Received.selector;
+    }
 
     // #region guardian functions.
 
@@ -210,7 +243,12 @@ abstract contract PancakeSwapV3StandardModule is
         address metaVault_
     ) external initializer {
         // #region checks.
-        if (address(oracle_) == address(0)) revert AddressZero();
+        if (
+            address(oracle_) == address(0)
+                || cakeReceiver_ == address(0) || metaVault_ == address(0)
+        ) {
+            revert AddressZero();
+        }
         if (maxSlippage_ > TEN_PERCENT) {
             revert MaxSlippageGtTenPercent();
         }
@@ -226,6 +264,10 @@ abstract contract PancakeSwapV3StandardModule is
 
         address _token0 = IArrakisMetaVault(metaVault_).token0();
         address _token1 = IArrakisMetaVault(metaVault_).token1();
+
+        if (_token0 == NATIVE_COIN || _token1 == NATIVE_COIN) {
+            revert NativeCoinNotAllowed();
+        }
 
         token0 = IERC20Metadata(_token0);
         token1 = IERC20Metadata(_token1);
@@ -245,7 +287,7 @@ abstract contract PancakeSwapV3StandardModule is
     /// @inheritdoc IArrakisLPModule
     function initializePosition(
         bytes calldata data_
-    ) external {
+    ) external virtual {
         /// @dev left over will sit on the module.
     }
 
@@ -253,16 +295,34 @@ abstract contract PancakeSwapV3StandardModule is
 
     function approve(
         address spender_,
-        uint256 amount0_,
-        uint256 amount1_
+        address[] calldata tokens_,
+        uint256[] calldata amounts_
     ) external nonReentrant whenNotPaused onlyMetaVaultOwner {
-        IERC20Metadata _token0 = token0;
-        IERC20Metadata _token1 = token1;
+        uint256 length = tokens_.length;
+        if (length != amounts_.length) {
+            revert LengthsNotEqual();
+        }
 
-        _token0.forceApprove(spender_, amount0_);
-        _token1.forceApprove(spender_, amount1_);
+        for (uint256 i; i < length;) {
+            address token = tokens_[i];
+            uint256 amount = amounts_[i];
 
-        emit LogApproval(spender_, amount0_, amount1_);
+            if (token == address(0)) {
+                revert AddressZero();
+            }
+
+            if (address(token) != NATIVE_COIN) {
+                IERC20Metadata(token).forceApprove(spender_, amount);
+            } else {
+                revert NativeCoinNotAllowed();
+            }
+
+            unchecked {
+                i += 1;
+            }
+        }
+
+        emit LogApproval(spender_, tokens_, amounts_);
     }
 
     // #endregion rfq system.
@@ -272,7 +332,8 @@ abstract contract PancakeSwapV3StandardModule is
         address receiver_,
         uint256 proportion_
     )
-        external
+        public
+        virtual
         nonReentrant
         onlyMetaVault
         returns (uint256 amount0, uint256 amount1)
@@ -316,8 +377,13 @@ abstract contract PancakeSwapV3StandardModule is
 
         for (uint256 i; i < tokenIds.length;) {
             modifyPosition.tokenId = tokenIds[i];
-            (uint256 amt0, uint256 amt1, uint256 f0, uint256 f1, uint256 cakeCo) =
-                _decreaseLiquidity(modifyPosition);
+            (
+                uint256 amt0,
+                uint256 amt1,
+                uint256 f0,
+                uint256 f1,
+                uint256 cakeCo
+            ) = _decreaseLiquidity(modifyPosition);
 
             fee0 += f0;
             fee1 += f1;
@@ -333,9 +399,11 @@ abstract contract PancakeSwapV3StandardModule is
 
         // #region take the manager share.
 
+        uint256 _managerFeePIPS = managerFeePIPS;
+
         if (cakeAmountCollected > 0) {
             _cakeManagerBalance += FullMath.mulDiv(
-                cakeAmountCollected, managerFeePIPS, PIPS
+                cakeAmountCollected, _managerFeePIPS, PIPS
             );
         }
 
@@ -347,21 +415,23 @@ abstract contract PancakeSwapV3StandardModule is
             address manager = metaVault.manager();
 
             if (fee0 > 0) {
-                uint256 managerFee0 = FullMath.mulDiv(fee0, managerFeePIPS, PIPS);
+                uint256 managerFee0 =
+                    FullMath.mulDiv(fee0, _managerFeePIPS, PIPS);
                 _token0.safeTransfer(manager, managerFee0);
                 fee0 = fee0 - managerFee0;
             }
             if (fee1 > 0) {
-                uint256 managerFee1 = FullMath.mulDiv(fee1, managerFeePIPS, PIPS);
-                _token1.safeTransfer(cakeReceiver, managerFee1);
+                uint256 managerFee1 =
+                    FullMath.mulDiv(fee1, _managerFeePIPS, PIPS);
+                _token1.safeTransfer(manager, managerFee1);
                 fee1 = fee1 - managerFee1;
             }
         }
 
         // #endregion send manager fee.
 
-        amount0 = amount0 + FullMath.mulDiv(fee0, proportion_, PIPS);
-        amount1 = amount1 + FullMath.mulDiv(fee1, proportion_, PIPS);
+        amount0 = amount0 + FullMath.mulDiv(fee0, proportion_, BASE);
+        amount1 = amount1 + FullMath.mulDiv(fee1, proportion_, BASE);
 
         if (amount0 > 0) {
             _token0.safeTransfer(receiver_, amount0);
@@ -371,6 +441,459 @@ abstract contract PancakeSwapV3StandardModule is
         }
 
         emit LogWithdraw(receiver_, proportion_, amount0, amount1);
+    }
+
+    /// @inheritdoc IPancakeSwapV3StandardModule
+    function rebalance(
+        RebalanceParams calldata params_
+    ) external nonReentrant whenNotPaused onlyManager {
+        // #region decrease positions.
+
+        uint256 length = params_.decreasePositions.length;
+
+        uint256 burn0;
+        uint256 burn1;
+
+        if (length > 0) {
+            uint256 cakeAmountCollected;
+
+            uint256 fee0;
+            uint256 fee1;
+
+            for (uint256 i; i < length;) {
+                if (
+                    !_tokenIds.contains(
+                        params_.decreasePositions[i].tokenId
+                    )
+                ) {
+                    revert TokenIdNotFound();
+                }
+
+                (
+                    uint256 amt0,
+                    uint256 amt1,
+                    uint256 f0,
+                    uint256 f1,
+                    uint256 cakeCo
+                ) = _decreaseLiquidity(params_.decreasePositions[i]);
+
+                fee0 += f0;
+                fee1 += f1;
+
+                burn0 += amt0;
+                burn1 += amt1;
+                cakeAmountCollected += cakeCo;
+
+                unchecked {
+                    i += 1;
+                }
+            }
+
+            // #region manager fees.
+
+            uint256 _managerFeePIPS = managerFeePIPS;
+
+            if (cakeAmountCollected > 0) {
+                _cakeManagerBalance += FullMath.mulDiv(
+                    cakeAmountCollected, _managerFeePIPS, PIPS
+                );
+            }
+
+            // #endregion manager fees.
+
+            // #region send manager fee.
+
+            {
+                address manager = metaVault.manager();
+
+                IERC20Metadata _token0 = token0;
+                IERC20Metadata _token1 = token1;
+
+                if (fee0 > 0) {
+                    uint256 managerFee0 =
+                        FullMath.mulDiv(fee0, _managerFeePIPS, PIPS);
+                    _token0.safeTransfer(manager, managerFee0);
+                }
+                if (fee1 > 0) {
+                    uint256 managerFee1 =
+                        FullMath.mulDiv(fee1, _managerFeePIPS, PIPS);
+                    _token1.safeTransfer(manager, managerFee1);
+                }
+            }
+
+            // #endregion send manager fee
+
+            // #region min burns.
+
+            if (burn0 < params_.minBurn0) {
+                revert BurnToken0();
+            }
+            if (burn1 < params_.minBurn1) {
+                revert BurnToken1();
+            }
+
+            // #endregion min burns.
+        }
+
+        // #endregion decrease positions.
+
+        // #region swap.
+
+        if (params_.swapPayload.amountIn > 0) {
+            IERC20Metadata _token0 = token0;
+            IERC20Metadata _token1 = token1;
+
+            _checkMinReturn(
+                params_.swapPayload.zeroForOne,
+                params_.swapPayload.expectedMinReturn,
+                params_.swapPayload.amountIn,
+                _token0.decimals(),
+                _token1.decimals()
+            );
+
+            uint256 balance;
+
+            if (params_.swapPayload.zeroForOne) {
+                _token0.forceApprove(
+                    params_.swapPayload.router,
+                    params_.swapPayload.amountIn
+                );
+
+                balance = _token1.balanceOf(address(this));
+            } else {
+                _token1.forceApprove(
+                    params_.swapPayload.router,
+                    params_.swapPayload.amountIn
+                );
+
+                balance = _token0.balanceOf(address(this));
+            }
+
+            if (
+                params_.swapPayload.router == address(metaVault)
+                    || params_.swapPayload.router == nftPositionManager
+                    || params_.swapPayload.router == masterChefV3
+                    || params_.swapPayload.router == CAKE
+            ) {
+                revert WrongRouter();
+            }
+
+            {
+                params_.swapPayload.router.functionCall(
+                    params_.swapPayload.payload
+                );
+            }
+
+            if (params_.swapPayload.zeroForOne) {
+                balance = _token1.balanceOf(address(this)) - balance;
+
+                if (params_.swapPayload.expectedMinReturn > balance) {
+                    revert SlippageTooHigh();
+                }
+
+                _token0.forceApprove(params_.swapPayload.router, 0);
+            } else {
+                balance = _token0.balanceOf(address(this)) - balance;
+
+                if (params_.swapPayload.expectedMinReturn > balance) {
+                    revert SlippageTooHigh();
+                }
+
+                _token1.forceApprove(params_.swapPayload.router, 0);
+            }
+        }
+
+        // #endregion swap.
+
+        uint256 mint0;
+        uint256 mint1;
+
+        // #region increase positions.
+
+        (uint160 sqrtPriceX96,,,,,,) =
+            IUniswapV3PoolVariant(pool).slot0();
+
+        length = params_.increasePositions.length;
+        if (length > 0) {
+            uint256 cakeAmountCollected;
+
+            uint256 fee0;
+            uint256 fee1;
+
+            MintReturnValues memory mintReturnValues;
+
+            for (uint256 i; i < length;) {
+                if (
+                    !_tokenIds.contains(
+                        params_.increasePositions[i].tokenId
+                    )
+                ) {
+                    revert TokenIdNotFound();
+                }
+
+                (
+                    mintReturnValues.amount0,
+                    mintReturnValues.amount1,
+                    mintReturnValues.fee0,
+                    mintReturnValues.fee1,
+                    mintReturnValues.cakeCo
+                ) = _increaseLiquidity(
+                    params_.increasePositions[i], sqrtPriceX96
+                );
+
+                mint0 += mintReturnValues.amount0;
+                mint1 += mintReturnValues.amount1;
+                fee0 += mintReturnValues.fee0;
+                fee1 += mintReturnValues.fee1;
+                cakeAmountCollected += mintReturnValues.cakeCo;
+
+                unchecked {
+                    i += 1;
+                }
+            }
+
+            // #region manager fees.
+
+            uint256 _managerFeePIPS = managerFeePIPS;
+
+            if (cakeAmountCollected > 0) {
+                _cakeManagerBalance += FullMath.mulDiv(
+                    cakeAmountCollected, _managerFeePIPS, PIPS
+                );
+            }
+
+            // #endregion manager fees.
+
+            // #region send manager fee.
+
+            {
+                address manager = metaVault.manager();
+
+                if (fee0 > 0) {
+                    uint256 managerFee0 =
+                        FullMath.mulDiv(fee0, _managerFeePIPS, PIPS);
+                    token0.safeTransfer(manager, managerFee0);
+                }
+                if (fee1 > 0) {
+                    uint256 managerFee1 =
+                        FullMath.mulDiv(fee1, _managerFeePIPS, PIPS);
+                    token1.safeTransfer(manager, managerFee1);
+                }
+            }
+
+            // #endregion send manager fee.
+        }
+
+        // #endregion increase positions.
+
+        // #region mint.
+
+        length = params_.mintParams.length;
+
+        if (length > 0) {
+            address _token0 = address(token0);
+            address _token1 = address(token1);
+
+            for (uint256 i; i < length;) {
+                (uint256 amount0, uint256 amount1) =
+                    _mint(params_.mintParams[i], _token0, _token1);
+
+                mint0 += amount0;
+                mint1 += amount1;
+
+                unchecked {
+                    i += 1;
+                }
+            }
+        }
+
+        // #endregion mint.
+
+        if (mint0 < params_.minDeposit0) {
+            revert MintToken0();
+        }
+        if (mint1 < params_.minDeposit1) {
+            revert MintToken1();
+        }
+
+        emit LogRebalance(burn0, burn1, mint0, mint1);
+    }
+
+    /// @inheritdoc IArrakisLPModule
+    function withdrawManagerBalance()
+        public
+        nonReentrant
+        whenNotPaused
+        returns (uint256 amount0, uint256 amount1)
+    {
+        uint256[] memory tokenIds = _tokenIds.values();
+        uint256 fee0;
+        uint256 fee1;
+        uint256 cakeAmountCollected;
+
+        for (uint256 i; i < tokenIds.length;) {
+            (
+                uint256 f0,
+                uint256 f1,
+                uint256 cakeCo
+            ) = _collectFees(tokenIds[i]);
+
+            fee0 += f0;
+            fee1 += f1;
+
+            amount0 += amt0;
+            amount1 += amt1;
+            cakeAmountCollected += cakeCo;
+
+            unchecked {
+                i += 1;
+            }
+        }
+
+        // #region take the manager share.
+
+        uint256 _managerFeePIPS = managerFeePIPS;
+
+        if (cakeAmountCollected > 0) {
+            _cakeManagerBalance += FullMath.mulDiv(
+                cakeAmountCollected, _managerFeePIPS, PIPS
+            );
+        }
+
+        // #endregion take the manager share.
+
+        // #region send manager fee.
+
+        {
+            address manager = metaVault.manager();
+
+            if (fee0 > 0) {
+                amount0 =
+                    FullMath.mulDiv(fee0, _managerFeePIPS, PIPS);
+                _token0.safeTransfer(manager, amount0);
+            }
+            if (fee1 > 0) {
+                amount1 =
+                    FullMath.mulDiv(fee1, _managerFeePIPS, PIPS);
+                _token1.safeTransfer(manager, amount1);
+            }
+        }
+
+        // #endregion send manager fee.
+
+        emit LogWithdrawManagerBalance(amount0, amount1);
+    }
+
+    /// @inheritdoc IArrakisLPModule
+    function setManagerFeePIPS(
+        uint256 newFeePIPS_
+    ) external onlyManager whenNotPaused {
+        uint256 _managerFeePIPS = managerFeePIPS;
+        if (_managerFeePIPS == newFeePIPS_) revert SameManagerFee();
+        if (newFeePIPS_ > PIPS) revert NewFeesGtPIPS(newFeePIPS_);
+
+        withdrawManagerBalance();
+
+        managerFeePIPS = newFeePIPS_;
+        emit LogSetManagerFeePIPS(_managerFeePIPS, newFeePIPS_);
+    }
+
+    /// @inheritdoc IPancakeSwapV3StandardModule
+    function claimManager() public nonReentrant whenNotPaused {
+        uint256 length = _tokenIds.length();
+
+        for (uint256 i; i < length;) {
+            uint256 tokenId = _tokenIds.at(i);
+
+            cakeBalance += IMasterChefV3(masterChefV3).harvest(
+                tokenId, address(this)
+            );
+
+            unchecked {
+                i += 1;
+            }
+        }
+
+        // #region take the manager share.
+
+        uint256 amountToSend = _cakeManagerBalance
+            + FullMath.mulDiv(cakeBalance, managerFeePIPS, PIPS);
+        _cakeManagerBalance = 0;
+
+        // #endregion take the manager share.
+
+        address _cakeReceiver = cakeReceiver;
+
+        IERC20Metadata(CAKE).safeTransfer(_cakeReceiver, amountToSend);
+
+        emit LogManagerClaim(_cakeReceiver, amountToSend);
+    }
+
+    /// @inheritdoc IPancakeSwapV3StandardModule
+    function claimRewards(
+        address receiver_
+    ) external onlyMetaVaultOwner nonReentrant whenNotPaused {
+        // #region checks.
+
+        if (receiver_ == address(0)) {
+            revert AddressZero();
+        }
+
+        // #endregion checks.
+
+        uint256 length = _tokenIds.length();
+        uint256 cakeBalance;
+
+        for (uint256 i; i < length;) {
+            uint256 tokenId = _tokenIds.at(i);
+
+            cakeBalance += IMasterChefV3(masterChefV3).harvest(
+                tokenId, address(this)
+            );
+
+            unchecked {
+                i += 1;
+            }
+        }
+
+        // #region take the manager share.
+
+        _cakeManagerBalance +=
+            FullMath.mulDiv(cakeBalance, managerFeePIPS, PIPS);
+
+        // #endregion take the manager share.
+
+        uint256 cakeToClaim = IERC20Metadata(CAKE).balanceOf(
+            address(this)
+        ) - _cakeManagerBalance;
+
+        IERC20Metadata(CAKE).safeTransfer(receiver_, cakeToClaim);
+
+        emit LogClaim(receiver_, cakeToClaim);
+    }
+
+    /// @inheritdoc IPancakeSwapV3StandardModule
+    function setReceiver(
+        address newReceiver_
+    ) external whenNotPaused {
+        address manager = metaVault.manager();
+
+        if (IOwnable(manager).owner() != msg.sender) {
+            revert OnlyManagerOwner();
+        }
+
+        address oldReceiver = cakeReceiver;
+        if (newReceiver_ == address(0)) {
+            revert AddressZero();
+        }
+
+        if (oldReceiver == newReceiver_) {
+            revert SameReceiver();
+        }
+
+        cakeReceiver = newReceiver_;
+
+        emit LogSetReceiver(oldReceiver, newReceiver_);
     }
 
     // #region view functions.
@@ -517,16 +1040,23 @@ abstract contract PancakeSwapV3StandardModule is
         address _pool = pool;
 
         for (uint256 i; i < length;) {
-            uint256 tokenId = _tokenIds.at(i);
+            RangeData memory underlying;
 
-            (int24 tickLower, int24 tickUpper,) =
-                _getPosition(tokenId);
+            {
+                uint256 tokenId = _tokenIds.at(i);
 
-            RangeData memory underlying = RangeData({
-                self: nftPositionManager,
-                range: Range({lowerTick: tickLower, upperTick: tickUpper}),
-                pool: _pool
-            });
+                (int24 tickLower, int24 tickUpper,) =
+                    _getPosition(tokenId);
+
+                underlying = RangeData({
+                    self: nftPositionManager,
+                    range: Range({
+                        lowerTick: tickLower,
+                        upperTick: tickUpper
+                    }),
+                    pool: _pool
+                });
+            }
 
             (uint256 amt0, uint256 amt1, uint256 f0, uint256 f1) =
                 UnderlyingV3.underlying(underlying, sqrtPriceX96_);
@@ -548,8 +1078,8 @@ abstract contract PancakeSwapV3StandardModule is
             fee1 = fee1 - FullMath.mulDiv(fee1, _managerFeePIPS, PIPS);
         }
 
-        amount0 = amount0 - fee0;
-        amount1 = amount1 - fee1;
+        amount0 = amount0 + fee0;
+        amount1 = amount1 + fee1;
     }
 
     function _managerBalance()
@@ -610,11 +1140,11 @@ abstract contract PancakeSwapV3StandardModule is
     {
         // #region unstake position.
 
-        uint128 liquidity;
-        (cakeAmountCollected, liquidity) =
-            _unstake(modifyPosition_.tokenId);
-
         {
+            uint128 liquidity;
+            (cakeAmountCollected, liquidity) =
+                _unstake(modifyPosition_.tokenId);
+
             liquidity = SafeCast.toUint128(
                 FullMath.mulDiv(
                     liquidity, modifyPosition_.proportion, BASE
@@ -636,9 +1166,8 @@ abstract contract PancakeSwapV3StandardModule is
             ).decreaseLiquidity(params);
         }
 
-        (uint256 amount0ToSend, uint256 amount1ToSend) = INonfungiblePositionManager(
-            nftPositionManager
-        ).collect(
+        (uint256 amount0ToSend, uint256 amount1ToSend) =
+        INonfungiblePositionManager(nftPositionManager).collect(
             INonfungiblePositionManager.CollectParams({
                 tokenId: modifyPosition_.tokenId,
                 recipient: address(this),
@@ -672,6 +1201,8 @@ abstract contract PancakeSwapV3StandardModule is
         returns (
             uint256 amount0Sent,
             uint256 amount1Sent,
+            uint256 fee0,
+            uint256 fee1,
             uint256 cakeAmountCollected
         )
     {
@@ -691,7 +1222,8 @@ abstract contract PancakeSwapV3StandardModule is
 
         // #region collect fees.
 
-        INonfungiblePositionManager(nftPositionManager).collect(
+        (fee0, fee1) = INonfungiblePositionManager(nftPositionManager)
+            .collect(
             INonfungiblePositionManager.CollectParams({
                 tokenId: modifyPosition_.tokenId,
                 recipient: address(this),
@@ -755,6 +1287,41 @@ abstract contract PancakeSwapV3StandardModule is
 
         IERC721(nftPositionManager).transferFrom(
             address(this), masterChefV3, modifyPosition_.tokenId
+        );
+    }
+
+    function _collectFees(
+        uint256 tokenId_
+    )
+        internal
+        returns (
+            uint256 fee0,
+            uint256 fee1,
+            uint256 cakeAmountCollected
+        )
+    {
+        {
+            (cakeAmountCollected,) = _unstake(tokenId_);
+        }
+
+        // #region collect fees.
+
+        (fee0, fee1) = INonfungiblePositionManager(nftPositionManager)
+            .collect(
+            INonfungiblePositionManager.CollectParams({
+                tokenId: tokenId_,
+                recipient: address(this),
+                amount0Max: type(uint128).max,
+                amount1Max: type(uint128).max
+            })
+        );
+
+        // #endregion collect fees
+
+        // #endregion increase liquidity.
+
+        IERC721(nftPositionManager).transferFrom(
+            address(this), masterChefV3, tokenId_
         );
     }
 
@@ -828,6 +1395,8 @@ abstract contract PancakeSwapV3StandardModule is
         IERC721(nftPositionManager).transferFrom(
             address(this), masterChefV3, tokenId
         );
+
+        // #endregion stake
     }
 
     function _checkMinReturn(
