@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import {IOracleWrapper} from "./IOracleWrapper.sol";
+import {RebalanceParams} from "../structs/SPancakeSwapV3.sol";
 
 interface IPancakeSwapV3StandardModule {
     // #region errors.
@@ -14,6 +15,17 @@ interface IPancakeSwapV3StandardModule {
     error Token0Mismatch();
     error Token1Mismatch();
     error OverMaxDeviation();
+    error WrongRouter();
+    error SlippageTooHigh();
+    error MintToken1();
+    error MintToken0();
+    error TokenIdNotFound();
+    error OnlyManagerOwner();
+    error SameReceiver();
+    error NativeCoinNotAllowed();
+    error LengthsNotEqual();
+    error BurnToken0();
+    error BurnToken1();
 
     // #endregion errors.
 
@@ -21,10 +33,10 @@ interface IPancakeSwapV3StandardModule {
 
     /// @notice Event describing an approval of left overs to an address.
     /// @param spender the address that will get the allowance.
-    /// @param amount0 the amount of token0 allowed to spender.
-    /// @param amount1 the amount of token1 allowed to spender.
+    /// @param tokens the tokens that will be allowed to spender.
+    /// @param amounts the amount of tokens that will be allowed to spender.
     event LogApproval(
-        address indexed spender, uint256 amount0, uint256 amount1
+         address indexed spender, address[] tokens, uint256[] amounts
     );
 
     /// @notice Event describing an rebalance results on underlying.
@@ -81,7 +93,8 @@ interface IPancakeSwapV3StandardModule {
     ) external;
 
     /// @notice function used to rebalance the inventory of the module.
-    function rebalance() external;
+    /// @param params_ parameters of the rebalance.
+    function rebalance(RebalanceParams calldata params_) external;
 
     /// @notice function used by user to claim the cake rewards.
     /// @param receiver_ address that will receive the cake rewards.
