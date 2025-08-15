@@ -732,17 +732,12 @@ abstract contract PancakeSwapV3StandardModule is
         uint256 cakeAmountCollected;
 
         for (uint256 i; i < tokenIds.length;) {
-            (
-                uint256 f0,
-                uint256 f1,
-                uint256 cakeCo
-            ) = _collectFees(tokenIds[i]);
+            (uint256 f0, uint256 f1, uint256 cakeCo) =
+                _collectFees(tokenIds[i]);
 
             fee0 += f0;
             fee1 += f1;
 
-            amount0 += amt0;
-            amount1 += amt1;
             cakeAmountCollected += cakeCo;
 
             unchecked {
@@ -763,25 +758,20 @@ abstract contract PancakeSwapV3StandardModule is
         // #endregion take the manager share.
 
         // #region send manager fee.
+        address manager = metaVault.manager();
 
-        {
-            address manager = metaVault.manager();
-
-            if (fee0 > 0) {
-                amount0 =
-                    FullMath.mulDiv(fee0, _managerFeePIPS, PIPS);
-                _token0.safeTransfer(manager, amount0);
-            }
-            if (fee1 > 0) {
-                amount1 =
-                    FullMath.mulDiv(fee1, _managerFeePIPS, PIPS);
-                _token1.safeTransfer(manager, amount1);
-            }
+        if (fee0 > 0) {
+            amount0 = FullMath.mulDiv(fee0, _managerFeePIPS, PIPS);
+            token0.safeTransfer(manager, amount0);
+        }
+        if (fee1 > 0) {
+            amount1 = FullMath.mulDiv(fee1, _managerFeePIPS, PIPS);
+            token1.safeTransfer(manager, amount1);
         }
 
         // #endregion send manager fee.
 
-        emit LogWithdrawManagerBalance(amount0, amount1);
+        emit LogWithdrawManagerBalance(manager, amount0, amount1);
     }
 
     /// @inheritdoc IArrakisLPModule
@@ -801,6 +791,8 @@ abstract contract PancakeSwapV3StandardModule is
     /// @inheritdoc IPancakeSwapV3StandardModule
     function claimManager() public nonReentrant whenNotPaused {
         uint256 length = _tokenIds.length();
+
+        uint256 cakeBalance;
 
         for (uint256 i; i < length;) {
             uint256 tokenId = _tokenIds.at(i);
