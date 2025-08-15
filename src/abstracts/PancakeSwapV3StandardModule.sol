@@ -256,8 +256,8 @@ abstract contract PancakeSwapV3StandardModule is
         // #endregion checks.
 
         oracle = oracle_;
-        _init1 = init0_;
         _init0 = init0_;
+        _init1 = init1_;
         maxSlippage = maxSlippage_;
         cakeReceiver = cakeReceiver_;
         metaVault = IArrakisMetaVault(metaVault_);
@@ -287,7 +287,7 @@ abstract contract PancakeSwapV3StandardModule is
     /// @inheritdoc IArrakisLPModule
     function initializePosition(
         bytes calldata data_
-    ) external virtual {
+    ) external virtual onlyMetaVault {
         /// @dev left over will sit on the module.
     }
 
@@ -350,7 +350,7 @@ abstract contract PancakeSwapV3StandardModule is
 
         // #endregion checks.
 
-        uint256[] memory tokenIds = _tokenIds.values();
+        uint256[] memory tokenIdsList = _tokenIds.values();
 
         uint256 cakeAmountCollected;
 
@@ -375,8 +375,8 @@ abstract contract PancakeSwapV3StandardModule is
         uint256 fee0;
         uint256 fee1;
 
-        for (uint256 i; i < tokenIds.length;) {
-            modifyPosition.tokenId = tokenIds[i];
+        for (uint256 i; i < tokenIdsList.length;) {
+            modifyPosition.tokenId = tokenIdsList[i];
             (
                 uint256 amt0,
                 uint256 amt1,
@@ -726,14 +726,14 @@ abstract contract PancakeSwapV3StandardModule is
         whenNotPaused
         returns (uint256 amount0, uint256 amount1)
     {
-        uint256[] memory tokenIds = _tokenIds.values();
+        uint256[] memory tokenIdsList = _tokenIds.values();
         uint256 fee0;
         uint256 fee1;
         uint256 cakeAmountCollected;
 
-        for (uint256 i; i < tokenIds.length;) {
+        for (uint256 i; i < tokenIdsList.length;) {
             (uint256 f0, uint256 f1, uint256 cakeCo) =
-                _collectFees(tokenIds[i]);
+                _collectFees(tokenIdsList[i]);
 
             fee0 += f0;
             fee1 += f1;
