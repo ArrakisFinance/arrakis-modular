@@ -76,4 +76,6 @@ interface IUniswapV3Pool {
     function feeGrowthGlobal1X128() external view returns (uint256);
 
     function tickSpacing() external view returns (int24);
+
+    function fee() external view returns (uint24);
 }
