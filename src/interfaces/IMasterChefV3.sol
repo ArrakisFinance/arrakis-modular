@@ -14,4 +14,18 @@ interface IMasterChefV3 {
     function pendingCake(
         uint256 _tokenId
     ) external view returns (uint256 reward);
+
+    function userPositionInfos(
+        uint256 _tokenId
+    ) external view returns (
+        uint128 liquidity,
+        uint128 boostLiquidity,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 rewardGrowthInside,
+        uint256 reward,
+        address user,
+        uint256 pid,
+        uint256 boostMultiplier
+    );
 }

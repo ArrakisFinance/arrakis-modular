@@ -215,7 +215,7 @@ abstract contract PancakeSwapV3StandardModule is
         address,
         uint256,
         bytes calldata
-    ) external returns (bytes4) {
+    ) external view returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -1070,8 +1070,8 @@ abstract contract PancakeSwapV3StandardModule is
             fee1 = fee1 - FullMath.mulDiv(fee1, _managerFeePIPS, PIPS);
         }
 
-        amount0 = amount0 + fee0;
-        amount1 = amount1 + fee1;
+        amount0 = amount0 + fee0 + token0.balanceOf(address(this));
+        amount1 = amount1 + fee1 + token1.balanceOf(address(this));
     }
 
     function _managerBalance()
@@ -1179,8 +1179,8 @@ abstract contract PancakeSwapV3StandardModule is
             _tokenIds.remove(modifyPosition_.tokenId);
         } else {
             /// @dev stake the nft position.
-            IERC721(nftPositionManager).transferFrom(
-                address(this), masterChefV3, modifyPosition_.tokenId
+            IERC721(nftPositionManager).safeTransferFrom(
+                address(this), masterChefV3, modifyPosition_.tokenId, ""
             );
         }
     }
@@ -1277,8 +1277,8 @@ abstract contract PancakeSwapV3StandardModule is
 
         // #endregion increase liquidity.
 
-        IERC721(nftPositionManager).transferFrom(
-            address(this), masterChefV3, modifyPosition_.tokenId
+        IERC721(nftPositionManager).safeTransferFrom(
+            address(this), masterChefV3, modifyPosition_.tokenId, ""
         );
     }
 
@@ -1312,8 +1312,8 @@ abstract contract PancakeSwapV3StandardModule is
 
         // #endregion increase liquidity.
 
-        IERC721(nftPositionManager).transferFrom(
-            address(this), masterChefV3, tokenId_
+        IERC721(nftPositionManager).safeTransferFrom(
+            address(this), masterChefV3, tokenId_, ""
         );
     }
 
@@ -1384,8 +1384,8 @@ abstract contract PancakeSwapV3StandardModule is
 
         // #region stake.
 
-        IERC721(nftPositionManager).transferFrom(
-            address(this), masterChefV3, tokenId
+        IERC721(nftPositionManager).safeTransferFrom(
+            address(this), masterChefV3, tokenId, ""
         );
 
         // #endregion stake
