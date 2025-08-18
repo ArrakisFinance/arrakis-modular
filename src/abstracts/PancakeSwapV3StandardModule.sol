@@ -215,7 +215,7 @@ abstract contract PancakeSwapV3StandardModule is
         address,
         uint256,
         bytes calldata
-    ) external returns (bytes4) {
+    ) external view returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -256,8 +256,8 @@ abstract contract PancakeSwapV3StandardModule is
         // #endregion checks.
 
         oracle = oracle_;
-        _init1 = init0_;
         _init0 = init0_;
+        _init1 = init1_;
         maxSlippage = maxSlippage_;
         cakeReceiver = cakeReceiver_;
         metaVault = IArrakisMetaVault(metaVault_);
@@ -287,7 +287,7 @@ abstract contract PancakeSwapV3StandardModule is
     /// @inheritdoc IArrakisLPModule
     function initializePosition(
         bytes calldata data_
-    ) external virtual {
+    ) external virtual onlyMetaVault {
         /// @dev left over will sit on the module.
     }
 
@@ -350,7 +350,7 @@ abstract contract PancakeSwapV3StandardModule is
 
         // #endregion checks.
 
-        uint256[] memory tokenIds = _tokenIds.values();
+        uint256[] memory tokenIdsList = _tokenIds.values();
 
         uint256 cakeAmountCollected;
 
@@ -375,8 +375,8 @@ abstract contract PancakeSwapV3StandardModule is
         uint256 fee0;
         uint256 fee1;
 
-        for (uint256 i; i < tokenIds.length;) {
-            modifyPosition.tokenId = tokenIds[i];
+        for (uint256 i; i < tokenIdsList.length;) {
+            modifyPosition.tokenId = tokenIdsList[i];
             (
                 uint256 amt0,
                 uint256 amt1,
@@ -726,14 +726,14 @@ abstract contract PancakeSwapV3StandardModule is
         whenNotPaused
         returns (uint256 amount0, uint256 amount1)
     {
-        uint256[] memory tokenIds = _tokenIds.values();
+        uint256[] memory tokenIdsList = _tokenIds.values();
         uint256 fee0;
         uint256 fee1;
         uint256 cakeAmountCollected;
 
-        for (uint256 i; i < tokenIds.length;) {
+        for (uint256 i; i < tokenIdsList.length;) {
             (uint256 f0, uint256 f1, uint256 cakeCo) =
-                _collectFees(tokenIds[i]);
+                _collectFees(tokenIdsList[i]);
 
             fee0 += f0;
             fee1 += f1;
@@ -1070,8 +1070,8 @@ abstract contract PancakeSwapV3StandardModule is
             fee1 = fee1 - FullMath.mulDiv(fee1, _managerFeePIPS, PIPS);
         }
 
-        amount0 = amount0 + fee0;
-        amount1 = amount1 + fee1;
+        amount0 = amount0 + fee0 + token0.balanceOf(address(this));
+        amount1 = amount1 + fee1 + token1.balanceOf(address(this));
     }
 
     function _managerBalance()
@@ -1179,8 +1179,8 @@ abstract contract PancakeSwapV3StandardModule is
             _tokenIds.remove(modifyPosition_.tokenId);
         } else {
             /// @dev stake the nft position.
-            IERC721(nftPositionManager).transferFrom(
-                address(this), masterChefV3, modifyPosition_.tokenId
+            IERC721(nftPositionManager).safeTransferFrom(
+                address(this), masterChefV3, modifyPosition_.tokenId, ""
             );
         }
     }
@@ -1277,8 +1277,8 @@ abstract contract PancakeSwapV3StandardModule is
 
         // #endregion increase liquidity.
 
-        IERC721(nftPositionManager).transferFrom(
-            address(this), masterChefV3, modifyPosition_.tokenId
+        IERC721(nftPositionManager).safeTransferFrom(
+            address(this), masterChefV3, modifyPosition_.tokenId, ""
         );
     }
 
@@ -1312,8 +1312,8 @@ abstract contract PancakeSwapV3StandardModule is
 
         // #endregion increase liquidity.
 
-        IERC721(nftPositionManager).transferFrom(
-            address(this), masterChefV3, tokenId_
+        IERC721(nftPositionManager).safeTransferFrom(
+            address(this), masterChefV3, tokenId_, ""
         );
     }
 
@@ -1384,8 +1384,8 @@ abstract contract PancakeSwapV3StandardModule is
 
         // #region stake.
 
-        IERC721(nftPositionManager).transferFrom(
-            address(this), masterChefV3, tokenId
+        IERC721(nftPositionManager).safeTransferFrom(
+            address(this), masterChefV3, tokenId, ""
         );
 
         // #endregion stake
