@@ -8,16 +8,18 @@ This document outlines the key invariants and actors for implementing an Actor-B
 
 ### Primary Actors
 
-1. **MetaVault** - The main vault contract that orchestrates user deposits/withdrawals
-2. **Manager** - Strategy executor who performs rebalancing operations and sets fees
-3. **MetaVaultOwner** - Owner of the metavault with administrative privileges
-4. **Guardian** - Emergency actor who can pause/unpause operations
-5. **Users** - End users who interact indirectly through the private vault
+1. **Vault Creator** - Creates vaults through ArrakisMetaVaultFactory, sets up management and module initialization
+2. **MetaVault** - The main vault contract that orchestrates user deposits/withdrawals
+3. **Manager** - Strategy executor who performs rebalancing operations and sets fees
+4. **Executor** - Address stored in vaultInfo on ArrakisStandardManager that can call rebalance function on ArrakisStandardManager
+5. **MetaVaultOwner** - Owner of the metavault with administrative privileges
+6. **Guardian** - Emergency actor who can pause/unpause operations
+7. **Users** - End users who interact indirectly through the private vault
 
 ### Secondary Actors
 
-6. **CakeReceiver** - Receives the manager's share of CAKE rewards
-7. **External Routers** - DEX routers used for token swaps during rebalancing
+8. **CakeReceiver** - Receives the manager's share of CAKE rewards
+9. **External Routers** - DEX routers used for token swaps during rebalancing
 
 ## Critical Invariants
 
@@ -37,7 +39,8 @@ This document outlines the key invariants and actors for implementing an Actor-B
 
 ### 3. Access Control Invariants
 
-- **Manager Exclusivity**: Only `manager` can call `rebalance()` and `setManagerFeePIPS()`
+- **Manager Exclusivity**: Only `manager` can call `rebalance()` and `setManagerFeePIPS()` on the module
+- **Executor Exclusivity**: Only `executor` can call `rebalance()` on the ArrakisStandardManager
 - **MetaVault Exclusivity**: Only `metaVault` can call `withdraw()` and `initializePosition()`
 - **Owner Privileges**: Only `metaVaultOwner` can call `claimRewards()` and `approve()`
 - **Guardian Powers**: Only `guardian` can `pause()`/`unpause()`
@@ -74,7 +77,9 @@ This document outlines the key invariants and actors for implementing an Actor-B
 
 ### Actor Behaviors to Model
 
-- **Manager**: Performs complex rebalancing with random position modifications, swaps, and parameter constraints
+- **Vault Creator**: Creates new vaults with various configurations, initializes modules with different parameters
+- **Manager**: Performs complex rebalancing with random position modifications, swaps, and parameter constraints (module level)
+- **Executor**: Triggers rebalancing operations through ArrakisStandardManager
 - **MetaVaultOwner**: Claims rewards, approves tokens for external contracts
 - **Guardian**: Randomly pauses/unpauses during operations to test emergency scenarios
 - **MetaVault**: Calls withdraw with various proportions and position states
@@ -82,12 +87,13 @@ This document outlines the key invariants and actors for implementing an Actor-B
 
 ### Fuzzing Focus Areas
 
-1. **Complex Rebalancing Scenarios**: Multiple simultaneous position changes with swaps
-2. **Edge Case Proportions**: Withdrawals at 0%, 100%, and values near `BASE`
-3. **Oracle Price Manipulation**: Testing behavior near deviation thresholds
-4. **Fee Boundary Testing**: Manager fees at 0%, 100%, and intermediate values
-5. **Emergency Scenarios**: Operations during paused states
-6. **Integration Edge Cases**: Interactions with empty positions, dust amounts, etc.
+1. **Vault Creation & Initialization**: Testing various configurations and module setup parameters
+2. **Complex Rebalancing Scenarios**: Multiple simultaneous position changes with swaps
+3. **Edge Case Proportions**: Withdrawals at 0%, 100%, and values near `BASE`
+4. **Oracle Price Manipulation**: Testing behavior near deviation thresholds
+5. **Fee Boundary Testing**: Manager fees at 0%, 100%, and intermediate values
+6. **Emergency Scenarios**: Operations during paused states
+7. **Integration Edge Cases**: Interactions with empty positions, dust amounts, etc.
 
 ## Implementation Recommendations
 
