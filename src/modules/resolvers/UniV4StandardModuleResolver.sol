@@ -82,15 +82,15 @@ contract UniV4StandardModuleResolver is
             uint256 amount1ToDeposit
         )
     {
-        address module;
         bool isInversed;
+        uint256 buffer0;
+        uint256 buffer1;
 
         UnderlyingPayload memory underlyingPayload;
 
         {
             PoolKey memory poolKey;
-            uint256 buffer0;
-            uint256 buffer1;
+            address module;
 
             {
                 module = address(IArrakisMetaVault(vault_).module());
@@ -167,13 +167,6 @@ contract UniV4StandardModuleResolver is
                     IPoolManager(poolManager);
                 underlyingPayload.self = module;
             }
-
-            if (
-                amount0ToDeposit > maxAmount0_ + buffer0
-                    || amount1ToDeposit > maxAmount1_ + buffer1
-            ) {
-                revert AmountsOverMaxAmounts();
-            }
         }
 
         uint256 totalSupply = IERC20(vault_).totalSupply();
@@ -199,7 +192,7 @@ contract UniV4StandardModuleResolver is
                 .totalUnderlyingForMint(underlyingPayload, proportion);
         } else {
             (uint256 init0, uint256 init1) =
-                IArrakisLPModule(module).getInits();
+                IArrakisMetaVault(vault_).getInits();
 
             (init0, init1) =
                 isInversed ? (init1, init0) : (init0, init1);
@@ -213,6 +206,13 @@ contract UniV4StandardModuleResolver is
                 FullMath.mulDivRoundingUp(shareToMint, init0, BASE);
             amount1ToDeposit =
                 FullMath.mulDivRoundingUp(shareToMint, init1, BASE);
+        }
+
+        if (
+            amount0ToDeposit > maxAmount0_ + buffer0
+                || amount1ToDeposit > maxAmount1_ + buffer1
+        ) {
+            revert AmountsOverMaxAmounts();
         }
 
         (amount0ToDeposit, amount1ToDeposit) = isInversed
