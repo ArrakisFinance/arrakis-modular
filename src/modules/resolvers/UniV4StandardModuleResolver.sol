@@ -11,7 +11,6 @@ import {IUniV4StandardModule} from
 import {IArrakisLPModule} from "../../interfaces/IArrakisLPModule.sol";
 import {UnderlyingPayload} from "../../structs/SUniswapV4.sol";
 import {BASE, PIPS} from "../../constants/CArrakis.sol";
-import {UnderlyingV4} from "../../libraries/UnderlyingV4.sol";
 import {Range as PoolRange} from "../../structs/SUniswapV4.sol";
 import {UnderlyingV4} from "../../libraries/UnderlyingV4.sol";
 
