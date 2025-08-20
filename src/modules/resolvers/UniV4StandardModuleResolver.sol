@@ -13,6 +13,7 @@ import {UnderlyingPayload} from "../../structs/SUniswapV4.sol";
 import {BASE, PIPS} from "../../constants/CArrakis.sol";
 import {UnderlyingV4} from "../../libraries/UnderlyingV4.sol";
 import {Range as PoolRange} from "../../structs/SUniswapV4.sol";
+import {UnderlyingV4} from "../../libraries/UnderlyingV4.sol";
 
 import {IPoolManager} from
     "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
@@ -81,42 +82,20 @@ contract UniV4StandardModuleResolver is
             uint256 amount1ToDeposit
         )
     {
-        uint256 totalSupply;
         address module;
         bool isInversed;
 
         UnderlyingPayload memory underlyingPayload;
-        uint256 buffer;
 
         {
             PoolKey memory poolKey;
-            PoolRange[] memory poolRanges;
+            uint256 buffer0;
+            uint256 buffer1;
 
             {
-                totalSupply = IERC20(vault_).totalSupply();
                 module = address(IArrakisMetaVault(vault_).module());
 
                 isInversed = IUniV4StandardModule(module).isInversed();
-
-                IUniV4StandardModule.Range[] memory _ranges =
-                    IUniV4StandardModule(module).getRanges();
-
-                buffer = 2 * _ranges.length;
-
-                if (buffer >= maxAmount0_ || buffer >= maxAmount1_) {
-                    revert MaxAmountsTooLow();
-                }
-
-                (maxAmount0_, maxAmount1_) = isInversed
-                    ? (maxAmount1_, maxAmount0_)
-                    : (maxAmount0_, maxAmount1_);
-
-                maxAmount0_ =
-                    maxAmount0_ > buffer ? maxAmount0_ - buffer : 0;
-                maxAmount1_ =
-                    maxAmount1_ > buffer ? maxAmount1_ - buffer : 0;
-
-                poolRanges = new PoolRange[](_ranges.length);
 
                 (
                     poolKey.currency0,
@@ -126,35 +105,78 @@ contract UniV4StandardModuleResolver is
                     poolKey.hooks
                 ) = IUniV4StandardModule(module).poolKey();
 
-                for (uint256 i; i < _ranges.length; i++) {
-                    IUniV4StandardModule.Range memory range =
-                        _ranges[i];
-                    poolRanges[i] = PoolRange({
-                        lowerTick: range.tickLower,
-                        upperTick: range.tickUpper,
-                        poolKey: poolKey
-                    });
+                {
+                    IUniV4StandardModule.Range[] memory _ranges =
+                        IUniV4StandardModule(module).getRanges();
+
+                    underlyingPayload.ranges =
+                        new PoolRange[](_ranges.length);
+                    uint160 sqrtPriceX96;
+
+                    {
+                        PoolId poolId = poolKey.toId();
+
+                        (sqrtPriceX96,,,) =
+                            IPoolManager(poolManager).getSlot0(poolId);
+                    }
+
+                    for (uint256 i; i < _ranges.length; i++) {
+                        IUniV4StandardModule.Range memory range =
+                            _ranges[i];
+                        underlyingPayload.ranges[i] = PoolRange({
+                            lowerTick: range.tickLower,
+                            upperTick: range.tickUpper,
+                            poolKey: poolKey
+                        });
+
+                        (uint256 b0, uint256 b1) =
+                        _getBufferForOneWeiLiquidity(
+                            range, sqrtPriceX96
+                        );
+
+                        buffer0 += b0;
+                        buffer1 += b1;
+                    }
                 }
+
+                (maxAmount0_, maxAmount1_) = isInversed
+                    ? (maxAmount1_, maxAmount0_)
+                    : (maxAmount0_, maxAmount1_);
+
+                if (buffer0 >= maxAmount0_ || buffer1 >= maxAmount1_)
+                {
+                    revert MaxAmountsTooLow();
+                }
+
+                maxAmount0_ = maxAmount0_ - buffer0;
+                maxAmount1_ = maxAmount1_ - buffer1;
             }
             {
-                uint256 leftOver0 = poolKey.currency0.isAddressZero()
+                underlyingPayload.leftOver0 = poolKey
+                    .currency0
+                    .isAddressZero()
                     ? module.balance
                     : IERC20(Currency.unwrap(poolKey.currency0)).balanceOf(
                         module
                     );
-                uint256 leftOver1 = IERC20(
+                underlyingPayload.leftOver1 = IERC20(
                     Currency.unwrap(poolKey.currency1)
                 ).balanceOf(module);
 
-                underlyingPayload = UnderlyingPayload({
-                    ranges: poolRanges,
-                    poolManager: IPoolManager(poolManager),
-                    self: module,
-                    leftOver0: leftOver0,
-                    leftOver1: leftOver1
-                });
+                underlyingPayload.poolManager =
+                    IPoolManager(poolManager);
+                underlyingPayload.self = module;
+            }
+
+            if (
+                amount0ToDeposit > maxAmount0_ + buffer0
+                    || amount1ToDeposit > maxAmount1_ + buffer1
+            ) {
+                revert AmountsOverMaxAmounts();
             }
         }
+
+        uint256 totalSupply = IERC20(vault_).totalSupply();
 
         if (totalSupply > 0) {
             (uint256 current0, uint256 current1) = UnderlyingV4
@@ -191,13 +213,6 @@ contract UniV4StandardModuleResolver is
                 FullMath.mulDivRoundingUp(shareToMint, init0, BASE);
             amount1ToDeposit =
                 FullMath.mulDivRoundingUp(shareToMint, init1, BASE);
-        }
-
-        if (
-            amount0ToDeposit > maxAmount0_ + buffer
-                || amount1ToDeposit > maxAmount1_ + buffer
-        ) {
-            revert AmountsOverMaxAmounts();
         }
 
         (amount0ToDeposit, amount1ToDeposit) = isInversed
@@ -379,4 +394,25 @@ contract UniV4StandardModuleResolver is
         amount0 += amount0Current;
         amount1 += amount1Current;
     }
+
+    // #region internal functions.
+
+    function _getBufferForOneWeiLiquidity(
+        IUniV4StandardModule.Range memory range_,
+        uint160 sqrtRatioX96_
+    ) internal pure returns (uint256 buffer0, uint256 buffer1) {
+        (buffer0, buffer1) = UnderlyingV4.getAmountsForDelta(
+            sqrtRatioX96_,
+            TickMath.getSqrtPriceAtTick(range_.tickLower),
+            TickMath.getSqrtPriceAtTick(range_.tickUpper),
+            int128(1)
+        );
+        /// @dev want to compute for 1 wei of liquidity.
+        buffer0 += 1;
+        /// @dev fees roundingup.
+        buffer1 += 1;
+        /// @dev fees roundingup.
+    }
+
+    // #endregion internal functions.
 }

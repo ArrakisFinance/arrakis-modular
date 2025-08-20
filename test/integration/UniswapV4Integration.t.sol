@@ -461,6 +461,8 @@ contract UniswapV4IntegrationTest is TestWrapper {
 
         router = _deployArrakisPublicRouter();
 
+        poolManager = _deployPoolManager();
+
         uniV4resolver =
             _deployUniV4StandardModuleResolver(poolManager);
 
