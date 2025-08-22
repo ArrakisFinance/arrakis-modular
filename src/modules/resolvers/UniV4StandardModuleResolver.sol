@@ -136,6 +136,9 @@ contract UniV4StandardModuleResolver is
                         buffer0 += b0;
                         buffer1 += b1;
                     }
+
+                    buffer0 += 1;
+                    buffer1 += 1;
                 }
 
                 (maxAmount0_, maxAmount1_) = isInversed
@@ -406,11 +409,6 @@ contract UniV4StandardModuleResolver is
             TickMath.getSqrtPriceAtTick(range_.tickUpper),
             int128(1)
         );
-        /// @dev want to compute for 1 wei of liquidity.
-        buffer0 += 1;
-        /// @dev fees roundingup.
-        buffer1 += 1;
-        /// @dev fees roundingup.
     }
 
     // #endregion internal functions.
