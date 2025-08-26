@@ -1,0 +1,20 @@
+# Working Echidna configuration
+testMode: assertion
+coverage: true
+testLimit: 10000
+seqLen: 30
+
+# Multiple senders for different actors
+sender: ["0x10000", "0x20000", "0x30000"]
+
+# Balance configuration  
+balanceContract: 100000000000000000000
+
+# Performance tuning
+shrinkLimit: 5000
+
+# Use Foundry for compilation
+cryticArgs: ["--foundry-out-directory", "out", "--foundry-compile-all"]
+
+# Coverage output formats
+coverageFormats: ["txt", "html"]

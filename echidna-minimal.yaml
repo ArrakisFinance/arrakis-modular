@@ -1,0 +1,3 @@
+# Minimal working Echidna configuration
+testMode: assertion
+testLimit: 10000
