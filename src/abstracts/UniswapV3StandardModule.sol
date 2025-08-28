@@ -139,14 +139,9 @@ abstract contract UniswapV3StandardModule is
 
     // #endregion modifiers.
 
-    constructor(
-        address guardian_,
-        address factory_
-    ) {
+    constructor(address guardian_, address factory_) {
         // #region checks.
-        if (
-            guardian_ == address(0) || factory_ == address(0)
-        ) {
+        if (guardian_ == address(0) || factory_ == address(0)) {
             revert AddressZero();
         }
         // #endregion checks.
@@ -991,7 +986,7 @@ abstract contract UniswapV3StandardModule is
                         UnderlyingV3.rangeExists(_ranges, burn.range);
 
                     _activeRanges[positionId] = false;
-                    _ranges[index] = _ranges[length - 1];
+                    _ranges[index] = _ranges[_ranges.length - 1];
                     _ranges.pop();
                 }
             }
