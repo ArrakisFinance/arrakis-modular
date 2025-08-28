@@ -860,7 +860,9 @@ abstract contract PancakeSwapV3StandardModule is
             address(this)
         ) - _cakeManagerBalance;
 
-        IERC20Metadata(CAKE).safeTransfer(receiver_, cakeToClaim);
+        if (address(token0) != CAKE && address(token1) != CAKE) {
+            IERC20Metadata(CAKE).safeTransfer(receiver_, cakeToClaim);
+        }
 
         emit LogClaim(receiver_, cakeToClaim);
     }
@@ -971,7 +973,7 @@ abstract contract PancakeSwapV3StandardModule is
                     ? poolPrice - oraclePrice
                     : oraclePrice - poolPrice,
                 10 ** token1Decimals,
-                poolPrice
+                oraclePrice
             ),
             PIPS,
             10 ** token1Decimals
