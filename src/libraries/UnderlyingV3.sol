@@ -11,9 +11,12 @@ import {
     PositionUnderlyingV3,
     ComputeFeesPayload,
     GetFeesPayload,
-    Range
+    Range,
+    PositionUnderlyingV3Nft
 } from "../structs/SUniswapV3.sol";
 import {PIPS} from "../constants/CArrakis.sol";
+import {INonfungiblePositionManagerPancake} from
+    "../interfaces/INonfungiblePositionManagerPancake.sol";
 
 import {
     FullMath,
@@ -24,8 +27,11 @@ import {TickMath} from "@v3-lib-0.8/contracts/TickMath.sol";
 
 import {SafeCast} from
     "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 library UnderlyingV3 {
+    using Address for address;
+
     // solhint-disable-next-line function-max-lines
     function totalUnderlyingForMint(
         UnderlyingPayloadV3 memory underlyingPayload_,
@@ -61,14 +67,12 @@ library UnderlyingV3 {
 
         amount0 += FullMath.mulDivRoundingUp(
             mintAmount_,
-            fee0After
-                + underlyingPayload_.leftOver0,
+            fee0After + underlyingPayload_.leftOver0,
             totalSupply_
         );
         amount1 += FullMath.mulDivRoundingUp(
             mintAmount_,
-            fee1After
-                + underlyingPayload_.leftOver1,
+            fee1After + underlyingPayload_.leftOver1,
             totalSupply_
         );
     }
@@ -287,6 +291,57 @@ library UnderlyingV3 {
         fee1 += uint256(tokensOwed1);
     }
 
+    function getUnderlyingBalancesNft(
+        PositionUnderlyingV3Nft memory positionUnderlying_
+    )
+        public
+        view
+        returns (
+            uint256 amount0Current,
+            uint256 amount1Current,
+            uint256 fee0,
+            uint256 fee1
+        )
+    {
+        (
+            int24 tickLower,
+            int24 tickUpper,
+            uint128 liquidity,
+            uint256 feeGrowthInside0Last,
+            uint256 feeGrowthInside1Last,
+            uint128 tokensOwed0,
+            uint128 tokensOwed1
+        ) = _getTokenIdInfo(
+            positionUnderlying_.tokenId,
+            positionUnderlying_.nftPositionManager
+        );
+
+        // compute current fees earned
+        (fee0, fee1) = _getFeesEarned(
+            GetFeesPayload({
+                feeGrowthInside0Last: feeGrowthInside0Last,
+                feeGrowthInside1Last: feeGrowthInside1Last,
+                pool: positionUnderlying_.pool,
+                liquidity: liquidity,
+                tick: positionUnderlying_.tick,
+                lowerTick: tickLower,
+                upperTick: tickUpper
+            })
+        );
+
+        // compute current holdings from liquidity
+        (amount0Current, amount1Current) = LiquidityAmounts
+            .getAmountsForLiquidity(
+            positionUnderlying_.sqrtPriceX96,
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
+            liquidity
+        );
+
+        fee0 += uint256(tokensOwed0);
+        fee1 += uint256(tokensOwed1);
+    }
+
     /// @notice Computes the token0 and token1 value for a given amount of liquidity, the current
     /// pool prices and the prices at the tick boundaries
     function getAmountsForDelta(
@@ -370,7 +425,9 @@ library UnderlyingV3 {
             ,
             ,
             ,
-        ) = IUniswapV3PoolVariant(feeInfo_.pool).ticks(feeInfo_.lowerTick);
+        ) = IUniswapV3PoolVariant(feeInfo_.pool).ticks(
+            feeInfo_.lowerTick
+        );
         (
             ,
             ,
@@ -379,13 +436,16 @@ library UnderlyingV3 {
             ,
             ,
             ,
-        ) = IUniswapV3PoolVariant(feeInfo_.pool).ticks(feeInfo_.upperTick);
+        ) = IUniswapV3PoolVariant(feeInfo_.pool).ticks(
+            feeInfo_.upperTick
+        );
 
         ComputeFeesPayload memory payload = ComputeFeesPayload({
             feeGrowthInsideLast: feeInfo_.feeGrowthInside0Last,
             feeGrowthOutsideLower: feeGrowthOutside0Lower,
             feeGrowthOutsideUpper: feeGrowthOutside0Upper,
-            feeGrowthGlobal: IUniswapV3Pool(feeInfo_.pool).feeGrowthGlobal0X128(),
+            feeGrowthGlobal: IUniswapV3Pool(feeInfo_.pool)
+                .feeGrowthGlobal0X128(),
             pool: feeInfo_.pool,
             liquidity: feeInfo_.liquidity,
             tick: feeInfo_.tick,
@@ -397,7 +457,8 @@ library UnderlyingV3 {
         payload.feeGrowthInsideLast = feeInfo_.feeGrowthInside1Last;
         payload.feeGrowthOutsideLower = feeGrowthOutside1Lower;
         payload.feeGrowthOutsideUpper = feeGrowthOutside1Upper;
-        payload.feeGrowthGlobal = IUniswapV3Pool(feeInfo_.pool).feeGrowthGlobal1X128();
+        payload.feeGrowthGlobal =
+            IUniswapV3Pool(feeInfo_.pool).feeGrowthGlobal1X128();
         fee1 = _computeFeesEarned(payload);
     }
 
@@ -439,10 +500,64 @@ library UnderlyingV3 {
         (uint256 fee0After, uint256 fee1After) =
             subtractAdminFees(fee0, fee1, module.managerFeePIPS());
 
-        amount0 += fee0After
-            + underlyingPayload_.leftOver0;
-        amount1 += fee1After
-            + underlyingPayload_.leftOver1;
+        amount0 += fee0After + underlyingPayload_.leftOver0;
+        amount1 += fee1After + underlyingPayload_.leftOver1;
+    }
+
+    function _getTokenIdInfo(
+        uint256 tokenId_,
+        address nftPositionManager_
+    )
+        internal
+        view
+        returns (
+            int24 tickLower,
+            int24 tickUpper,
+            uint128 liquidity,
+            uint256 feeGrowthInside0LastX128,
+            uint256 feeGrowthInside1LastX128,
+            uint128 tokensOwed0,
+            uint128 tokensOwed1
+        )
+    {
+        bytes memory payload = abi.encodeWithSelector(
+            INonfungiblePositionManagerPancake.positions.selector,
+            tokenId_
+        );
+
+        bytes memory result =
+            nftPositionManager_.functionStaticCall(payload);
+
+        // #region copy bytes.
+
+        bytes memory copy = new bytes(result.length - 256);
+
+        for (uint256 i = 256; i < result.length; i++) {
+            copy[i - 256] = result[i];
+        }
+
+        // #endregion copy bytes.
+
+        (,,,,, tickLower, tickUpper, liquidity) = abi.decode(
+            result,
+            (
+                uint96,
+                address,
+                address,
+                address,
+                uint24,
+                int24,
+                int24,
+                uint128
+            )
+        );
+
+        (
+            feeGrowthInside0LastX128,
+            feeGrowthInside1LastX128,
+            tokensOwed0,
+            tokensOwed1
+        ) = abi.decode(copy, (uint256, uint256, uint128, uint128));
     }
 
     function _computeFeesEarned(
@@ -497,15 +612,13 @@ library UnderlyingV3 {
             keccak256(abi.encodePacked(self_, lowerTick_, upperTick_));
     }
 
-    function rangeExists(Range[] memory currentRanges_, Range memory range_)
-        public
-        pure
-        returns (bool ok, uint256 index)
-    {
+    function rangeExists(
+        Range[] memory currentRanges_,
+        Range memory range_
+    ) public pure returns (bool ok, uint256 index) {
         for (uint256 i; i < currentRanges_.length; i++) {
-            ok =
-                range_.lowerTick == currentRanges_[i].lowerTick &&
-                range_.upperTick == currentRanges_[i].upperTick;
+            ok = range_.lowerTick == currentRanges_[i].lowerTick
+                && range_.upperTick == currentRanges_[i].upperTick;
             if (ok) {
                 index = i;
                 break;
