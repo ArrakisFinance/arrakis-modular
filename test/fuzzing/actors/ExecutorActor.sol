@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import {IArrakisStandardManager} from "../../../src/interfaces/IArrakisStandardManager.sol";
 import {IArrakisMetaVault} from "../../../src/interfaces/IArrakisMetaVault.sol";
 import {IPancakeSwapV3StandardModule} from "../../../src/interfaces/IPancakeSwapV3StandardModule.sol";
+import {IArrakisLPModule} from "../../../src/interfaces/IArrakisLPModule.sol";
 import {RebalanceParams} from "../../../src/structs/SPancakeSwapV3.sol";
 import {ModifyPosition, SwapPayload} from "../../../src/structs/SUniswapV3.sol";
 import {INonfungiblePositionManagerPancake} from "../../../src/interfaces/INonfungiblePositionManagerPancake.sol";
@@ -158,7 +159,7 @@ contract ExecutorActor {
             } else if (operation == 1) {
                 // Withdraw manager balance
                 payloads[i] = abi.encodeWithSelector(
-                    IPancakeSwapV3StandardModule.withdrawManagerBalance.selector
+                    IArrakisLPModule.withdrawManagerBalance.selector
                 );
             } else if (operation == 2) {
                 // Claim manager rewards
@@ -169,7 +170,7 @@ contract ExecutorActor {
                 // Set manager fee (random fee between 0-1000 PIPS)
                 uint256 newFee = (_generateSeed(seed + i) % 1001);
                 payloads[i] = abi.encodeWithSelector(
-                    IPancakeSwapV3StandardModule.setManagerFeePIPS.selector,
+                    IArrakisLPModule.setManagerFeePIPS.selector,
                     newFee
                 );
             }

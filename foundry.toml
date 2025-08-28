@@ -29,6 +29,16 @@ optimizer_runs = 0
 extra_output_files = []
 dynamic_test_link = true
 
+[profile.fuzzing]
+src = "src"
+out = "out"
+libs = ["lib"]
+evm_version = "paris"
+auto_detect_solc = false
+solc = "0.8.19"
+optimizer = true
+optimizer_runs = 10_000
+
 [fmt]
 line_length = 70
 multiline_func_header = "params_first"

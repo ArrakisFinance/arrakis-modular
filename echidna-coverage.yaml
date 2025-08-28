@@ -1,0 +1,7 @@
+# Coverage-focused Echidna configuration
+testMode: assertion
+testLimit: 50000
+seqLen: 50
+coverage: true
+coverageFormats: ["txt", "html"]
+corpusDir: coverage-corpus

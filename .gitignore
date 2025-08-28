@@ -13,3 +13,5 @@ out/
 
 #macOS
 .DS_Store
+
+coverage-corpus/

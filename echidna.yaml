@@ -1,0 +1,30 @@
+# Echidna configuration for testing
+testMode: assertion
+coverage: true
+testLimit: 5000
+seqLen: 20
+
+# Multiple senders for different actors
+sender: ["0x10000", "0x20000", "0x30000"]
+
+# Balance configuration  
+balanceContract: 100000000000000000000000
+
+# Assertions configuration
+testMode: assertion
+
+# Performance tuning
+shrinkLimit: 5000
+
+# Use Foundry for compilation
+cryticArgs: ["--foundry-out-directory", "out", "--foundry-compile-all"]
+
+# Filter functions to test
+filterFunctions: [
+  "fuzz_deposit",
+  "fuzz_withdraw", 
+  "fuzz_balance_check"
+]
+
+# Coverage output formats
+coverageFormats: ["txt", "html"]
