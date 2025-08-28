@@ -29,7 +29,8 @@ import {
 import {
     ModifyPosition,
     RangeData,
-    Range
+    Range,
+    PositionUnderlyingV3Nft
 } from "../structs/SUniswapV3.sol";
 import {
     RebalanceParams,
@@ -1032,26 +1033,24 @@ abstract contract PancakeSwapV3StandardModule is
         address _pool = pool;
 
         for (uint256 i; i < length;) {
-            RangeData memory underlying;
+            PositionUnderlyingV3Nft memory positionUnderlyingNft;
 
             {
                 uint256 tokenId = _tokenIds.at(i);
 
-                (int24 tickLower, int24 tickUpper,) =
-                    _getPosition(tokenId);
-
-                underlying = RangeData({
-                    self: nftPositionManager,
-                    range: Range({
-                        lowerTick: tickLower,
-                        upperTick: tickUpper
-                    }),
-                    pool: _pool
+                positionUnderlyingNft = PositionUnderlyingV3Nft({
+                    tokenId: tokenId,
+                    nftPositionManager: nftPositionManager,
+                    pool: _pool,
+                    tick: TickMath.getTickAtSqrtRatio(sqrtPriceX96_),
+                    sqrtPriceX96: sqrtPriceX96_
                 });
             }
 
             (uint256 amt0, uint256 amt1, uint256 f0, uint256 f1) =
-                UnderlyingV3.underlying(underlying, sqrtPriceX96_);
+            UnderlyingV3.getUnderlyingBalancesNft(
+                positionUnderlyingNft
+            );
 
             fee0 += f0;
             fee1 += f1;
@@ -1180,7 +1179,10 @@ abstract contract PancakeSwapV3StandardModule is
         } else {
             /// @dev stake the nft position.
             IERC721(nftPositionManager).safeTransferFrom(
-                address(this), masterChefV3, modifyPosition_.tokenId, ""
+                address(this),
+                masterChefV3,
+                modifyPosition_.tokenId,
+                ""
             );
         }
     }

@@ -50,6 +50,14 @@ struct PositionUnderlyingV3 {
     int24 upperTick;
 }
 
+struct PositionUnderlyingV3Nft {
+    uint256 tokenId;
+    address nftPositionManager;
+    address pool;
+    int24 tick;
+    uint160 sqrtPriceX96;
+}
+
 struct UnderlyingPayload {
     uint256[] tokenIds;
     address nftPositionManager;
