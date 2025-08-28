@@ -81,7 +81,7 @@ contract PancakeSwapV3InvariantFuzzing {
     uint256 public ghost_totalWithdrawals;
     uint256 public ghost_vaultCount;
     mapping(address => uint256) public ghost_userDeposits;
-    mapping(address => uint256) public ghost_userShares;
+    // Note: Private vaults don't have shares, they track underlying directly
     
     // Track initialization status
     bool public isInitialized;
@@ -220,7 +220,7 @@ contract PancakeSwapV3InvariantFuzzing {
         // Get balances before
         uint256 balance0Before = IERC20Metadata(WETH).balanceOf(testVault);
         uint256 balance1Before = IERC20Metadata(USDC).balanceOf(testVault);
-        uint256 totalSupplyBefore = IArrakisMetaVault(testVault).totalSupply();
+        (uint256 underlying0Before, uint256 underlying1Before) = IArrakisMetaVault(testVault).totalUnderlying();
         
         // Mock token transfers (in real fork test, we'd need actual tokens)
         // For assertion testing, we assume tokens are available
@@ -233,7 +233,7 @@ contract PancakeSwapV3InvariantFuzzing {
             // Get balances after
             uint256 balance0After = IERC20Metadata(WETH).balanceOf(testVault);
             uint256 balance1After = IERC20Metadata(USDC).balanceOf(testVault);
-            uint256 totalSupplyAfter = IArrakisMetaVault(testVault).totalSupply();
+            (uint256 underlying0After, uint256 underlying1After) = IArrakisMetaVault(testVault).totalUnderlying();
             
             // Assertions
             if (amount0 > 0) {
@@ -243,8 +243,9 @@ contract PancakeSwapV3InvariantFuzzing {
                 assert(balance1After >= balance1Before);
             }
             
-            // Total supply should increase if deposit was successful
-            assert(totalSupplyAfter >= totalSupplyBefore);
+            // Total underlying should increase if deposit was successful
+            assert(underlying0After >= underlying0Before);
+            assert(underlying1After >= underlying1Before);
             
             // Vault should remain solvent
             assert(_checkVaultSolvency(testVault));
@@ -265,12 +266,12 @@ contract PancakeSwapV3InvariantFuzzing {
         // Bound proportion to valid range (0-100%)
         proportion = _bound(proportion, 1, BASE);
         
-        // Check if user has shares to withdraw
-        uint256 userShares = ghost_userShares[msg.sender];
-        require(userShares > 0, "No shares to withdraw");
+        // Check if user is depositor (private vaults don't have shares)
+        // Only owner can withdraw from private vault
+        require(msg.sender == IOwnable(testVault).owner(), "Only owner can withdraw");
         
         // Get state before withdrawal
-        uint256 totalSupplyBefore = IArrakisMetaVault(testVault).totalSupply();
+        (uint256 underlying0Before, uint256 underlying1Before) = IArrakisMetaVault(testVault).totalUnderlying();
         uint256 balance0Before = IERC20Metadata(WETH).balanceOf(testVault);
         uint256 balance1Before = IERC20Metadata(USDC).balanceOf(testVault);
         uint256 userBalance0Before = IERC20Metadata(WETH).balanceOf(msg.sender);
@@ -283,15 +284,15 @@ contract PancakeSwapV3InvariantFuzzing {
             
             // Update ghost variables
             ghost_totalWithdrawals += amount0 + amount1;
-            ghost_userShares[msg.sender] = ghost_userShares[msg.sender] * (BASE - proportion) / BASE;
             
             // Get state after withdrawal
-            uint256 totalSupplyAfter = IArrakisMetaVault(testVault).totalSupply();
+            (uint256 underlying0After, uint256 underlying1After) = IArrakisMetaVault(testVault).totalUnderlying();
             uint256 userBalance0After = IERC20Metadata(WETH).balanceOf(msg.sender);
             uint256 userBalance1After = IERC20Metadata(USDC).balanceOf(msg.sender);
             
-            // Assertions
-            assert(totalSupplyAfter <= totalSupplyBefore);
+            // Assertions - underlying should decrease proportionally
+            assert(underlying0After <= underlying0Before);
+            assert(underlying1After <= underlying1Before);
             
             // User should receive tokens
             if (amount0 > 0) {
@@ -364,9 +365,8 @@ contract PancakeSwapV3InvariantFuzzing {
                 _getVaultUnderlying(testVault);
             
             // Assertions
-            // Underlying should be positive if vault has supply
-            uint256 totalSupply = IArrakisMetaVault(testVault).totalSupply();
-            if (totalSupply > 0) {
+            // Underlying should be positive if vault has underlying tokens
+            if (underlying0Before > 0 || underlying1Before > 0) {
                 assert(underlying0After > 0 || underlying1After > 0);
             }
             
@@ -400,17 +400,14 @@ contract PancakeSwapV3InvariantFuzzing {
     }
     
     function _checkVaultSolvency(address vault) internal view returns (bool) {
-        try IArrakisMetaVault(vault).totalSupply() returns (uint256 totalSupply) {
-            if (totalSupply == 0) return true;
-            
-            try this._getVaultUnderlying(vault) returns (uint256 amount0, uint256 amount1) {
-                return amount0 > 0 || amount1 > 0;
-            } catch {
-                return false;
-            }
-        } catch {
-            return false;
+        // Private vaults don't have totalSupply, check underlying directly
+        (uint256 amount0, uint256 amount1) = _getVaultUnderlying(vault);
+        
+        // If we've made net deposits, vault should have some underlying
+        if (ghost_totalDeposits > ghost_totalWithdrawals) {
+            return amount0 > 0 || amount1 > 0;
         }
+        return true; // If net deposits <= 0, vault can be empty
     }
     
     function _getVaultUnderlying(address vault) internal view returns (uint256 amount0, uint256 amount1) {
