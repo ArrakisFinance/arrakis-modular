@@ -887,7 +887,7 @@ abstract contract UniswapV3StandardModule is
                         if (liquidityToRemove == liquidity) {
                             _activeRanges[positionId] = false;
                             _ranges[length - i - 1] =
-                                _ranges[length - 1];
+                                _ranges[_ranges.length - 1];
                             _ranges.pop();
                         }
                     }
