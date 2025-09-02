@@ -36,7 +36,7 @@ contract AerodromePriceMove is Script {
     uint128 constant LIQUIDITY = 2;
     
     // Swap parameters
-    uint160 constant SQRT_PRICE_TARGET_X96 = 17520236940691398217386303729432;
+    uint160 constant SQRT_PRICE_TARGET_X96 = 18572096475904342638375800406016;
     uint256 constant amountIn = 32; // To adjust after simulation
 
     // Token holder addresses for simulation
@@ -59,10 +59,10 @@ contract AerodromePriceMove is Script {
      * @notice Script entry point
      */
     function run() external {
-        _simulate(); // Uncomment this and comment out the lines below to simulate the script
-        // vm.startBroadcast();
-        // _run();
-        // vm.stopBroadcast();
+        //_simulate(); // Uncomment this and comment out the lines below to simulate the script
+        vm.startBroadcast();
+        _run();
+        vm.stopBroadcast();
     }
 
     /**
@@ -72,8 +72,8 @@ contract AerodromePriceMove is Script {
 
         console.log("Simulating Aerodrome price change...");
         // Deal tokens to the sender - ensure enough for the swap
-        dealTokens(msg.sender, TOKEN0, 1 * (10 ** 18)); // 1 WETH
-        dealTokens(msg.sender, TOKEN1, 1_000_000 * (10 ** 18)); // 1M of token1
+        _dealTokens(msg.sender, TOKEN0, 1 * (10 ** 18)); // 1 WETH
+        _dealTokens(msg.sender, TOKEN1, 1_000_000 * (10 ** 18)); // 1M of token1
 
         vm.startPrank(msg.sender);
         _run();
@@ -100,8 +100,8 @@ contract AerodromePriceMove is Script {
         
         console.log("\nRecord pre-swap values...");
         // Record pre-swap balance
-        uint256 tokenInBalanceBefore = getTokenBalance(address(msg.sender), tokenIn);
-        uint256 tokenOutBalanceBefore = getTokenBalance(address(msg.sender), tokenOut);
+        uint256 tokenInBalanceBefore = _getTokenBalance(address(msg.sender), tokenIn);
+        uint256 tokenOutBalanceBefore = _getTokenBalance(address(msg.sender), tokenOut);
 
         console.log("Token In balance before swap:", tokenInBalanceBefore);
         console.log("Token Out balance before swap:", tokenOutBalanceBefore);
@@ -141,8 +141,8 @@ contract AerodromePriceMove is Script {
         _swap(params);
 
         // Record and report post-swap balances
-        uint256 tokenInBalanceAfter = getTokenBalance(address(msg.sender), tokenIn);
-        uint256 tokenOutBalanceAfter = getTokenBalance(address(msg.sender), tokenOut);
+        uint256 tokenInBalanceAfter = _getTokenBalance(address(msg.sender), tokenIn);
+        uint256 tokenOutBalanceAfter = _getTokenBalance(address(msg.sender), tokenOut);
 
         console.log("Token In balance after swap:", tokenInBalanceAfter);
         console.log("Token Out balance after swap:", tokenOutBalanceAfter);
@@ -167,7 +167,7 @@ contract AerodromePriceMove is Script {
         }
 
         // Burn position
-        _burnPosition(tokenId, liquidity);
+        _burnPosition(24321609, 1);
     }
 
     
@@ -270,14 +270,16 @@ contract AerodromePriceMove is Script {
         console.log("Target tick:", targetTick);
 
         lower = _roundToSpacing(
-            currentTick < targetTick ? currentTick : targetTick
+            currentTick < targetTick ? currentTick : targetTick,
+            false
         );
         upper = _roundToSpacing(
-            currentTick < targetTick ? targetTick : currentTick
+            currentTick < targetTick ? targetTick : currentTick,
+            true
         );
 
         if (upper - lower < TICK_SPACING) {
-            upper = lower + TICK_SPACING;
+            upper = lower + TICK_SPACING; // should be safe within bounds since real tick is never on the edges
         }
     }
 
@@ -286,13 +288,13 @@ contract AerodromePriceMove is Script {
      * @param tick Tick value to round
      * @return Rounded tick aligned to tick spacing and bounded within usable range
      */
-    function _roundToSpacing(int24 tick) internal pure returns (int24) {
+    function _roundToSpacing(int24 tick, bool isUpper) internal pure returns (int24) {
         // Calculate the min and max usable ticks for the given tick spacing
         int24 minUsableTick = (TickMath.MIN_TICK / TICK_SPACING) * TICK_SPACING;
         int24 maxUsableTick = (TickMath.MAX_TICK / TICK_SPACING) * TICK_SPACING;
         
         // First align the tick to spacing
-        int24 aligned = (tick / TICK_SPACING) * TICK_SPACING;
+        int24 aligned = (tick / TICK_SPACING) * TICK_SPACING + (isUpper ? TICK_SPACING : 0);
         if (tick < 0 && tick % TICK_SPACING != 0) {
             aligned -= TICK_SPACING;
         }
@@ -321,7 +323,7 @@ contract AerodromePriceMove is Script {
      * @param token Token address
      * @return Token balance
      */
-    function getTokenBalance(
+    function _getTokenBalance(
         address account,
         address token
     ) internal view returns (uint256) {
@@ -334,7 +336,7 @@ contract AerodromePriceMove is Script {
      * @param token Token address
      * @param amount Amount of tokens to provide
      */
-    function dealTokens(
+    function _dealTokens(
         address recipient,
         address token,
         uint256 amount
