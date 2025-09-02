@@ -294,7 +294,7 @@ contract AerodromePriceMove is Script {
         int24 maxUsableTick = (TickMath.MAX_TICK / TICK_SPACING) * TICK_SPACING;
         
         // First align the tick to spacing
-        int24 aligned = (tick / TICK_SPACING) * TICK_SPACING + (isUpper ? TICK_SPACING : 0);
+        int24 aligned = (tick / TICK_SPACING) * TICK_SPACING + (isUpper ? TICK_SPACING : int24(0));
         if (tick < 0 && tick % TICK_SPACING != 0) {
             aligned -= TICK_SPACING;
         }

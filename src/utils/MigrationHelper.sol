@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {IMigrationHelper} from "../interfaces/IMigrationHelper.sol";
 import {ISafe, Operation} from "../interfaces/ISafe.sol";
-import {IPALMTerms} from "../interfaces/IPALMTerms.sol";
+import {IPALMTerms} from "../interfaces/IPalmTerms.sol";
 import {
     IArrakisStandardManager,
     SetupParams
