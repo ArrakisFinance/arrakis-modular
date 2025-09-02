@@ -1087,23 +1087,26 @@ abstract contract PancakeSwapV3StandardModule is
 
         address _pool = pool;
 
-        (uint160 sqrtPriceX96,,,,,,) =
+        (uint160 sqrtPriceX96, int24 tick,,,,,) =
             IUniswapV3PoolVariant(_pool).slot0();
 
         for (uint256 i; i < length;) {
-            uint256 tokenId = _tokenIds.at(i);
+            PositionUnderlyingV3Nft memory positionUnderlyingNft;
 
-            (int24 tickLower, int24 tickUpper,) =
-                _getPosition(tokenId);
+            {
+                uint256 tokenId = _tokenIds.at(i);
 
-            RangeData memory underlying = RangeData({
-                self: nftPositionManager,
-                range: Range({lowerTick: tickLower, upperTick: tickUpper}),
-                pool: _pool
-            });
+                positionUnderlyingNft = PositionUnderlyingV3Nft({
+                    tokenId: tokenId,
+                    nftPositionManager: nftPositionManager,
+                    pool: _pool,
+                    tick: tick,
+                    sqrtPriceX96: sqrtPriceX96
+                });
+            }
 
-            (,, uint256 f0, uint256 f1) =
-                UnderlyingV3.underlying(underlying, sqrtPriceX96);
+            (,, uint256 f0, uint256 f1) = UnderlyingV3
+                .getUnderlyingBalancesNft(positionUnderlyingNft);
 
             fee0 += f0;
             fee1 += f1;
