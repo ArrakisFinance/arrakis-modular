@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import {SwapPayload} from "../structs/SPancakeSwapV4.sol";
 import {IOracleWrapper} from "../interfaces/IOracleWrapper.sol";
+import {IPancakeDistributor} from "../interfaces/IPancakeDistributor.sol";
 
 import {ICLPoolManager} from
     "@pancakeswap/v4-core/src/pool-cl/interfaces/ICLPoolManager.sol";
@@ -50,6 +51,7 @@ interface IPancakeSwapV4StandardModule {
     error ClaimParamsLengthZero();
     error OnlyManagerOwner();
     error SameReceiver();
+    error RewardTokenNotAllowed();
 
     // #endregion errors.
 
@@ -83,6 +85,7 @@ interface IPancakeSwapV4StandardModule {
     event LogClaimManagerReward(
         address indexed token, uint256 amount
     );
+    event LogClaimEscrowed(address indexed token, uint256 amount);
     event LogSetReceiver(
         address oldRewardReceiver, address newRewardReceiver
     );
@@ -174,6 +177,20 @@ interface IPancakeSwapV4StandardModule {
         uint256 amount_
     ) external;
 
+    function claimRewards(
+        IPancakeDistributor.ClaimParams[] calldata params_,
+        IPancakeDistributor.ClaimEscrowed[] calldata escrowed_,
+        address receiver_
+    ) external;
+
+    function claimManagerRewards(
+        IPancakeDistributor.ClaimParams[] calldata params_
+    ) external;
+
+    function setReceiver(
+        address newReceiver_
+    ) external;
+
     // #endregion only manager functions.
 
     // #region view functions.
@@ -214,6 +231,8 @@ interface IPancakeSwapV4StandardModule {
         external
         view
         returns (Range[] memory ranges);
+
+    function rewardReceiver() external view returns (address);
 
     // #endregion view functions.
 }

@@ -6,6 +6,8 @@ import {TestWrapper} from "../utils/TestWrapper.sol";
 import {console} from "forge-std/console.sol";
 // #endregion foundry.
 
+import {IArrakisLPModule} from
+    "../../src/interfaces/IArrakisLPModule.sol";
 import {PancakeSwapV4StandardModulePublic} from
     "../../src/modules/PancakeSwapV4StandardModulePublic.sol";
 import {BunkerModule} from "../../src/modules/BunkerModule.sol";
@@ -16,7 +18,8 @@ import {PancakeSwapV4StandardModuleResolver} from
     "../../src/modules/resolvers/PancakeSwapV4StandardModuleResolver.sol";
 import {
     NATIVE_COIN,
-    TEN_PERCENT
+    TEN_PERCENT,
+    PIPS
 } from "../../src/constants/CArrakis.sol";
 import {IArrakisMetaVault} from
     "../../src/interfaces/IArrakisMetaVault.sol";
@@ -51,6 +54,8 @@ import {
 import {IOracleWrapper} from "../../src/interfaces/IOracleWrapper.sol";
 import {IPancakeSwapV4StandardModuleResolver} from
     "../../src/interfaces/IPancakeSwapV4StandardModuleResolver.sol";
+import {IPancakeDistributor} from
+    "../../src/interfaces/IPancakeDistributor.sol";
 
 // #endregion interfaces.
 
@@ -67,7 +72,7 @@ import {SafeCast} from
 
 // #endregion openzeppelin.
 
-// #region uniswap v4.
+// #region pancake v4.
 import {IPoolManager} from
     "@pancakeswap/v4-core/src/interfaces/IPoolManager.sol";
 import {Vault, IVault} from "@pancakeswap/v4-core/src/Vault.sol";
@@ -90,8 +95,12 @@ import {ILockCallback} from
     "@pancakeswap/v4-core/src/interfaces/ILockCallback.sol";
 import {CLPoolParametersHelper} from
     "@pancakeswap/v4-core/src/pool-cl/libraries/CLPoolParametersHelper.sol";
+import {FullMath} from
+    "@pancakeswap/v4-core/src/pool-cl/libraries/FullMath.sol";
+import {Hashes} from
+    "@pancakeswap/v4-core/lib/openzeppelin-contracts/contracts/utils/cryptography/Hashes.sol";
 
-// #endregion uniswap v4.
+// #endregion pancake v4.
 
 import {LiquidityAmounts} from
     "@v3-lib-0.8/contracts/LiquidityAmounts.sol";
@@ -99,36 +108,40 @@ import {LiquidityAmounts} from
 // #region valantis mocks.
 
 import {OracleWrapper} from "./mocks/OracleWrapper.sol";
-import {CollectorMock} from "./mocks/CollectorMock.sol";
 
 // #endregion valantis mocks.
 
 // #region utils.
 
-import {IDistributorExtension} from
-    "./utils/IDistributorExtension.sol";
+import {IPancakeDistributorExtension} from
+    "./utils/IPancakeDistributorExtension.sol";
 
 // #endregion utils.
 
-contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
+contract PancakeSwapV4IntegrationTest is
+    TestWrapper,
+    ILockCallback
+{
     using SafeERC20 for IERC20Metadata;
     using CurrencyLibrary for Currency;
     using PoolIdLibrary for PoolKey;
 
     // #region constant properties.
     address public constant WETH =
-        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant USDC =
-        0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+        0x2170Ed0880ac9A755fd29B2688956BD959F933F8;
     address public constant USDT =
-        0xdAC17F958D2ee523a2206206994597C13D831ec7;
+        0x55d398326f99059fF775485246999027B3197955;
+    address public constant USDC =
+        0x8965349fb649A33a30cbFDa057D8eC2C48AbE2A2;
     address public constant AAVE =
-        0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9;
+        0xfb6115445Bff7b52FeB98650C87f44907E58f802;
+    address public constant CAKE =
+        0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82;
 
     address public constant distributor =
-        0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
-    address public constant distributorGovernor =
-        0x529619a10129396a2F642cae32099C1eA7FA2834;
+        0xEA8620aAb2F07a0ae710442590D649ADE8440877;
+    address public constant distributorAdmin =
+        0xfb0B4c408eA60BbFc099fB6FC160052D7215375e;
     // #endregion constant properties.
 
     // #region arrakis modular contracts.
@@ -153,12 +166,9 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         0xE973Cf1e347EcF26232A95dBCc862AA488b0351b;
     address public constant permit2 =
         0x000000000022D473030F116dDEE9F6B43aC78BA3;
-    address public constant weth =
-        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     // #endregion arrakis modular contracts.
 
     address public owner;
-    address public collector;
 
     address public bunkerImplementation;
     address public bunkerBeacon;
@@ -180,12 +190,12 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
     // #endregion arrakis.
 
-    // #region uniswap.
+    // #region pancake.
 
     address public poolManager;
     address public pancakeVault;
 
-    // #endregion uniswap.
+    // #endregion pancake.
 
     // #region mocks.
 
@@ -210,14 +220,13 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
     function setUp() public {
         // #region reset fork.
 
-        _reset(vm.envString("ETH_RPC_URL"), 20_792_200);
+        _reset(vm.envString("BSC_RPC_URL"), 59_854_309);
 
         // #endregion reset fork.
 
         // #region setup.
 
         owner = vm.addr(uint256(keccak256(abi.encode("Owner"))));
-        collector = address(new CollectorMock(distributor));
 
         /// @dev we will not use it so we mock it.
         privateModule =
@@ -229,7 +238,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         deployer = vm.addr(uint256(keccak256(abi.encode("Deployer"))));
 
         (token0, token1) =
-            (IERC20Metadata(USDC), IERC20Metadata(WETH));
+            (IERC20Metadata(WETH), IERC20Metadata(USDC));
 
         // #region create an oracle.
 
@@ -241,10 +250,10 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         _setup();
 
-        // #region create a uniswap v4 pool.
+        // #region create a pancake v4 pool.
 
-        Currency currency0 = Currency.wrap(USDC);
-        Currency currency1 = Currency.wrap(WETH);
+        Currency currency0 = Currency.wrap(WETH);
+        Currency currency1 = Currency.wrap(USDC);
 
         poolKey = PoolKey({
             currency0: currency0,
@@ -261,14 +270,14 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         IVault(pancakeVault).lock(abi.encode(0));
 
-        // #endregion create a uniswap v4 pool.
+        // #endregion create a pancake v4 pool.
 
         // #region create a vault.
 
         bytes32 salt =
-            keccak256(abi.encode("Public vault Univ4 salt"));
-        init0 = 2000e6;
-        init1 = 1e18;
+            keccak256(abi.encode("Public vault Pancake V4 salt"));
+        init0 = 1e18;
+        init1 = 2000e18;
         maxSlippage = 10_000;
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
@@ -295,8 +304,8 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         vm.prank(deployer);
         vault = IArrakisMetaVaultFactory(factory).deployPublicVault(
             salt,
-            USDC,
             WETH,
+            USDC,
             owner,
             pancakeSwapStandardModuleBeacon,
             moduleCreationPayload,
@@ -304,7 +313,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         );
     }
 
-    // #region uniswap v4 callback function.
+    // #region pancake v4 callback function.
 
     function lockAcquired(
         bytes calldata data
@@ -318,7 +327,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         }
     }
 
-    // #endregion uniswap v4 callback function.
+    // #endregion pancake v4 callback function.
 
     // #region test resolver constructor.
 
@@ -334,134 +343,177 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
             IPancakeSwapV4StandardModuleResolver.MintZero.selector
         );
         IPancakeSwapV4StandardModuleResolver(pancakeSwapV4resolver)
-            .computeMintAmounts(2000e6, 1e18, 1e18, 0, 0);
+            .computeMintAmounts(2000e18, 1e18, 1e18, 0, 0);
     }
 
     // #endregion test resolver constructor.
 
     // #region test.
 
-    // function test_addLiquidity() public {
-    //     (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
-    //     IArrakisPublicVaultRouterV2(router).getMintAmounts(
-    //         vault, init0 / 3, init1
-    //     );
+    function test_addLiquidity() public {
+        (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
+        IArrakisPublicVaultRouterV2(router).getMintAmounts(
+            vault, init0 / 3, init1
+        );
 
-    //     address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
 
-    //     deal(WETH, user, amount1);
+        deal(WETH, user, amount0);
 
-    //     deal(USDC, user, amount0);
+        deal(USDC, user, amount1);
 
-    //     // #region approve router.
+        // #region approve router.
 
-    //     vm.startPrank(user);
+        vm.startPrank(user);
 
-    //     IERC20Metadata(USDC).approve(router, amount0);
-    //     IERC20Metadata(WETH).approve(router, amount1);
+        IERC20Metadata(WETH).approve(router, amount0);
+        IERC20Metadata(USDC).approve(router, amount1);
 
-    //     // #endregion approve router.
+        // #endregion approve router.
 
-    //     // #region add liquidity.
+        // #region add liquidity.
 
-    //     IArrakisPublicVaultRouterV2(router).addLiquidity(
-    //         AddLiquidityData({
-    //             amount0Max: amount0,
-    //             amount1Max: amount1,
-    //             amount0Min: amount0 * 99 / 100,
-    //             amount1Min: amount1 * 99 / 100,
-    //             amountSharesMin: sharesToMint * 99 / 100,
-    //             vault: vault,
-    //             receiver: user
-    //         })
-    //     );
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: amount0,
+                amount1Max: amount1,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint * 99 / 100,
+                vault: vault,
+                receiver: user
+            })
+        );
 
-    //     vm.stopPrank();
+        vm.stopPrank();
 
-    //     // #endregion add liquidity.
+        // #endregion add liquidity.
 
-    //     // #region merkl rewards.
+        // #region merkl rewards.
 
-    //     address module = address(IArrakisMetaVault(vault).module());
+        address module = address(IArrakisMetaVault(vault).module());
 
-    //     vm.startPrank(IOwnable(vault).owner());
+        vm.startPrank(IOwnable(vault).owner());
 
-    //     address[] memory tokens = new address[](2);
-    //     uint256[] memory amounts = new uint256[](2);
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
 
-    //     tokens[0] = AAVE;
-    //     tokens[1] = USDT;
-    //     amounts[0] = type(uint256).max;
-    //     amounts[1] = type(uint256).max;
+        tokens[0] = USDT;
+        tokens[1] = AAVE;
+        amounts[0] = type(uint256).max;
+        amounts[1] = type(uint256).max;
 
-    //     IPancakeSwapV4StandardModule(module).approve(
-    //         collector, tokens, amounts
-    //     );
-    //     vm.stopPrank();
+        vm.stopPrank();
 
-    //     uint256 uSDTBalance =
-    //         IERC20Metadata(USDT).balanceOf(distributor);
-    //     uint256 aAVEBalance =
-    //         IERC20Metadata(AAVE).balanceOf(distributor);
+        uint256 cakeBalance =
+            IERC20Metadata(CAKE).balanceOf(distributor);
 
-    //     bytes32[][] memory proofs = new bytes32[][](2);
-    //     address[] memory users = new address[](2);
-    //     tokens = new address[](2);
-    //     amounts = new uint256[](2);
-    //     proofs[0] = new bytes32[](1);
-    //     proofs[0][0] = keccak256(abi.encode(module, USDT, 2000e6));
-    //     users[0] = module;
-    //     tokens[0] = AAVE;
-    //     amounts[0] = 1e18;
-    //     proofs[1] = new bytes32[](1);
-    //     proofs[1][0] = keccak256(abi.encode(module, AAVE, 1e18));
-    //     users[1] = module;
-    //     tokens[1] = USDT;
-    //     amounts[1] = 2000e6;
+        IPancakeDistributor.ClaimParams[] memory params =
+            new IPancakeDistributor.ClaimParams[](1);
+        IPancakeDistributor.ClaimEscrowed[] memory escrowed =
+            new IPancakeDistributor.ClaimEscrowed[](0);
 
-    //     vm.prank(distributorGovernor);
-    //     IDistributorExtension(distributor).updateTree(
-    //         IDistributorExtension.MerkleTree({
-    //             merkleRoot: proofs[0][0] < proofs[1][0]
-    //                 ? keccak256(abi.encode(proofs[0][0], proofs[1][0]))
-    //                 : keccak256(abi.encode(proofs[1][0], proofs[0][0])),
-    //             ipfsHash: keccak256("IPFS_HASH")
-    //         })
-    //     );
+        params[0].proof = new bytes32[](1);
+        params[0].token = CAKE;
+        params[0].amount = IPancakeDistributorExtension(distributor)
+            .claimedAmounts(CAKE, module) + 1_000_000_000_000_000_000;
+        // params[0].proof[0] = keccak256(bytes.concat(keccak256(abi.encode(block.chainid, module, CAKE, params[0].amount))));
+        params[0].proof[0] = keccak256(abi.encode("TOTO"));
 
-    //     vm.warp(
-    //         IDistributorExtension(distributor).endOfDisputePeriod()
-    //             + 1
-    //     );
+        bytes32 root = Hashes.commutativeKeccak256(
+            params[0].proof[0],
+            keccak256(
+                bytes.concat(
+                    keccak256(
+                        abi.encode(
+                            block.chainid,
+                            module,
+                            CAKE,
+                            params[0].amount
+                        )
+                    )
+                )
+            )
+        );
 
-    //     deal(USDT, distributor, uSDTBalance + amounts[1]);
-    //     deal(AAVE, distributor, aAVEBalance + amounts[0]);
+        vm.warp(
+            IPancakeDistributorExtension(distributor)
+                .endOfDisputePeriod() + 1
+        );
 
-    //     uSDTBalance = IERC20Metadata(USDT).balanceOf(distributor);
-    //     aAVEBalance = IERC20Metadata(AAVE).balanceOf(distributor);
+        vm.prank(distributorAdmin);
+        IPancakeDistributorExtension(distributor).setMerkleTree(
+            root, keccak256(abi.encode("IpfsHash"))
+        );
 
-    //     uSDTBalance = IERC20Metadata(USDT).balanceOf(collector);
-    //     aAVEBalance = IERC20Metadata(AAVE).balanceOf(collector);
+        bytes32[][] memory proofs = new bytes32[][](2);
+        address[] memory users = new address[](2);
+        tokens = new address[](2);
+        amounts = new uint256[](2);
+        proofs[0] = new bytes32[](1);
+        proofs[0][0] = keccak256(abi.encode(module, USDT, 2000e18));
+        users[0] = module;
+        tokens[0] = AAVE;
+        amounts[0] = 1e18;
+        proofs[1] = new bytes32[](1);
+        proofs[1][0] = keccak256(abi.encode(module, AAVE, 1e18));
+        users[1] = module;
+        tokens[1] = USDT;
+        amounts[1] = 2000e18;
 
-    //     CollectorMock(collector).claim(users, tokens, amounts, proofs);
-    //     CollectorMock(collector).transferFrom(
-    //         AAVE, module, amounts[0]
-    //     );
-    //     CollectorMock(collector).transferFrom(
-    //         USDT, module, amounts[1]
-    //     );
+        vm.warp(
+            IPancakeDistributorExtension(distributor)
+                .endOfDisputePeriod() + 1
+        );
 
-    //     assertEq(
-    //         IERC20Metadata(USDT).balanceOf(collector),
-    //         uSDTBalance + amounts[1]
-    //     );
-    //     assertEq(
-    //         IERC20Metadata(AAVE).balanceOf(collector),
-    //         aAVEBalance + amounts[0]
-    //     );
+        vm.prank(distributorAdmin);
+        IPancakeDistributorExtension(distributor).setMerkleTree(
+            proofs[0][0] < proofs[1][0]
+                ? keccak256(abi.encode(proofs[0][0], proofs[1][0]))
+                : keccak256(abi.encode(proofs[1][0], proofs[0][0])),
+            keccak256("IPFS_HASH")
+        );
 
-    //     // #endregion merkl rewards.
-    // }
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        assertEq(IERC20Metadata(CAKE).balanceOf(receiver), 0);
+
+        address managerReceiver =
+            vm.addr(uint256(keccak256(abi.encode("ManagerReceiver"))));
+
+        vm.prank(IOwnable(arrakisStandardManager).owner());
+        IPancakeSwapV4StandardModule(module).setReceiver(
+            managerReceiver
+        );
+
+        vm.prank(IOwnable(vault).owner());
+        IPancakeSwapV4StandardModule(module).claimRewards(
+            params, escrowed, receiver
+        );
+
+        uint256 managerFeePIPS =
+            IArrakisLPModule(module).managerFeePIPS();
+
+        address rewardReceiver =
+            IPancakeSwapV4StandardModule(module).rewardReceiver();
+
+        assertEq(
+            IERC20Metadata(CAKE).balanceOf(receiver),
+            FullMath.mulDiv(
+                1_000_000_000_000_000_000, managerFeePIPS, PIPS
+            )
+        );
+
+        assertEq(
+            IERC20Metadata(CAKE).balanceOf(rewardReceiver),
+            FullMath.mulDiv(
+                1_000_000_000_000_000_000, managerFeePIPS, PIPS
+            )
+        );
+
+        // #endregion merkl rewards.
+    }
 
     function test_addLiquidityMaxAmountsTooLow() public {
         (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
@@ -471,16 +523,16 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
 
-        deal(WETH, user, amount1);
+        deal(WETH, user, amount0);
 
-        deal(USDC, user, amount0);
+        deal(USDC, user, amount1);
 
         // #region approve router.
 
         vm.startPrank(user);
 
-        IERC20Metadata(USDC).approve(router, amount0);
-        IERC20Metadata(WETH).approve(router, amount1);
+        IERC20Metadata(WETH).approve(router, amount0);
+        IERC20Metadata(USDC).approve(router, amount1);
 
         // #endregion approve router.
 
@@ -516,15 +568,15 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
 
-        deal(WETH, user, amount1);
-        deal(USDC, user, amount0);
+        deal(WETH, user, amount0);
+        deal(USDC, user, amount1);
 
         // #region approve router.
 
         vm.startPrank(user);
 
-        IERC20Metadata(USDC).approve(router, amount0);
-        IERC20Metadata(WETH).approve(router, amount1);
+        IERC20Metadata(WETH).approve(router, amount0);
+        IERC20Metadata(USDC).approve(router, amount1);
 
         // #endregion approve router.
 
@@ -555,15 +607,15 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         address secondUser =
             vm.addr(uint256(keccak256(abi.encode("Second User"))));
 
-        deal(WETH, secondUser, amount1);
-        deal(USDC, secondUser, amount0);
+        deal(USDC, secondUser, amount1);
+        deal(WETH, secondUser, amount0);
 
         // #region approve router.
 
         vm.startPrank(secondUser);
 
-        IERC20Metadata(USDC).approve(router, amount0);
-        IERC20Metadata(WETH).approve(router, amount1);
+        IERC20Metadata(WETH).approve(router, amount0);
+        IERC20Metadata(USDC).approve(router, amount1);
 
         // #endregion approve router.
 
@@ -592,7 +644,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         bytes32 salt =
             keccak256(abi.encode("Public vault Univ4 salt v2"));
         init0 = 0;
-        init1 = 1e18;
+        init1 = 2000e18;
         maxSlippage = 10_000;
 
         bytes memory moduleCreationPayload = abi.encodeWithSelector(
@@ -619,8 +671,8 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         vm.prank(deployer);
         vault = IArrakisMetaVaultFactory(factory).deployPublicVault(
             salt,
-            USDC,
             WETH,
+            USDC,
             owner,
             pancakeSwapStandardModuleBeacon,
             moduleCreationPayload,
@@ -634,15 +686,15 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
 
-        deal(WETH, user, amount1);
-        deal(USDC, user, amount0);
+        deal(WETH, user, amount0);
+        deal(USDC, user, amount1);
 
         // #region approve router.
 
         vm.startPrank(user);
 
-        IERC20Metadata(USDC).approve(router, amount0);
-        IERC20Metadata(WETH).approve(router, amount1);
+        IERC20Metadata(WETH).approve(router, amount0);
+        IERC20Metadata(USDC).approve(router, amount1);
 
         // #endregion approve router.
 
@@ -673,15 +725,15 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         address secondUser =
             vm.addr(uint256(keccak256(abi.encode("Second User"))));
 
-        deal(WETH, secondUser, amount1);
-        deal(USDC, secondUser, amount0);
+        deal(WETH, secondUser, amount0);
+        deal(USDC, secondUser, amount1);
 
         // #region approve router.
 
         vm.startPrank(secondUser);
 
-        IERC20Metadata(USDC).approve(router, amount0);
-        IERC20Metadata(WETH).approve(router, amount1);
+        IERC20Metadata(WETH).approve(router, amount0);
+        IERC20Metadata(USDC).approve(router, amount1);
 
         // #endregion approve router.
 
@@ -709,7 +761,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         bytes32 salt =
             keccak256(abi.encode("Public vault Univ4 salt v2"));
-        init0 = 2000e6;
+        init0 = 1e18;
         init1 = 0;
         maxSlippage = 10_000;
 
@@ -737,8 +789,8 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         vm.prank(deployer);
         vault = IArrakisMetaVaultFactory(factory).deployPublicVault(
             salt,
-            USDC,
             WETH,
+            USDC,
             owner,
             pancakeSwapStandardModuleBeacon,
             moduleCreationPayload,
@@ -752,15 +804,15 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
 
-        deal(WETH, user, amount1);
-        deal(USDC, user, amount0);
+        deal(WETH, user, amount0);
+        deal(USDC, user, amount1);
 
         // #region approve router.
 
         vm.startPrank(user);
 
-        IERC20Metadata(USDC).approve(router, amount0);
-        IERC20Metadata(WETH).approve(router, amount1);
+        IERC20Metadata(WETH).approve(router, amount0);
+        IERC20Metadata(USDC).approve(router, amount1);
 
         // #endregion approve router.
 
@@ -791,15 +843,15 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         address secondUser =
             vm.addr(uint256(keccak256(abi.encode("Second User"))));
 
-        deal(WETH, secondUser, amount1);
-        deal(USDC, secondUser, amount0);
+        deal(WETH, secondUser, amount0);
+        deal(USDC, secondUser, amount1);
 
         // #region approve router.
 
         vm.startPrank(secondUser);
 
-        IERC20Metadata(USDC).approve(router, amount0);
-        IERC20Metadata(WETH).approve(router, amount1);
+        IERC20Metadata(WETH).approve(router, amount0);
+        IERC20Metadata(USDC).approve(router, amount1);
 
         // #endregion approve router.
 
@@ -828,16 +880,16 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         address user = vm.addr(uint256(keccak256(abi.encode("User"))));
 
-        deal(WETH, user, amount1);
+        deal(WETH, user, amount0);
 
-        deal(USDC, user, amount0);
+        deal(USDC, user, amount1);
 
         // #region approve router.
 
         vm.startPrank(user);
 
-        IERC20Metadata(USDC).approve(router, amount0);
-        IERC20Metadata(WETH).approve(router, amount1);
+        IERC20Metadata(WETH).approve(router, amount0);
+        IERC20Metadata(USDC).approve(router, amount1);
 
         // #endregion approve router.
 
@@ -918,15 +970,15 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         address secondUser =
             vm.addr(uint256(keccak256(abi.encode("Second User"))));
 
-        deal(WETH, secondUser, amount1);
-        deal(USDC, secondUser, amount0);
+        deal(WETH, secondUser, amount0);
+        deal(USDC, secondUser, amount1);
 
         // #region approve router.
 
         vm.startPrank(secondUser);
 
-        IERC20Metadata(USDC).approve(router, init0);
-        IERC20Metadata(WETH).approve(router, init1 / 3);
+        IERC20Metadata(WETH).approve(router, init0);
+        IERC20Metadata(USDC).approve(router, init1 / 3);
 
         // #endregion approve router.
 
@@ -964,11 +1016,11 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         // #endregion whitelist a deployer.
 
-        // #region uniswap setup.
+        // #region pancake setup.
 
         (poolManager, pancakeVault) = _deployPoolManager();
 
-        // #endregion uniswap setup.
+        // #endregion pancake setup.
 
         // #region create bunker module.
 
@@ -1021,11 +1073,11 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
 
         // #endregion whitelist resolver.
 
-        // #region create an uniswap standard module.
+        // #region create an pancake standard module.
 
         _deployPancakeSwapStandardModule(poolManager);
 
-        // #endregion create an uniswap standard module.
+        // #endregion create an pancake standard module.
 
         address[] memory beacons = new address[](2);
         beacons[0] = bunkerBeacon;
@@ -1069,7 +1121,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
     function _deployPancakeSwapStandardModule(
         address poolManager_
     ) internal {
-        // #region create uniswap standard module.
+        // #region create pancake standard module.
 
         pancakeSwapStandardModuleImplementation = address(
             new PancakeSwapV4StandardModulePublic(
@@ -1085,7 +1137,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
         UpgradeableBeacon(pancakeSwapStandardModuleBeacon)
             .transferOwnership(arrakisTimeLock);
 
-        // #endregion create uniswap standard module.
+        // #endregion create pancake standard module.
     }
 
     function _deployArrakisPublicRouter()
@@ -1094,7 +1146,7 @@ contract UniswapV4IntegrationTest is TestWrapper, ILockCallback {
     {
         return address(
             new ArrakisPublicVaultRouterV2(
-                NATIVE_COIN, permit2, owner, factory, weth
+                NATIVE_COIN, permit2, owner, factory, WETH
             )
         );
     }
