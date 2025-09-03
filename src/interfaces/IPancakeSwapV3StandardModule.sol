@@ -23,6 +23,7 @@ interface IPancakeSwapV3StandardModule {
     error OnlyManagerOwner();
     error SameReceiver();
     error NativeCoinNotAllowed();
+    error CakeNotAllowed();
     error LengthsNotEqual();
     error BurnToken0();
     error BurnToken1();
