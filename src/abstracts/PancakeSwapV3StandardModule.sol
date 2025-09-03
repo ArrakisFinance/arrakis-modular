@@ -270,6 +270,10 @@ abstract contract PancakeSwapV3StandardModule is
             revert NativeCoinNotAllowed();
         }
 
+        if (_token0 == CAKE || _token1 == CAKE) {
+            revert CakeNotAllowed();
+        }
+
         token0 = IERC20Metadata(_token0);
         token1 = IERC20Metadata(_token1);
 
@@ -860,9 +864,7 @@ abstract contract PancakeSwapV3StandardModule is
             address(this)
         ) - _cakeManagerBalance;
 
-        if (address(token0) != CAKE && address(token1) != CAKE) {
-            IERC20Metadata(CAKE).safeTransfer(receiver_, cakeToClaim);
-        }
+        IERC20Metadata(CAKE).safeTransfer(receiver_, cakeToClaim);
 
         emit LogClaim(receiver_, cakeToClaim);
     }
