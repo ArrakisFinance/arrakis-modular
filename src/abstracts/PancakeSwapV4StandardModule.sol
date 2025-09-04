@@ -485,6 +485,7 @@ abstract contract PancakeSwapV4StandardModule is
 
     function claimRewards(
         IPancakeDistributor.ClaimParams[] calldata params_,
+        IPancakeDistributor.ClaimEscrowed[] calldata escrowed_,
         address receiver_
     ) external onlyMetaVaultOwner nonReentrant whenNotPaused {
         // #region checks.
@@ -493,13 +494,56 @@ abstract contract PancakeSwapV4StandardModule is
             revert AddressZero();
         }
 
-        uint256 length = params_.length;
-
-        if (length == 0) {
+        if (params_.length == 0 && escrowed_.length == 0) {
             revert ClaimParamsLengthZero();
         }
 
         // #endregion checks.
+
+        // #region escrowed.
+
+        uint256 length = escrowed_.length;
+
+        for (uint256 i; i < length; i++) {
+            IPancakeDistributor.ClaimEscrowed memory escrowed =
+                escrowed_[i];
+
+            if (escrowed.token == address(0)) {
+                revert AddressZero();
+            }
+
+            if (
+                escrowed.token == address(token0)
+                    || escrowed.token == address(token1)
+            ) {
+                revert RewardTokenNotAllowed();
+            }
+
+            uint256 balanceToken = IERC20Metadata(escrowed.token)
+                .balanceOf(address(this));
+
+            if (balanceToken < escrowed.amount) {
+                revert InsufficientFunds();
+            }
+
+            IERC20Metadata(escrowed.token).safeTransfer(
+                receiver_, escrowed.amount
+            );
+
+            emit LogClaimEscrowed(escrowed.token, escrowed.amount);
+        }
+
+        // #endregion escrowed.
+
+        length = params_.length;
+        uint256[] memory balances = new uint256[](length);
+
+        for (uint256 i; i < length; i++) {
+            IPancakeDistributor.ClaimParams memory param = params_[i];
+
+            balances[i] =
+                IERC20Metadata(param.token).balanceOf(address(this));
+        }
 
         // #region claim.
 
@@ -507,27 +551,30 @@ abstract contract PancakeSwapV4StandardModule is
 
         // #endregion claim.
 
+        address rewardReceiver = _rewardReceiver;
         uint256 _managerFeePIPS = managerFeePIPS;
 
         for (uint256 i; i < length; i++) {
             IPancakeDistributor.ClaimParams memory param = params_[i];
+            uint256 balance = IERC20Metadata(param.token).balanceOf(
+                address(this)
+            ) - balances[i];
+
+            if (balance == 0) {
+                continue;
+            }
 
             uint256 managerShare =
-                FullMath.mulDiv(param.amount, _managerFeePIPS, PIPS);
-
-            uint256 balanceOfToken =
-                IERC20Metadata(param.token).balanceOf(address(this));
+                FullMath.mulDiv(balance, _managerFeePIPS, PIPS);
 
             IERC20Metadata(param.token).safeTransfer(
-                receiver_, balanceOfToken - managerShare
+                receiver_, balance - managerShare
             );
             IERC20Metadata(param.token).safeTransfer(
-                _rewardReceiver, managerShare
+                rewardReceiver, managerShare
             );
 
-            emit LogClaimReward(
-                param.token, balanceOfToken - managerShare
-            );
+            emit LogClaimReward(param.token, balance - managerShare);
             emit LogClaimManagerReward(param.token, managerShare);
         }
     }
@@ -545,22 +592,39 @@ abstract contract PancakeSwapV4StandardModule is
 
         // #endregion checks.
 
+        uint256[] memory balances = new uint256[](length);
+
+        for (uint256 i; i < length; i++) {
+            IPancakeDistributor.ClaimParams memory param = params_[i];
+
+            balances[i] =
+                IERC20Metadata(param.token).balanceOf(address(this));
+        }
+
         // #region claim.
 
         distributor.claim(params_);
 
         // #endregion claim.
 
+        address rewardReceiver = _rewardReceiver;
         uint256 _managerFeePIPS = managerFeePIPS;
 
         for (uint256 i; i < length; i++) {
             IPancakeDistributor.ClaimParams memory param = params_[i];
+            uint256 balance = IERC20Metadata(param.token).balanceOf(
+                address(this)
+            ) - balances[i];
+
+            if (balance == 0) {
+                continue;
+            }
 
             uint256 managerShare =
-                FullMath.mulDiv(param.amount, _managerFeePIPS, PIPS);
+                FullMath.mulDiv(balance, _managerFeePIPS, PIPS);
 
             IERC20Metadata(param.token).safeTransfer(
-                _rewardReceiver, managerShare
+                rewardReceiver, managerShare
             );
 
             emit LogClaimManagerReward(param.token, managerShare);
