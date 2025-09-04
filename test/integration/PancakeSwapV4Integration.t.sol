@@ -515,6 +515,244 @@ contract PancakeSwapV4IntegrationTest is
         // #endregion merkl rewards.
     }
 
+    function test_add_Liquidity_Escrowed() public {
+        (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
+        IArrakisPublicVaultRouterV2(router).getMintAmounts(
+            vault, init0 / 3, init1
+        );
+
+        address user = vm.addr(uint256(keccak256(abi.encode("User"))));
+
+        deal(WETH, user, amount0);
+
+        deal(USDC, user, amount1);
+
+        // #region approve router.
+
+        vm.startPrank(user);
+
+        IERC20Metadata(WETH).approve(router, amount0);
+        IERC20Metadata(USDC).approve(router, amount1);
+
+        // #endregion approve router.
+
+        // #region add liquidity.
+
+        IArrakisPublicVaultRouterV2(router).addLiquidity(
+            AddLiquidityData({
+                amount0Max: amount0,
+                amount1Max: amount1,
+                amount0Min: amount0 * 99 / 100,
+                amount1Min: amount1 * 99 / 100,
+                amountSharesMin: sharesToMint * 99 / 100,
+                vault: vault,
+                receiver: user
+            })
+        );
+
+        vm.stopPrank();
+
+        // #endregion add liquidity.
+
+        // #region merkl rewards.
+
+        address module = address(IArrakisMetaVault(vault).module());
+
+        vm.startPrank(IOwnable(vault).owner());
+
+        address[] memory tokens = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
+
+        tokens[0] = USDT;
+        tokens[1] = AAVE;
+        amounts[0] = type(uint256).max;
+        amounts[1] = type(uint256).max;
+
+        vm.stopPrank();
+
+        uint256 cakeBalance =
+            IERC20Metadata(CAKE).balanceOf(distributor);
+
+        IPancakeDistributor.ClaimParams[] memory params =
+            new IPancakeDistributor.ClaimParams[](1);
+        IPancakeDistributor.ClaimEscrowed[] memory escrowed;
+
+        params[0].proof = new bytes32[](1);
+        params[0].token = CAKE;
+        params[0].amount = IPancakeDistributorExtension(distributor)
+            .claimedAmounts(CAKE, module) + 1_000_000_000_000_000_000;
+        // params[0].proof[0] = keccak256(bytes.concat(keccak256(abi.encode(block.chainid, module, CAKE, params[0].amount))));
+        params[0].proof[0] = keccak256(abi.encode("TOTO"));
+
+        bytes32 root = Hashes.commutativeKeccak256(
+            params[0].proof[0],
+            keccak256(
+                bytes.concat(
+                    keccak256(
+                        abi.encode(
+                            block.chainid,
+                            module,
+                            CAKE,
+                            params[0].amount
+                        )
+                    )
+                )
+            )
+        );
+
+        vm.warp(
+            IPancakeDistributorExtension(distributor)
+                .endOfDisputePeriod() + 1
+        );
+
+        vm.prank(distributorAdmin);
+        IPancakeDistributorExtension(distributor).setMerkleTree(
+            root, keccak256(abi.encode("IpfsHash"))
+        );
+
+        bytes32[][] memory proofs = new bytes32[][](2);
+        address[] memory users = new address[](2);
+        tokens = new address[](2);
+        amounts = new uint256[](2);
+        proofs[0] = new bytes32[](1);
+        proofs[0][0] = keccak256(abi.encode(module, USDT, 2000e18));
+        users[0] = module;
+        tokens[0] = AAVE;
+        amounts[0] = 1e18;
+        proofs[1] = new bytes32[](1);
+        proofs[1][0] = keccak256(abi.encode(module, AAVE, 1e18));
+        users[1] = module;
+        tokens[1] = USDT;
+        amounts[1] = 2000e18;
+
+        vm.warp(
+            IPancakeDistributorExtension(distributor)
+                .endOfDisputePeriod() + 1
+        );
+
+        vm.prank(distributorAdmin);
+        IPancakeDistributorExtension(distributor).setMerkleTree(
+            proofs[0][0] < proofs[1][0]
+                ? keccak256(abi.encode(proofs[0][0], proofs[1][0]))
+                : keccak256(abi.encode(proofs[1][0], proofs[0][0])),
+            keccak256("IPFS_HASH")
+        );
+
+        address receiver =
+            vm.addr(uint256(keccak256(abi.encode("Receiver"))));
+
+        assertEq(IERC20Metadata(CAKE).balanceOf(receiver), 0);
+
+        address managerReceiver =
+            vm.addr(uint256(keccak256(abi.encode("ManagerReceiver"))));
+
+        vm.prank(IOwnable(arrakisStandardManager).owner());
+        IPancakeSwapV4StandardModule(module).setReceiver(
+            managerReceiver
+        );
+
+        vm.prank(arrakisStandardManager);
+        IPancakeSwapV4StandardModule(module).claimManagerRewards(
+            params
+        );
+
+        uint256 managerFeePIPS =
+            IArrakisLPModule(module).managerFeePIPS();
+
+        address rewardReceiver =
+            IPancakeSwapV4StandardModule(module).rewardReceiver();
+
+        assertEq(
+            IERC20Metadata(CAKE).balanceOf(rewardReceiver),
+            FullMath.mulDiv(
+                1_000_000_000_000_000_000, managerFeePIPS, PIPS
+            )
+        );
+
+        // #region do escrow rewards claim.
+
+        params = new IPancakeDistributor.ClaimParams[](0);
+        escrowed = new IPancakeDistributor.ClaimEscrowed[](1);
+
+        escrowed[0] = IPancakeDistributor.ClaimEscrowed({
+            token: CAKE,
+            amount: 1_000_000_000_000_000_000
+                - FullMath.mulDiv(
+                    1_000_000_000_000_000_000, managerFeePIPS, PIPS
+                )
+        });
+
+        vm.prank(IOwnable(vault).owner());
+        IPancakeSwapV4StandardModule(module).claimRewards(
+            params, escrowed, receiver
+        );
+
+        // #endregion do escrow rewards claim.
+
+        console.log("ManagerFeePIPS : ", managerFeePIPS);
+
+        assertEq(
+            IERC20Metadata(CAKE).balanceOf(receiver),
+            FullMath.mulDiv(
+                1_000_000_000_000_000_000, managerFeePIPS, PIPS
+            )
+        );
+
+        // #endregion merkl rewards.
+    }
+
+    // #region sub section claimRewards/claimManagerRewards.
+
+    function test_claimRewards_only_meta_vault_owner() public {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        IPancakeDistributor.ClaimParams[] memory params;
+        IPancakeDistributor.ClaimEscrowed[] memory escrowed;
+        address receiver = address(0);
+
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule.OnlyMetaVaultOwner.selector
+        );
+
+        IPancakeSwapV4StandardModule(module).claimRewards(
+            params, escrowed, receiver
+        );
+    }
+
+    function test_claimRewards_receiver_address_zero() public {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        IPancakeDistributor.ClaimParams[] memory params;
+        IPancakeDistributor.ClaimEscrowed[] memory escrowed;
+        address receiver = address(0);
+
+        vm.prank(IOwnable(vault).owner());
+        vm.expectRevert(IArrakisLPModule.AddressZero.selector);
+        IPancakeSwapV4StandardModule(module).claimRewards(
+            params, escrowed, receiver
+        );
+    }
+
+    function test_claimRewards_claim_params_length_zero() public {
+        address module = address(IArrakisMetaVault(vault).module());
+
+        IPancakeDistributor.ClaimParams[] memory params;
+        IPancakeDistributor.ClaimEscrowed[] memory escrowed;
+        address receiver = vm.addr(1);
+
+        vm.prank(IOwnable(vault).owner());
+        vm.expectRevert(
+            IPancakeSwapV4StandardModule
+                .ClaimParamsLengthZero
+                .selector
+        );
+        IPancakeSwapV4StandardModule(module).claimRewards(
+            params, escrowed, receiver
+        );
+    }
+
+    // #endregion sub section claimRewards/claimManagerRewards.
+
     function test_addLiquidityMaxAmountsTooLow() public {
         (uint256 sharesToMint, uint256 amount0, uint256 amount1) =
         IArrakisPublicVaultRouterV2(router).getMintAmounts(
